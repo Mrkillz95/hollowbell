@@ -1,0 +1,9 @@
+.gradle/
+build/
+run/
+out/
+.idea/
+*.iml
+.vscode/
+reference/*_vox.bin
+reference/*_names.json

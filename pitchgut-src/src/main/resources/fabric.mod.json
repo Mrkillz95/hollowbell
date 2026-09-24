@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "mountain_breathes",
+  "version": "${version}",
+  "name": "The Mountain That Breathes",
+  "description": "A full-size walking boss: a ridge of pale flesh on hundreds of wrong legs, with a forest of arms, two hundred eyes and a mouth that pours black goo. Calm, hunting or guardian.",
+  "authors": [
+    "JJ"
+  ],
+  "license": "All rights reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.jj.mountain.MountainMod"
+    ],
+    "client": [
+      "net.jj.mountain.client.MountainClient"
+    ],
+    "fabric-gametest": [
+      "net.jj.mountain.test.MountainGameTests"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "mixins": [
+    "mountain_breathes.mixins.json",
+    {
+      "config": "mountain_breathes.client.mixins.json",
+      "environment": "client"
+    }
+  ]
+}

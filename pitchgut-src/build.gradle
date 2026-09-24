@@ -1,0 +1,67 @@
+plugins {
+    id 'fabric-loom' version '1.11.8'
+    id 'maven-publish'
+}
+version = project.mod_version
+group = project.maven_group
+base { archivesName = project.archives_base_name }
+repositories { mavenCentral() }
+loom {
+    splitEnvironmentSourceSets()
+    mods {
+        "mountain_breathes" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+fabricApi {
+    configureDataGeneration { client = true }
+}
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+processResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") { expand "version": project.version }
+}
+tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+jar { from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } } }
+
+loom {
+    runs {
+        gametest {
+            server()
+            name "Game Test"
+            vmArg "-Dfabric-api.gametest"
+            vmArg "-Xmx3G"
+            vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest-report.xml"
+            runDir "build/gametest"
+        }
+    }
+}
+
+loom {
+    runs {
+        autotest {
+            client()
+            name "Auto Test"
+            vmArg "-Dmountain.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "autotest.txt")
+            vmArg "-Dmountain.debug=true"
+            vmArg "-Dmountain.legdebug=true"
+            vmArg "-Dmountain.oldbody=" + (project.findProperty("oldbody") ?: "false")
+            vmArg "-Dmountain.bend=" + (project.findProperty("bend") ?: "0.25,0.15,0.5,0")
+            vmArg "-Xmx6G"
+            programArgs "--width", "1280", "--height", "720"
+            runDir "build/autotest"
+        }
+    }
+}

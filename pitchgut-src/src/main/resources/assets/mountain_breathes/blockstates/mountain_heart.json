@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "mode=0": { "model": "mountain_breathes:block/mountain_heart_dark" },
+    "mode=1": { "model": "mountain_breathes:block/mountain_heart" },
+    "mode=2": { "model": "mountain_breathes:block/mountain_heart_lit" }
+  }
+}

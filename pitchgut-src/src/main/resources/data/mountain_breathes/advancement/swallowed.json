@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:adventure/root",
+  "display": {
+    "icon": { "id": "mountain_breathes:goo" },
+    "title": { "translate": "advancement.mountain_breathes.inside.title" },
+    "description": { "translate": "advancement.mountain_breathes.inside.desc" },
+    "frame": "goal", "show_toast": true, "announce_to_chat": true
+  },
+  "criteria": {
+    "inside": { "trigger": "minecraft:changed_dimension", "conditions": { "to": "mountain_breathes:innards" } }
+  }
+}

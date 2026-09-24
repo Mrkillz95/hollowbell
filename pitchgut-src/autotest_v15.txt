@@ -1,0 +1,39 @@
+world flat
+gui off
+cmd tp @p 0 -60 0 0 5
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd gamerule doMobSpawning false
+cmd execute as @p at @p run mountain summon calm 1
+wait 40
+cmd mountain stay
+waitmodel
+cmd gamemode spectator @p
+cmd tp @p -50 -52 140 -70 -25
+wait 250
+shot v01_hips_left
+cmd tp @p 50 -52 150 70 -25
+wait 60
+shot v02_hips_right
+cmd tp @p 0 -57 150 0 -30
+wait 60
+shot v03_under
+cmd tp @p -110 -45 150 -90 -2
+wait 60
+shot v04_side_left
+cmd summon iron_golem -45 -60 120 {NoAI:1b,PersistenceRequired:1b,Tags:["t"]}
+cmd tp @p -110 -40 120 -90 5
+wait 20
+cmd mountain attack leg_sweep
+wait 12
+shot v05_sweep_out
+wait 8
+shot v06_sweep_across
+wait 8
+shot v07_sweep_across2
+cmd mountain goto 0 -60 -500
+wait 120
+shot v08_walking
+wait 60
+shot v09_walking
+quit

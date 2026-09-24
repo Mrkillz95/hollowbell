@@ -1,0 +1,19 @@
+world flat
+gui off
+render 6
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd execute as @p at @p run mountain summon calm 0.35
+wait 80
+book
+page 1
+wait 25
+shot attacks
+page 0
+wait 15
+shot orders
+page 2
+wait 15
+shot him
+quit

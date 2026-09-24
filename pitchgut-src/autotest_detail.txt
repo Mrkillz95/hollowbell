@@ -1,0 +1,28 @@
+world flat
+gui off
+cmd tp @p 0 -60 0 0 5
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd gamerule doMobSpawning false
+cmd execute as @p at @p run mountain summon calm 1
+wait 40
+cmd mountain goo off
+cmd mountain stay
+waitmodel
+cmd gamemode spectator @p
+cmd mountain detail off
+view -150 55 60 0 25 60
+wait 300
+shot d1_near_full
+cmd mountain detail 10
+wait 20
+shot d2_near_simple
+view -150 55 160 0 25 160
+wait 60
+cmd mountain detail off
+wait 20
+shot d3_far_full
+cmd mountain detail 10
+wait 20
+shot d4_far_simple
+quit

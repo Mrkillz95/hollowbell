@@ -1,0 +1,67 @@
+world flat
+gui off
+cmd tp @p 0 -60 0 0 5
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd gamerule doMobSpawning false
+cmd execute as @p at @p run mountain summon calm 1
+wait 40
+cmd mountain stay
+waitmodel
+cmd gamemode spectator @p
+view 0 205 -10 0 125 -40
+wait 250
+view 0.0 205.0 -10.0 0.0 125.0 -40.0
+wait 40
+shot a_head_top
+view 0.0 175.0 -130.0 0.0 120.0 -45.0
+wait 40
+shot a_head_topfront
+view -115.0 125.0 -45.0 0.0 110.0 -40.0
+wait 40
+shot a_head_left
+view 115.0 125.0 -45.0 0.0 110.0 -40.0
+wait 40
+shot a_head_right
+view 0.0 105.0 -175.0 0.0 100.0 -45.0
+wait 40
+shot a_head_front
+view 103.3 164.1 80.2 71.5 132.0 58.2
+wait 40
+shot a_hand20
+view -10.7 210.6 113.1 -10.3 162.6 91.1
+wait 40
+shot a_hand29
+view 77.0 159.6 69.7 46.5 125.7 47.7
+wait 40
+shot a_hand02
+view 40.3 151.5 187.3 21.9 108.0 165.3
+wait 40
+shot a_hand13
+view -42.2 190.4 19.7 -29.1 144.7 -2.3
+wait 40
+shot a_hand58
+cmd mountain attack tongue
+wait 30
+view 0.0 205.0 -10.0 0.0 125.0 -40.0
+wait 8
+shot b_open_top
+view 0.0 175.0 -130.0 0.0 120.0 -45.0
+wait 8
+shot b_open_topfront
+view -115.0 125.0 -45.0 0.0 110.0 -40.0
+wait 8
+shot b_open_left
+view 115.0 125.0 -45.0 0.0 110.0 -40.0
+wait 8
+shot b_open_right
+view 0.0 105.0 -175.0 0.0 100.0 -45.0
+wait 8
+shot b_open_front
+view 103.3 164.1 80.2 71.5 132.0 58.2
+wait 8
+shot b_hand20
+view -10.7 210.6 113.1 -10.3 162.6 91.1
+wait 8
+shot b_hand29
+quit

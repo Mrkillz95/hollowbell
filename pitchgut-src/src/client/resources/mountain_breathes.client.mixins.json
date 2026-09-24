@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.mountain.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CameraShakeMixin",
+    "DriveZoomMixin",
+    "FrozenBodyMixin",
+    "MountainVisibleMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

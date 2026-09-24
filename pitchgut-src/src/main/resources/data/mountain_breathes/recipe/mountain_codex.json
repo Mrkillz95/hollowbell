@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "fef",
+    "sbh",
+    "fgf"
+  ],
+  "key": {
+    "f": {
+      "item": "mountain_breathes:mountain_flesh"
+    },
+    "e": {
+      "item": "mountain_breathes:mountain_eye"
+    },
+    "s": {
+      "item": "minecraft:nether_star"
+    },
+    "b": {
+      "item": "minecraft:book"
+    },
+    "h": {
+      "item": "mountain_breathes:mountain_horn"
+    },
+    "g": {
+      "item": "mountain_breathes:goo"
+    }
+  },
+  "result": {
+    "id": "mountain_breathes:mountain_codex",
+    "count": 1
+  }
+}

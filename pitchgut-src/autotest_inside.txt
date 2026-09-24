@@ -1,0 +1,25 @@
+world flat
+gui off
+cmd tp @p 0 -58 0 0 5
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd gamerule doMobSpawning false
+cmd execute as @p at @p run mountain summon calm 1.0
+wait 40
+cmd mountain stay
+waitmodel
+cmd gamemode survival @p
+cmd effect give @p resistance 900 4 true
+cmd effect give @p regeneration 900 4 true
+cmd mountain swallow @p
+wait 140
+cmd tp @p ~ ~ ~ 90 -5
+wait 40
+shot i01_heart
+cmd tp @p ~-8 ~ ~ 90 -12
+wait 40
+shot i02_heart_close
+cmd tp @p ~ ~ ~ 200 -10
+wait 30
+shot i03_room
+quit

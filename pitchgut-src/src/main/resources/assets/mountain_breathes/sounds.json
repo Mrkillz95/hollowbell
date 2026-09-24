@@ -1,0 +1,79 @@
+{
+  "step": {
+    "sounds": [
+      "mountain_breathes:step1",
+      "mountain_breathes:step2",
+      "mountain_breathes:step3",
+      "mountain_breathes:step4"
+    ],
+    "subtitle": "subtitles.mountain_breathes.step"
+  },
+  "breath_in": {
+    "sounds": [
+      "mountain_breathes:breath_in"
+    ],
+    "subtitle": "subtitles.mountain_breathes.breath_in"
+  },
+  "breath_out": {
+    "sounds": [
+      "mountain_breathes:breath_out"
+    ],
+    "subtitle": "subtitles.mountain_breathes.breath_out"
+  },
+  "roar": {
+    "sounds": [
+      "mountain_breathes:roar"
+    ],
+    "subtitle": "subtitles.mountain_breathes.roar"
+  },
+  "scream": {
+    "sounds": [
+      "mountain_breathes:scream"
+    ],
+    "subtitle": "subtitles.mountain_breathes.scream"
+  },
+  "heart": {
+    "sounds": [
+      "mountain_breathes:heart"
+    ],
+    "subtitle": "subtitles.mountain_breathes.heart"
+  },
+  "hurt": {
+    "sounds": [
+      "mountain_breathes:hurt"
+    ],
+    "subtitle": "subtitles.mountain_breathes.hurt"
+  },
+  "death": {
+    "sounds": [
+      "mountain_breathes:death"
+    ],
+    "subtitle": "subtitles.mountain_breathes.death"
+  },
+  "ambient": {
+    "sounds": [
+      "mountain_breathes:ambient"
+    ],
+    "subtitle": "subtitles.mountain_breathes.ambient"
+  },
+  "goo": {
+    "sounds": [
+      "mountain_breathes:goo1",
+      "mountain_breathes:goo2",
+      "mountain_breathes:goo3"
+    ],
+    "subtitle": "subtitles.mountain_breathes.goo"
+  },
+  "rage": {
+    "sounds": [
+      "mountain_breathes:rage"
+    ],
+    "subtitle": "subtitles.mountain_breathes.rage"
+  },
+  "weak": {
+    "sounds": [
+      "mountain_breathes:weak"
+    ],
+    "subtitle": "subtitles.mountain_breathes.weak"
+  }
+}

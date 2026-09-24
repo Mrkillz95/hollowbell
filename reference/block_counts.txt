@@ -1,0 +1,31 @@
+pieces 34
+voxels 656901
+bounds x -100 100 y 0 202 z -100 92
+  106135 bone_block
+   82049 oxidized_copper
+   75272 weathered_copper
+   66678 calcite
+   45768 stained_glass[color=lime]
+   32992 oxidized_cut_copper
+   30303 end_stone
+   26441 glass
+   26049 stained_glass[color=white]
+   23883 stained_glass[color=yellow]
+   19733 concrete[color=silver]
+   19489 end_bricks
+   18855 verdant_froglight
+   18259 stained_glass[color=silver]
+   16751 concrete[color=gray]
+    9091 glowstone
+    6989 sea_lantern
+    5379 weathered_cut_copper
+    4944 stained_glass[color=cyan]
+    3312 honeycomb_block
+    3309 dripstone_block
+    2597 tinted_glass
+    2549 stained_hardened_clay[color=green]
+    2540 moss_block
+    2238 ochre_froglight
+    2211 concrete[color=black]
+    1548 shroomlight
+    1537 stained_hardened_clay[color=cyan]

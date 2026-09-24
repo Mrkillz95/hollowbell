@@ -1,0 +1,600 @@
+world flat
+gui off
+cmd tp @p 0 -60 0 0 5
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd gamerule doMobSpawning false
+cmd tp @p 0 -60 -120 0 5
+wait 60
+cmd fill -150 -60 -200 0 -59 -120 stone
+cmd fill -150 -60 -119 0 -59 -40 stone
+cmd fill 1 -60 -200 150 -59 -120 stone
+cmd fill 1 -60 -119 150 -59 -40 stone
+cmd fill -150 -58 -198 0 -57 -120 stone
+cmd fill -150 -58 -119 0 -57 -42 stone
+cmd fill 1 -58 -198 150 -57 -120 stone
+cmd fill 1 -58 -119 150 -57 -42 stone
+cmd fill -150 -56 -196 0 -55 -120 stone
+cmd fill -150 -56 -119 0 -55 -44 stone
+cmd fill 1 -56 -196 150 -55 -120 stone
+cmd fill 1 -56 -119 150 -55 -44 stone
+cmd fill -150 -54 -194 -75 -53 -46 stone
+cmd fill -74 -54 -194 0 -53 -46 stone
+cmd fill 1 -54 -194 75 -53 -46 stone
+cmd fill 76 -54 -194 150 -53 -46 stone
+cmd fill -150 -52 -192 -75 -51 -48 stone
+cmd fill -74 -52 -192 0 -51 -48 stone
+cmd fill 1 -52 -192 75 -51 -48 stone
+cmd fill 76 -52 -192 150 -51 -48 stone
+cmd fill -150 -50 -190 -75 -49 -50 stone
+cmd fill -74 -50 -190 0 -49 -50 stone
+cmd fill 1 -50 -190 75 -49 -50 stone
+cmd fill 76 -50 -190 150 -49 -50 stone
+cmd fill -150 -48 -188 -75 -47 -52 stone
+cmd fill -74 -48 -188 0 -47 -52 stone
+cmd fill 1 -48 -188 75 -47 -52 stone
+cmd fill 76 -48 -188 150 -47 -52 stone
+cmd fill -150 -46 -186 -75 -45 -54 stone
+cmd fill -74 -46 -186 0 -45 -54 stone
+cmd fill 1 -46 -186 75 -45 -54 stone
+cmd fill 76 -46 -186 150 -45 -54 stone
+cmd fill -150 -44 -184 -75 -43 -56 stone
+cmd fill -74 -44 -184 0 -43 -56 stone
+cmd fill 1 -44 -184 75 -43 -56 stone
+cmd fill 76 -44 -184 150 -43 -56 stone
+cmd fill -150 -42 -182 -75 -41 -58 stone
+cmd fill -74 -42 -182 0 -41 -58 stone
+cmd fill 1 -42 -182 75 -41 -58 stone
+cmd fill 76 -42 -182 150 -41 -58 stone
+cmd fill -150 -40 -180 -75 -39 -60 stone
+cmd fill -74 -40 -180 0 -39 -60 stone
+cmd fill 1 -40 -180 75 -39 -60 stone
+cmd fill 76 -40 -180 150 -39 -60 stone
+cmd fill -150 -38 -178 -75 -37 -62 stone
+cmd fill -74 -38 -178 0 -37 -62 stone
+cmd fill 1 -38 -178 75 -37 -62 stone
+cmd fill 76 -38 -178 150 -37 -62 stone
+cmd fill -150 -36 -176 -75 -35 -64 stone
+cmd fill -74 -36 -176 0 -35 -64 stone
+cmd fill 1 -36 -176 75 -35 -64 stone
+cmd fill 76 -36 -176 150 -35 -64 stone
+cmd fill -150 -34 -174 -75 -33 -66 stone
+cmd fill -74 -34 -174 0 -33 -66 stone
+cmd fill 1 -34 -174 75 -33 -66 stone
+cmd fill 76 -34 -174 150 -33 -66 stone
+cmd fill -150 -32 -172 0 -31 -68 stone
+cmd fill 1 -32 -172 150 -31 -68 stone
+cmd fill -150 -30 -170 0 -29 -70 stone
+cmd fill 1 -30 -170 150 -29 -70 stone
+cmd fill -150 -28 -168 0 -27 -72 stone
+cmd fill 1 -28 -168 150 -27 -72 stone
+cmd fill -150 -26 -166 0 -25 -74 stone
+cmd fill 1 -26 -166 150 -25 -74 stone
+cmd fill -150 -24 -164 0 -23 -76 stone
+cmd fill 1 -24 -164 150 -23 -76 stone
+cmd fill -150 -22 -162 0 -21 -78 stone
+cmd fill 1 -22 -162 150 -21 -78 stone
+cmd fill -150 -20 -160 0 -19 -80 stone
+cmd fill 1 -20 -160 150 -19 -80 stone
+cmd fill -150 -18 -158 0 -17 -82 stone
+cmd fill 1 -18 -158 150 -17 -82 stone
+cmd fill -150 -16 -156 0 -15 -84 stone
+cmd fill 1 -16 -156 150 -15 -84 stone
+cmd fill -150 -14 -154 0 -13 -86 stone
+cmd fill 1 -14 -154 150 -13 -86 stone
+cmd fill -150 -12 -152 0 -11 -88 stone
+cmd fill 1 -12 -152 150 -11 -88 stone
+cmd fill -150 -10 -150 0 -9 -90 stone
+cmd fill 1 -10 -150 150 -9 -90 stone
+cmd fill -150 -8 -148 0 -7 -92 stone
+cmd fill 1 -8 -148 150 -7 -92 stone
+cmd fill -150 -6 -146 150 -5 -94 stone
+cmd fill -150 -4 -144 150 -3 -96 stone
+cmd fill -150 -2 -142 150 -1 -98 stone
+cmd fill -150 0 -140 150 1 -100 stone
+cmd fill -150 2 -138 150 3 -102 stone
+cmd fill -150 4 -136 150 5 -104 stone
+cmd fill -150 6 -134 150 7 -106 stone
+cmd fill -150 8 -132 150 9 -108 stone
+cmd fill -150 10 -130 150 11 -110 stone
+cmd fill -150 12 -128 150 13 -112 stone
+cmd fill -150 14 -126 150 15 -114 stone
+cmd fill -150 16 -124 150 17 -116 stone
+cmd fill -150 18 -122 150 19 -118 stone
+wait 5
+cmd tp @p 75 -60 -360 0 5
+wait 60
+cmd fill 0 -60 -420 75 -59 -300 stone
+cmd fill 76 -60 -420 150 -59 -300 stone
+cmd fill 0 -58 -419 75 -57 -301 stone
+cmd fill 76 -58 -419 150 -57 -301 stone
+cmd fill 0 -56 -418 75 -55 -302 stone
+cmd fill 76 -56 -418 150 -55 -302 stone
+cmd fill 0 -54 -417 75 -53 -303 stone
+cmd fill 76 -54 -417 150 -53 -303 stone
+cmd fill 0 -52 -416 75 -51 -304 stone
+cmd fill 76 -52 -416 150 -51 -304 stone
+cmd fill 0 -50 -415 75 -49 -305 stone
+cmd fill 76 -50 -415 150 -49 -305 stone
+cmd fill 0 -48 -414 75 -47 -306 stone
+cmd fill 76 -48 -414 150 -47 -306 stone
+cmd fill 0 -46 -413 75 -45 -307 stone
+cmd fill 76 -46 -413 150 -45 -307 stone
+cmd fill 0 -44 -412 150 -43 -308 stone
+cmd fill 0 -42 -411 150 -41 -309 stone
+cmd fill 0 -40 -410 150 -39 -310 stone
+cmd fill 0 -38 -409 150 -37 -311 stone
+cmd fill 0 -36 -408 150 -35 -312 stone
+cmd fill 0 -34 -407 150 -33 -313 stone
+cmd fill 0 -32 -406 150 -31 -314 stone
+cmd fill 0 -30 -405 150 -29 -315 stone
+cmd fill 0 -28 -404 150 -27 -316 stone
+cmd fill 0 -26 -403 150 -25 -317 stone
+cmd fill 0 -24 -402 150 -23 -318 stone
+cmd fill 0 -22 -401 150 -21 -319 stone
+cmd fill 0 -20 -400 150 -19 -320 stone
+cmd fill 0 -18 -399 150 -17 -321 stone
+cmd fill 0 -16 -398 150 -15 -322 stone
+cmd fill 0 -14 -397 150 -13 -323 stone
+cmd fill 0 -12 -396 150 -11 -324 stone
+cmd fill 0 -10 -395 150 -9 -325 stone
+cmd fill 0 -8 -394 150 -7 -326 stone
+cmd fill 0 -6 -393 150 -5 -327 stone
+cmd fill 0 -4 -392 150 -3 -328 stone
+cmd fill 0 -2 -391 150 -1 -329 stone
+wait 5
+cmd tp @p 0 -60 0 0 5
+wait 60
+wait 20
+cmd execute as @p at @p run mountain summon calm 1
+wait 40
+cmd mountain breakblocks off
+cmd mountain goo off
+cmd mountain stay
+waitmodel
+cmd gamemode spectator @p
+view -230 40 60 0 20 60
+wait 200
+shot r00
+cmd mountain goto 0 -60 -900
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r01
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r02
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r03
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r04
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r05
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r06
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r07
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r08
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r09
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r10
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r11
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r13
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r14
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r15
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r16
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r17
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r18
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r19
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r20
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r21
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r22
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r23
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r24
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r25
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r26
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r27
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r28
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r29
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r30
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r31
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r32
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r33
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r34
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r35
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r36
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r37
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r38
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r39
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+view -230 40 60 0 20 60
+wait 12
+shot r40
+quit

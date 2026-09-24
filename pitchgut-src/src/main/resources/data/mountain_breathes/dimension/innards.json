@@ -1,0 +1,7 @@
+{
+  "type": "mountain_breathes:innards",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": { "biome": "mountain_breathes:innards", "layers": [], "lakes": false, "features": false, "structure_overrides": [] }
+  }
+}

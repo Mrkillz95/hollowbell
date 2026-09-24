@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.mountain.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ChunkMapAccess",
+    "EntityCollideMixin",
+    "MountainTrackingMixin",
+    "ServerFloatingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

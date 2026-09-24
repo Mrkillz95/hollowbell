@@ -1,0 +1,16 @@
+{
+  "parent": "minecraft:adventure/root",
+  "display": {
+    "icon": { "id": "minecraft:ender_eye" },
+    "title": { "translate": "advancement.mountain_breathes.slay.title" },
+    "description": { "translate": "advancement.mountain_breathes.slay.desc" },
+    "frame": "challenge", "show_toast": true, "announce_to_chat": true
+  },
+  "criteria": {
+    "kill": {
+      "trigger": "minecraft:player_killed_entity",
+      "conditions": { "entity": [ { "condition": "minecraft:entity_properties", "entity": "this", "predicate": { "type": "mountain_breathes:mountain" } } ] }
+    }
+  },
+  "rewards": { "experience": 800 }
+}
