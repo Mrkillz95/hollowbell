@@ -195,3 +195,23 @@ Same pattern as Furrowmaw: `/hollowbell summon [calm/hunting/guardian] [size]`,
    list and ride/"being him" controls so Hollowbell matches the other two. The
    Pitchgut source is in `pitchgut-src\` for reference only. Copy what's needed into
    `net.jj.hollowbell` and never change `pitchgut-src\` itself.
+
+## Guesses made while building
+
+Things the design didn't say, and what was picked. Change any of them if they're wrong.
+
+- **The ground patch** is cut off below the strands: every end stone, end brick, moss, green terracotta and
+  grey trail block goes, and the calcite and bone of the ground is kept only straight under a strand (so each
+  strand carries on down to the ground). Arm tips that touch the ground are kept.
+- **The five glowing spots.** The build has four big yellow glass balls inside the dome, one under each yellow
+  patch you see from above, plus a tall glowing vase of glowstone hanging under the crown in the middle. The
+  four balls (with the patch over each) are spots 1 to 4, and the vase is spot 5.
+- **The middle of the strands.** Under the vase there's a branching pale stalk with the pods hanging on it.
+  It's treated as strands, and it hangs from the vase.
+- **Strands:** the build splits into 80 strands (a few of them are the joined-up sheets), not 60.
+- **Pods** are the hollow glass balls with black and tinted glass eyes in the middle (23 of them). The grey
+  lumps of concrete, honeycomb and dripstone are the egg clumps (90 of them).
+- **The 128 threads:** 32 in a ring round the crown and 96 between the 24 copper ribs (4 rings of 24). Thick
+  (a plus shape) at the bottom, then 2 by 2, then 1 wide. Bone and calcite, an oxidized copper band every 13
+  to 16 blocks, a few verdant froglight bits. Full strength up to 45 blocks above the crown, then fading out
+  to nothing at 100 above the crown.
