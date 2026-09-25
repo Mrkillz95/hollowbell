@@ -240,3 +240,38 @@ Things the design didn't say, and what was picked. Change any of them if they're
 - **Bellings** live 3 minutes, have 8 health and sting for 2 plus poison. Shed egg clumps grow back after
   5 minutes.
 - **Advancements:** "Rung Out" for killing one, "Under Glass" for being pulled into the dome.
+
+## Guesses made for 1.1
+
+JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the calls made.
+
+- **Threads are gone; the pods hold him up.** Each popped pod lets him hang a little lower and lean toward it. Pop
+  a third of them (8 of 23) and he loses his lift and sinks right down for at least 30 seconds, dome in reach, until
+  enough have grown back. A popped pod starts growing back after 90 seconds and takes about 20 more (it grows
+  from small, dark until it's whole). The second boss bar counts pods and turns purple while he's down.
+- **Tidier build.** 28 egg clumps are kept (from 90), in groups of three or four, and only ones really stuck on to a
+  strand or an arm (a clump on its own would float). About half of the lone bone dots in the arm copper and half
+  of the lone froglight, copper and glass bits in the strands go back to the block round them; the lime loops and
+  their pale middles are never touched. Anything that touches nothing else of him is taken off.
+- **His body is cut up more finely so it can move like a jellyfish:** the dome into 11 bands by height (so it
+  squeezes in more at the rim than at the top), the rim into 16 sectors (a ripple runs round it), each arm into
+  4 pieces and each strand into 1 to 6 pieces by length. 24 strands that branch off lower down hang from the
+  strand they grow out of.
+- **Flying.** He picks a height: low over the ground most of the time, sometimes up high. He follows the ground
+  over hills and down into valleys, looking a couple of seconds ahead, and always keeps his rim above the
+  highest ground under him. Something on the ground: he comes down so his strand ends are at its feet. Something
+  high up (elytra, a pillar, a flying mob): he climbs until it's among his strands. Climbing, the bell squeezes
+  hard every 1 to 3 seconds (quicker the further up he has to go) and shoots him up, and he drifts on up slower
+  between. Sinking, the bell opens and he comes down slowly. His speed never changes suddenly, and he turns in
+  wide, heavy curves. `/hollowbell height <blocks>` sets how high he drifts.
+- **Being him**: Jump takes him up, Sneak takes him down.
+- **Moving with weight.** Arms and strands are chains of joints in water: they trail behind as he moves, swing
+  back past when he stops and settle, stream down under him in a bundle while he climbs, and float up and spread
+  while he sinks. They rest on the ground and drag along it, never go into it, and never come up through his
+  bell. A strand is like wet rope: it bunches a little rather than kicking out, and gives a little rather than
+  yanking tight. His body (how low he hangs, how he leans, the bell's squeeze, the glow) eases toward whatever is
+  asked of it, so starting, ending or cutting off a move halfway never makes him jump. A gametest cuts four
+  moves off one after another and checks no part of him lurches.
+- **On the client** he's carried on at the speed the server sends and eased toward where it says he is, so he
+  glides between updates instead of stepping. Seats (what he's holding) are placed by the client from its own
+  view of him, so a grabbed mob stays on the strand tip.

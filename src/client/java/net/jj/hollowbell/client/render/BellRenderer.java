@@ -52,8 +52,12 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
 
     @Override public ResourceLocation getTextureLocation(HollowbellEntity e) { return TextureAtlas.LOCATION_BLOCKS; }
 
+    /** the view this frame, kept from shouldRender so each part of him can be left out when it's off the screen */
+    private @org.jetbrains.annotations.Nullable Frustum frustum;
+
     @Override
     public boolean shouldRender(HollowbellEntity e, Frustum frustum, double x, double y, double z) {
+        this.frustum = frustum;
         return e.shouldRenderAtSqrDistance(e.distanceToSqr(x, y, z)) && frustum.isVisible(e.getBoundingBoxForCulling());
     }
 
@@ -107,8 +111,19 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         shader.setDefaultUniforms(VertexFormat.Mode.QUADS, view, proj, mc.getWindow());
         shader.apply();
         boolean[] shown = new boolean[rig.boneCount()];
+        // each part of him that's off the screen isn't drawn at all
+        Matrix4f abs = e.modelToWorld(partial);
+        Matrix4f boneAbs = new Matrix4f();
+        Vector3f cc = new Vector3f();
+        BellModel model = BellModel.get();
         for (int b = 0; b < shown.length; b++) {
             shown[b] = rig.shown(e.state, b);
+            float[] bb = model.bounds[b];
+            if (!shown[b] || bb == null || frustum == null) continue;
+            boneAbs.set(abs).mul(draw[b]);
+            boneAbs.transformPosition(cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f));
+            float r = 0.5f * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0]) + (bb[4] - bb[1]) * (bb[4] - bb[1]) + (bb[5] - bb[2]) * (bb[5] - bb[2])) * s * 1.35f + 1f;
+            if (!frustum.isVisible(new net.minecraft.world.phys.AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r))) shown[b] = false;
         }
         Matrix4f mv = new Matrix4f(), boneWorld = new Matrix4f();
         Matrix3f rot = new Matrix3f();
@@ -127,7 +142,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 rot.transform(l1.set(l1w)).normalize();
                 if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
                 if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
-                float[] c = tint(e, b, kind == BellMeshes.GLOW ? 1f : lit, hurt, dying);
+                float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying);
                 if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f); shader.COLOR_MODULATOR.upload(); }
                 m.vb.bind();
                 m.vb.draw();
@@ -144,6 +159,17 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     }
 
     private static void upload(Uniform u, Matrix4f m) { if (u != null) { u.set(m); u.upload(); } }
+
+    /**
+     * How bright a glowing block of him is: full, with a slow pulse (each part in its own time), pushed brighter
+     * when a move flares his glow, and going out as he dies.
+     */
+    private float glowLevel(HollowbellEntity e, int b, float lit, float partial) {
+        float t = e.state.time;
+        float pulse = 0.88f + 0.12f * Mth.sin(t * 0.045f + rig.part[b] * 1.9f + rig.kind[b].ordinal());
+        float k = pulse + 0.6f * e.state.glow;
+        return Mth.lerp(e.state.death, k, lit * 0.5f);
+    }
 
     /** a popped pod goes dark and stays dark; everything flashes red when he is hurt */
     private float[] tint(HollowbellEntity e, int b, float k, float hurt, float dying) {

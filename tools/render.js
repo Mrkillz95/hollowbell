@@ -98,7 +98,7 @@ function main() {
   m.bones.forEach((b, bi) => {
     const kind = b.name.replace(/_\d+$/, '').replace(/_\d+$/, '');
     kinds[kind] = (kinds[kind] || 0) + 1;
-    const pc = b.name === 'bell' ? [70, 150, 120] : b.name === 'rim' ? [200, 200, 200] : b.name === 'crown' ? [255, 210, 0]
+    const pc = b.name.startsWith('bell_') ? (+b.name.slice(5) % 2 ? [70, 150, 120] : [90, 175, 140]) : b.name.startsWith('rim_') ? (+b.name.slice(4) % 2 ? [200, 200, 200] : [160, 160, 170]) : b.name === 'crown' ? [255, 210, 0]
       : b.name.startsWith('spot_') ? [255, 110, 0] : b.name.startsWith('pod_') ? [255, 0, 255] : b.name.startsWith('egg_') ? [140, 70, 20] : partColour(bi);
     for (const v of b.v) {
       const g = glassAlpha[v[3]];

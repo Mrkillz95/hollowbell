@@ -66,7 +66,7 @@ public class HollowbellMod implements ModInitializer {
             switch (pay.what()) {
                 case DrivePayload.LEAVE -> him.dropRider();
                 case DrivePayload.ATTACK -> CodexOrders.moveFromCrown(p, him, pay.arg());
-                default -> him.drive(p, pay.forward(), pay.strafe(), pay.yaw());
+                default -> him.drive(p, pay.forward(), pay.strafe(), pay.yaw(), pay.arg());
             }
         }));
 

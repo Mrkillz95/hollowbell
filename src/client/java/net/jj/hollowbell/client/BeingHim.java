@@ -146,8 +146,10 @@ public final class BeingHim {
         if (mc.options.keyDown.isDown()) f -= 1;
         if (mc.options.keyLeft.isDown()) s += 1;
         if (mc.options.keyRight.isDown()) s -= 1;
-        if (auto != null) { f = auto[0]; s = auto[1]; yaw = auto[2]; }
-        ClientPlayNetworking.send(new DrivePayload(DrivePayload.DRIVE, 0, f, s, yaw));
+        // jump takes him up, sneak takes him down
+        int up = (mc.options.keyJump.isDown() ? 1 : 0) - (mc.options.keyShift.isDown() ? 1 : 0);
+        if (auto != null) { f = auto[0]; s = auto[1]; yaw = auto[2]; up = auto.length > 3 ? (int) auto[3] : 0; }
+        ClientPlayNetworking.send(new DrivePayload(DrivePayload.DRIVE, up, f, s, yaw));
         mc.player.setDeltaMovement(0, mc.player.getDeltaMovement().y, 0);
     }
 

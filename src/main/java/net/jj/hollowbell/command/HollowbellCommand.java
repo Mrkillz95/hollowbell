@@ -54,6 +54,8 @@ public final class HollowbellCommand {
                 .then(Commands.literal("heal").executes(c -> near(c, h -> { h.heal(); h.mendPods(); }, "heal")))
                 .then(Commands.literal("popped").then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
                         .executes(c -> near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "n")), "popped"))))
+                .then(Commands.literal("height").then(Commands.argument("blocks", FloatArgumentType.floatArg(0f, 400f))
+                        .executes(c -> near(c, h -> h.setCruise(FloatArgumentType.getFloat(c, "blocks")), "height"))))
                 .then(Commands.literal("ride").executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
                     HollowbellEntity h = nearest(c.getSource());
