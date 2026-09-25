@@ -1,19 +1,31 @@
 world flat
 gui off
-render 16
+render 20
+sim 20
 cmd time set 6000
 cmd tp @p 0 -60 0 0 0
 wait 20
 cmd hollowbell summon calm 1
-wait 5
-status
 waitmodel
+wait 300
+cmd hollowbell stay true
+cmd hollowbell height 12
+wait 100
 status
-wait 20
+cmd hollowbell goto 700 106
+view 0 60 -120 0 60 0
+fixed
+wait 60
 status
-wait 20
+wait 60
 status
-wait 40
+cmd tp @p ~ ~ ~-150
+wait 60
+status
+wait 60
+status
+cmd tp @p ~ ~ ~-100
+wait 60
 status
 wait 60
 status

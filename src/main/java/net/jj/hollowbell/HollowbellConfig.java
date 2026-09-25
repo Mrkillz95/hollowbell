@@ -36,7 +36,7 @@ public final class HollowbellConfig {
         public int sunkSeconds = 30;
         /** How many egg clumps he sheds at a time, and whether he sheds at all (0 = never). */
         public int shedCount = 4;
-        /** Keeps the chunks under him loaded while players are near him, so he never freezes half-loaded. */
+        /** Keeps the chunk at his middle moving and the ground under him loaded while a player can see him, so he never freezes in the air. */
         public boolean chunkLoading = true;
         /** How many of him the world holds at once. Summon another past this and the oldest one goes. 0 = no limit. */
         public int maxHollowbells = 0;
