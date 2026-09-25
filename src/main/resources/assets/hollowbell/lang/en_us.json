@@ -255,5 +255,9 @@
   "codex.hollowbell.tier_tip.heavy": "Rare and huge. Long warning, wide area. Wears him out for a few seconds.",
   "codex.hollowbell.worn_out": " (worn out)",
   "doing.hollowbell.tired": "worn out",
-  "message.hollowbell.worn_out": "He's worn out. Give him a few seconds."
+  "message.hollowbell.worn_out": "He's worn out. Give him a few seconds.",
+  "command.hollowbell.detail_is_on": "Detail is on: far away he's drawn simpler, so he runs faster.",
+  "command.hollowbell.detail_is_off": "Detail is off: he's always drawn in full, however far away.",
+  "command.hollowbell.detail_on": "Detail on: far away he'll be drawn simpler, so he runs faster.",
+  "command.hollowbell.detail_off": "Detail off: he'll always be drawn in full, however far away."
 }

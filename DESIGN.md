@@ -307,3 +307,6 @@ JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the
   set out in `tools/sounds.py`, which checks every one against the game's sound list. Every heavy move has its own
   warning sound. A bigger Hollowbell is louder, heard further, and deeper; a small one higher. `ambientSounds` in
   the config turns the hum and drift off.
+- **`/hollowbell detail`** is a command of the client's own (no cheats needed, it only changes your own game):
+  `on` (the default) keeps the far-away simple version as it was, `off` draws him in full at every distance.
+  Nothing else changes with it. It's saved as `simpleFarAway` in `config/hollowbell.json` on that computer.

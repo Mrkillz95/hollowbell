@@ -56,5 +56,17 @@ public class HollowbellClient implements ClientModInitializer {
             @Override public void onResourceManagerReload(ResourceManager rm) { BellMeshes.INSTANCE.invalidate(); }
         });
         net.jj.hollowbell.client.dev.AutoTest.init();
+        // /hollowbell detail [on|off]: a setting on this computer only, so it's a command of the client's own
+        net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((d, reg) -> d.register(
+                net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("hollowbell").then(
+                        net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("detail")
+                                .executes(c -> { c.getSource().sendFeedback(net.minecraft.network.chat.Component.translatable(
+                                        net.jj.hollowbell.Detail.on() ? "command.hollowbell.detail_is_on" : "command.hollowbell.detail_is_off")); return 1; })
+                                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("on").executes(c -> {
+                                    net.jj.hollowbell.Detail.set(true);
+                                    c.getSource().sendFeedback(net.minecraft.network.chat.Component.translatable("command.hollowbell.detail_on")); return 1; }))
+                                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("off").executes(c -> {
+                                    net.jj.hollowbell.Detail.set(false);
+                                    c.getSource().sendFeedback(net.minecraft.network.chat.Component.translatable("command.hollowbell.detail_off")); return 1; })))));
     }
 }

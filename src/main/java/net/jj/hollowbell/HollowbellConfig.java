@@ -52,7 +52,7 @@ public final class HollowbellConfig {
         public boolean bossBar = true;
         /** How far away (in blocks) he is still drawn. */
         public int renderDistance = 720;
-        /** Far away he is drawn with bigger, merged blocks so he runs faster. */
+        /** Far away he is drawn with bigger, merged blocks so he runs faster ("/hollowbell detail on"). Off = always drawn in full ("/hollowbell detail off"). */
         public boolean simpleFarAway = true;
         /** How far away (in blocks, at full size) the simpler drawing starts. */
         public int simpleFarAwayAt = 160;
