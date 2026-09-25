@@ -26,7 +26,6 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
@@ -313,12 +312,18 @@ public class HollowbellGameTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "sting")
     public void theStrandsSting(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 32);
-        Zombie[] z = new Zombie[1];
+        Pig[] z = new Pig[1];
         h.runAfterDelay(20, () -> {
             e.setStay(true);
-            Vec3 tip = e.strandTipWorld(e.rig.strands.length / 2);
-            z[0] = EntityType.ZOMBIE.create(h.getLevel());
+            // right on one of the blocks of a strand's lowest piece
+            var S = e.rig.strands[e.rig.strands.length / 2];
+            int bone = S.bones()[S.bones().length - 1];
+            BellModel m = BellModel.get();
+            int k = m.count(bone) / 2;
+            Vec3 tip = e.boneWorld(bone, new Vector3f(m.x[bone][k] + 0.5f, m.y[bone][k] + 0.5f, m.z[bone][k] + 0.5f));
+            z[0] = EntityType.PIG.create(h.getLevel());
             z[0].moveTo(tip.x, tip.y - 0.9, tip.z, 0, 0);
+            z[0].setNoGravity(true);
             z[0].setNoAi(true);
             z[0].setPersistenceRequired();
             h.getLevel().addFreshEntity(z[0]);
@@ -345,7 +350,7 @@ public class HollowbellGameTests implements FabricGameTest {
             h.assertTrue(e.threadGrowth(5) == 0f, "thread 5 wasn't cut");
             h.assertTrue(e.threadsHolding() == 127, "threads holding: " + e.threadsHolding());
         });
-        h.runAfterDelay(30, () -> h.assertTrue(e.threadGrowth(5) > 0f && e.threadGrowth(5) < 1f, "thread 5 isn't growing back: " + e.threadGrowth(5)));
+        h.runAfterDelay(60, () -> h.assertTrue(e.threadGrowth(5) > 0f && e.threadGrowth(5) < 1f, "thread 5 isn't growing back: " + e.threadGrowth(5)));
         h.runAfterDelay(20 + 20 + 420, () -> {
             HollowbellConfig.V.threadRegrowSeconds = was;
             h.assertTrue(e.threadGrowth(5) >= 1f, "thread 5 never grew back: " + e.threadGrowth(5));
