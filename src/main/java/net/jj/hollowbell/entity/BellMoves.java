@@ -93,7 +93,7 @@ public final class BellMoves {
     public int insideCount() { return inside.size(); }
     public List<LivingEntity> insideNow() { List<LivingEntity> l = new ArrayList<>(); for (Inside i : inside) if (i.e != null) l.add(i.e); return l; }
     public int treesInside() { int n = 0; for (Inside i : inside) if (i.tree != null) n++; return n; }
-    public boolean holdsStill() { return move == Moves.DROP || move == Moves.CURTAIN || move == Moves.WRAP || (move == Moves.SLAM && t > 20); }
+    public boolean holdsStill() { return ((move == Moves.GRAB || move == Moves.HARVEST) && t <= Moves.REACH) || move == Moves.DROP || move == Moves.CURTAIN || move == Moves.WRAP || (move == Moves.SLAM && t > 20); }
 
     public boolean caught(@Nullable Entity e) {
         if (e == null) return false;
@@ -431,7 +431,7 @@ public final class BellMoves {
             lift = Mth.clamp((t - Moves.REACH) / (float) Moves.LIFT, 0f, 1f);
             h.setLift(lift);
             // everything is carried after the pose (afterPose); here only the sting of being held
-            if (grabbed != null && !gentle && t % 30 == 0 && !(grabbed instanceof Player p && p.isCreative())) {
+            if (grabbed != null && !gentle && move == Moves.GRAB && t % 30 == 0 && !(grabbed instanceof Player p && p.isCreative())) {
                 grabbed.hurt(h.damageSources().mobAttack(h), h.dmg(2f, grabbed));
                 sting(grabbed);
             }
@@ -644,8 +644,9 @@ public final class BellMoves {
                     continue;
                 }
                 // it hurts in here
-                if (in.age % 40 == 0 && !(in.e instanceof Player p && p.isCreative())) {
-                    in.e.hurt(h.damageSources().mobAttack(h), in.e instanceof Player ? h.dmg(2f, in.e) : 2f);
+                boolean player = in.e instanceof Player;
+                if (in.age % (player ? 40 : 100) == 0 && !(in.e instanceof Player p && p.isCreative())) {
+                    in.e.hurt(h.damageSources().mobAttack(h), player ? h.dmg(2f, in.e) : 1f);
                     if (in.e instanceof Player) in.e.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0));
                 }
             } else if (in.tree != null && in.age > 20 * 60 * 3) {

@@ -538,4 +538,29 @@ public class HollowbellGameTests implements FabricGameTest {
             h.succeed();
         });
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "sizes")
+    public void theSmallestAndTheBiggestWork(GameTestHelper h) {
+        HollowbellEntity tiny = spawnAway(h, HollowbellEntity.MIN_SCALE, HollowbellEntity.HUNTER, 70);
+        HollowbellEntity big = spawnAway(h, HollowbellEntity.MAX_SCALE, HollowbellEntity.HUNTER, 72);
+        Pig[] p = new Pig[1];
+        h.runAfterDelay(20, () -> {
+            tiny.setStay(true);
+            p[0] = pig(h, under(tiny));
+            p[0].setInvulnerable(true);
+            h.assertTrue(tiny.forceMove(Moves.GRAB, p[0]), "the tiny one can't grab");
+            h.assertTrue(big.forceMove(Moves.PULSE, null), "the big one can't pulse");
+        });
+        h.runAfterDelay(20 + Moves.length(Moves.GRAB) + 10, () -> {
+            h.assertTrue(tiny.isAlive() && big.isAlive(), "one of them died");
+            // too small to have room inside: the pig is squeezed and let go
+            h.assertTrue(!tiny.moves().isInside(p[0]) && !p[0].isPassenger(), "the tiny one took a pig inside");
+            h.assertTrue(tiny.healthMax() >= 40f, "the tiny one has almost no health: " + tiny.healthMax());
+            h.assertTrue(Math.abs(big.healthMax() - HollowbellConfig.V.health * 2f) < 1f, "the big one's health: " + big.healthMax());
+            p[0].discard();
+            release(h, tiny);
+            release(h, big);
+            h.succeed();
+        });
+    }
 }

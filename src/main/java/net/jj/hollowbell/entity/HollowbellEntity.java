@@ -899,6 +899,8 @@ public class HollowbellEntity extends Monster {
 
     @Override
     public void remove(RemovalReason why) {
+        if (!level().isClientSide && why != RemovalReason.UNLOADED_TO_CHUNK && why != RemovalReason.UNLOADED_WITH_PLAYER)
+            HollowbellMod.LOG.info("Hollowbell removed at {} ({})", position(), why);
         clearBars();
         if (!level().isClientSide) { dropRider(); moves.letGoOfEverything(why == RemovalReason.KILLED || why == RemovalReason.DISCARDED); }
         super.remove(why);
@@ -1002,6 +1004,7 @@ public class HollowbellEntity extends Monster {
     @Override
     public void die(DamageSource src) {
         if (!level().isClientSide) {
+            HollowbellMod.LOG.info("Hollowbell died at {} ({})", position(), src.getMsgId());
             dropRider();
             stopFetch();
             moves.letGoOfEverything(true);
@@ -1065,6 +1068,7 @@ public class HollowbellEntity extends Monster {
     @Override public boolean isInWater() { return false; }
     @Override public void travel(Vec3 v) {}
     @Override public boolean removeWhenFarAway(double d) { return false; }
+    @Override protected boolean shouldDespawnInPeaceful() { return false; }
     @Override public boolean fireImmune() { return true; }
     @Override public boolean canBeAffected(net.minecraft.world.effect.MobEffectInstance e) { return false; }
     @Override public boolean isAttackable() { return true; }

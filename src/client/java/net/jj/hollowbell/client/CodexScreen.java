@@ -27,6 +27,7 @@ import org.jetbrains.annotations.Nullable;
 public class CodexScreen extends Screen {
     private static final int W = 164, H = 20, GAP = 4;
     private static int page;
+    public static void showPage(int p) { page = Math.max(0, Math.min(3, p)); }
 
     private static java.util.List<String> safeNames = java.util.List.of(), safeIds = java.util.List.of();
     private static boolean safeInForce, safeHasBook;

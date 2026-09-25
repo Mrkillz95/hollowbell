@@ -1,0 +1,24 @@
+world flat
+gui off
+render 12
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 1
+waitmodel
+wait 20
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon cow ~ ~ ~ {NoAI:1b}
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon villager ~2 ~ ~ {NoAI:1b}
+wait 5
+cmd hollowbell do harvest
+wait 260
+cmd hollowbell do harvest
+wait 260
+status
+view 110 180 34 55 142 17
+wait 30
+shot cow_glass
+view 0 250 -100 0 150 0
+wait 30
+shot dome_down
+quit

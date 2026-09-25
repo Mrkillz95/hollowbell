@@ -215,3 +215,28 @@ Things the design didn't say, and what was picked. Change any of them if they're
   (a plus shape) at the bottom, then 2 by 2, then 1 wide. Bone and calcite, an oxidized copper band every 13
   to 16 blocks, a few verdant froglight bits. Full strength up to 45 blocks above the crown, then fading out
   to nothing at 100 above the crown.
+- **Hitting him** works on the real blocks: a swing or an arrow lands on the exact block you aimed at, and
+  that block's part decides the damage: crown x3 (x4 from inside), spots x2.5 (x3.5 from inside), pods x1,
+  egg clumps x0.3, threads x0.2, all the copper and bone x0.1. On the ground (dropped or sunk) everything
+  counts 1.3 times.
+- **Pods** each take a share of his health when they pop (1.5% of his max) and drop a pod item.
+- **Threads** take about 3 good hits to cut. They start growing back after 45 seconds and take 20 more to
+  grow. Cut 6 in 10 and he sinks; he rises again once half of them hold.
+- **Grabs** let go after 4 hits on the strand (or arm, for the wrap). A pull up takes about 10 seconds.
+- **Inside the dome** you hang in one of 14 places: the first four are right under the glowing balls, so
+  a spot is in reach over your head. Damage over time is 2 every 2 seconds plus poison. Hurting him by 4% of
+  his health from inside makes him let every player go. Too small (under 0.07 size) and there's no inside.
+- **Trees** he harvests hang in the dome as block displays for 3 minutes, then drop as logs.
+- **The crown when he's down.** Even flat on the ground the crown is still high up (about 80 blocks at full
+  size), so the dome and rim are what's in reach; the crown and spots can be shot with arrows. There's no
+  walking on the dome.
+- **Riding:** "Sit on his crown" in the book makes him come over; a strand lifts you onto the crown and you
+  drive him, like the Mountain's "being him" (keys 1-9 for his 9 moves, G to get off).
+- **The book:** the nearest Hollowbell within 600 blocks listens to whoever carries it (anywhere in the
+  pack). There's no "only one book" rule like Pitchgut's; it works like Furrowmaw's.
+- **Drops:** the Stinger (netherite-strength sword that poisons and slows), 8-16 bell glass, 3-6 pods, the
+  crown block, plus copper, bone and froglight. Bell glass armor is like diamond with more toughness. A pod
+  in a glass bottle makes a long poison potion.
+- **Bellings** live 3 minutes, have 8 health and sting for 2 plus poison. Shed egg clumps grow back after
+  5 minutes.
+- **Advancements:** "Rung Out" for killing one, "Under Glass" for being pulled into the dome.

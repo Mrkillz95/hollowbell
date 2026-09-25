@@ -36,6 +36,7 @@ public final class AutoTest {
 
     public static void init() {
         String f = System.getProperty("hollowbell.autotest");
+        if (f != null && System.getenv("HB_SCRIPT") != null && !System.getenv("HB_SCRIPT").isEmpty()) f = System.getenv("HB_SCRIPT");
         if (f == null) return;
         try { script = new ArrayList<>(Files.readAllLines(Path.of(f))); }
         catch (Exception e) { HollowbellMod.LOG.error("autotest: cannot read {}", f, e); return; }
@@ -77,6 +78,40 @@ public final class AutoTest {
             }
             if (s.startsWith("gui ")) { mc.options.hideGui = !s.endsWith("on"); continue; }
             if (s.startsWith("render ")) { mc.options.renderDistance().set(Integer.parseInt(s.substring(7).trim())); continue; }
+            if (s.startsWith("page ")) {
+                if (mc.screen != null) mc.screen.onClose();
+                net.jj.hollowbell.client.CodexScreen.showPage(Integer.parseInt(s.substring(5).trim()));
+                mc.setScreen(new net.jj.hollowbell.client.CodexScreen());
+                continue;
+            }
+            if (s.equals("pick")) {
+                net.jj.hollowbell.client.BellPick.afterPick(1f);
+                for (var en : mc.level.entitiesForRendering()) if (en instanceof HollowbellEntity hh) {
+                    var cam = mc.getCameraEntity();
+                    HollowbellMod.LOG.info("autotest pick: eye {} look {} in box {} ready {} ray {}", cam.getEyePosition(), cam.getViewVector(1f),
+                            hh.bodyBox().contains(cam.getEyePosition()), hh.clientPoseReady(), hh.raycast(cam.getEyePosition(), cam.getViewVector(1f), 100));
+                }
+                var hb = net.jj.hollowbell.client.BellPick.looking();
+                HollowbellMod.LOG.info("autotest pick: {} bone {} {}", hb != null, net.jj.hollowbell.client.BellPick.bone,
+                        hb != null && net.jj.hollowbell.client.BellPick.bone >= 0 ? hb.rig.boneNames[net.jj.hollowbell.client.BellPick.bone] : "-");
+                continue;
+            }
+            if (s.equals("swing")) {
+                if (mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult eh && mc.gameMode != null) {
+                    mc.gameMode.attack(mc.player, eh.getEntity());
+                    HollowbellMod.LOG.info("autotest swing at {}", eh.getEntity());
+                } else HollowbellMod.LOG.info("autotest swing: nothing under the crosshair ({})", mc.hitResult);
+                continue;
+            }
+            if (s.equals("status")) {
+                MinecraftServer sv = mc.getSingleplayerServer();
+                if (sv != null) sv.execute(() -> {
+                    for (var l : sv.getAllLevels()) for (var hb : l.getEntities(net.jj.hollowbell.ModEntities.HOLLOWBELL, x -> true))
+                        HollowbellMod.LOG.info("autotest status: hp {}/{} pods {} threads {} move {} inside {} at {}", hb.healthNow(), hb.healthMax(),
+                                hb.podsLeft(), hb.threadsHolding(), hb.moveNow(), hb.moves().insideCount(), hb.position());
+                });
+                continue;
+            }
             if (s.equals("book")) { mc.setScreen(new net.jj.hollowbell.client.CodexScreen()); continue; }
             if (s.equals("close")) { mc.setScreen(null); continue; }
             if (s.equals("quit")) { HollowbellMod.LOG.info("autotest done"); mc.stop(); return; }
