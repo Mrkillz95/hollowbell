@@ -4,17 +4,33 @@
   "version": "${version}",
   "name": "Hollowbell",
   "description": "A huge green jellyfish boss made from glass, copper and bone. It drifts over the land on its hanging strands and pulls things up into its hollow dome.",
-  "authors": ["JJ"],
+  "authors": [
+    "JJ"
+  ],
   "license": "All rights reserved",
   "environment": "*",
   "entrypoints": {
-    "main": ["net.jj.hollowbell.HollowbellMod"],
-    "client": ["net.jj.hollowbell.client.HollowbellClient"]
+    "main": [
+      "net.jj.hollowbell.HollowbellMod"
+    ],
+    "client": [
+      "net.jj.hollowbell.client.HollowbellClient"
+    ],
+    "fabric-gametest": [
+      "net.jj.hollowbell.test.HollowbellGameTests"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.1",
     "java": ">=21",
     "fabric-api": "*"
-  }
+  },
+  "mixins": [
+    "hollowbell.mixins.json",
+    {
+      "config": "hollowbell.client.mixins.json",
+      "environment": "client"
+    }
+  ]
 }

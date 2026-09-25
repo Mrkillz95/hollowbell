@@ -1,0 +1,236 @@
+{
+ "parent": "minecraft:block/block",
+ "textures": {
+  "particle": "minecraft:block/glowstone",
+  "base": "minecraft:block/ochre_froglight_side",
+  "top": "minecraft:block/ochre_froglight_top",
+  "glow": "minecraft:block/glowstone",
+  "ring": "minecraft:block/oxidized_copper"
+ },
+ "elements": [
+  {
+   "from": [
+    1,
+    0,
+    1
+   ],
+   "to": [
+    15,
+    2,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#ring"
+    },
+    "south": {
+     "texture": "#ring"
+    },
+    "east": {
+     "texture": "#ring"
+    },
+    "west": {
+     "texture": "#ring"
+    },
+    "up": {
+     "texture": "#ring"
+    },
+    "down": {
+     "texture": "#ring"
+    }
+   }
+  },
+  {
+   "from": [
+    2,
+    2,
+    2
+   ],
+   "to": [
+    14,
+    6,
+    14
+   ],
+   "faces": {
+    "north": {
+     "texture": "#base"
+    },
+    "south": {
+     "texture": "#base"
+    },
+    "east": {
+     "texture": "#base"
+    },
+    "west": {
+     "texture": "#base"
+    },
+    "up": {
+     "texture": "#top"
+    },
+    "down": {
+     "texture": "#base"
+    }
+   }
+  },
+  {
+   "from": [
+    4,
+    6,
+    4
+   ],
+   "to": [
+    12,
+    9,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glow"
+    },
+    "south": {
+     "texture": "#glow"
+    },
+    "east": {
+     "texture": "#glow"
+    },
+    "west": {
+     "texture": "#glow"
+    },
+    "up": {
+     "texture": "#glow"
+    },
+    "down": {
+     "texture": "#glow"
+    }
+   }
+  },
+  {
+   "from": [
+    2,
+    6,
+    2
+   ],
+   "to": [
+    4,
+    10,
+    4
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glow"
+    },
+    "south": {
+     "texture": "#glow"
+    },
+    "east": {
+     "texture": "#glow"
+    },
+    "west": {
+     "texture": "#glow"
+    },
+    "up": {
+     "texture": "#glow"
+    },
+    "down": {
+     "texture": "#glow"
+    }
+   }
+  },
+  {
+   "from": [
+    12,
+    6,
+    2
+   ],
+   "to": [
+    14,
+    10,
+    4
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glow"
+    },
+    "south": {
+     "texture": "#glow"
+    },
+    "east": {
+     "texture": "#glow"
+    },
+    "west": {
+     "texture": "#glow"
+    },
+    "up": {
+     "texture": "#glow"
+    },
+    "down": {
+     "texture": "#glow"
+    }
+   }
+  },
+  {
+   "from": [
+    2,
+    6,
+    12
+   ],
+   "to": [
+    4,
+    10,
+    14
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glow"
+    },
+    "south": {
+     "texture": "#glow"
+    },
+    "east": {
+     "texture": "#glow"
+    },
+    "west": {
+     "texture": "#glow"
+    },
+    "up": {
+     "texture": "#glow"
+    },
+    "down": {
+     "texture": "#glow"
+    }
+   }
+  },
+  {
+   "from": [
+    12,
+    6,
+    12
+   ],
+   "to": [
+    14,
+    10,
+    14
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glow"
+    },
+    "south": {
+     "texture": "#glow"
+    },
+    "east": {
+     "texture": "#glow"
+    },
+    "west": {
+     "texture": "#glow"
+    },
+    "up": {
+     "texture": "#glow"
+    },
+    "down": {
+     "texture": "#glow"
+    }
+   }
+  }
+ ]
+}

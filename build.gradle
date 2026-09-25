@@ -24,6 +24,14 @@ loom {
             vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest-report.xml"
             runDir "build/gametest"
         }
+        autotest {
+            client()
+            name "Auto Test"
+            vmArg "-Dhollowbell.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "tools/autotest.txt")
+            vmArg "-Xmx6G"
+            programArgs "--width", "1280", "--height", "720"
+            runDir "build/autotest"
+        }
     }
 }
 dependencies {

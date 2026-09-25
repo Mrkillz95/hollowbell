@@ -1,0 +1,22 @@
+world flat
+gui off
+render 12
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 0.5
+waitmodel
+wait 100
+view 0 110 -330 0 90 0
+wait 60
+shot front
+view 230 260 -230 0 100 0
+wait 40
+shot high
+view 0 60 -60 0 150 0
+wait 40
+shot under
+view 0 150 -40 0 170 30
+wait 40
+shot inside
+quit

@@ -1,0 +1,22 @@
+{
+ "display": {
+  "icon": {
+   "id": "hollowbell:bell_glass"
+  },
+  "title": {
+   "translate": "advancements.hollowbell.inside.title"
+  },
+  "description": {
+   "translate": "advancements.hollowbell.inside.description"
+  },
+  "frame": "goal",
+  "show_toast": true,
+  "announce_to_chat": true
+ },
+ "parent": "minecraft:adventure/kill_a_mob",
+ "criteria": {
+  "inside": {
+   "trigger": "minecraft:impossible"
+  }
+ }
+}

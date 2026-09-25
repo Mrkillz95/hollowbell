@@ -1,0 +1,18 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "misc",
+ "pattern": [
+  "GGG",
+  "G G",
+  "G G"
+ ],
+ "key": {
+  "G": {
+   "item": "hollowbell:bell_glass"
+  }
+ },
+ "result": {
+  "id": "hollowbell:bell_glass_leggings",
+  "count": 1
+ }
+}

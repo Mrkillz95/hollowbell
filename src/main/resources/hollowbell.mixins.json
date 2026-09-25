@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.hollowbell.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ChunkMapAccess",
+    "TrackingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
