@@ -75,6 +75,8 @@ public final class AutoTest {
             // view: the camera at a spot in his own model space, looking at another, and kept there as he moves
             if (s.startsWith("view ")) { follow = s.substring(5).trim(); view(mc, follow); continue; }
             if (s.equals("fixed")) { follow = null; continue; }
+            // cowcam dx dy dz: the camera that far from the cow (in blocks), looking at it, kept there as it moves
+            if (s.startsWith("cowcam ")) { follow = "cow " + s.substring(7).trim(); view(mc, follow); continue; }
             if (s.startsWith("detail ")) { net.jj.hollowbell.Detail.set(s.endsWith("on")); continue; }
             if (s.startsWith("shot ")) {
                 String name = s.substring(5).trim() + ".png";
@@ -118,7 +120,7 @@ public final class AutoTest {
             }
             if (s.equals("status")) {
                 for (var en : mc.level.entitiesForRendering()) if (en instanceof HollowbellEntity hh)
-                    HollowbellMod.LOG.info("autotest client sees him at {} (camera {}) fps {}", hh.position(), mc.gameRenderer.getMainCamera().getPosition(), mc.getFps());
+                    HollowbellMod.LOG.info("autotest client sees him at {} (camera {}) fps {} hurtTime {} hp {}", hh.position(), mc.gameRenderer.getMainCamera().getPosition(), mc.getFps(), hh.hurtTime, hh.getHealth());
                 MinecraftServer sv = mc.getSingleplayerServer();
                 if (sv != null) sv.execute(() -> {
                     for (var l : sv.getAllLevels()) for (var hb : l.getEntities(net.jj.hollowbell.ModEntities.HOLLOWBELL, x -> true))
@@ -136,6 +138,7 @@ public final class AutoTest {
     private static void view(Minecraft mc, String args) {
         MinecraftServer srv = mc.getSingleplayerServer();
         if (srv == null) return;
+        if (args.startsWith("cow ")) { cowView(srv, args.substring(4).trim().split("\\s+")); return; }
         String[] a = args.split("\\s+");
         float[] v = new float[6];
         for (int i = 0; i < 6; i++) v[i] = Float.parseFloat(a[i]);
@@ -151,6 +154,23 @@ public final class AutoTest {
             float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
             player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);
             // the camera hangs where it's put, even when it stops following him
+            player.setNoGravity(true);
+            player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        });
+    }
+
+    private static void cowView(MinecraftServer srv, String[] a) {
+        double dx = Double.parseDouble(a[0]), dy = Double.parseDouble(a[1]), dz = Double.parseDouble(a[2]);
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var player = srv.getPlayerList().getPlayers().get(0);
+            var l = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.animal.Cow.class, player.getBoundingBox().inflate(500));
+            if (l.isEmpty()) return;
+            var c = l.get(0).position().add(0, 0.7, 0);
+            var cam = c.add(dx, dy, dz);
+            var d = c.subtract(cam).normalize();
+            float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
+            player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);
             player.setNoGravity(true);
             player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         });

@@ -322,3 +322,12 @@ JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the
 - **Lighter to draw:** each part of him is checked against the view on its own, so the parts behind you aren't
   drawn.
 - **Drops stay the same** as 1.0.
+- **Check pass fixes.** A creature he grabs is squeezed down to its last bit of health on the way up but lives
+  until it's in the dome (so you see it taken in), then dies there; players still get the full squeeze. His
+  strands now sink into the ground with him at the very end of dying instead of sticking up out of it. Turned
+  over in the sky dive, the point he's measured from goes deep under the ground, so the void under the world no
+  longer hurts him unless he's truly lost down there.
+- **In-game pictures** of the check are in `reference/converted/ingame_v11/`: textures up close, the dome from
+  above and inside, climbing and sinking, moving side on (leaning in, strands trailing, swinging back and
+  settling), a cow held on a strand tip and taken up, night glow, every heavy move, detail on and off far away,
+  and dying.

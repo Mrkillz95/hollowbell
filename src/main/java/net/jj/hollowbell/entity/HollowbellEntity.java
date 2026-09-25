@@ -864,6 +864,8 @@ public class HollowbellEntity extends Monster {
         return false;
     }
 
+    private static final boolean DEBUG = Boolean.getBoolean("hollowbell.debug") || System.getProperty("hollowbell.autotest") != null;
+
     public boolean fairGame(@Nullable LivingEntity e) {
         return e != null && e.isAlive() && !e.isRemoved() && e.level() == level() && !spares(e)
                 && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand) && e != rider && !moves.caught(e);
@@ -1018,6 +1020,7 @@ public class HollowbellEntity extends Monster {
     private boolean takeDamage(DamageSource src, float dealt) {
         Entity att = src.getEntity();
         lastHitBig = dealt > healthMax() * 0.02f;
+        if (DEBUG) HollowbellMod.LOG.info("Hollowbell hurt {} by {} ({})", dealt, src.getMsgId(), att);
         hp = Math.max(0f, healthNow() - dealt);
         entityData.set(DATA_HP, hp);
         level().broadcastDamageEvent(this, src);
@@ -1342,6 +1345,16 @@ public class HollowbellEntity extends Monster {
     @Override public boolean removeWhenFarAway(double d) { return false; }
     @Override protected boolean shouldDespawnInPeaceful() { return false; }
     @Override public boolean fireImmune() { return true; }
+
+    /**
+     * He's so big that turned over in the dive (or folded right down in a deep valley) the point he's measured from
+     * can dip well under the ground, even under the bottom of the world. Only if he's really lost down there does
+     * the void hurt him.
+     */
+    @Override
+    protected void onBelowWorld() {
+        if (getY() < level().getMinBuildHeight() - 64 - 420 * bellScale()) super.onBelowWorld();
+    }
     @Override public boolean canBeAffected(net.minecraft.world.effect.MobEffectInstance e) { return false; }
     @Override public boolean isAttackable() { return true; }
     @Override public boolean skipAttackInteraction(Entity e) { return false; }
