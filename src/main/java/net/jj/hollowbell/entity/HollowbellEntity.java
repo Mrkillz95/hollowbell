@@ -4,6 +4,7 @@ import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
+import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
@@ -245,6 +246,8 @@ public class HollowbellEntity extends Monster {
         entityData.set(DATA_LIFT, -1f);
     }
     void setAim(Vector3f aim) { entityData.set(DATA_AIM, new Vector3f(aim)); }
+    /** jumps the move of the moment to t ticks in (the dive, once he's landed) */
+    void rewindMove(int t) { entityData.set(DATA_MOVE_START, level().getGameTime() - t); }
     void setLift(float l) { entityData.set(DATA_LIFT, l); }
     Vector3f aim() { return entityData.get(DATA_AIM); }
 
@@ -718,7 +721,8 @@ public class HollowbellEntity extends Monster {
             vy *= 0.97;
         }
         // never into the ground: pushed up out of it, firmly but without a jump
-        if (getY() + vy < hardMin) vy = Math.max(vy, (hardMin - getY()) * 0.2);
+        Vec3 steer = moves.steer();
+        if (steer == null && getY() + vy < hardMin) vy = Math.max(vy, Math.min((hardMin - getY()) * 0.2, 0.4 + 0.9 * s));
 
         // ---- across: steered smoothly toward where he's going, heavy to turn
         double max = maxSpeed();
@@ -741,6 +745,8 @@ public class HollowbellEntity extends Monster {
         hv = hv.add(dv).scale(0.995);
         if (still && want == null) hv = hv.scale(0.97);
         vel = new Vec3(hv.x, vy, hv.z);
+        // the dive: driven down hard, bell first (it eases into the speed)
+        if (steer != null) vel = vel.add(steer.subtract(vel).scale(0.12));
 
         // level pulses, to carry him along (none while he climbs: those come above; none sinking)
         if (!down && Math.abs(e) <= climbAt && now >= nextPulse) {
@@ -778,7 +784,9 @@ public class HollowbellEntity extends Monster {
     public void pulse(float power) {
         entityData.set(DATA_PULSE_START, level().getGameTime());
         entityData.set(DATA_PULSE_POWER, power);
-        sound(toWorld(new Vector3f(0, rig.rimY + 20, 0)), net.minecraft.sounds.SoundEvents.CONDUIT_AMBIENT_SHORT, 1.4f + power, 0.5f);
+        Vec3 at = toWorld(new Vector3f(0, rig.rimY + 20, 0));
+        sound(at, ModSounds.PULSE, 1.2f + power, 1.05f - 0.1f * power);
+        if (power >= 1f) sound(at, ModSounds.PULSE_WATER, 0.8f + 0.6f * power, 1f);
     }
 
     // ------------------------------------------------------------------ who he goes after
@@ -838,7 +846,18 @@ public class HollowbellEntity extends Monster {
             if (isGuardian() && home != null && p.position().distanceTo(home) > guardRange()) continue;
             if (d < bd) { bd = d; best = p; }
         }
-        if (best != null) setTarget(best);
+        if (best != null) { setTarget(best); return; }
+        // no player: hostile creatures (a guardian clears them off his ground; a hunter goes for them too)
+        if (tickCount % 40 != 0) return;
+        double mr = isGuardian() ? guardRange() : r * 0.8;
+        Vec3 c = isGuardian() && home != null ? home : position();
+        LivingEntity mob = null; double md = Double.MAX_VALUE;
+        for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(mr, 60 * bellScale() + 30, mr),
+                e -> e instanceof net.minecraft.world.entity.monster.Enemy && !(e instanceof Player) && fairGame(e))) {
+            double d = horiz(e.position());
+            if (d < md) { md = d; mob = e; }
+        }
+        if (mob != null) setTarget(mob);
     }
 
     /** the book: go and get these */
@@ -955,6 +974,7 @@ public class HollowbellEntity extends Monster {
 
     private boolean takeDamage(DamageSource src, float dealt) {
         Entity att = src.getEntity();
+        lastHitBig = dealt > healthMax() * 0.02f;
         hp = Math.max(0f, healthNow() - dealt);
         entityData.set(DATA_HP, hp);
         level().broadcastDamageEvent(this, src);
@@ -988,8 +1008,8 @@ public class HollowbellEntity extends Monster {
         podRegrowAt[i] = level().getGameTime() + Math.max(1, HollowbellConfig.V.podRegrowSeconds) * 20L;
         partsDirty = true;
         Vec3 c = podWorld(i);
-        sound(c, net.minecraft.sounds.SoundEvents.GLASS_BREAK, 3f, 0.5f);
-        sound(c, net.minecraft.sounds.SoundEvents.SLIME_DEATH, 2f, 0.4f);
+        sound(c, ModSounds.POD_POP, 3f, 1f);
+        sound(c, net.minecraft.sounds.SoundEvents.GLASS_BREAK, 2f, 0.5f);
         particles(net.minecraft.core.particles.ParticleTypes.SQUID_INK, c, 40, rig.pods[i].radius() * bellScale() * 0.6, 0.2);
         // a pod out of his twenty-three is worth a good piece of him
         float worth = healthMax() * 0.015f;
@@ -1218,7 +1238,7 @@ public class HollowbellEntity extends Monster {
             stopFetch();
             moves.letGoOfEverything(true);
             setMove(Moves.NONE, -1, new Vector3f());
-            sound(position().add(0, rig.rimY * bellScale(), 0), net.minecraft.sounds.SoundEvents.WARDEN_DEATH, 4f, 0.5f);
+            sound(position().add(0, rig.rimY * bellScale(), 0), ModSounds.DEATH, 4f, 1f);
         }
         super.die(src);
     }
@@ -1285,18 +1305,24 @@ public class HollowbellEntity extends Monster {
     @Override protected void registerGoals() {}
     @Override public boolean displayFireAnimation() { return false; }
     @Override public void knockback(double d, double x, double z) {}
-    @Override protected net.minecraft.sounds.SoundEvent getHurtSound(DamageSource s) { return net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_HIT; }
-    @Override protected net.minecraft.sounds.SoundEvent getDeathSound() { return net.minecraft.sounds.SoundEvents.WARDEN_DEATH; }
-    @Override protected float getSoundVolume() { return 2.5f * HollowbellConfig.V.soundVolume; }
-    @Override public float getVoicePitch() { return 0.5f; }
+    @Override protected net.minecraft.sounds.SoundEvent getHurtSound(DamageSource s) { return lastHitBig ? ModSounds.HURT_HEAVY : ModSounds.HURT; }
+    @Override protected net.minecraft.sounds.SoundEvent getDeathSound() { return ModSounds.DEATH; }
+    @Override protected float getSoundVolume() { return 2.5f * HollowbellConfig.V.soundVolume * Mth.clamp((float) Math.sqrt(bellScale()), 0.3f, 1.5f); }
+    @Override public float getVoicePitch() { return Mth.clamp(1.1f - 0.3f * (float) Math.sqrt(bellScale()), 0.5f, 1.4f); }
+    /** the last hit took a big piece of him: he cries out rather than rings */
+    private boolean lastHitBig;
     @Override public ItemStack getPickResult() { return new ItemStack(isHunter() ? ModItems.HUNTING_EGG : isGuardian() ? ModItems.GUARDIAN_EGG : ModItems.CALM_EGG); }
 
     // ------------------------------------------------------------------ little helpers
 
+    /** a sound of his: a big one is louder (heard further off) and deeper, a small one quieter and higher */
     public void sound(Vec3 at, SoundEvent ev, float vol, float pitch) {
         float v = vol * HollowbellConfig.V.soundVolume;
         if (v <= 0f) return;
-        level().playSound(null, at.x, at.y, at.z, ev, SoundSource.HOSTILE, v * (0.6f + 0.4f * Math.min(1f, bellScale() * 2f)), pitch);
+        float s = bellScale();
+        float size = Mth.clamp((float) Math.sqrt(s), 0.25f, 1.6f);
+        float p = Mth.clamp(pitch * Mth.clamp(1.15f - 0.35f * (float) Math.log(Math.max(0.03f, s) * 2.2f) / 1.6f, 0.75f, 1.9f), 0.5f, 2f);
+        level().playSound(null, at.x, at.y, at.z, ev, SoundSource.HOSTILE, v * (0.45f + 0.55f * size), p);
     }
 
     public void particles(ParticleOptions p, Vec3 at, int n, double spread, double speed) {
@@ -1305,7 +1331,9 @@ public class HollowbellEntity extends Monster {
 
     /** how hard he hits: small ones hit less */
     public float dmg(float base, Entity to) {
-        float f = base * HollowbellConfig.V.damageMultiplier * Mth.clamp(0.25f + 0.75f * (float) Math.sqrt(bellScale()), 0.3f, 1.4f);
+        // the numbers in the moves are for full size; a small one hits a good deal less, a huge one more
+        float size = Mth.clamp(0.2f + 0.8f * (float) Math.pow(bellScale(), 0.6), 0.25f, 1.5f);
+        float f = base * HollowbellConfig.V.damageMultiplier * size;
         if (!(to instanceof Player)) f *= HollowbellConfig.V.mobDamage;
         return f;
     }

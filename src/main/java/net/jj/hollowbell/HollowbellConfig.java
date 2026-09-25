@@ -10,6 +10,8 @@ import java.nio.file.Path;
 /** config/hollowbell.json - written with defaults the first time the game starts. */
 public final class HollowbellConfig {
     public static final class Values {
+        /** Which version of these settings this file was written by (older files are brought up to date). */
+        public int configVersion = 0;
         /** How big the spawn eggs make him. 1.0 = full size, the same as the KillzAI build (about 200 wide and 200 tall). */
         public float spawnEggScale = 1.0f;
         /** How big the small spawn egg makes him. */
@@ -19,7 +21,7 @@ public final class HollowbellConfig {
         /** Multiplies every hit he lands. */
         public float damageMultiplier = 1.0f;
         /** His hits on anything that isn't a player are multiplied by this. */
-        public float mobDamage = 2.0f;
+        public float mobDamage = 2.5f;
         /** Lets him pull trees up, flatten plants with his strands and crack the ground with his arm (also needs the mobGriefing gamerule). */
         public boolean griefing = true;
         /** He pulls cows, villagers and trees up into his dome. */
@@ -42,6 +44,8 @@ public final class HollowbellConfig {
         public boolean scaleToPlayers = true;
         /** How loud he is, 0 = silent, 1 = normal. */
         public float soundVolume = 1.0f;
+        /** His low hum and the wet sound of him drifting, going on all the time near him. */
+        public boolean ambientSounds = true;
         /** The screen shakes when his bell or arm slams down. */
         public boolean screenShake = true;
         /** Shows his health and pods bars. */
@@ -69,6 +73,7 @@ public final class HollowbellConfig {
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json"); }
 
     public static void save() {
+        V.configVersion = 2;
         try { Files.writeString(file(), new GsonBuilder().setPrettyPrinting().create().toJson(V)); }
         catch (Exception e) { HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString()); }
     }
@@ -78,8 +83,13 @@ public final class HollowbellConfig {
         try {
             if (Files.exists(file())) {
                 Values v = gson.fromJson(Files.readString(file()), Values.class);
-                if (v != null) V = v;
+                if (v != null) {
+                    // 1.1: he hits creatures much harder (1.0 barely killed them)
+                    if (v.configVersion < 2) v.mobDamage = Math.max(v.mobDamage, 2.5f);
+                    V = v;
+                }
             }
+            V.configVersion = 2;
             Files.writeString(file(), gson.toJson(V));
         } catch (Exception e) {
             HollowbellMod.LOG.warn("Could not read {}, using defaults: {}", file(), e.toString());

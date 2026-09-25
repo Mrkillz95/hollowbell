@@ -3,6 +3,7 @@ package net.jj.hollowbell;
 import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Seat;
+import net.jj.hollowbell.entity.Shot;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -16,6 +17,8 @@ public final class ModEntities {
     public static final EntityType<Seat> SEAT = register("seat",
             EntityType.Builder.<Seat>of(Seat::new, MobCategory.MISC).sized(0.5f, 0.5f).fireImmune().noSave().noSummon()
                     .clientTrackingRange(24).updateInterval(1));
+    public static final EntityType<Shot> SHOT = register("shot",
+            EntityType.Builder.<Shot>of(Shot::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(8).updateInterval(1));
     public static final EntityType<Belling> BELLING = register("belling",
             EntityType.Builder.of(Belling::new, MobCategory.MONSTER).sized(1.2f, 1.6f).fireImmune()
                     .clientTrackingRange(10).updateInterval(2));

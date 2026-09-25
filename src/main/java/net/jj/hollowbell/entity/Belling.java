@@ -59,6 +59,8 @@ public class Belling extends Monster {
         if (t != null && (!t.isAlive() || t.distanceToSqr(this) > 48 * 48 || (h != null && h.spares(t)) || (t instanceof Player p && (p.isCreative() || p.isSpectator())))) {
             setTarget(null); t = null;
         }
+        // they help him with whatever he's fighting
+        if (t == null && h != null && h.getTarget() != null && h.getTarget().isAlive() && h.getTarget().distanceToSqr(this) < 48 * 48) { setTarget(h.getTarget()); t = h.getTarget(); }
         if (t == null && tickCount % 20 == 0) {
             Player best = null; double bd = 24 * 24;
             for (Player p : level().players()) {
@@ -79,19 +81,20 @@ public class Belling extends Monster {
         setDeltaMovement(v);
         if (t != null && --stingIn <= 0 && getBoundingBox().inflate(0.4).intersects(t.getBoundingBox())) {
             stingIn = 20;
-            t.hurt(damageSources().mobAttack(this), 2f);
+            t.hurt(damageSources().mobAttack(this), t instanceof Player ? 3f : 5f);
             t.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0));
             t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0));
-            playSound(SoundEvents.BEE_STING, 0.8f, 1.2f);
+            playSound(net.jj.hollowbell.ModSounds.STING, 0.8f, 1.4f);
         }
     }
 
     @Override public void travel(Vec3 in) { move(net.minecraft.world.entity.MoverType.SELF, getDeltaMovement()); }
     @Override protected void checkFallDamage(double y, boolean onGround, net.minecraft.world.level.block.state.BlockState st, net.minecraft.core.BlockPos pos) {}
     @Override public boolean causeFallDamage(float d, float m, DamageSource s) { return false; }
-    @Override protected SoundEvent getAmbientSound() { return SoundEvents.AMETHYST_BLOCK_CHIME; }
-    @Override protected SoundEvent getHurtSound(DamageSource s) { return SoundEvents.SLIME_HURT_SMALL; }
-    @Override protected SoundEvent getDeathSound() { return SoundEvents.SLIME_DEATH_SMALL; }
+    @Override protected SoundEvent getAmbientSound() { return net.jj.hollowbell.ModSounds.BELLING; }
+    @Override protected SoundEvent getHurtSound(DamageSource s) { return net.jj.hollowbell.ModSounds.BELLING_HURT; }
+    @Override protected SoundEvent getDeathSound() { return net.jj.hollowbell.ModSounds.BELLING_DEATH; }
+    @Override public int getAmbientSoundInterval() { return 120; }
     @Override public boolean removeWhenFarAway(double d) { return true; }
 
     @Override

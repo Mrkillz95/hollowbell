@@ -196,7 +196,7 @@ public final class BellAnim {
             // toward the same way: so a move started, ended or cut off halfway never yanks an arm or a strand
             boolean scripted = scripted(ch, st);
             held[c] += ((scripted ? 1f : 0f) - held[c]) * (scripted ? 0.3f : 0.06f);
-            float ease = scripted ? 0.35f : 0.07f + 0.05f * (1f - held[c]);
+            float ease = scripted ? (ch.arm ? 0.55f : 0.35f) : 0.07f + 0.05f * (1f - held[c]);
             tg[0] = raw[0]; tg[1] = raw[1]; tg[2] = raw[2];
             for (int i = 3; i < raw.length; i++) {
                 // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs
@@ -209,7 +209,7 @@ public final class BellAnim {
             else groundAt[c] -= in.shiftY;
             float hk = held[c];
             float k0, damp, abs;
-            if (ch.arm) { k0 = Mth.lerp(hk, 0.12f, 0.5f); damp = Mth.lerp(hk, 0.88f, 0.82f); abs = Mth.lerp(hk, 0.3f, 0.85f); }
+            if (ch.arm) { k0 = Mth.lerp(hk, 0.12f, 0.6f); damp = Mth.lerp(hk, 0.88f, 0.8f); abs = Mth.lerp(hk, 0.3f, 0.9f); }
             else { k0 = Mth.lerp(hk, 0.05f, 0.3f); damp = Mth.lerp(hk, 0.93f, 0.82f); abs = Mth.lerp(hk, 0.1f, 0.7f); }
             // the top joint goes where it hangs from
             p[0] = tg[0]; p[1] = tg[1]; p[2] = tg[2];
@@ -233,7 +233,8 @@ public final class BellAnim {
                 q[o] = p[o]; q[o + 1] = p[o + 1]; q[o + 2] = p[o + 2];
                 float mx = vx + k * (wx - p[o]), my = vy + k * (wy - p[o + 1]), mz = vz + k * (wz - p[o + 2]);
                 // however hard it's swung, nothing moves further than this in a tick
-                float ml = mx * mx + my * my + mz * mz, cap = ch.arm ? 14f : 10f;
+                // (an arm swung by a move, a slam, may go much faster than one just swaying)
+                float ml = mx * mx + my * my + mz * mz, cap = ch.arm ? 14f + 26f * hk : 10f;
                 if (ml > cap * cap) { float f = cap / (float) Math.sqrt(ml); mx *= f; my *= f; mz *= f; }
                 p[o] += mx; p[o + 1] += my; p[o + 2] += mz;
             }
@@ -296,7 +297,7 @@ public final class BellAnim {
 
     /** was this chain knocked by the ground or his bell in the last few ticks (for the tests) */
     public boolean knocked(int c) {
-        for (int k = c; k >= 0; k = rig.chains[k].parentChain) if (steps - 1 - knockedAt[k] <= 3) return true;
+        for (int k = c; k >= 0; k = rig.chains[k].parentChain) if (steps - 1 - knockedAt[k] <= 8) return true;
         return false;
     }
 
@@ -343,14 +344,16 @@ public final class BellAnim {
         BellRig.ArmDef A = rig.arms[ch.index];
         float dx = (float) Math.cos(A.angle()), dz = (float) Math.sin(A.angle());
         float t = st.time, ph = ch.index * 1.3f;
+        // an arm a move has hold of does only what the move asks (his swimming doesn't pull it about)
+        float free = scripted(ch, st) ? 0f : 1f;
         // swimming: each pulse swings them out a little, the lower segments later and more
-        float out = st.armSwing * (0.05f + 0.03f * sg) * (st.pulse - 0.35f);
+        float out = free * st.armSwing * (0.05f + 0.03f * sg) * (st.pulse - 0.35f);
         // a slow curl in and out while he idles
-        if (sg > 0) out -= 0.05f * (1f + (float) Math.sin(t * 0.03f + ph)) * (0.6f + 0.4f * sg / (float) m);
+        if (sg > 0) out -= free * 0.05f * (1f + (float) Math.sin(t * 0.03f + ph)) * (0.6f + 0.4f * sg / (float) m);
         // climbing: folded in under him; sinking: spread out and up
-        float open = Math.max(st.sink, st.spread);
-        if (sg == 0) out += -0.28f * st.climb + 0.45f * open;
-        else out += 0.06f * st.climb + 0.14f * open;
+        float open = free * Math.max(st.sink, st.spread);
+        if (sg == 0) out += -0.28f * st.climb * free + 0.45f * open;
+        else out += 0.06f * st.climb * free + 0.14f * open;
         // folded out when the bell comes down
         if (sg == 0) out += st.fold * 0.85f; else out -= st.fold * 0.2f;
         int segK = Math.min(sg, 2);
@@ -358,13 +361,14 @@ public final class BellAnim {
             out += BellRig.slam(st.slamT, segK);
             // coming down, the arm reaches for what it's slamming
             if (sg == 0 && st.slamT > 0.45f) {
+                // turned so the line from its root to its tip lies on the line from its root to the spot
                 Vector3f j0 = A.joints()[0];
-                float wx = st.slamX - j0.x, wz = st.slamZ - j0.z;
-                float d = (float) Math.sqrt(wx * wx + wz * wz), hgt = Math.max(20f, j0.y - st.slamY);
-                float reach = BellRig.smooth((st.slamT - 0.45f) / 0.15f) * (1f - BellRig.smooth((st.slamT - 0.8f) / 0.2f));
-                // take off the arm's own lean inward, so it points at the spot
-                float built = (float) Math.atan2(Math.hypot(A.tip().x - j0.x, A.tip().z - j0.z), j0.y - A.tip().y);
-                local.mul(swing(qTmp, wx, wz, reach * Math.max(0f, (float) Math.atan2(d, hgt) - 0.3f * built)));
+                float reach = BellRig.smooth((st.slamT - 0.4f) / 0.15f);
+                Vector3f built = new Vector3f(A.tip()).sub(j0), want = new Vector3f(st.slamX, st.slamY, st.slamZ).sub(j0);
+                if (built.lengthSquared() > 1 && want.lengthSquared() > 1) {
+                    Quaternionf aimQ = new Quaternionf().rotationTo(built.normalize(), want.normalize());
+                    local.mul(new Quaternionf().slerp(aimQ, reach));
+                }
             }
         }
         // the arm storm: every arm up, then down one after another
@@ -383,7 +387,7 @@ public final class BellAnim {
         local.mul(swing(qTmp, dx, dz, out));
         // trailing behind as he goes (the water does the rest)
         float sp = (float) Math.sqrt(st.driftX * st.driftX + st.driftZ * st.driftZ);
-        if (sp > 1e-4f) local.premul(swing(qTmp, -st.driftX, -st.driftZ, Math.min(0.3f, sp * 0.8f) / (m + 1) * (sg == 0 ? 0.5f : 1f)));
+        if (sp > 1e-4f && free > 0f) local.premul(swing(qTmp, -st.driftX, -st.driftZ, Math.min(0.3f, sp * 0.8f) / (m + 1) * (sg == 0 ? 0.5f : 1f)));
     }
 
     private void strandLocal(BellRig.Chain ch, int sg, int m, BellState st, Quaternionf local) {
@@ -400,9 +404,10 @@ public final class BellAnim {
         // trailing behind as he drifts
         float sp = (float) Math.sqrt(st.driftX * st.driftX + st.driftZ * st.driftZ);
         if (sp > 1e-4f) local.premul(swing(qTmp, -st.driftX, -st.driftZ, Math.min(0.5f, sp * 1.2f) / (m + 1) * (sg == 0 ? 0.6f : 1f)));
-        // climbing: drawn in to a bundle under him. Sinking: floating up and out
-        if (sg == 0 && st.climb > 0f) local.premul(swing(qTmp, -ox, -oz, 0.1f * st.climb * Math.min(1f, r / 50f)));
-        float open = Math.max(st.sink, st.spread);
+        // climbing: drawn in to a bundle under him. Sinking: floating up and out (not a strand a move has hold of)
+        float free = scripted(ch, st) ? 0f : 1f;
+        if (sg == 0 && st.climb > 0f) local.premul(swing(qTmp, -ox, -oz, free * 0.1f * st.climb * Math.min(1f, r / 50f)));
+        float open = free * Math.max(st.sink, st.spread);
         if (open > 0f) local.premul(swing(qTmp, ox, oz, open * (sg == 0 ? 0.3f : 0.12f)));
         // buckling under him when the bell comes down: zig zag, out
         if (st.fold > 0f) {

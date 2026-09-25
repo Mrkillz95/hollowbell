@@ -38,6 +38,7 @@ public class HollowbellMod implements ModInitializer {
     public void onInitialize() {
         HollowbellConfig.load();
         ModBlocks.init();
+        ModSounds.init();
         ModEntities.init();
         ModItems.init();
         FabricDefaultAttributeRegistry.register(ModEntities.HOLLOWBELL, HollowbellEntity.createAttributes());

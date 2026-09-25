@@ -275,3 +275,27 @@ JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the
 - **On the client** he's carried on at the speed the server sends and eased toward where it says he is, so he
   glides between updates instead of stepping. Seats (what he's holding) are placed by the client from its own
   view of him, so a grabbed mob stays on the strand tip.
+- **22 moves** (the 9 old ones and 13 new), in three strengths:
+  - Light: grab, harvest, sting volley, strand lash, glow flash.
+  - Medium: curtain, sweep, arm slam, arm wrap, pulse wave, shed, spore cloud, pod burst, egg rain.
+  - Heavy: drop, whirlpool, sky dive, deep toll, arm storm, stinger storm, sun lances, undertow. The last two
+    and the arm storm are extra heavy moves added on JJ's later note (more big, dangerous moves).
+- **Heavy moves** each start with a loud warning sound, a red message to everyone near, and his glow flaring;
+  the wind-up lasts 1.5 to 4.5 seconds. Afterwards he's worn out for 5 seconds (slower, drooping, no moves), and
+  he can't do another heavy one for 15 to 40 seconds.
+- **The book's cost for each move** is like the Mountain's: light ones 7 to 10% of his wind, medium 15 to 22%,
+  heavy 42 to 55%. The book can ask for the same move again after 6 s (light), 15 s (medium) or 35 s (heavy).
+  Shed, egg rain, pod burst and every heavy move sour him a little.
+- **How hard he hits** (at full size, before the damage setting): light 5 to 14, medium 18 to 32, heavy 45 to 70,
+  and 2.5 times that on creatures (was 2). Size scales it by 0.2 + 0.8 x size^0.6 (a tenth-size one hits about
+  40% as hard, double size about 1.4 times). Old config files get the new creature multiplier.
+- **Why 1.0 barely killed creatures:** he only ever went for players (a creature was never his target unless it
+  hit him), things inside his dome took 1 damage every 5 seconds, most hits were small, and a creature that had
+  just been stung was still in its moment of safety when the real blow landed, so the blow was lost. Now hunting
+  and guardian ones go after hostile creatures when no player is about (guardians clear their ground), inside
+  the dome a creature takes a big bite every second, and his blows land even straight after another hit.
+- **The arm slam and arm storm** hit everything under the arm where it comes down on the ground, as it slaps
+  down and slides back in, not just one spot at its end.
+- **The sky dive** climbs 70 blocks (at full size) above him or what he's after, turns over, dives bell first and
+  lands crown down. The shock wave reaches about 100 blocks out (at full size).
+- **Being him**: keys 1 to 0, then Z X C V B N M, then R H J K U for the 22 moves, light first.

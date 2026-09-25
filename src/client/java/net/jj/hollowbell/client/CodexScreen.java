@@ -83,7 +83,7 @@ public class CodexScreen extends Screen {
     private long now() { Minecraft mc = Minecraft.getInstance(); return mc.level == null ? 0 : mc.level.getGameTime(); }
 
     private long coolLeft(int move) {
-        return Math.max(0, Math.max(CodexOrders.ATTACK_COOL - (now() - used[move]), CodexOrders.ANY_COOL - (now() - used[0])));
+        return Math.max(0, Math.max(CodexOrders.attackCool(move) - (now() - used[move]), CodexOrders.ANY_COOL - (now() - used[0])));
     }
 
     private void send(CodexPayload p) {
@@ -173,12 +173,29 @@ public class CodexScreen extends Screen {
         } catch (NumberFormatException ignored) {}
     }
 
+    /** which strength of move the page shows: light, medium, heavy */
+    private static int moveTier = Moves.LIGHT;
+
     private void movesPage() {
         moveLines.clear(); moveIds.clear();
-        for (int i = 1; i < Moves.NAMES.length; i++) {
-            final int which = i;
-            int idx = i - 1;
-            Button b = at(idx % 2, idx / 2, Component.empty(), x -> send(new CodexPayload(CodexPayload.ATTACK_MOVE, which)));
+        // light / medium / heavy along the top of the page
+        int tw = (W * 2 + GAP - 2 * 2) / 3;
+        for (int k = 0; k < 3; k++) {
+            final int tier = k;
+            Component name = Component.translatable("codex.hollowbell.tier." + Moves.TIER_NAMES[k]);
+            ChatFormatting col = k == Moves.LIGHT ? ChatFormatting.WHITE : k == Moves.MEDIUM ? ChatFormatting.GOLD : ChatFormatting.RED;
+            Button tb = Button.builder(k == moveTier ? name.copy().withStyle(col, ChatFormatting.UNDERLINE) : name.copy().withStyle(ChatFormatting.GRAY),
+                    x -> { moveTier = tier; rebuild(); }).bounds(left() + k * (tw + 2), top(), tw, H).build();
+            tb.setTooltip(Tooltip.create(Component.translatable("codex.hollowbell.tier_tip." + Moves.TIER_NAMES[k])));
+            addRenderableWidget(tb);
+        }
+        int idx = 0;
+        for (int which0 : Moves.ORDER) {
+            if (Moves.tier(which0) != moveTier) continue;
+            final int which = which0;
+            Button b = at(idx % 2, 1 + idx / 2, Component.empty(), x -> send(new CodexPayload(CodexPayload.ATTACK_MOVE, which)));
+            idx++;
+            int i = which;
             float cost = CodexOrders.windCost(CodexPayload.ATTACK_MOVE, which);
             Component tip = Component.translatable("codex.hollowbell.move_tip." + Moves.NAMES[which]).copy().append(CommonComponents.NEW_LINE)
                     .append(Component.translatable("codex.hollowbell.costs", Math.round(cost * 100f)).withStyle(ChatFormatting.GRAY));

@@ -20,6 +20,7 @@ loom {
             server()
             name "Game Test"
             vmArg "-Dfabric-api.gametest"
+            vmArg "-Dhollowbell.debug=true"
             vmArg "-Xmx3G"
             vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest-report.xml"
             runDir "build/gametest"
