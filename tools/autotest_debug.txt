@@ -1,0 +1,20 @@
+world flat
+gui off
+render 16
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 1
+wait 5
+status
+waitmodel
+status
+wait 20
+status
+wait 20
+status
+wait 40
+status
+wait 60
+status
+quit

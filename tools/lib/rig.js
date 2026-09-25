@@ -2,7 +2,8 @@
 // hangs from, and cuts the arms and strands into segments that can bend.
 const { N26 } = require('./classify');
 
-const STRAND_SEGS = 4;
+const BAND = 6;
+const RIM_SECTORS = 16;
 const EGGS_KEPT = 30;
 
 // Picks the egg clumps to keep: groups of three or four close together, the groups spread out from each other,
@@ -32,7 +33,7 @@ function pickEggGroups(eggs, X, Y, Z, n, want, stuck) {
   }
   return keep;
 }
-const ARM_SEGS = 3;
+const ARM_SEGS = 4;
 
 function hash(x, y, z, s) {
   let h = (x * 374761393 + y * 668265263 + z * 2147483647 + s * 1274126177) | 0;
@@ -225,22 +226,41 @@ function buildRig(M, C) {
   const addBone = (name, parent, pivot, extra = {}) => { boneIndex.set(name, bones.length); bones.push({ name, parent, pivot: pivot.map(v => Math.round(v * 100) / 100), ...extra }); return bones.length - 1; };
   const boneOf = new Int32Array(n).fill(-1);
 
-  // bell group
+  // bell group. 1.1: the dome is cut into bands by height (so it can squeeze in more at the rim than at the top,
+  // like a real jellyfish), and the rim into sectors round the edge (so a ripple can run round it)
   let crownY = 0;
   for (let k = 0; k < n; k++) if (label[k] === 'crown') crownY = Math.max(crownY, Y[k]);
-  const bell = addBone('bell', null, [0, crownY, 0]);
-  addBone('rim', 'bell', [0, 134, 0]);
-  addBone('crown', 'bell', [0, crownY, 0]);
-  for (let i = 0; i < 5; i++) addBone('spot_' + i, 'bell', [0, crownY, 0]);
-  for (let k = 0; k < n; k++) if (label[k] !== null) boneOf[k] = boneIndex.get(label[k]);
+  let bellLow = 1e9;
+  for (let k = 0; k < n; k++) if (label[k] === 'bell') bellLow = Math.min(bellLow, Y[k]);
+  const NBANDS = Math.floor((crownY - bellLow) / BAND) + 1;
+  const bandOf = y => Math.max(0, Math.min(NBANDS - 1, Math.floor((crownY - y) / BAND)));
+  const bandDefs = [];
+  for (let i = 0; i < NBANDS; i++) {
+    const b = addBone('bell_' + i, null, [0, crownY, 0]);
+    bandDefs.push({ bone: b, top: Math.min(crownY, crownY - i * BAND), bottom: i === NBANDS - 1 ? bellLow : crownY - (i + 1) * BAND + 1 });
+  }
+  const sectorOf = (x, z) => ((Math.floor((Math.atan2(z, x) + Math.PI) / (2 * Math.PI) * RIM_SECTORS) % RIM_SECTORS) + RIM_SECTORS) % RIM_SECTORS;
+  const sectorDefs = [];
+  for (let i = 0; i < RIM_SECTORS; i++) {
+    const b = addBone('rim_' + i, null, [0, 134, 0]);
+    sectorDefs.push({ bone: b, angle: Math.round(((i + 0.5) / RIM_SECTORS * 2 * Math.PI - Math.PI) * 1000) / 1000 });
+  }
+  addBone('crown', null, [0, crownY, 0]);
+  for (let i = 0; i < 5; i++) addBone('spot_' + i, null, [0, crownY, 0]);
+  for (let k = 0; k < n; k++) {
+    if (label[k] === null) continue;
+    if (label[k] === 'bell') boneOf[k] = boneIndex.get('bell_' + bandOf(Y[k]));
+    else if (label[k] === 'rim') boneOf[k] = boneIndex.get('rim_' + sectorOf(X[k], Z[k]));
+    else boneOf[k] = boneIndex.get(label[k]);
+  }
 
   // centres of a set of voxels, and the middle of a thin slab of them
   const centre = ks => { const m = [0, 0, 0]; for (const k of ks) { m[0] += X[k]; m[1] += Y[k]; m[2] += Z[k]; } return m.map(v => v / Math.max(1, ks.length)); };
 
-  // arms: split by height into segments
+  // arms: split by height into segments, hung from the rim sector they come out under
   const armDefs = [];
   for (let a = 0; a < 8; a++) {
-    const ks = []; for (let k = 0; k < n; k++) if (label[k] === null && lab[k] === a) ks.push(k);
+    const ks = []; for (let k = 0; k < n; k++) if (label[k] === null && lab[k] === a && !gone[k]) ks.push(k);
     let y0 = 1e9, y1 = -1e9; for (const k of ks) { y0 = Math.min(y0, Y[k]); y1 = Math.max(y1, Y[k]); }
     const cuts = []; for (let s = 0; s <= ARM_SEGS; s++) cuts.push(y1 + 1 - (y1 + 1 - y0) * s / ARM_SEGS);
     const segOf = k => { for (let s = 0; s < ARM_SEGS; s++) if (Y[k] >= cuts[s + 1]) return s; return ARM_SEGS - 1; };
@@ -250,7 +270,7 @@ function buildRig(M, C) {
       const top = ks.filter(k => segOf(k) === s && Y[k] >= Math.floor(cuts[s]) - 3);
       const piv = centre(top.length ? top : ks.filter(k => segOf(k) === s));
       const nm = `arm_${a}_${s}`;
-      addBone(nm, s === 0 ? 'rim' : `arm_${a}_${s - 1}`, piv);
+      addBone(nm, s === 0 ? 'rim_' + sectorOf(piv[0], piv[2]) : `arm_${a}_${s - 1}`, piv);
       joints.push(piv); names.push(nm);
     }
     for (const k of ks) boneOf[k] = boneIndex.get(`arm_${a}_${segOf(k)}`);
@@ -260,29 +280,61 @@ function buildRig(M, C) {
       angle: Math.round(Math.atan2(joints[0][2], joints[0][0]) * 1000) / 1000 });
   }
 
-  // strands
-  const strandDefs = [];
-  const segOfStrand = new Int32Array(n).fill(-1);
+  // strands. Each is cut into segments about 12 to 20 blocks long so it bends smoothly. A strand hangs from the
+  // rim, or from the glowing vase in the middle, or (for the ones that branch off lower down) from the strand it
+  // grows out of, so it swings with it.
+  const strandInfo = [];
   for (let s = 0; s < nStr; s++) {
-    const ks = []; for (let k = 0; k < n; k++) if (strandOf[k] === s) ks.push(k);
+    const ks = []; for (let k = 0; k < n; k++) if (strandOf[k] === s && !gone[k]) ks.push(k);
     if (!ks.length) continue;
     let y0 = 1e9, y1 = -1e9; for (const k of ks) { y0 = Math.min(y0, Y[k]); y1 = Math.max(y1, Y[k]); }
     const len = y1 - y0 + 1;
-    const segs = len >= 40 ? STRAND_SEGS : len >= 16 ? 2 : 1;
+    const segs = len >= 70 ? 6 : len >= 50 ? 5 : len >= 35 ? 4 : len >= 22 ? 3 : len >= 12 ? 2 : 1;
     const cuts = []; for (let q = 0; q <= segs; q++) cuts.push(y1 + 1 - len * q / segs);
     const segOf = k => { for (let q = 0; q < segs; q++) if (Y[k] >= cuts[q + 1]) return q; return segs - 1; };
+    strandInfo.push({ id: strandInfo.length, s, ks, y0, y1, segs, cuts, segOf });
+  }
+  const infoOfStrand = new Map(strandInfo.map(I => [I.s, I]));
+  const strandDefs = new Array(strandInfo.length);
+  const segOfStrand = new Int32Array(n).fill(-1);
+  const made = new Set();
+  let branched = 0;
+  for (const I of [...strandInfo].sort((a, b) => b.y1 - a.y1 || a.id - b.id)) {
+    const { id, ks, y0, y1, segs, cuts, segOf } = I;
     const names = []; const joints = [];
-    const id = strandDefs.length;
     for (let q = 0; q < segs; q++) {
       const top = ks.filter(k => segOf(k) === q && Y[k] >= Math.floor(cuts[q]) - 2);
       const piv = centre(top.length ? top : ks.filter(k => segOf(k) === q));
       const nm = `strand_${id}_${q}`;
-      addBone(nm, q === 0 ? (y1 >= 118 && Math.hypot(piv[0], piv[2]) < 26 ? 'spot_4' : 'rim') : `strand_${id}_${q - 1}`, piv);
+      let parent = `strand_${id}_${q - 1}`;
+      if (q === 0) {
+        if (y1 >= 118 && Math.hypot(piv[0], piv[2]) < 26) parent = 'spot_4';
+        else if (y1 >= 118) parent = 'rim_' + sectorOf(piv[0], piv[2]);
+        else {
+          // a branch: the strand it touches most near its top (one already hung, so higher up)
+          const touch = new Map();
+          for (const k of ks) {
+            if (Y[k] < y1 - 3) continue;
+            for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) for (let c = -2; c <= 2; c++) {
+              const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+              if (j === undefined || gone[j] || strandOf[j] < 0 || strandOf[j] === I.s) continue;
+              const J = infoOfStrand.get(strandOf[j]);
+              if (!J || !made.has(J.id)) continue;
+              const bn = `strand_${J.id}_${J.segOf(j)}`;
+              touch.set(bn, (touch.get(bn) || 0) + 1);
+            }
+          }
+          if (touch.size) { parent = [...touch].sort((a, b) => b[1] - a[1])[0][0]; branched++; }
+          else parent = 'rim_' + sectorOf(piv[0], piv[2]);
+        }
+      }
+      addBone(nm, parent, piv);
       names.push(nm); joints.push(piv);
     }
+    made.add(id);
     for (const k of ks) { boneOf[k] = boneIndex.get(`strand_${id}_${segOf(k)}`); segOfStrand[k] = id; }
     const bot = ks.filter(k => Y[k] <= y0 + 2);
-    strandDefs.push({ bones: names.map(b => boneIndex.get(b)), joints, bottom: centre(bot), top: y1, low: y0, size: ks.length });
+    strandDefs[id] = { bones: names.map(b => boneIndex.get(b)), joints, bottom: centre(bot), top: y1, low: y0, size: ks.length };
   }
 
   // pods and eggs hang from the strand segment they touch most (or the nearest one)
@@ -363,8 +415,9 @@ function buildRig(M, C) {
       spots: [0, 1, 2, 3, 4].map(i => spotDef(C, boneIndex.get('spot_' + i), 'spot_' + i)),
       crown: spotDef(C, boneIndex.get('crown'), 'crown'),
       dome: profile,
+      bands: bandDefs, sectors: sectorDefs,
     },
-    stats: { strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
+    stats: { strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
   };
 }
 

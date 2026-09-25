@@ -1,0 +1,28 @@
+world flat
+gui off
+render 16
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 1
+waitmodel
+wait 120
+status
+view 0 90 -330 0 110 0
+wait 40
+shot v11_idle
+cmd hollowbell height 70
+wait 30
+shot v11_climb_1
+wait 8
+shot v11_climb_2
+wait 8
+shot v11_climb_3
+wait 250
+cmd hollowbell height 0
+wait 60
+shot v11_sink_1
+wait 60
+shot v11_sink_2
+status
+quit

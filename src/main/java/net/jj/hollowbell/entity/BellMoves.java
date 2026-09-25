@@ -93,6 +93,19 @@ public final class BellMoves {
     public int insideCount() { return inside.size(); }
     public List<LivingEntity> insideNow() { List<LivingEntity> l = new ArrayList<>(); for (Inside i : inside) if (i.e != null) l.add(i.e); return l; }
     public int treesInside() { int n = 0; for (Inside i : inside) if (i.tree != null) n++; return n; }
+    /** the height (of his base) a move needs him at, or null to let him choose */
+    public @Nullable Double wantsHeight() {
+        if ((move == Moves.GRAB || move == Moves.HARVEST) && t <= Moves.REACH + 4) {
+            // the strand ends down at what it's reaching for
+            if (target != null) return target.getY() - 1.5 * s();
+            if (treeAt != null) return (double) treeAt.getY();
+        }
+        if (move == Moves.CURTAIN && target != null) return target.getY() - 2 * s();
+        // the arms and the sweep hit on the ground: down he comes to it
+        if ((move == Moves.SLAM || move == Moves.WRAP || move == Moves.SWEEP) && target != null) return target.getY() - 2 * s();
+        return null;
+    }
+
     public boolean holdsStill() { return ((move == Moves.GRAB || move == Moves.HARVEST) && t <= Moves.REACH) || move == Moves.DROP || move == Moves.CURTAIN || move == Moves.WRAP || (move == Moves.SLAM && t > 20); }
 
     public boolean caught(@Nullable Entity e) {
@@ -174,6 +187,11 @@ public final class BellMoves {
     }
 
     private @Nullable BlockPos treeAt;
+    /** the slam's arm has come down (it only hits once) */
+    private boolean landed;
+
+    /** ends whatever move he's in the middle of, straight away (he eases back to rest by himself) */
+    public void stopNow() { if (move != Moves.NONE) end(); }
 
     private void end() {
         if (move == Moves.GRAB || move == Moves.HARVEST) letGoOfGrab(false);
@@ -282,12 +300,21 @@ public final class BellMoves {
             }
             case Moves.SLAM -> {
                 int hit = Math.round(BellRig.SLAM_HIT * Moves.length(Moves.SLAM));
-                if (t == hit) {
-                    Vec3 c = h.armTipWorld(arg);
-                    c = new Vec3(c.x, Math.max(c.y, h.groundAt(c.x, c.z)), c.z);
+                // it follows you while the arm is up, then it's coming down where you were
+                if (target != null && target.isAlive() && t < hit - 10) h.setAim(h.toModel(target.position()));
+                // the arm has weight: it lands when its tip really comes down, a moment after it's swung
+                Vec3 tipNow = h.armTipWorld(arg);
+                double gy = h.groundAt(tipNow.x, tipNow.z);
+                boolean down = tipNow.y - gy < 6 * s + 2;
+                if (t == 1) landed = false;
+                if (!landed && t >= hit - 2 && (down || t >= hit + 6)) {
+                    landed = true;
+                    // the blow lands on the ground under the arm's end, and on everything between
+                    Vec3 c = new Vec3(tipNow.x, gy, tipNow.z);
                     double r = 16 * s + 3;
-                    for (LivingEntity e : near(new AABB(c, c).inflate(r, 6 + 12 * s, r))) {
-                        double d = e.position().distanceTo(c);
+                    double topY = Math.max(tipNow.y, c.y) + 3 + 4 * s;
+                    for (LivingEntity e : near(new AABB(c.x - r, c.y - 2, c.z - r, c.x + r, topY, c.z + r))) {
+                        double d = Math.hypot(e.getX() - c.x, e.getZ() - c.z);
                         if (d > r) continue;
                         e.hurt(h.damageSources().mobAttack(h), h.dmg(14f, e) * (float) (1.0 - 0.5 * d / r));
                         Vec3 out = e.position().subtract(c).multiply(1, 0, 1);
@@ -338,7 +365,7 @@ public final class BellMoves {
                 }
             }
             case Moves.DROP -> {
-                if (t == Moves.DROP_FALL) {
+                if (t == Moves.DROP_WIND + Moves.DROP_FALL) {
                     Vec3 c = h.position();
                     double r = h.bellRadius() + 4;
                     for (LivingEntity e : near(h.bodyBox().setMaxY(h.getY() + 40 * s + 6))) {
@@ -355,7 +382,7 @@ public final class BellMoves {
                     h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 200, h.bellRadius(), 0.15);
                     thump(c, 1f);
                 }
-                if (t == Moves.DROP_FALL + Moves.DROP_DOWN) h.sound(h.position(), SoundEvents.CONDUIT_ACTIVATE, 3f, 0.5f);
+                if (t == Moves.DROP_WIND + Moves.DROP_FALL + Moves.DROP_DOWN) h.sound(h.position(), SoundEvents.CONDUIT_ACTIVATE, 3f, 0.5f);
             }
             case Moves.SHED -> {
                 if (t == Moves.SHED_AT) shed();
@@ -460,7 +487,7 @@ public final class BellMoves {
         float k = Mth.clamp((t - into0) / (float) Moves.INTO, 0f, 1f);
         Vec3 to = slotWorld(slot, grabbed);
         Vec3 at = intoFrom.lerp(to, k * k * (3 - 2 * k));
-        if (grabSeat != null) grabSeat.moveTo(at.x, at.y, at.z);
+        if (grabSeat != null) { grabSeat.follow(Seat.FREE, 0); grabSeat.moveTo(at.x, at.y, at.z); }
         if (grabbedTree != null) placeTree(grabbedTree, at);
         if (k >= 1f) {
             Inside in = new Inside();
@@ -563,24 +590,27 @@ public final class BellMoves {
     public void afterPose() {
         if (grabSeat != null || grabbedTree != null) {
             if ((move == Moves.GRAB || move == Moves.HARVEST) && t < Moves.REACH + Moves.LIFT && arg >= 0) {
-                Vec3 tip = h.strandTipWorld(arg);
                 if (grabSeat != null && grabbed != null) {
-                    grabSeat.moveTo(tip.x, tip.y - grabbed.getBbHeight() * 0.6, tip.z);
+                    grabSeat.follow(Seat.STRAND_TIP, arg);
+                    Vec3 at = h.seatSpot(Seat.STRAND_TIP, arg, grabbed);
+                    grabSeat.moveTo(at.x, at.y, at.z);
                     if (grabbed.getVehicle() != grabSeat) grabbed.startRiding(grabSeat, true);
                     grabbed.fallDistance = 0;
                 }
-                if (grabbedTree != null) placeTree(grabbedTree, tip.add(0, -1, 0));
+                if (grabbedTree != null) placeTree(grabbedTree, h.strandTipWorld(arg).add(0, -1, 0));
             }
         }
         if (wrapSeat != null && wrapped != null && arg >= 0) {
-            Vec3 tip = h.armTipWorld(arg);
-            wrapSeat.moveTo(tip.x, tip.y - wrapped.getBbHeight() * 0.5, tip.z);
+            wrapSeat.follow(Seat.ARM_TIP, arg);
+            Vec3 at = h.seatSpot(Seat.ARM_TIP, arg, wrapped);
+            wrapSeat.moveTo(at.x, at.y, at.z);
             if (wrapped.getVehicle() != wrapSeat) wrapped.startRiding(wrapSeat, true);
             wrapped.fallDistance = 0;
         }
         for (Inside in : inside) {
-            Vec3 at = slotWorld(in.slot, in.e);
+            Vec3 at = h.seatSpot(Seat.INSIDE, in.slot, in.e);
             if (in.seat != null && in.e != null) {
+                in.seat.follow(Seat.INSIDE, in.slot);
                 in.seat.moveTo(at.x, at.y, at.z);
                 if (in.e.getVehicle() != in.seat) in.e.startRiding(in.seat, true);
                 in.e.fallDistance = 0;
@@ -591,36 +621,9 @@ public final class BellMoves {
 
     // ------------------------------------------------------------------ inside the dome
 
-    /** places inside the dome to hang things: the first four right under the glowing balls, then round the vase */
-    private static final int SLOTS = 14;
+    private static final int SLOTS = HollowbellEntity.SLOTS;
     private int slotCount() { return SLOTS; }
-
-    private Vector3f slotModel(int i) {
-        if (i < 4) {
-            var S = rig.spots[i];
-            return new Vector3f(S.centre().x * 0.95f, 140f, S.centre().z * 0.95f);
-        }
-        if (i < 8) {
-            // between the balls, close to the vase
-            double a = Math.atan2(rig.spots[i - 4].centre().z, rig.spots[i - 4].centre().x) + Math.PI / 4;
-            return new Vector3f((float) (Math.cos(a) * 26), 150f, (float) (Math.sin(a) * 26));
-        }
-        double a = (i - 8) * Math.PI * 2 / (SLOTS - 8) + 0.3;
-        return new Vector3f((float) (Math.cos(a) * 58), 142f, (float) (Math.sin(a) * 58));
-    }
-
-    /** where the feet of whatever is in slot i go, in the world */
-    private Vec3 slotWorld(int i, @Nullable LivingEntity who) {
-        Vec3 w = h.boneWorld(rig.bellBone, slotModel(i));
-        if (i < 4) {
-            // right under the ball, so it is in reach over your head
-            Vec3 ballBottom = h.boneWorld(rig.spots[i].bone(), new Vector3f(rig.spots[i].centre().x, rig.spots[i].centre().y - 15f, rig.spots[i].centre().z));
-            w = new Vec3(ballBottom.x, ballBottom.y - 2.6, ballBottom.z);
-        } else if (i < 8) {
-            w = w.add(0, -1, 0);
-        }
-        return w;
-    }
+    private Vec3 slotWorld(int i, @Nullable LivingEntity who) { return h.slotWorld(i); }
 
     private int freeSlot() {
         boolean[] used = new boolean[SLOTS];

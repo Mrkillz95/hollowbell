@@ -33,6 +33,7 @@ public final class AutoTest {
     private static List<String> script;
     private static int line, wait, joined;
     private static boolean asked;
+    private static String follow;
 
     public static void init() {
         String f = System.getProperty("hollowbell.autotest");
@@ -63,6 +64,7 @@ public final class AutoTest {
         }
         if (mc.player == null) return;
         if (++joined < 40) return;
+        if (follow != null) view(mc, follow);
         if (wait > 0) { wait--; return; }
         while (line < script.size()) {
             String s = script.get(line++).trim();
@@ -70,7 +72,9 @@ public final class AutoTest {
             if (s.startsWith("wait ")) { wait = Integer.parseInt(s.substring(5).trim()); return; }
             if (s.equals("waitmodel")) { if (!BellMeshes.INSTANCE.ensureReady()) { line--; wait = 10; } return; }
             if (s.startsWith("cmd ")) { run(mc, s.substring(4).trim()); continue; }
-            if (s.startsWith("view ")) { view(mc, s.substring(5).trim()); continue; }
+            // view: the camera at a spot in his own model space, looking at another, and kept there as he moves
+            if (s.startsWith("view ")) { follow = s.substring(5).trim(); view(mc, follow); continue; }
+            if (s.equals("fixed")) { follow = null; continue; }
             if (s.startsWith("shot ")) {
                 String name = s.substring(5).trim() + ".png";
                 Screenshot.grab(mc.gameDirectory, name, mc.getMainRenderTarget(), c -> HollowbellMod.LOG.info("autotest shot {}", name));

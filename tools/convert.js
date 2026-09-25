@@ -43,10 +43,11 @@ function main() {
   for (let i = 0; i < vox.length; i++) occupied.set(key(vox[i][0], vox[i][1], vox[i][2]), i);
   const glass = palette.map(isGlass);
 
-  // which faces show: a face is hidden by an opaque neighbour, or by the same glass, but only inside one bone
-  // group (bones that never move against each other); where two moving bones meet, both faces stay
+  // which faces show: a face is hidden by an opaque neighbour, or by the same glass, but only inside one bone;
+  // where two bones meet, both faces stay (they can move apart). The one exception is the same glass running on
+  // across two parts of the dome: the join between them stays clear.
   const bones = R.bones;
-  const group = bones.map(b => (['bell', 'rim', 'crown'].includes(b.name) || b.name.startsWith('spot_')) ? 0 : 1 + bones.indexOf(b));
+  const bellish = bones.map(b => /^(bell_|rim_|crown|spot_)/.test(b.name));
   const DIRS = [[0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1], [-1, 0, 0], [1, 0, 0]];   // down up north south west east
   // how deep each voxel is from open air: a face buried under two or more layers of glass can't be made out,
   // so it is left out (the yellow balls are solid glass full of speckles)
@@ -77,7 +78,8 @@ function main() {
       let show = true;
       if (j !== undefined) {
         const [, , , q, c, al2] = vox[j];
-        const same = group[b] === group[c];
+        const same = b === c;
+        if (!same && bellish[b] && bellish[c] && glass[p] && q === p) show = false;
         if (same && al === 255 && al2 === 255 && (!glass[q] || (glass[p] && q === p))) show = false;
         if (same && al < 255 && al2 < 255 && !glass[q]) show = false;
         if (same && Math.min(depth[i], depth[j]) >= 3) show = false;

@@ -5,6 +5,7 @@ import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.item.CodexItem;
+import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.BellState;
@@ -76,12 +77,24 @@ public class HollowbellEntity extends Monster {
     private static final EntityDataAccessor<Float> DATA_SUNK = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<CompoundTag> DATA_PARTS = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.COMPOUND_TAG);
     private static final EntityDataAccessor<Integer> DATA_FLAGS = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.INT);
-    private static final int F_STAY = 1, F_RIDDEN = 2;
+    /** how he is moving, blocks per tick: the client carries him on with it between updates */
+    private static final EntityDataAccessor<Vector3f> DATA_VEL = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.VECTOR3);
+    private static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4;
 
     public final BellRig rig = BellRig.get();
     /** the pose the server works with (and the client, for aiming and hits) */
     public final BellState state = new BellState(rig);
     public final Matrix4f[] pose = rig.newPose();
+    /** his body and his swinging arms and strands, a tick at a time (both sides) */
+    private final BellAnim anim = new BellAnim(rig);
+    private final BellAnim.In animIn = new BellAnim.In();
+    private @Nullable Vec3 animAt;
+    {
+        // one set of his parts, seen by the pose and the animation alike
+        state.podPopped = anim.now().podPopped;
+        state.podGrowth = anim.now().podGrowth;
+        state.eggGone = anim.now().eggGone;
+    }
     private long poseTick = Long.MIN_VALUE;
     private final Mood mood = new Mood(this);
     final BellMoves moves = new BellMoves(this);
@@ -102,8 +115,15 @@ public class HollowbellEntity extends Monster {
 
     // ---- going places
     private @Nullable Vec3 home, goal;
+    /** blocks per tick, in the world */
     private Vec3 vel = Vec3.ZERO;
     private long nextPulse;
+    /** how high over the ground he likes to drift right now, and the height he is making for */
+    private double cruise = -1, wantY = Double.NaN;
+    /** the being-him keys: up (1), down (-1) */
+    private int driveUp;
+    /** a fresh one comes down out of the sky; ticks left of that */
+    private int arriving;
     private int wanderIn;
     private boolean stay;
     private int angerTicks;
@@ -121,8 +141,9 @@ public class HollowbellEntity extends Monster {
     // ---- bars
     private @Nullable BellBar barHp, barPods;
 
-    // ---- client smoothing
-    private float cLower, cTiltX, cTiltZ, cSunk, cDriftX, cDriftZ;
+    // ---- client smoothing: where the server last said he is, and how he's carried on between
+    private @Nullable Vec3 cTarget;
+    private Vec3 cVel = Vec3.ZERO;
     private CompoundTag cParts;
 
     /** set by the client: a slam's thump for the screen shake (x y z, how hard) */
@@ -161,6 +182,7 @@ public class HollowbellEntity extends Monster {
         b.define(DATA_SUNK, 0f);
         b.define(DATA_PARTS, new CompoundTag());
         b.define(DATA_FLAGS, 0);
+        b.define(DATA_VEL, new Vector3f());
     }
 
     // ------------------------------------------------------------------ size, mood, health
@@ -203,6 +225,10 @@ public class HollowbellEntity extends Monster {
     public void setStay(boolean on) { stay = on; setFlag(F_STAY, on); if (on) { goal = null; vel = Vec3.ZERO; } }
     private void setFlag(int f, boolean on) { int v = entityData.get(DATA_FLAGS); entityData.set(DATA_FLAGS, on ? v | f : v & ~f); }
     public boolean ridden() { return (entityData.get(DATA_FLAGS) & F_RIDDEN) != 0; }
+    /** worn out after a heavy move: slower, and no moves for a few seconds */
+    public boolean tired() { return (entityData.get(DATA_FLAGS) & F_TIRED) != 0; }
+    void setTired(boolean on) { setFlag(F_TIRED, on); }
+    public Vec3 velocity() { return level().isClientSide ? cVel : vel; }
 
     public int moveNow() { return entityData.get(DATA_MOVE); }
     public int moveArg() { return entityData.get(DATA_MOVE_ARG); }
@@ -244,8 +270,10 @@ public class HollowbellEntity extends Monster {
     /** the box round all of him, for drawing and for finding what is near him */
     public AABB bodyBox() {
         float s = bellScale();
-        double r = 108 * s + 2;
-        return new AABB(getX() - r, getY() - 4, getZ() - r, getX() + r, getY() + (rig.crownY + 8) * s, getZ() + r);
+        double r = 112 * s + 2;
+        // brought down onto the ground or flipped in the dive, he can reach well below where he floats
+        double below = Math.max(4, (state.lower + 12) * s + 4);
+        return new AABB(getX() - r, getY() - below, getZ() - r, getX() + r, getY() + (rig.crownY + 12) * s, getZ() + r);
     }
 
     @Override public AABB getBoundingBoxForCulling() { return bodyBox(); }
@@ -293,45 +321,108 @@ public class HollowbellEntity extends Monster {
     public Vec3 spotWorld(int k) { return boneWorld(rig.spots[k].bone(), rig.spots[k].centre()); }
     public Vec3 crownWorld() { return boneWorld(rig.crownBone, new Vector3f(0, rig.crownY + 1, 0)); }
 
-    /** the server's pose, worked out once a tick when something needs it */
+    // ------------------------------------------------------------------ places on him things are held
+
+    /** places inside the dome to hang things: the first four right under the glowing balls, then round the vase */
+    public static final int SLOTS = 14;
+
+    private Vector3f slotModel(int i) {
+        if (i < 4) {
+            var S = rig.spots[i];
+            return new Vector3f(S.centre().x * 0.95f, 140f, S.centre().z * 0.95f);
+        }
+        if (i < 8) {
+            // between the balls, close to the vase
+            double a = Math.atan2(rig.spots[i - 4].centre().z, rig.spots[i - 4].centre().x) + Math.PI / 4;
+            return new Vector3f((float) (Math.cos(a) * 26), 150f, (float) (Math.sin(a) * 26));
+        }
+        double a = (i - 8) * Math.PI * 2 / (SLOTS - 8) + 0.3;
+        return new Vector3f((float) (Math.cos(a) * 58), 142f, (float) (Math.sin(a) * 58));
+    }
+
+    /** where the feet of whatever is in slot i of the dome go, in the world */
+    public Vec3 slotWorld(int i) {
+        if (i < 4) {
+            // right under the ball, so it is in reach over your head
+            var S = rig.spots[i];
+            Vec3 ballBottom = boneWorld(S.bone(), new Vector3f(S.centre().x, S.centre().y - 15f, S.centre().z));
+            return new Vec3(ballBottom.x, ballBottom.y - 2.6, ballBottom.z);
+        }
+        Vec3 w = boneWorld(rig.bellBone, slotModel(i));
+        return i < 8 ? w.add(0, -1, 0) : w;
+    }
+
+    /** where a seat of the given kind is right now (see Seat), for whatever rides it */
+    public Vec3 seatSpot(int mode, int index, @Nullable Entity who) {
+        double hgt = who == null ? 1 : who.getBbHeight();
+        return switch (mode) {
+            case Seat.STRAND_TIP -> index >= 0 && index < rig.strands.length ? strandTipWorld(index).add(0, -hgt * 0.6, 0) : position();
+            case Seat.ARM_TIP -> index >= 0 && index < rig.arms.length ? armTipWorld(index).add(0, -hgt * 0.5, 0) : position();
+            case Seat.INSIDE -> slotWorld(Mth.clamp(index, 0, SLOTS - 1));
+            case Seat.CROWN -> crownWorld();
+            default -> position();
+        };
+    }
+
+    /** the pose as of this tick, worked out once a tick when something needs it */
     public void ensurePose() {
         long now = level().getGameTime();
         if (poseTick == now) return;
         poseTick = now;
-        fillState(0f);
+        fillState(1f);
         rig.computePose(state, pose);
     }
 
-    /** the pose state as of this moment. On the client this smooths what the server sends. */
+    /** the pose state at this moment (partial: how far into the tick, for drawing) */
     public void fillState(float partial) {
-        BellState st = state;
-        boolean client = level().isClientSide;
-        long gt = level().getGameTime();
-        st.time = tickCount + partial;
-        st.pulse = Moves.pulseCurve((float) (gt - entityData.get(DATA_PULSE_START)) + partial, entityData.get(DATA_PULSE_POWER));
-        Vector3f hang = entityData.get(DATA_HANG);
-        float sunkNow = entityData.get(DATA_SUNK);
-        if (client) {
-            st.lower = cLower; st.tiltX = cTiltX; st.tiltZ = cTiltZ;
-            st.driftX = cDriftX; st.driftZ = cDriftZ;
-        } else {
-            st.lower = hang.x; st.tiltX = hang.y; st.tiltZ = hang.z;
-            Vector3f v = dirToModel(vel);
-            st.driftX = v.x; st.driftZ = v.z;
-        }
-        int move = moveNow();
-        float t = moveT(partial);
-        st.drop = Math.max(Moves.drop(move, t), client ? cSunk : sunkNow);
-        Vector3f aim = aim();
-        Moves.pose(rig, st, move, t, moveArg(), aim.x, aim.y, aim.z, entityData.get(DATA_LIFT));
-        st.red = angry();
-        if (isDeadOrDying()) {
-            float dt = deathTime + partial;
-            st.death = Mth.clamp(dt / 140f, 0f, 1f);
-            st.sink = Mth.clamp((dt - 190f) / 120f, 0f, 1f);
-        } else { st.death = 0f; st.sink = 0f; }
-        if (client) readParts();
+        if (level().isClientSide) readParts();
+        anim.fill(state, partial);
+        state.red = angry();
     }
+
+    /** one tick of his body and his arms and strands swinging: after he has moved, on both sides */
+    private void animTick() {
+        float s = bellScale();
+        BellAnim.In in = animIn;
+        long gt = level().getGameTime();
+        in.time = (float) (gt % 240000L);
+        Vec3 v = level().isClientSide ? cVel : vel;
+        Vector3f mv = dirToModel(v);
+        in.vx = mv.x; in.vy = mv.y; in.vz = mv.z;
+        Vec3 at = position();
+        Vector3f sh = animAt == null ? new Vector3f() : dirToModel(at.subtract(animAt));
+        if (animAt == null) anim.reset();
+        animAt = at;
+        in.shiftX = sh.x; in.shiftY = sh.y; in.shiftZ = sh.z;
+        in.speedRef = (float) (maxSpeed() / s);
+        in.pulse = Moves.pulseCurve((float) (gt - entityData.get(DATA_PULSE_START)), entityData.get(DATA_PULSE_POWER));
+        Vector3f hang = entityData.get(DATA_HANG);
+        in.hangLower = hang.x; in.hangTiltX = hang.y; in.hangTiltZ = hang.z;
+        in.sunk = entityData.get(DATA_SUNK) > 0.5f ? 1f : 0f;
+        in.dying = isDeadOrDying() ? deathTime : -1f;
+        in.tired = tired();
+        in.red = angry();
+        double g = groundAt(getX(), getZ());
+        in.groundUnder = (float) ((g - getY()) / s);
+        in.ground = this::groundModel;
+        if (level().isClientSide) readParts();
+        Vector3f aim = aim();
+        int move = moveNow();
+        Moves.pose(rig, anim.now(), in, move, moveT(0f), moveArg(), aim.x, aim.y, aim.z, entityData.get(DATA_LIFT));
+        anim.step(in);
+        poseTick = Long.MIN_VALUE;
+    }
+
+    /** the ground under a point of him, in his own model heights (NaN if that ground isn't loaded) */
+    private float groundModel(float mx, float mz) {
+        Vec3 w = toWorld(new Vector3f(mx, 0, mz));
+        BlockPos p = BlockPos.containing(w.x, getY(), w.z);
+        if (!level().hasChunkAt(p)) return Float.NaN;
+        return (float) ((level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) - getY()) / bellScale());
+    }
+
+    /** for the tests: was this arm or strand knocked by the ground or his bell just now */
+    public boolean chainKnocked(int c) { return anim.knocked(c); }
 
     /** the client's pose, for its own drawing of hits and aiming (the renderer makes its own) */
     public boolean clientPoseReady() { return level().isClientSide && tickCount > 1; }
@@ -356,12 +447,13 @@ public class HollowbellEntity extends Monster {
         CompoundTag t = entityData.get(DATA_PARTS);
         if (t == cParts || !t.contains("G")) return;
         cParts = t;
+        BellState st = anim.now();
         int mask = t.getInt("P");
-        for (int i = 0; i < rig.pods.length && i < 31; i++) state.podPopped[i] = (mask & (1 << i)) != 0;
+        for (int i = 0; i < rig.pods.length && i < 31; i++) st.podPopped[i] = (mask & (1 << i)) != 0;
         byte[] e = t.getByteArray("E");
-        for (int i = 0; i < Math.min(e.length, rig.eggs.length); i++) state.eggGone[i] = e[i] != 0;
+        for (int i = 0; i < Math.min(e.length, rig.eggs.length); i++) st.eggGone[i] = e[i] != 0;
         byte[] pg = t.getByteArray("G");
-        for (int i = 0; i < Math.min(pg.length, rig.pods.length); i++) state.podGrowth[i] = (pg[i] & 0xff) / 255f;
+        for (int i = 0; i < Math.min(pg.length, rig.pods.length); i++) st.podGrowth[i] = (pg[i] & 0xff) / 255f;
     }
 
     // ------------------------------------------------------------------ ticking
@@ -376,15 +468,28 @@ public class HollowbellEntity extends Monster {
     }
 
     private void clientTick() {
-        Vector3f hang = entityData.get(DATA_HANG);
-        cLower += (hang.x - cLower) * 0.08f;
-        cTiltX += (hang.y - cTiltX) * 0.08f;
-        cTiltZ += (hang.z - cTiltZ) * 0.08f;
-        cSunk += (entityData.get(DATA_SUNK) - cSunk) * 0.06f;
-        Vector3f v = dirToModel(new Vec3(getX() - xo, 0, getZ() - zo));
-        cDriftX += (v.x - cDriftX) * 0.1f;
-        cDriftZ += (v.z - cDriftZ) * 0.1f;
+        // carried on at the speed the server says, and eased toward where it last said he was, so he glides
+        // between its updates instead of stepping
+        Vector3f sv = entityData.get(DATA_VEL);
+        cVel = cVel.add(new Vec3(sv.x - cVel.x, sv.y - cVel.y, sv.z - cVel.z).scale(0.35));
+        Vec3 p = position().add(cVel);
+        if (cTarget != null) {
+            Vec3 err = cTarget.subtract(p);
+            if (err.lengthSqr() > Mth.square(24 * bellScale() + 12)) p = cTarget;
+            else p = p.add(err.scale(0.14));
+        }
+        setPos(p.x, p.y, p.z);
+        animTick();
         if (tickCount % 4 == 0) BellFx.ambient(this);
+    }
+
+    /** the server's word on where he is: kept as a target rather than jumped to */
+    @Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
+        if (cTarget == null && tickCount < 2) setPos(x, y, z);
+        cTarget = new Vec3(x, y, z);
+        setYRot(yRot);
+        setXRot(xRot);
     }
 
     private void serverTick() {
@@ -400,7 +505,8 @@ public class HollowbellEntity extends Monster {
         riderTick();
         pickTarget();
         moves.tick();
-        drift(now);
+        fly(now);
+        animTick();
         ensurePose();
         moves.afterPose();
         stingTick();
@@ -467,6 +573,13 @@ public class HollowbellEntity extends Monster {
     // ------------------------------------------------------------------ where he goes
 
     public void setGoal(@Nullable Vec3 g) { goal = g; if (g != null) setStay(false); }
+
+    /** /hollowbell height: how high over the ground he drifts (his strand ends that far up), until he picks again */
+    public void setCruise(double blocks) {
+        cruise = Math.max(0, blocks);
+        wanderIn = Math.max(wanderIn, 1200);
+        if (stay) wantY = groundAt(getX(), getZ()) + cruise;
+    }
     public @Nullable Vec3 goal() { return goal; }
     public void callTo(Player p) { setGoal(p.position()); }
     public @Nullable Vec3 home() { return home; }
@@ -478,16 +591,37 @@ public class HollowbellEntity extends Monster {
     /** his bell's radius in the world */
     public double bellRadius() { return 88 * bellScale(); }
 
-    private void drift(long now) {
+    /** his top speed across, blocks per tick */
+    public double maxSpeed() {
         float s = bellScale();
-        boolean down = resting() || isDeadOrDying();
+        double v = 0.10 + 0.16 * Math.sqrt(s);
+        if (rider != null) v *= 1.5;
+        if (angry()) v *= 1.15;
+        if (tired()) v *= 0.4;
+        return v;
+    }
+
+    /**
+     * Flying, like a jellyfish. He picks a height and swims to it: going up, the bell squeezes hard and shoots him
+     * up, then he drifts on up slower until the next push (quicker pushes the further he has to go); going down,
+     * the bell opens and he sinks slowly like a parachute; level, slow gentle pulses carry him along. His speed
+     * only ever changes smoothly, he turns in wide heavy curves, and he never goes into the ground: he looks at
+     * the ground under all of him and ahead of him, and keeps his rim above it.
+     */
+    private void fly(long now) {
+        float s = bellScale();
+        boolean dying = isDeadOrDying();
+        boolean down = resting() || dying;
+        LivingEntity t = getTarget();
         Vec3 want = null;
-        if (rider != null && (driveF != 0f || driveS != 0f)) {
-            float yr = driveYaw * Mth.DEG_TO_RAD;
-            Vec3 fw = new Vec3(-Mth.sin(yr), 0, Mth.cos(yr)), rt = new Vec3(Mth.cos(yr), 0, Mth.sin(yr));
-            want = position().add(fw.scale(driveF * 60).add(rt.scale(driveS * 60)));
-        } else if (!stay && !moves.holdsStill()) {
-            LivingEntity t = getTarget();
+        boolean still = stay || moves.holdsStill() || dying;
+        if (rider != null) {
+            if (driveF != 0f || driveS != 0f) {
+                float yr = driveYaw * Mth.DEG_TO_RAD;
+                Vec3 fw = new Vec3(-Mth.sin(yr), 0, Mth.cos(yr)), rt = new Vec3(Mth.cos(yr), 0, Mth.sin(yr));
+                want = position().add(fw.scale(driveF * 60).add(rt.scale(driveS * 60)));
+            }
+        } else if (!still) {
             if (fetchingNow() != null) want = fetchingNow().position();
             else if (goal != null) {
                 want = goal;
@@ -502,57 +636,149 @@ public class HollowbellEntity extends Monster {
                     double a = random.nextDouble() * Math.PI * 2, d = random.nextDouble() * wanderRange();
                     goal = null;
                     wanderTo = c.add(Math.cos(a) * d, 0, Math.sin(a) * d);
+                    // and a new height to drift at: low over the ground, or up high
+                    cruise = random.nextInt(3) == 0 ? (20 + random.nextDouble() * 30) * s + 4 : (2 + random.nextDouble() * 14) * s + 1;
                 }
                 if (wanderTo != null && horiz(wanderTo) > 8 * s + 3) want = wanderTo;
             }
         }
-        // each pulse pushes him along
-        int period = angry() ? 46 : 70;
-        if (rider != null && want != null) period = 36;
-        if (now >= nextPulse && !down) {
-            pulse(1f);
-            nextPulse = now + period + random.nextInt(12);
-            if (want != null) {
-                Vec3 d = want.subtract(position()).multiply(1, 0, 1);
-                double len = d.length();
-                if (len > 0.01) {
-                    double speed = (0.10 + 0.16 * Math.sqrt(s)) * (rider != null ? 1.5 : 1.0);
-                    // slowing down as he gets there, so he doesn't overshoot
-                    double k = Math.min(1.0, len / (30 * s + 10));
-                    vel = vel.add(d.scale(1 / len).scale(speed * 2.2 * k));
-                }
+        if (cruise < 0) cruise = 6 * s + 1;
+
+        // ---- the ground under him and ahead of him
+        Vec3 hv = new Vec3(vel.x, 0, vel.z);
+        double r = bellRadius() * 0.6;
+        double gC = groundAt(getX(), getZ());
+        double gMax = gC, gSum = gC;
+        int gN = 1;
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.PI / 4;
+            double gx = getX() + Math.cos(a) * r, gz = getZ() + Math.sin(a) * r;
+            double g = groundAt(gx, gz);
+            gMax = Math.max(gMax, g); gSum += g; gN++;
+            // and where he'll be in a couple of seconds
+            double ax = gx + hv.x * 50, az = gz + hv.z * 50;
+            double g2 = groundAt(ax, az);
+            gMax = Math.max(gMax, g2); gSum += g2; gN++;
+        }
+        double gAvg = gSum / gN;
+        // his rim stays above the highest ground under him; his strand ends may drag a little
+        double hardMin = Math.max(gC - 8 * s, gMax + 2 + 2 * s - (rig.rimY - 10) * s);
+
+        // ---- the height he's making for
+        double wy;
+        if (arriving > 0) { arriving--; wy = gAvg + cruise; }
+        else if (dying || down) wy = gC;
+        else if (rider != null) {
+            if (Double.isNaN(wantY)) wantY = getY();
+            if (driveUp != 0) wantY = getY() + driveUp * (14 * s + 4);
+            wy = wantY;
+        } else if (fetchingNow() != null) wy = fetchingNow().getY();
+        else if (moves.wantsHeight() != null) wy = moves.wantsHeight();
+        else if (t != null) {
+            double tg = groundAt(t.getX(), t.getZ());
+            boolean airborne = t.getY() - tg > 6 + 12 * s;
+            double d = horiz(t.position());
+            if (airborne) wy = t.getY() - 55 * s;             // up to it: it hangs among his strands, under the bell
+            else if (d > bellRadius() * 2.2) wy = Math.max(t.getY(), gAvg) + 18 * s + 2;   // coming: a little higher
+            else wy = t.getY() - 1.5 * s;                      // over it, the strand ends at its feet
+        } else if (stay) { if (Double.isNaN(wantY)) wantY = getY(); wy = Math.max(wantY, gAvg); }
+        else wy = gAvg + cruise;
+        wy = Math.max(wy, hardMin);
+        double top = level().getMaxBuildHeight() + 40 - (rig.crownY + 20) * s;
+        wy = Math.min(wy, Math.min(top, gC + 220 * s + 90));
+        if (!(rider != null) && !(stay)) wantY = wy;
+
+        // ---- up and down
+        double e = wy - getY();
+        double vy = vel.y;
+        double climbAt = 3 * s + 1;
+        float pulseAge = (float) (now - entityData.get(DATA_PULSE_START));
+        float push = pushCurve(pulseAge) * entityData.get(DATA_PULSE_POWER);
+        double vAvg = (0.07 + 0.24 * Math.pow(s, 0.7));
+        if (!down && e > climbAt) {
+            double u = Mth.clamp(e / (30 * s + 10), 0, 1);
+            int period = (int) Mth.lerp(u, 62, 24);
+            if (now >= nextPulse) {
+                pulse((float) (1.05 + 0.6 * u));
+                nextPulse = now + period;
+            }
+            // the push comes with the squeeze, then the water slows him till the next one
+            double climbRate = vAvg * (0.45 + 0.55 * u);
+            vy += push * climbRate * period / 22.0 * 0.11;
+            vy *= 0.955;
+        } else if (e < -climbAt || down) {
+            // sinking, bell open: slow and steady
+            // coming down to hit something (or to the ground in a drop), he lets himself fall faster
+            boolean hurry = (down && !dying) || moves.wantsHeight() != null;
+            double sinkMax = (0.04 + 0.16 * Math.pow(s, 0.7)) * (hurry ? 2.6 : 1.0);
+            double vt = -Math.min(sinkMax, Math.max(0, -e) * 0.035);
+            vy += (vt - vy) * 0.045;
+        } else {
+            vy += (e * 0.03 - vy) * 0.05;
+            vy *= 0.97;
+        }
+        // never into the ground: pushed up out of it, firmly but without a jump
+        if (getY() + vy < hardMin) vy = Math.max(vy, (hardMin - getY()) * 0.2);
+
+        // ---- across: steered smoothly toward where he's going, heavy to turn
+        double max = maxSpeed();
+        Vec3 wantV = Vec3.ZERO;
+        if (want != null && !still) {
+            Vec3 d = want.subtract(position()).multiply(1, 0, 1);
+            double len = d.length();
+            if (len > 0.01) {
+                // easing off as he gets there, so he doesn't overshoot
+                double k = Mth.clamp((len - 2 * s) / (30 * s + 12), 0, 1);
+                wantV = d.scale(max * k / len);
             }
         }
-        if (down) vel = vel.scale(0.8);
-        vel = vel.scale(0.965);
-        double cap = 0.6 + 0.4 * s;
-        if (vel.lengthSqr() > cap * cap) vel = vel.normalize().scale(cap);
-        double nx = getX() + vel.x, nz = getZ() + vel.z;
-        // he floats along with the strand ends just touching the ground under his middle
-        double ground = groundAt(nx, nz);
-        double ny = getY() + Mth.clamp(ground - getY(), -0.6 - s, 0.6 + s) * 0.25;
-        if (Math.abs(ground - getY()) > 60 * s + 20) ny = ground;        // came off a cliff or up out of the sea
-        setPos(nx, ny, nz);
+        // each pulse gives a surge
+        double surge = 1 + 0.5 * push;
+        wantV = wantV.scale(surge);
+        double acc = max / 60.0 * (0.6 + 1.2 * push) * (down ? 0.5 : 1);
+        Vec3 dv = wantV.subtract(hv);
+        if (dv.length() > acc) dv = dv.normalize().scale(acc);
+        hv = hv.add(dv).scale(0.995);
+        if (still && want == null) hv = hv.scale(0.97);
+        vel = new Vec3(hv.x, vy, hv.z);
+
+        // level pulses, to carry him along (none while he climbs: those come above; none sinking)
+        if (!down && Math.abs(e) <= climbAt && now >= nextPulse) {
+            int period = angry() ? 46 : 70;
+            if (rider != null && want != null) period = 36;
+            if (want == null) period += 30;           // idling: a slow breathing pulse
+            pulse(want == null ? 0.7f : 1f);
+            nextPulse = now + period + random.nextInt(12);
+        }
+
+        setPos(getX() + vel.x, getY() + vel.y, getZ() + vel.z);
         setDeltaMovement(Vec3.ZERO);
-        if (tickCount % 10 == 0 && HollowbellConfig.V.griefing && vel.lengthSqr() > 0.001) moves.flattenUnderStrands();
+        entityData.set(DATA_VEL, new Vector3f((float) vel.x, (float) vel.y, (float) vel.z));
+        if (tickCount % 10 == 0 && HollowbellConfig.V.griefing && hv.lengthSqr() > 0.001) moves.flattenUnderStrands();
+    }
+
+    /** how hard the bell is pushing, age ticks into a pulse: rises with the squeeze and fades, 0 to 1 */
+    static float pushCurve(float age) {
+        if (age < 0f || age > 20f) return 0f;
+        return age < 5f ? Moves.smooth(age / 5f) : 1f - Moves.smooth((age - 5f) / 15f);
     }
 
     private @Nullable Vec3 wanderTo;
     private double wanderRange() { return (isGuardian() ? 80 : 150) * bellScale() + 30; }
     public double horiz(Vec3 p) { double dx = p.x - getX(), dz = p.z - getZ(); return Math.sqrt(dx * dx + dz * dz); }
 
-    /** the top of the ground (or water) at a spot */
+    /** the top of the ground (or water, or treetops) at a spot */
     public double groundAt(double x, double z) {
         BlockPos p = BlockPos.containing(x, getY(), z);
         if (!level().hasChunkAt(p)) return getY();
-        return level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ());
+        return level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
     }
 
     /** a pulse of the bell: it squeezes in, and a strong one is the pulse wave */
     public void pulse(float power) {
         entityData.set(DATA_PULSE_START, level().getGameTime());
         entityData.set(DATA_PULSE_POWER, power);
-        sound(boneWorld(rig.rimBone, new Vector3f(0, rig.rimY + 20, 0)), net.minecraft.sounds.SoundEvents.CONDUIT_AMBIENT_SHORT, 1.4f + power, 0.5f);
+        sound(toWorld(new Vector3f(0, rig.rimY + 20, 0)), net.minecraft.sounds.SoundEvents.CONDUIT_AMBIENT_SHORT, 1.4f + power, 0.5f);
     }
 
     // ------------------------------------------------------------------ who he goes after
@@ -915,6 +1141,7 @@ public class HollowbellEntity extends Monster {
         riderSeat = new Seat(level(), this);
         Vec3 c = crownWorld();
         riderSeat.setPos(c.x, c.y, c.z);
+        riderSeat.follow(Seat.CROWN, 0);
         level().addFreshEntity(riderSeat);
         who.stopRiding();
         who.startRiding(riderSeat, true);
@@ -955,10 +1182,12 @@ public class HollowbellEntity extends Monster {
         driveF = driveS = 0f;
     }
 
-    public void drive(LivingEntity who, float forward, float strafe, float yaw) {
+    /** the being-him keys: which way, and up (1) or down (-1) */
+    public void drive(LivingEntity who, float forward, float strafe, float yaw, int up) {
         if (rider != who) return;
         driveF = Mth.clamp(forward, -1f, 1f);
         driveS = Mth.clamp(strafe, -1f, 1f);
+        driveUp = Mth.clamp(up, -1, 1);
         driveYaw = yaw;
         driveIdle = 0;
     }
@@ -966,13 +1195,13 @@ public class HollowbellEntity extends Monster {
     private void riderTick() {
         if (rider == null) return;
         if (!rider.isAlive() || rider.isRemoved() || rider.level() != level()) { dropRider(); return; }
-        if (riderSeat == null || riderSeat.isRemoved()) { riderSeat = new Seat(level(), this); level().addFreshEntity(riderSeat); }
+        if (riderSeat == null || riderSeat.isRemoved()) { riderSeat = new Seat(level(), this); riderSeat.follow(Seat.CROWN, 0); level().addFreshEntity(riderSeat); }
         ensurePose();
         Vec3 c = crownWorld();
         riderSeat.moveTo(c.x, c.y, c.z);
         if (rider.getVehicle() != riderSeat) rider.startRiding(riderSeat, true);
         rider.fallDistance = 0;
-        if (++driveIdle > 60) { driveF = 0; driveS = 0; }
+        if (++driveIdle > 60) { driveF = 0; driveS = 0; driveUp = 0; }
     }
 
     /** a move pressed while riding: the book's clock applies */

@@ -169,5 +169,6 @@
   "command.hollowbell.done_remove": "Removed.",
   "bar.hollowbell.pods_sunk": "Pods: %s of %s (he's lost his lift)",
   "codex.hollowbell.parts_sunk": "Pods %s of %s: he's lost his lift",
-  "message.hollowbell.sunk": "Too many pods popped: he's lost his lift and sinks to the ground!"
+  "message.hollowbell.sunk": "Too many pods popped: he's lost his lift and sinks to the ground!",
+  "command.hollowbell.done_height": "He'll drift at that height for a while."
 }
