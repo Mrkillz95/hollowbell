@@ -1008,4 +1008,20 @@ public class HollowbellGameTests implements FabricGameTest {
             h.succeed();
         });
     }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "bosshits")
+    public void anotherGiantsBlowLandsInFull(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 71);
+        h.runAfterDelay(20, () -> {
+            net.minecraft.world.entity.monster.Zombie z = net.minecraft.world.entity.EntityType.ZOMBIE.create(h.getLevel());
+            z.moveTo(e.getX(), e.getY(), e.getZ(), 0f, 0f);
+            float before = e.healthNow();
+            e.hurt(h.getLevel().damageSources().mobAttack(z), 50f);
+            h.assertTrue(before - e.healthNow() > 49f, "a creature's blow should land in full: " + (before - e.healthNow()));
+            float before2 = e.healthNow();
+            e.hurt(h.getLevel().damageSources().mobAttack(z), 1.0E6f);
+            h.assertTrue(e.healthNow() <= 0f || e.isDeadOrDying(), "the Unmake's killing blow should kill him: " + e.healthNow() + " of " + before2);
+            release(h, e);
+            h.succeed();
+        });
+    }
 }
