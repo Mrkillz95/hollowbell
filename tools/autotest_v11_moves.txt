@@ -11,7 +11,7 @@ waitmodel
 wait 420
 cmd hollowbell mood calm
 cmd hollowbell stay true
-cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon zombie ~30 ~ ~10 {NoAI:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon zombie ~30 ~ ~10 {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
 wait 5
 view 0 90 -270 0 90 0
 cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_storm
@@ -54,8 +54,10 @@ wait 30
 shot heavy_sky_dive_turn
 wait 20
 shot heavy_sky_dive_fall
-wait 30
+wait 60
 shot heavy_sky_dive_land
+wait 15
+shot heavy_sky_dive_wave
 wait 150
 view 0 100 -270 0 100 0
 detail on

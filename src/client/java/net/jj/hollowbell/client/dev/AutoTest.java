@@ -150,6 +150,9 @@ public final class AutoTest {
             var d = tgt.subtract(cam).normalize();
             float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
             player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);
+            // the camera hangs where it's put, even when it stops following him
+            player.setNoGravity(true);
+            player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         });
     }
 
