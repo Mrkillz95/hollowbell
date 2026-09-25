@@ -217,14 +217,14 @@ public final class BellMoves {
         float s = s();
         switch (which) {
             case Moves.GRAB -> {
-                if (at == null || grabbed != null || grabbedTree != null) return false;
+                if (at == null || grabbed != null || grabbedTree != null || !HollowbellEntity.canCarry(at)) return false;
                 a = nearestStrand(at.position());
                 if (a < 0) return false;
                 grabbed = null; lift = 0f; strandHits = 0f; gentle = false;
             }
             case Moves.HARVEST -> {
                 if (grabbed != null || grabbedTree != null) return false;
-                LivingEntity mob = at != null && !(at instanceof Player) ? at : findHarvestMob();
+                LivingEntity mob = at != null && !(at instanceof Player) && HollowbellEntity.canCarry(at) ? at : findHarvestMob();
                 if (mob != null) { target = mob; aim = h.toModel(mob.position()); a = nearestStrand(mob.position()); }
                 else {
                     BlockPos tree = findTree();
@@ -238,7 +238,7 @@ public final class BellMoves {
                 lift = 0f; strandHits = 0f; gentle = false;
             }
             case Moves.SLAM, Moves.WRAP -> {
-                if (which == Moves.WRAP && (at == null || wrapped != null)) return false;
+                if (which == Moves.WRAP && (at == null || wrapped != null || !HollowbellEntity.canCarry(at))) return false;
                 a = at != null ? nearestArm(at.position()) : h.getRandom().nextInt(rig.arms.length);
                 armHits = 0f;
             }
@@ -372,7 +372,8 @@ public final class BellMoves {
         boolean night = h.level().getSkyDarken() > 6;
         List<int[]> opts = new ArrayList<>();
         // light
-        if (d < bell * 0.85 && !h.sunk()) opts.add(new int[]{Moves.GRAB, 4});
+        boolean carry = HollowbellEntity.canCarry(tg);
+        if (d < bell * 0.85 && !h.sunk() && carry) opts.add(new int[]{Moves.GRAB, 4});
         if (d < bell * 3) opts.add(new int[]{Moves.VOLLEY, flying ? 5 : 3});
         if (d < bell * 1.3) opts.add(new int[]{Moves.LASH, 4});
         if (d < 50 * s + 30) opts.add(new int[]{Moves.FLASH, night ? 3 : 1});
@@ -381,7 +382,7 @@ public final class BellMoves {
         if (d < bell * 0.85) opts.add(new int[]{Moves.CURTAIN, 2});
         if (d < bell * 1.4) opts.add(new int[]{Moves.SWEEP, 2});
         if (d < bell * 1.7) opts.add(new int[]{Moves.SLAM, 3});
-        if (d < bell * 1.5) opts.add(new int[]{Moves.WRAP, 2});
+        if (d < bell * 1.5 && carry) opts.add(new int[]{Moves.WRAP, 2});
         if (d < bell * 1.6) opts.add(new int[]{Moves.PULSE, 1});
         if (d < bell * 2) opts.add(new int[]{Moves.SPORES, 2});
         if (d < bell * 0.8 && h.podsLeft() > 0) opts.add(new int[]{Moves.POD_BURST, 2});
@@ -1109,7 +1110,7 @@ public final class BellMoves {
             if (target != null) {
                 // got it if it's within reach of the strand's end (or right under it)
                 double reach = 14 * s + 4;
-                if (!target.isAlive() || (target.position().distanceTo(tip) > reach && h.horiz(target.position()) > h.bellRadius())) { end(); return; }
+                if (!target.isAlive() || !HollowbellEntity.canCarry(target) || (target.position().distanceTo(tip) > reach && h.horiz(target.position()) > h.bellRadius())) { end(); return; }
                 grabbed = target;
                 grabSeat = seat(grabbed, tip);
                 h.sound(tip, ModSounds.GRAB, 2.5f, 0.8f);
@@ -1225,7 +1226,7 @@ public final class BellMoves {
             return;
         }
         if (t == Moves.WRAP_REACH) {
-            if (target == null || !target.isAlive() || target.position().distanceTo(tip) > 30 * s() + 6) { end(); return; }
+            if (target == null || !target.isAlive() || !HollowbellEntity.canCarry(target) || target.position().distanceTo(tip) > 30 * s() + 6) { end(); return; }
             wrapped = target;
             wrapSeat = seat(wrapped, tip);
             h.sound(tip, ModSounds.GRAB, 2.5f, 0.6f);
@@ -1377,7 +1378,7 @@ public final class BellMoves {
         double r = h.bellRadius() * 1.1;
         List<LivingEntity> l = level().getEntitiesOfClass(LivingEntity.class, h.bodyBox().setMaxY(h.getY() + 20 * s() + 4),
                 e -> (e instanceof Animal || e instanceof AbstractVillager || (e instanceof Mob && !(e instanceof HollowbellEntity) && !(e instanceof Belling)))
-                        && h.fairGame(e) && h.horiz(e.position()) < r && !e.isPassenger());
+                        && h.fairGame(e) && HollowbellEntity.canCarry(e) && h.horiz(e.position()) < r && !e.isPassenger());
         if (l.isEmpty()) return null;
         return l.get(h.getRandom().nextInt(l.size()));
     }

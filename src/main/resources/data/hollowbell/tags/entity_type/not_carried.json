@@ -1,0 +1,61 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "mountain_breathes:mountain",
+      "required": false
+    },
+    {
+      "id": "mountain_breathes:mountain_part",
+      "required": false
+    },
+    {
+      "id": "mountain_breathes:grip",
+      "required": false
+    },
+    {
+      "id": "mountain_breathes:heart",
+      "required": false
+    },
+    {
+      "id": "fire_ice_cerberus:cerberus",
+      "required": false
+    },
+    {
+      "id": "fire_ice_cerberus:cerberus_part",
+      "required": false
+    },
+    {
+      "id": "fire_ice_cerberus:cerberus_seat",
+      "required": false
+    },
+    {
+      "id": "furrowmaw:furrowmaw",
+      "required": false
+    },
+    {
+      "id": "furrowmaw:furrowmaw_part",
+      "required": false
+    },
+    {
+      "id": "furrowmaw:gullet",
+      "required": false
+    },
+    {
+      "id": "minecraft:ender_dragon",
+      "required": false
+    },
+    {
+      "id": "minecraft:wither",
+      "required": false
+    },
+    {
+      "id": "minecraft:warden",
+      "required": false
+    },
+    {
+      "id": "minecraft:elder_guardian",
+      "required": false
+    }
+  ]
+}
