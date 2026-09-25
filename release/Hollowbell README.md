@@ -10,6 +10,7 @@ He's made from your build block for block. Every block wears its real texture, a
 - **He really flies.** He swims up and down like a jellyfish: the bell squeezes and shoots him up, and opens like a parachute when he sinks. He follows the ground, climbs after things up high and never scrapes his rim on the ground.
 - **He moves like he has weight.** Arms and strands trail behind him, swing back when he stops, bundle up under him when he climbs and float up when he sinks. Nothing snaps from one pose to the next, even when a move gets cut off halfway. The bell leans into the way he's going.
 - **Smooth on your screen too.** He glides between server updates instead of stepping.
+- **What he grabs stays on the end of the strand** holding it, all the way up into the dome.
 - **22 moves** (13 new), split into light, medium and heavy. Heavy moves are huge, hit a big area and come with a loud warning and a red message first. After one he's worn out for a few seconds.
 - **He kills things now.** In 1.0 he hardly hurt creatures. Now his hits are much bigger, they land even right after another hit, hunting and guardian ones go after hostile mobs, and what he takes into the dome dies in there.
 - **His own sounds:** a low hum, a wet drifting sound, the whoosh of each pulse, a deep toll, a heartbeat when you're inside him, and a sound for every move. Bigger ones sound deeper.
