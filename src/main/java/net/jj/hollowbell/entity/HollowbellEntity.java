@@ -866,6 +866,26 @@ public class HollowbellEntity extends Monster {
 
     private static final boolean DEBUG = Boolean.getBoolean("hollowbell.debug") || System.getProperty("hollowbell.autotest") != null;
 
+    /** entity types he never picks up (the other giant bosses and their parts); mods can add to it */
+    public static final net.minecraft.tags.TagKey<EntityType<?>> NOT_CARRIED =
+            net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ENTITY_TYPE, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("hollowbell", "not_carried"));
+    /** JJ's own small creatures he may still pick up (Furrowmaw's furrowlings) */
+    public static final net.minecraft.tags.TagKey<EntityType<?>> CARRIED_ANYWAY =
+            net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ENTITY_TYPE, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("hollowbell", "carried_anyway"));
+
+    /**
+     * Whether his strands and arms can pick this up. Never the giants: Pitchgut, Cerberus, Furrowmaw, any boss, any
+     * part of one, anything from JJ's other boss mods (so future ones are covered too), or anything simply huge.
+     */
+    public static boolean canCarry(@Nullable Entity e) {
+        if (e == null) return false;
+        EntityType<?> t = e.getType();
+        if (t.is(NOT_CARRIED) || t.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags.BOSSES)) return false;
+        String cls = e.getClass().getName();
+        if (cls.startsWith("net.jj.") && !cls.startsWith("net.jj.hollowbell.") && !t.is(CARRIED_ANYWAY)) return false;
+        return e.getBbWidth() <= 6.0f && e.getBbHeight() <= 8.0f;
+    }
+
     public boolean fairGame(@Nullable LivingEntity e) {
         return e != null && e.isAlive() && !e.isRemoved() && e.level() == level() && !spares(e)
                 && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand) && e != rider && !moves.caught(e);

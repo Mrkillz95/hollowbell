@@ -982,4 +982,30 @@ public class HollowbellGameTests implements FabricGameTest {
             h.succeed();
         });
     }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "nocarry")
+    public void heNeverPicksUpTheGiants(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.HUNTER, 70);
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            Vec3 at = under(e);
+            net.minecraft.world.entity.monster.Zombie z = net.minecraft.world.entity.EntityType.ZOMBIE.create(h.getLevel());
+            z.moveTo(at.x, at.y, at.z, 0f, 0f);
+            z.setNoAi(true);
+            h.getLevel().addFreshEntity(z);
+            net.minecraft.world.entity.monster.Giant giant = net.minecraft.world.entity.EntityType.GIANT.create(h.getLevel());
+            giant.moveTo(at.x + 3, at.y, at.z, 0f, 0f);
+            giant.setNoAi(true);
+            h.getLevel().addFreshEntity(giant);
+            net.minecraft.world.entity.boss.wither.WitherBoss wither = net.minecraft.world.entity.EntityType.WITHER.create(h.getLevel());
+            h.assertTrue(HollowbellEntity.canCarry(z), "a zombie can be picked up");
+            h.assertFalse(HollowbellEntity.canCarry(giant), "a giant is too big to pick up");
+            h.assertFalse(HollowbellEntity.canCarry(wither), "a boss can't be picked up");
+            h.assertFalse(e.forceMove(Moves.GRAB, giant), "he doesn't try to grab the giant");
+            h.assertFalse(e.forceMove(Moves.WRAP, giant), "or wrap it");
+            z.discard();
+            giant.discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
 }

@@ -1,8 +1,12 @@
-# Hollowbell (Java mod) — version 1.1.1
+# Hollowbell (Java mod) — version 1.1.2
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.1.2
+
+- **He can't pick up the other giants.** His strands and arms won't grab, wrap or carry Pitchgut, the Cerberus, the Furrowmaw, any other boss (the Wither, the Ender Dragon, the Warden), or anything huge. He can still fight them. JJ's future boss mods are left alone too.
 
 ## What's new in 1.1.1
 
@@ -31,7 +35,7 @@ He's made from your build block for block. Every block wears its real texture, a
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.1.1.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut and Furrowmaw.
+2. Put `hollowbell-1.1.2.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut and Furrowmaw.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
