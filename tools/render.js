@@ -4,7 +4,6 @@
 //   front, side, top, iso: block colours, glass see-through (blended)
 //   cutaway: the front half cut away
 //   parts_front, parts_iso: every part in its own colour
-//   threads: the whole thing with the threads going up
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
@@ -94,22 +93,19 @@ function main() {
   const m = readModel();
   const cols = m.palette.map(blockColour);
   const glassAlpha = m.palette.map(n => /tinted_glass/.test(n) ? 0.85 : /stained_glass/.test(n) ? 0.55 : /glass/.test(n) ? 0.25 : 0);
-  const body = [], withThreads = [], parts = [];
+  const body = [], parts = [];
   const kinds = {};
   m.bones.forEach((b, bi) => {
-    const isThread = b.name.startsWith('thread_');
     const kind = b.name.replace(/_\d+$/, '').replace(/_\d+$/, '');
     kinds[kind] = (kinds[kind] || 0) + 1;
     const pc = b.name === 'bell' ? [70, 150, 120] : b.name === 'rim' ? [200, 200, 200] : b.name === 'crown' ? [255, 210, 0]
-      : b.name.startsWith('spot_') ? [255, 110, 0] : b.name.startsWith('pod_') ? [255, 0, 255] : b.name.startsWith('egg_') ? [140, 70, 20]
-      : isThread ? [240, 240, 255] : partColour(bi);
+      : b.name.startsWith('spot_') ? [255, 110, 0] : b.name.startsWith('pod_') ? [255, 0, 255] : b.name.startsWith('egg_') ? [140, 70, 20] : partColour(bi);
     for (const v of b.v) {
       const g = glassAlpha[v[3]];
       const a = v[5] / 255;
       const it = [v[0], v[1], v[2], cols[v[3]], g > 0 || a < 1, g > 0 ? g * a : a];
-      withThreads.push(it);
-      if (!isThread) body.push(it);
-      if (!isThread) parts.push([v[0], v[1], v[2], pc, false, 1]);
+      body.push(it);
+      parts.push([v[0], v[1], v[2], pc, false, 1]);
     }
   });
   draw(path.join(OUT, 'front.png'), body, PROJ.front, 3);
@@ -119,7 +115,6 @@ function main() {
   draw(path.join(OUT, 'cutaway.png'), body.filter(v => v[2] >= 0), (x, y, z) => [x, y, z], 3);
   draw(path.join(OUT, 'parts_front.png'), parts, PROJ.front, 2.5);
   draw(path.join(OUT, 'parts_iso.png'), parts, PROJ.iso, 2.5);
-  draw(path.join(OUT, 'threads.png'), withThreads, PROJ.iso, 1.6);
   console.log('bones by kind:', JSON.stringify(kinds));
 }
 

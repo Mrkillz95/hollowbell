@@ -52,7 +52,6 @@ public class BellingRenderer extends EntityRenderer<Belling> {
             mv.set(view).mul(base);
             if (shader.MODEL_VIEW_MATRIX != null) { shader.MODEL_VIEW_MATRIX.set(mv); shader.MODEL_VIEW_MATRIX.upload(); }
             for (int b = 0; b < rig.boneCount(); b++) {
-                if (rig.kind[b] == BellRig.Kind.THREAD) continue;
                 BellMeshes.Mesh m = meshes.mesh(BellMeshes.TINY, kind, b);
                 if (m == null) continue;
                 m.vb.bind();

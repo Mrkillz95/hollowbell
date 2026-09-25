@@ -26,10 +26,12 @@ public final class HollowbellConfig {
         public boolean harvest = true;
         /** Things he pulls all the way up end up inside his dome. Off = he squeezes them and lets go instead. */
         public boolean insideDome = true;
-        /** His threads can be cut. */
-        public boolean threadsCanBeCut = true;
-        /** How long a cut thread takes to start growing back, in seconds. */
-        public int threadRegrowSeconds = 45;
+        /** How long a popped pod takes to start growing back, in seconds (it then takes about 20 more to grow). */
+        public int podRegrowSeconds = 90;
+        /** How many of his pods (as a share, 0.34 = a third) have to be popped before he loses his lift and sinks. */
+        public float podsToSink = 0.34f;
+        /** Once he sinks, he stays down at least this long, in seconds. */
+        public int sunkSeconds = 30;
         /** How many egg clumps he sheds at a time, and whether he sheds at all (0 = never). */
         public int shedCount = 4;
         /** Keeps the chunks under him loaded while players are near him, so he never freezes half-loaded. */
@@ -42,7 +44,7 @@ public final class HollowbellConfig {
         public float soundVolume = 1.0f;
         /** The screen shakes when his bell or arm slams down. */
         public boolean screenShake = true;
-        /** Shows his health, pods and threads bars. */
+        /** Shows his health and pods bars. */
         public boolean bossBar = true;
         /** How far away (in blocks) he is still drawn. */
         public int renderDistance = 720;

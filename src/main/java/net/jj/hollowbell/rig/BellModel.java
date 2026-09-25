@@ -24,7 +24,7 @@ public final class BellModel {
     public final String[] boneNames;
     public final short[][] x, y, z, pal;
     public final byte[][] faces;
-    /** per voxel fade (0-255) for the bones that fade out (the tops of the threads), else null */
+    /** per voxel fade (0-255) for bones that fade out, else null (none do now) */
     public final byte[][] alpha;
     /** each bone's blocks at rest, for hit tests */
     private final LongOpenHashSet[] occupied;
@@ -42,7 +42,7 @@ public final class BellModel {
             LongOpenHashSet s = new LongOpenHashSet(Math.max(4, n));
             float[] bb = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
             for (int i = 0; i < n; i++) {
-                // the faded tip of a thread is too thin to hit
+                // anything nearly faded out is too thin to hit
                 if (alpha[b] != null && (alpha[b][i] & 0xff) < 90) continue;
                 s.add(key(x[b][i], y[b][i], z[b][i]));
                 bb[0] = Math.min(bb[0], x[b][i]); bb[1] = Math.min(bb[1], y[b][i]); bb[2] = Math.min(bb[2], z[b][i]);

@@ -71,7 +71,7 @@ public class HollowbellEntity extends Monster {
     private static final EntityDataAccessor<Float> DATA_LIFT = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Long> DATA_PULSE_START = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<Float> DATA_PULSE_POWER = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
-    /** lower, tilt x, tilt z: what his cut threads do to him */
+    /** lower, tilt x, tilt z: what his popped pods do to him */
     private static final EntityDataAccessor<Vector3f> DATA_HANG = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.VECTOR3);
     private static final EntityDataAccessor<Float> DATA_SUNK = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<CompoundTag> DATA_PARTS = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.COMPOUND_TAG);
@@ -88,9 +88,10 @@ public class HollowbellEntity extends Monster {
 
     // ---- his parts
     private final float[] podHp = new float[rig.pods.length];
-    private final float[] threadHp = new float[rig.threads.length];
-    /** gametime a cut thread starts growing back */
-    private final long[] threadRegrowAt = new long[rig.threads.length];
+    /** gametime a popped pod starts growing back */
+    private final long[] podRegrowAt = new long[rig.pods.length];
+    /** he stays down at least until this gametime once enough pods are popped */
+    private long sunkUntil;
     private final int[] eggBack = new int[rig.eggs.length];
     private boolean partsDirty = true;
     private int partsSentAt;
@@ -118,7 +119,7 @@ public class HollowbellEntity extends Monster {
     private @Nullable UUID fetching;
 
     // ---- bars
-    private @Nullable BellBar barHp, barPods, barThreads;
+    private @Nullable BellBar barHp, barPods;
 
     // ---- client smoothing
     private float cLower, cTiltX, cTiltZ, cSunk, cDriftX, cDriftZ;
@@ -135,7 +136,6 @@ public class HollowbellEntity extends Monster {
         this.xpReward = 500;
         this.noCulling = true;
         for (int i = 0; i < podHp.length; i++) podHp[i] = 1f;
-        for (int i = 0; i < threadHp.length; i++) threadHp[i] = 1f;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -207,7 +207,7 @@ public class HollowbellEntity extends Monster {
     public int moveNow() { return entityData.get(DATA_MOVE); }
     public int moveArg() { return entityData.get(DATA_MOVE_ARG); }
     public float moveT(float partial) { return (float) (level().getGameTime() - entityData.get(DATA_MOVE_START)) + partial; }
-    /** resting on the ground: sunk down from cut threads, or down in a drop */
+    /** resting on the ground: sunk down from popped pods, or down in a drop */
     public boolean resting() { return entityData.get(DATA_SUNK) > 0.5f || moveNow() == Moves.DROP; }
     public boolean sunk() { return entityData.get(DATA_SUNK) > 0.5f; }
 
@@ -224,9 +224,10 @@ public class HollowbellEntity extends Monster {
 
     public int podsLeft() { int n = 0; for (int i = 0; i < rig.pods.length; i++) if (!state.podPopped[i]) n++; return n; }
     public int eggsLeft() { int n = 0; for (int i = 0; i < rig.eggs.length; i++) if (!state.eggGone[i]) n++; return n; }
-    public int threadsHolding() { int n = 0; for (float g : state.threadGrowth) if (g >= 0.999f) n++; return n; }
     public boolean isPodPopped(int i) { return state.podPopped[i]; }
-    public float threadGrowth(int i) { return state.threadGrowth[i]; }
+    public float podGrowth(int i) { return state.podGrowth[i]; }
+    /** how many popped pods bring him down */
+    public int podsToSink() { return Math.max(1, (int) Math.ceil(rig.pods.length * Mth.clamp(HollowbellConfig.V.podsToSink, 0.05f, 1f))); }
 
     @Override
     protected EntityDimensions getDefaultDimensions(Pose p) {
@@ -244,7 +245,7 @@ public class HollowbellEntity extends Monster {
     public AABB bodyBox() {
         float s = bellScale();
         double r = 108 * s + 2;
-        return new AABB(getX() - r, getY() - 4, getZ() - r, getX() + r, getY() + (rig.threadTop + 4) * s, getZ() + r);
+        return new AABB(getX() - r, getY() - 4, getZ() - r, getX() + r, getY() + (rig.crownY + 8) * s, getZ() + r);
     }
 
     @Override public AABB getBoundingBoxForCulling() { return bodyBox(); }
@@ -291,11 +292,6 @@ public class HollowbellEntity extends Monster {
     public Vec3 eggWorld(int e) { return boneWorld(rig.eggs[e].bone(), rig.eggs[e].centre()); }
     public Vec3 spotWorld(int k) { return boneWorld(rig.spots[k].bone(), rig.spots[k].centre()); }
     public Vec3 crownWorld() { return boneWorld(rig.crownBone, new Vector3f(0, rig.crownY + 1, 0)); }
-    public Vec3 threadBaseWorld(int t) { return boneWorld(rig.threads[t].bones()[0], rig.threads[t].base()); }
-    public Vec3 threadTopWorld(int t) {
-        var T = rig.threads[t];
-        return boneWorld(T.bones()[1], new Vector3f(T.base().x, T.top(), T.base().z));
-    }
 
     /** the server's pose, worked out once a tick when something needs it */
     public void ensurePose() {
@@ -350,22 +346,22 @@ public class HollowbellEntity extends Monster {
         byte[] e = new byte[rig.eggs.length];
         for (int i = 0; i < e.length; i++) e[i] = (byte) (state.eggGone[i] ? 1 : 0);
         t.putByteArray("E", e);
-        byte[] th = new byte[rig.threads.length];
-        for (int i = 0; i < th.length; i++) th[i] = (byte) Math.round(Mth.clamp(state.threadGrowth[i], 0f, 1f) * 255f);
-        t.putByteArray("T", th);
+        byte[] pg = new byte[rig.pods.length];
+        for (int i = 0; i < pg.length; i++) pg[i] = (byte) Math.round(Mth.clamp(state.podGrowth[i], 0f, 1f) * 255f);
+        t.putByteArray("G", pg);
         entityData.set(DATA_PARTS, t);
     }
 
     private void readParts() {
         CompoundTag t = entityData.get(DATA_PARTS);
-        if (t == cParts || !t.contains("T")) return;
+        if (t == cParts || !t.contains("G")) return;
         cParts = t;
         int mask = t.getInt("P");
         for (int i = 0; i < rig.pods.length && i < 31; i++) state.podPopped[i] = (mask & (1 << i)) != 0;
         byte[] e = t.getByteArray("E");
         for (int i = 0; i < Math.min(e.length, rig.eggs.length); i++) state.eggGone[i] = e[i] != 0;
-        byte[] th = t.getByteArray("T");
-        for (int i = 0; i < Math.min(th.length, rig.threads.length); i++) state.threadGrowth[i] = (th[i] & 0xff) / 255f;
+        byte[] pg = t.getByteArray("G");
+        for (int i = 0; i < Math.min(pg.length, rig.pods.length); i++) state.podGrowth[i] = (pg[i] & 0xff) / 255f;
     }
 
     // ------------------------------------------------------------------ ticking
@@ -414,20 +410,18 @@ public class HollowbellEntity extends Monster {
         if (tickCount % 20 == 0) fighters.entrySet().removeIf(e -> now - e.getValue() > 6000);
     }
 
-    // ------------------------------------------------------------------ threads, pods, eggs over time
+    // ------------------------------------------------------------------ pods and eggs over time
 
     private void partsTick(long now) {
-        int regrow = Math.max(1, HollowbellConfig.V.threadRegrowSeconds) * 20;
         boolean anyChange = false;
-        for (int i = 0; i < rig.threads.length; i++) {
-            float g = state.threadGrowth[i];
-            if (g >= 1f) continue;
-            if (now < threadRegrowAt[i]) continue;
-            // grows back over about twenty seconds
+        for (int i = 0; i < rig.pods.length; i++) {
+            float g = state.podGrowth[i];
+            if (g >= 1f || now < podRegrowAt[i]) continue;
+            // a popped pod grows back over about twenty seconds, then it can be popped again
             float ng = Math.min(1f, g + 1f / 400f);
             if ((int) (ng * 40) != (int) (g * 40) || ng >= 1f) anyChange = true;
-            state.threadGrowth[i] = ng;
-            if (ng >= 1f) threadHp[i] = 1f;
+            state.podGrowth[i] = ng;
+            if (ng >= 1f) { state.podPopped[i] = false; podHp[i] = 1f; }
         }
         if (anyChange) partsDirty = true;
         // egg clumps come back slowly on the strands
@@ -435,31 +429,39 @@ public class HollowbellEntity extends Monster {
             if (!state.eggGone[i] || eggBack[i] <= 0) continue;
             if (--eggBack[i] == 0) { state.eggGone[i] = false; partsDirty = true; }
         }
-        if (tickCount % 5 == 0) hangFromThreads();
+        if (tickCount % 5 == 0) hangFromPods();
     }
 
-    /** cut threads let him hang lower and lean toward the cut side; cut enough and he sinks right down */
-    private void hangFromThreads() {
-        int n = rig.threads.length;
-        float cut = 0f, lx = 0f, lz = 0f;
+    /**
+     * The pods keep him up. Each popped one lets him hang a little lower and lean toward that side; pop a third of
+     * them and he loses his lift and sinks right down, and stays down until enough have grown back.
+     */
+    private void hangFromPods() {
+        int n = rig.pods.length, popped = 0;
+        float lx = 0f, lz = 0f;
         for (int i = 0; i < n; i++) {
-            float missing = 1f - state.threadGrowth[i];
-            if (missing <= 0f) continue;
-            cut += missing;
-            var T = rig.threads[i];
-            float r = Math.max(10f, (float) Math.hypot(T.base().x, T.base().z));
-            lx += missing * T.base().x / r;
-            lz += missing * T.base().z / r;
+            float missing = 1f - state.podGrowth[i];
+            if (!state.podPopped[i]) continue;
+            popped++;
+            var P = rig.pods[i];
+            float r = Math.max(10f, (float) Math.hypot(P.centre().x, P.centre().z));
+            lx += missing * P.centre().x / r;
+            lz += missing * P.centre().z / r;
         }
-        float frac = cut / n;
-        float lower = frac * 70f;
-        // leaning over toward the side with the cut threads: its edge goes down
-        float tiltZ = Mth.clamp(-lx / n * 1.4f, -0.3f, 0.3f), tiltX = Mth.clamp(lz / n * 1.4f, -0.3f, 0.3f);
+        int need = podsToSink();
+        float lower = Math.min(1f, popped / (float) need) * 18f;
+        // leaning over toward the side with the popped pods: its edge goes down
+        float tiltZ = Mth.clamp(-lx / need * 0.12f, -0.18f, 0.18f), tiltX = Mth.clamp(lz / need * 0.12f, -0.18f, 0.18f);
         entityData.set(DATA_HANG, new Vector3f(lower, tiltX, tiltZ));
         float sunk = entityData.get(DATA_SUNK);
-        // down once too many are gone, and he stays down until enough have grown back
-        if (sunk < 0.5f && frac >= 0.6f) { entityData.set(DATA_SUNK, 1f); sound(position(), net.minecraft.sounds.SoundEvents.ANVIL_LAND, 3f, 0.4f); }
-        else if (sunk > 0.5f && threadsHolding() >= n / 2) entityData.set(DATA_SUNK, 0f);
+        long now = level().getGameTime();
+        if (sunk < 0.5f && popped >= need) {
+            entityData.set(DATA_SUNK, 1f);
+            sunkUntil = now + Math.max(5, HollowbellConfig.V.sunkSeconds) * 20L;
+            sound(position(), net.minecraft.sounds.SoundEvents.ANVIL_LAND, 3f, 0.4f);
+            for (ServerPlayer p : level() instanceof ServerLevel sl ? sl.players() : List.<ServerPlayer>of())
+                if (p.distanceToSqr(this) < Mth.square(120 * bellScale() + 60)) p.displayClientMessage(Component.translatable("message.hollowbell.sunk"), true);
+        } else if (sunk > 0.5f && popped < need && now >= sunkUntil) entityData.set(DATA_SUNK, 0f);
     }
 
     // ------------------------------------------------------------------ where he goes
@@ -695,7 +697,6 @@ public class HollowbellEntity extends Monster {
             case SPOT -> inside ? 3.5f : 2.5f;
             case POD -> 1f;
             case EGG -> 0.3f;
-            case THREAD -> 0.2f;
             default -> 0.1f;           // the copper and bone take very little
         };
     }
@@ -714,9 +715,6 @@ public class HollowbellEntity extends Monster {
                 if (at != null) particles(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK,
                         net.minecraft.world.level.block.Blocks.WHITE_STAINED_GLASS.defaultBlockState()), at, 16, rig.pods[part].radius() * bellScale() * 0.5, 0.3);
                 if (podHp[part] <= 0f) popPod(part, att);
-            } else if (k == BellRig.Kind.THREAD && HollowbellConfig.V.threadsCanBeCut && state.threadGrowth[part] >= 0.999f) {
-                threadHp[part] -= amount / 12f;
-                if (threadHp[part] <= 0f) cutThread(part, att);
             } else if (k == BellRig.Kind.STRAND) {
                 moves.strandHit(part, amount, att);
             } else if (k == BellRig.Kind.ARM) {
@@ -759,7 +757,9 @@ public class HollowbellEntity extends Monster {
     public void popPod(int i, @Nullable Entity by) {
         if (state.podPopped[i]) return;
         state.podPopped[i] = true;
+        state.podGrowth[i] = 0f;
         podHp[i] = 0f;
+        podRegrowAt[i] = level().getGameTime() + Math.max(1, HollowbellConfig.V.podRegrowSeconds) * 20L;
         partsDirty = true;
         Vec3 c = podWorld(i);
         sound(c, net.minecraft.sounds.SoundEvents.GLASS_BREAK, 3f, 0.5f);
@@ -775,21 +775,7 @@ public class HollowbellEntity extends Monster {
             sl.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(sl, c.x, c.y, c.z, drop));
         }
         if (hp <= 0f) { setHealth(0f); die(by instanceof Player pl ? damageSources().playerAttack(pl) : damageSources().generic()); }
-    }
-
-    public void cutThread(int i, @Nullable Entity by) {
-        if (state.threadGrowth[i] <= 0f) return;
-        Vec3 c = threadBaseWorld(i);
-        state.threadGrowth[i] = 0f;
-        threadHp[i] = 0f;
-        threadRegrowAt[i] = level().getGameTime() + Math.max(1, HollowbellConfig.V.threadRegrowSeconds) * 20L;
-        partsDirty = true;
-        sound(c, net.minecraft.sounds.SoundEvents.BONE_BLOCK_BREAK, 2.5f, 0.6f);
-        sound(c, net.minecraft.sounds.SoundEvents.CHAIN_BREAK, 2f, 0.5f);
-        particles(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK,
-                net.minecraft.world.level.block.Blocks.BONE_BLOCK.defaultBlockState()), c.add(0, 2 * bellScale(), 0), 30, 1 + bellScale() * 2, 0.2);
-        if (by instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable("message.hollowbell.thread_cut", threadsHolding(), rig.threads.length), true);
-        hangFromThreads();
+        else hangFromPods();
     }
 
     /** /hollowbell popped n: pops the first n pods */
@@ -797,15 +783,12 @@ public class HollowbellEntity extends Monster {
         for (int i = 0; i < rig.pods.length && n > 0 && !isDeadOrDying(); i++) if (!state.podPopped[i]) { popPod(i, null); n--; }
     }
 
-    public void cutThreads(int n) {
-        for (int i = 0; i < rig.threads.length && n > 0; i++) if (state.threadGrowth[i] >= 0.999f) { cutThread(i, null); n--; }
-    }
-
-    /** grows every thread back straight away */
-    public void mendThreads() {
-        for (int i = 0; i < rig.threads.length; i++) { state.threadGrowth[i] = 1f; threadHp[i] = 1f; threadRegrowAt[i] = 0; }
+    /** grows every pod back straight away */
+    public void mendPods() {
+        for (int i = 0; i < rig.pods.length; i++) { state.podPopped[i] = false; state.podGrowth[i] = 1f; podHp[i] = 1f; podRegrowAt[i] = 0; }
+        sunkUntil = 0;
         partsDirty = true;
-        hangFromThreads();
+        hangFromPods();
     }
 
     void eggGone(int i) { state.eggGone[i] = true; eggBack[i] = 20 * 60 * 5; partsDirty = true; }
@@ -869,7 +852,6 @@ public class HollowbellEntity extends Monster {
     public void clearBars() {
         if (barHp != null) barHp.removeAllPlayers();
         if (barPods != null) barPods.removeAllPlayers();
-        if (barThreads != null) barThreads.removeAllPlayers();
     }
 
     private void barsTick() {
@@ -878,20 +860,18 @@ public class HollowbellEntity extends Monster {
         if (barHp == null) {
             barHp = new BellBar(BellBar.idFor(getUUID(), "hp"), Component.translatable("bar.hollowbell.health"), BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.NOTCHED_10);
             barPods = new BellBar(BellBar.idFor(getUUID(), "pods"), Component.empty(), BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.PROGRESS);
-            barThreads = new BellBar(BellBar.idFor(getUUID(), "threads"), Component.empty(), BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);
         }
         barHp.setProgress(Mth.clamp(healthNow() / Math.max(1f, healthMax()), 0f, 1f));
         barHp.setColor(angry() ? BossEvent.BossBarColor.RED : BossEvent.BossBarColor.GREEN);
         barPods.setProgress(podsLeft() / (float) Math.max(1, rig.pods.length));
-        barPods.setName(Component.translatable("bar.hollowbell.pods", podsLeft(), rig.pods.length));
-        barThreads.setProgress(threadsHolding() / (float) rig.threads.length);
-        barThreads.setName(Component.translatable(sunk() ? "bar.hollowbell.threads_sunk" : "bar.hollowbell.threads", threadsHolding(), rig.threads.length));
+        barPods.setName(Component.translatable(sunk() ? "bar.hollowbell.pods_sunk" : "bar.hollowbell.pods", podsLeft(), rig.pods.length));
+        barPods.setColor(sunk() ? BossEvent.BossBarColor.PURPLE : BossEvent.BossBarColor.YELLOW);
         double r = 90 * bellScale() + 90;
         List<ServerPlayer> want = new ArrayList<>();
         if (level() instanceof ServerLevel sl) for (ServerPlayer p : sl.players()) {
             if (p.distanceToSqr(getX(), p.getY(), getZ()) < r * r || moves.caught(p) || p == rider) want.add(p);
         }
-        for (BellBar b : new BellBar[]{barHp, barPods, barThreads}) {
+        for (BellBar b : new BellBar[]{barHp, barPods}) {
             for (ServerPlayer p : new ArrayList<>(b.getPlayers())) if (!want.contains(p)) b.removePlayer(p);
             for (ServerPlayer p : want) b.addPlayer(p);
         }
@@ -1122,17 +1102,17 @@ public class HollowbellEntity extends Monster {
         byte[] e = new byte[rig.eggs.length];
         for (int i = 0; i < e.length; i++) e[i] = (byte) (state.eggGone[i] ? 1 : 0);
         tag.putByteArray("Eggs", e);
-        ListTag th = new ListTag();
+        ListTag pg = new ListTag();
         long now = level().getGameTime();
-        for (int i = 0; i < rig.threads.length; i++) {
+        for (int i = 0; i < rig.pods.length; i++) {
             CompoundTag o = new CompoundTag();
-            o.putFloat("G", state.threadGrowth[i]);
-            o.putFloat("H", threadHp[i]);
-            o.putLong("Wait", Math.max(0, threadRegrowAt[i] - now));
-            th.add(o);
+            o.putFloat("G", state.podGrowth[i]);
+            o.putLong("Wait", Math.max(0, podRegrowAt[i] - now));
+            pg.add(o);
         }
-        tag.put("Threads", th);
+        tag.put("PodGrowth", pg);
         tag.putFloat("Sunk", entityData.get(DATA_SUNK));
+        tag.putLong("SunkFor", Math.max(0, sunkUntil - now));
         if (home != null) { tag.putDouble("HomeX", home.x); tag.putDouble("HomeY", home.y); tag.putDouble("HomeZ", home.z); }
         tag.putBoolean("Stay", stay);
         if (hunted != null) tag.putUUID("Hunted", hunted);
@@ -1168,17 +1148,17 @@ public class HollowbellEntity extends Monster {
             byte[] e = tag.getByteArray("Eggs");
             for (int i = 0; i < Math.min(e.length, rig.eggs.length); i++) { state.eggGone[i] = e[i] != 0; if (state.eggGone[i]) eggBack[i] = 20 * 60 * 5; }
         }
-        if (tag.contains("Threads", Tag.TAG_LIST)) {
-            ListTag th = tag.getList("Threads", Tag.TAG_COMPOUND);
-            for (int i = 0; i < Math.min(th.size(), rig.threads.length); i++) {
-                CompoundTag o = th.getCompound(i);
-                state.threadGrowth[i] = o.getFloat("G");
-                threadHp[i] = o.getFloat("H");
-                threadRegrowAt[i] = o.getLong("Wait");      // made relative to now on the first tick
-                pendingWaits = true;
+        if (tag.contains("PodGrowth", Tag.TAG_LIST)) {
+            ListTag pg = tag.getList("PodGrowth", Tag.TAG_COMPOUND);
+            for (int i = 0; i < Math.min(pg.size(), rig.pods.length); i++) {
+                CompoundTag o = pg.getCompound(i);
+                state.podGrowth[i] = o.getFloat("G");
+                podRegrowAt[i] = o.getLong("Wait");      // made relative to now on the first tick
             }
-        }
+        } else for (int i = 0; i < rig.pods.length; i++) state.podGrowth[i] = state.podPopped[i] ? 0f : 1f;
         entityData.set(DATA_SUNK, tag.getFloat("Sunk"));
+        sunkUntil = tag.getLong("SunkFor");
+        pendingWaits = true;
         if (tag.contains("HomeX")) home = new Vec3(tag.getDouble("HomeX"), tag.getDouble("HomeY"), tag.getDouble("HomeZ"));
         setStay(tag.getBoolean("Stay"));
         hunted = tag.hasUUID("Hunted") ? tag.getUUID("Hunted") : null;
@@ -1195,7 +1175,8 @@ public class HollowbellEntity extends Monster {
         if (pendingWaits && !level().isClientSide) {
             pendingWaits = false;
             long now = level().getGameTime();
-            for (int i = 0; i < threadRegrowAt.length; i++) threadRegrowAt[i] += now;
+            for (int i = 0; i < podRegrowAt.length; i++) podRegrowAt[i] += now;
+            sunkUntil += now;
         }
     }
 

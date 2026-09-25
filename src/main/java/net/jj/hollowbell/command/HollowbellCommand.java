@@ -51,12 +51,9 @@ public final class HollowbellCommand {
                         .executes(c -> near(c, h -> h.hurtBy(FloatArgumentType.getFloat(c, "amount")), "hurt"))))
                 .then(Commands.literal("sethealth").then(Commands.argument("n", FloatArgumentType.floatArg(1f))
                         .executes(c -> near(c, h -> h.setHealthTo(FloatArgumentType.getFloat(c, "n")), "sethealth"))))
-                .then(Commands.literal("heal").executes(c -> near(c, h -> { h.heal(); h.mendThreads(); }, "heal")))
+                .then(Commands.literal("heal").executes(c -> near(c, h -> { h.heal(); h.mendPods(); }, "heal")))
                 .then(Commands.literal("popped").then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
                         .executes(c -> near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "n")), "popped"))))
-                .then(Commands.literal("cut").then(Commands.argument("n", IntegerArgumentType.integer(0, 128))
-                        .executes(c -> near(c, h -> h.cutThreads(IntegerArgumentType.getInteger(c, "n")), "cut"))))
-                .then(Commands.literal("mend").executes(c -> near(c, HollowbellEntity::mendThreads, "mend")))
                 .then(Commands.literal("ride").executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
                     HollowbellEntity h = nearest(c.getSource());
@@ -123,7 +120,7 @@ public final class HollowbellCommand {
         for (HollowbellEntity h : all) {
             c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.list_line", (int) h.getX(), (int) h.getY(), (int) h.getZ(),
                     String.format("%.2f", h.bellScale()), Component.translatable("mode.hollowbell." + h.variant()),
-                    (int) h.healthNow(), (int) h.healthMax(), h.podsLeft(), h.rig.pods.length, h.threadsHolding(), h.rig.threads.length), false);
+                    (int) h.healthNow(), (int) h.healthMax(), h.podsLeft(), h.rig.pods.length), false);
         }
         return all.size();
     }

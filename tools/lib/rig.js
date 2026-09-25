@@ -1,5 +1,5 @@
 // Turns the sorted voxels into bones: splits the strands apart, finds each pod and egg clump and the strand it
-// hangs from, cuts the arms and strands into segments that can bend, and adds the 128 threads going up.
+// hangs from, and cuts the arms and strands into segments that can bend.
 const { N26 } = require('./classify');
 
 const STRAND_SEGS = 4;
@@ -286,82 +286,19 @@ function buildRig(M, C) {
   const profile = [];
   for (let y = 132; y <= crownY; y++) profile.push([y, Math.round((inner[y] || 0) * 10) / 10, Math.round((outer[y] || 0) * 10) / 10]);
 
-  // ---------------- threads
-  const topOf = new Map();   // x,z -> highest bell voxel y
-  for (let k = 0; k < n; k++) {
-    if (!['bell', 'crown', 'rim'].includes(label[k]) && !(label[k] || '').startsWith('spot_')) continue;
-    const key = X[k] * 1000 + Z[k];
-    if (!topOf.has(key) || topOf.get(key) < Y[k]) topOf.set(key, Y[k]);
-  }
-  // the ribs: angles where the copper of the dome shell is thickest, at mid height
-  const hist = new Float64Array(720);
-  for (let k = 0; k < n; k++) {
-    if (label[k] !== 'bell' || Y[k] < 150 || Y[k] > 175) continue;
-    if (!/oxidized_copper|oxidized_cut_copper/.test(P[C.PAL[k]])) continue;
-    const r = Math.hypot(X[k], Z[k]); if (!outer[Y[k]] || r < outer[Y[k]] - 3) continue;
-    const a = (Math.atan2(Z[k], X[k]) + Math.PI) / (2 * Math.PI) * 720;
-    hist[Math.floor(a) % 720]++;
-  }
-  const sm = new Float64Array(720);
-  for (let i = 0; i < 720; i++) for (let d = -4; d <= 4; d++) sm[i] += hist[(i + d + 720) % 720];
-  const peaks = [];
-  for (let i = 0; i < 720; i++) {
-    let top = true;
-    for (let d = -10; d <= 10 && top; d++) if (d && sm[(i + d + 720) % 720] > sm[i]) top = false;
-    if (top && sm[i] > 0) peaks.push(i);
-  }
-  // keep the 24 strongest, as angles
-  const ribs = peaks.sort((a, b) => sm[b] - sm[a]).slice(0, 24).map(i => (i + 0.5) / 720 * 2 * Math.PI - Math.PI).sort((a, b) => a - b);
-  const gaps = ribs.map((a, i) => { const b = i + 1 < ribs.length ? ribs[i + 1] : ribs[0] + 2 * Math.PI; return (a + b) / 2; });
-  const spots = [];
-  for (let i = 0; i < 32; i++) spots.push([19, (i + 0.5) / 32 * 2 * Math.PI]);
-  for (const r of [30, 43, 56, 69]) for (const a of gaps) spots.push([r + (hash(Math.round(a * 100), r, 0, 7) - 0.5) * 3, a]);
-  const threadTop = crownY + 100;
-  const fadeFrom = crownY + 45;
-  const threadDefs = [];
-  const threadVox = [];     // x,y,z,paletteName,bone,alpha
-  const TH = { bone: 'minecraft:bone_block', calcite: 'minecraft:calcite', band: 'minecraft:oxidized_copper', glow: 'minecraft:verdant_froglight' };
-  spots.forEach(([r, a], t) => {
-    const bx = Math.round(r * Math.cos(a)), bz = Math.round(r * Math.sin(a));
-    let by = -1;
-    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) by = Math.max(by, topOf.get((bx + dx) * 1000 + bz + dz) ?? -1);
-    if (by < 0) throw new Error(`no dome under thread ${t} at ${bx},${bz}`);
-    const b0 = addBone(`thread_${t}_0`, 'bell', [bx, by, bz]);
-    const b1 = addBone(`thread_${t}_1`, `thread_${t}_0`, [bx, fadeFrom, bz]);
-    const len = threadTop - by;
-    const bandStep = 13 + Math.floor(hash(t, 1, 2, 3) * 4);
-    for (let y = by - 1; y <= threadTop; y++) {
-      const f = (y - by) / len;
-      const cells = f < 0.3 ? [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] : f < 0.65 ? [[0, 0], [1, 0], [0, 1], [1, 1]] : [[0, 0]];
-      const band = y > by + 4 && (y - by) % bandStep === 0;
-      for (const [dx, dz] of cells) {
-        const x = bx + dx, z = bz + dz;
-        let pal;
-        if (band) pal = TH.band;
-        else if (dx === 0 && dz === 0 && hash(x, y, z, 11) < 0.05) pal = TH.glow;
-        else pal = hash(x, y, z, 5) < 0.35 ? TH.calcite : TH.bone;
-        const alpha = y <= fadeFrom ? 255 : Math.max(0, Math.round(255 * (threadTop - y) / (threadTop - fadeFrom)));
-        if (alpha < 8) continue;
-        threadVox.push([x, y, z, pal, y <= fadeFrom ? b0 : b1, alpha]);
-      }
-    }
-    threadDefs.push({ bones: [b0, b1], base: [bx, by, bz], top: threadTop, ring: t < 32 ? 0 : 1 + Math.floor((t - 32) / 24), angle: Math.round(a * 1000) / 1000 });
-  });
-
   return {
-    bones, boneOf, threadVox,
+    bones, boneOf,
     rig: {
       version: 1,
       note: 'Hollowbell rig: model space is blocks at size 1, y 0 is the ground under his strands, x and z are centred on the crown.',
-      crownY, rimY: 132, threadTop, fadeFrom,
+      crownY, rimY: 132,
       bones: bones.map(b => ({ name: b.name, parent: b.parent, pivot: b.pivot })),
-      arms: armDefs, strands: strandDefs, pods: podDefs, eggs: eggDefs, threads: threadDefs,
+      arms: armDefs, strands: strandDefs, pods: podDefs, eggs: eggDefs,
       spots: [0, 1, 2, 3, 4].map(i => spotDef(C, boneIndex.get('spot_' + i), 'spot_' + i)),
       crown: spotDef(C, boneIndex.get('crown'), 'crown'),
       dome: profile,
-      ribs: ribs.map(a => Math.round(a * 1000) / 1000),
     },
-    stats: { strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, threads: threadDefs.length, orphans, loosePods: pods.loose, looseEggs: eggs.loose },
+    stats: { strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, orphans, loosePods: pods.loose, looseEggs: eggs.loose },
   };
 }
 

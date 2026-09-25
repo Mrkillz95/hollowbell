@@ -105,7 +105,7 @@ public class HollowbellGameTests implements FabricGameTest {
         for (int b = 0; b < rig.boneCount(); b++) h.assertTrue(rig.boneNames[b].equals(m.boneNames[b]), "bone " + b + " named differently");
         h.assertTrue(rig.arms.length == 8, "arms: " + rig.arms.length);
         h.assertTrue(rig.spots.length == 5, "spots: " + rig.spots.length);
-        h.assertTrue(rig.threads.length == 128, "threads: " + rig.threads.length);
+        for (String n : rig.boneNames) h.assertTrue(!n.startsWith("thread"), "a thread is still in the rig: " + n);
         h.assertTrue(rig.strands.length >= 50, "strands: " + rig.strands.length);
         h.assertTrue(rig.pods.length >= 10 && rig.pods.length <= 31, "pods: " + rig.pods.length);
         h.assertTrue(rig.eggs.length >= 10, "egg clumps: " + rig.eggs.length);
@@ -128,7 +128,6 @@ public class HollowbellGameTests implements FabricGameTest {
             float want = Math.max(40f, HollowbellConfig.V.health * S);
             h.assertTrue(Math.abs(e.healthMax() - want) < 1f, "health " + e.healthMax() + " want " + want);
             h.assertTrue(e.podsLeft() == e.rig.pods.length, "pods popped already");
-            h.assertTrue(e.threadsHolding() == 128, "threads not all holding: " + e.threadsHolding());
             double ground = e.groundAt(e.getX(), e.getZ());
             h.assertTrue(Math.abs(e.getY() - ground) < 1.5, "he should hang with his strands on the ground: y " + e.getY() + " ground " + ground);
             // the pose puts his crown where it should be
@@ -336,42 +335,48 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
-    // ------------------------------------------------------------------ threads, pods, eggs
+    // ------------------------------------------------------------------ pods and eggs
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 900, batch = "threads")
-    public void threadsCutAndGrowBack(GameTestHelper h) {
-        int was = HollowbellConfig.V.threadRegrowSeconds;
-        HollowbellConfig.V.threadRegrowSeconds = 1;
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 900, batch = "pod_regrow")
+    public void podsGrowBack(GameTestHelper h) {
+        int was = HollowbellConfig.V.podRegrowSeconds;
+        HollowbellConfig.V.podRegrowSeconds = 1;
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 40);
         h.runAfterDelay(20, () -> {
             e.setStay(true);
-            int bone = e.rig.threads[5].bones()[0];
-            for (int i = 0; i < 20 && e.threadGrowth(5) > 0f; i++) e.applyDamage(e.damageSources().generic(), 6f, bone, false);
-            h.assertTrue(e.threadGrowth(5) == 0f, "thread 5 wasn't cut");
-            h.assertTrue(e.threadsHolding() == 127, "threads holding: " + e.threadsHolding());
+            e.popPods(1);
+            h.assertTrue(e.isPodPopped(0) && e.podGrowth(0) == 0f, "pod 0 wasn't popped");
         });
-        h.runAfterDelay(60, () -> h.assertTrue(e.threadGrowth(5) > 0f && e.threadGrowth(5) < 1f, "thread 5 isn't growing back: " + e.threadGrowth(5)));
+        h.runAfterDelay(60, () -> h.assertTrue(e.podGrowth(0) > 0f && e.podGrowth(0) < 1f, "pod 0 isn't growing back: " + e.podGrowth(0)));
         h.runAfterDelay(20 + 20 + 420, () -> {
-            HollowbellConfig.V.threadRegrowSeconds = was;
-            h.assertTrue(e.threadGrowth(5) >= 1f, "thread 5 never grew back: " + e.threadGrowth(5));
-            h.assertTrue(e.threadsHolding() == 128, "not all holding again");
+            HollowbellConfig.V.podRegrowSeconds = was;
+            h.assertTrue(e.podGrowth(0) >= 1f && !e.isPodPopped(0), "pod 0 never grew back: " + e.podGrowth(0));
+            h.assertTrue(e.podsLeft() == e.rig.pods.length, "not all pods back");
             release(h, e);
             h.succeed();
         });
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 120, batch = "sunk")
-    public void cutEnoughThreadsAndHeSinks(GameTestHelper h) {
+    public void popAThirdOfThePodsAndHeSinks(GameTestHelper h) {
+        int was = HollowbellConfig.V.sunkSeconds;
+        HollowbellConfig.V.sunkSeconds = 1;
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 41);
-        h.runAfterDelay(20, () -> { e.setStay(true); e.cutThreads(90); });
-        h.runAfterDelay(35, () -> {
-            h.assertTrue(e.threadsHolding() == 38, "holding: " + e.threadsHolding());
-            h.assertTrue(e.sunk(), "90 threads cut and he hasn't sunk");
-            h.assertTrue(!e.forceMove(Moves.DROP, null), "he can drop while he's already sunk");
-            e.mendThreads();
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            e.popPods(e.podsToSink() - 1);
+            h.assertTrue(!e.sunk(), "he sank before a third of his pods were popped");
+            e.popPods(1);
+            h.assertTrue(e.podsToSink() >= e.rig.pods.length / 4 && e.podsToSink() <= e.rig.pods.length / 2, "pods to sink: " + e.podsToSink());
         });
-        h.runAfterDelay(50, () -> {
-            h.assertTrue(!e.sunk(), "threads mended and he's still sunk");
+        h.runAfterDelay(35, () -> {
+            h.assertTrue(e.sunk(), "a third of his pods popped and he hasn't sunk");
+            h.assertTrue(!e.forceMove(Moves.DROP, null), "he can drop while he's already sunk");
+            e.mendPods();
+        });
+        h.runAfterDelay(80, () -> {
+            HollowbellConfig.V.sunkSeconds = was;
+            h.assertTrue(!e.sunk(), "pods grown back and he's still sunk");
             release(h, e);
             h.succeed();
         });
@@ -491,7 +496,6 @@ public class HollowbellGameTests implements FabricGameTest {
         HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.GUARDIAN, 61);
         h.runAfterDelay(20, () -> {
             e.popPods(3);
-            e.cutThreads(7);
             e.setStay(true);
             e.hurtBy(50f);
             CompoundTag tag = new CompoundTag();
@@ -501,7 +505,7 @@ public class HollowbellGameTests implements FabricGameTest {
             h.assertTrue(Math.abs(b.bellScale() - 0.2f) < 1e-4, "size lost: " + b.bellScale());
             h.assertTrue(b.isGuardian(), "mood lost");
             h.assertTrue(b.podsLeft() == e.podsLeft(), "pods lost: " + b.podsLeft() + " vs " + e.podsLeft());
-            h.assertTrue(b.threadsHolding() == e.threadsHolding(), "threads lost: " + b.threadsHolding() + " vs " + e.threadsHolding());
+            h.assertTrue(b.podGrowth(0) == e.podGrowth(0), "pod growth lost");
             h.assertTrue(Math.abs(b.healthNow() - e.healthNow()) < 0.5f, "health lost: " + b.healthNow() + " vs " + e.healthNow());
             h.assertTrue(b.healthMax() == e.healthMax(), "max health lost");
             h.assertTrue(b.staying(), "hold still lost");

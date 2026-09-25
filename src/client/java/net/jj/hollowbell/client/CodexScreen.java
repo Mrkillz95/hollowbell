@@ -263,8 +263,8 @@ public class CodexScreen extends Screen {
         if (mHuntDays > 0)
             g.drawCenteredString(this.font, Component.translatable("codex.hollowbell.hunted", mHuntDays).withStyle(ChatFormatting.RED), this.width / 2, top() - 76, 0xFFFF5555);
         if (m != null && page != 3) {
-            // his health, pods and threads, small, under the pages
-            Component bars = Component.translatable("codex.hollowbell.parts", m.podsLeft(), m.rig.pods.length, m.threadsHolding(), m.rig.threads.length);
+            // his pods, small, under the pages
+            Component bars = Component.translatable(m.sunk() ? "codex.hollowbell.parts_sunk" : "codex.hollowbell.parts", m.podsLeft(), m.rig.pods.length);
             g.drawString(this.font, bars, left() + 2, top() + 6 * (H + GAP) + 6, 0xFF9FE0C4, false);
         }
         if (page == 3) {

@@ -4,7 +4,7 @@
 //   node tools/convert.js
 //
 // Reads build-source/ (34 Bedrock .mcstructure pieces placed by hollowbell.mcfunction), drops the ground patch,
-// maps every block to its Java name, sorts every voxel into a part, adds the 128 threads going up, and writes
+// maps every block to its Java name, tidies it up, sorts every voxel into a part, and writes
 //   src/main/resources/hollowbell/hollowbell_model.bin   (the voxels, one list per bone)
 //   src/main/resources/hollowbell/hollowbell_rig.json    (the bones and every part)
 // Then run tools/render.js to draw it to PNG.
@@ -36,13 +36,6 @@ function main() {
   const occupied = new Map();
   const key = (x, y, z) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
   for (let i = 0; i < vox.length; i++) occupied.set(key(vox[i][0], vox[i][1], vox[i][2]), i);
-  let threadClash = 0;
-  for (const t of R.threadVox) {
-    const k = key(t[0], t[1], t[2]);
-    if (occupied.has(k)) { threadClash++; continue; }   // inside the dome's own blocks
-    occupied.set(k, vox.length);
-    vox.push([t[0], t[1], t[2], pal(t[3]), t[4], t[5]]);
-  }
   const glass = palette.map(isGlass);
 
   // which faces show: a face is hidden by an opaque neighbour, or by the same glass, but only inside one bone
@@ -88,7 +81,7 @@ function main() {
     }
     faces[i] = f;
   }
-  console.log(`${vox.length} voxels (${R.threadVox.length - threadClash} in threads), ${faceCount} faces showing`);
+  console.log(`${vox.length} voxels, ${faceCount} faces showing`);
 
   // write the model: gzip( "HBEL" version palette bones[ name count voxels[x y z pal faces alpha] ] )
   const perBone = bones.map(() => []);
