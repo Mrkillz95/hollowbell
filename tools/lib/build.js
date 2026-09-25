@@ -45,6 +45,7 @@ function readNBT(buf) {
 function bedrockName(b) {
   const st = b.states || {};
   const n = b.name.replace('minecraft:', '');
+  if (st.pillar_axis !== undefined && st.pillar_axis !== 'y') return `${n}[axis=${st.pillar_axis}]`;
   return st.color !== undefined ? `${n}[color=${st.color}]` : n;
 }
 

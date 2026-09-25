@@ -23,6 +23,8 @@ const RENAMED = {
 };
 
 function javaName(bedrock) {
+  const ax = bedrock.match(/^([a-z_]+)\[axis=([xz])\]$/);
+  if (ax) return javaName(ax[1]) + `[axis=${ax[2]}]`;     // a pillar block lying on its side
   const m = bedrock.match(/^([a-z_]+)(?:\[color=([a-z_]+)\])?$/);
   if (!m) throw new Error('cannot read block name: ' + bedrock);
   const [, base, colour] = m;

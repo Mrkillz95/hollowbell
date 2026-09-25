@@ -14,8 +14,8 @@ const ROOT = path.join(__dirname, '..');
 const RES = path.join(ROOT, 'src', 'main', 'resources', 'hollowbell');
 const OUT = path.join(ROOT, 'reference', 'converted');
 
-function readModel() {
-  const b = zlib.gunzipSync(fs.readFileSync(path.join(RES, 'hollowbell_model.bin')));
+function readModel(file = path.join(RES, 'hollowbell_model.bin')) {
+  const b = zlib.gunzipSync(fs.readFileSync(file));
   let p = 0;
   const i32 = () => { const v = b.readInt32BE(p); p += 4; return v; };
   const utf = () => { const n = b.readInt16BE(p); p += 2; const s = b.toString('utf8', p, p + n); p += n; return s; };
@@ -118,4 +118,5 @@ function main() {
   console.log('bones by kind:', JSON.stringify(kinds));
 }
 
-main();
+if (require.main === module) main();
+module.exports = { readModel, draw, PROJ, OUT };
