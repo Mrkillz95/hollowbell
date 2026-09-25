@@ -60,17 +60,16 @@ public class HollowbellClient implements ClientModInitializer {
             @Override public void onResourceManagerReload(ResourceManager rm) { BellMeshes.INSTANCE.invalidate(); }
         });
         net.jj.hollowbell.client.dev.AutoTest.init();
-        // /hollowbell detail [on|off]: a setting on this computer only, so it's a command of the client's own
-        net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((d, reg) -> d.register(
-                net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("hollowbell").then(
-                        net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("detail")
-                                .executes(c -> { c.getSource().sendFeedback(net.minecraft.network.chat.Component.translatable(
-                                        net.jj.hollowbell.Detail.on() ? "command.hollowbell.detail_is_on" : "command.hollowbell.detail_is_off")); return 1; })
-                                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("on").executes(c -> {
-                                    net.jj.hollowbell.Detail.set(true);
-                                    c.getSource().sendFeedback(net.minecraft.network.chat.Component.translatable("command.hollowbell.detail_on")); return 1; }))
-                                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("off").executes(c -> {
-                                    net.jj.hollowbell.Detail.set(false);
-                                    c.getSource().sendFeedback(net.minecraft.network.chat.Component.translatable("command.hollowbell.detail_off")); return 1; })))));
+        // /hollowbell detail [on|off]: the server passes it on, and the setting is kept on this computer only.
+        // (It used to be a command of the client's own, but then the client took every /hollowbell command for its
+        // own and never sent the rest to the server.)
+        ClientPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.DetailPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> {
+            if (p.what() == net.jj.hollowbell.net.DetailPayload.ON) net.jj.hollowbell.Detail.set(true);
+            else if (p.what() == net.jj.hollowbell.net.DetailPayload.OFF) net.jj.hollowbell.Detail.set(false);
+            String key = p.what() == net.jj.hollowbell.net.DetailPayload.ON ? "command.hollowbell.detail_on"
+                    : p.what() == net.jj.hollowbell.net.DetailPayload.OFF ? "command.hollowbell.detail_off"
+                    : net.jj.hollowbell.Detail.on() ? "command.hollowbell.detail_is_on" : "command.hollowbell.detail_is_off";
+            if (ctx.client().player != null) ctx.client().player.displayClientMessage(net.minecraft.network.chat.Component.translatable(key), false);
+        }));
     }
 }

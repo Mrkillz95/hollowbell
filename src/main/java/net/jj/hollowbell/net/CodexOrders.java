@@ -132,6 +132,7 @@ public final class CodexOrders {
         m.mood().spendWind(cost);
         long[] t = book(p);
         t[which] = t[0] = p.level().getGameTime();
+        sendMood(p, m);
     }
 
     private record Later(java.util.UUID who, CodexPayload pay, long at) {}
@@ -150,7 +151,19 @@ public final class CodexOrders {
             }
         }
         if (server.getTickCount() % 20 != 0) return;
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) if (CodexItem.carriedBy(p)) sendMood(p, his(p));
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            // riding him, his wind and grudge show on screen too, book or not
+            HollowbellEntity r = riding(p);
+            if (r != null) sendMood(p, r);
+            else if (CodexItem.carriedBy(p)) sendMood(p, his(p));
+        }
+    }
+
+    /** the Hollowbell this player is riding, if any */
+    public static @Nullable HollowbellEntity riding(ServerPlayer p) {
+        if (p.getVehicle() instanceof net.jj.hollowbell.entity.Seat seat
+                && p.level().getEntity(seat.ownerId()) instanceof HollowbellEntity h && h.rider() == p) return h;
+        return null;
     }
 
     public static void sendMood(ServerPlayer p, @Nullable HollowbellEntity m) {

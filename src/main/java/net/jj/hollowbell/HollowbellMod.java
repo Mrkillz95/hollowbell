@@ -50,6 +50,7 @@ public class HollowbellMod implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(HitPayload.TYPE, HitPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SafeListPayload.TYPE, SafeListPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(MoodPayload.TYPE, MoodPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.DetailPayload.TYPE, net.jj.hollowbell.net.DetailPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BeingHimPayload.TYPE, BeingHimPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ThumpPayload.TYPE, ThumpPayload.CODEC);
 

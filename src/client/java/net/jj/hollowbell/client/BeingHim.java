@@ -155,40 +155,89 @@ public final class BeingHim {
         mc.player.setDeltaMovement(0, mc.player.getDeltaMovement().y, 0);
     }
 
-    /** the list of keys down the left of the screen */
+    /**
+     * The riding screen, top left: his health, his wind and grudge bars, then his moves in two columns (light and
+     * medium, then heavy) with a clock on each, and the keys to get off and go up and down. If the window is too
+     * short for all of it, it's drawn smaller so none of it is cut off.
+     */
     public static void hud(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         if (inId < 0 || mc.player == null) return;
         HollowbellEntity m = him();
-        int x = 6, y = 8;           // high enough up that all the lines clear the hotbar and the chat
-        g.drawString(mc.font, Component.translatable("being.hollowbell.title").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF, true);
+        var font = mc.font;
+
+        // how big it all is, so it can be fitted to the window
+        int col1 = 0, col2 = 0, rows1 = 0, rows2 = 0;
+        String[] labels = new String[KEY.length];
+        for (int i = 0; i < KEY.length; i++) {
+            int which = SLOT[i];
+            long left = coolLeft(which);
+            String label = "[" + KEY_NAME[i] + "] " + Component.translatable("move.hollowbell." + Moves.NAMES[which]).getString();
+            if (left > 0) label += "  " + (int) Math.ceil(left / 20.0) + "s";
+            labels[i] = label;
+            // the width is taken with a clock on, so the columns don't shift about as the clocks come and go
+            int w = font.width("[" + KEY_NAME[i] + "] " + Component.translatable("move.hollowbell." + Moves.NAMES[which]).getString() + "  00s");
+            if (Moves.tier(which) == Moves.HEAVY) { col2 = Math.max(col2, w); rows2++; } else { col1 = Math.max(col1, w); rows1++; }
+        }
+        int bars = 112;
+        int width = Math.max(bars, col1 + 10 + col2);
+        int height = 22 + 26 + 11 + Math.max(rows1 + 1, rows2) * 10 + 4 + 20 + (now() - zoomShownAt < 60 ? 10 : 0);
+        // (kept clear of the chat and hotbar at the bottom)
+        float fit = Math.min(1f, Math.min((g.guiHeight() - 64f) / height, (g.guiWidth() * 0.45f) / width));
+
+        g.pose().pushPose();
+        g.pose().translate(6, 6, 0);
+        g.pose().scale(fit, fit, 1f);
+        int x = 0, y = 0;
+        g.drawString(font, Component.translatable("being.hollowbell.title").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF, true);
         if (m != null) {
             int pct = Math.round(100f * m.healthNow() / Math.max(1f, m.healthMax()));
-            g.drawString(mc.font, Component.literal(pct + "%  ").append(Component.translatable("being.hollowbell.held"))
+            g.drawString(font, Component.literal(pct + "%  ").append(Component.translatable("being.hollowbell.held"))
                     .withStyle(ChatFormatting.GRAY), x, y + 10, 0xBBBBBB, true);
         }
         y += 22;
-        // the moves in their three strengths, light (pale), medium (orange), heavy (red)
-        int row = 0, lastTier = -1;
+        // wind (what the moves cost) and grudge (how much he holds against you), like the book's
+        float wind = CodexScreen.wind(), grudge = CodexScreen.grudge();
+        meter(g, x, y, bars, "wind", wind, wind > 0.5f ? 0xFF5FBF6A : wind > 0.2f ? 0xFFD8A63A : 0xFFB0432A);
+        meter(g, x, y + 12, bars, "grudge", grudge, grudge < 0.5f ? 0xFF8A4A3A : 0xFFD03018);
+        y += 26;
+
+        // the moves: light (pale) and medium (orange) down the first column, heavy (red) down the second
+        g.drawString(font, Component.translatable("being.hollowbell.moves").withStyle(ChatFormatting.GRAY), x, y, 0xBBBBBB, true);
+        y += 11;
+        int r1 = 0, r2 = 0, lastTier = -1;
         for (int i = 0; i < KEY.length; i++) {
             int which = SLOT[i];
             int tier = Moves.tier(which);
-            if (tier != lastTier) {
-                if (lastTier >= 0) row++;
-                lastTier = tier;
-            }
             long left = coolLeft(which);
-            String name = Component.translatable("move.hollowbell." + Moves.NAMES[which]).getString();
-            String label = "[" + KEY_NAME[i] + "] " + name;
             int col = left > 0 ? 0x666666 : tier == Moves.LIGHT ? 0xE9E3D0 : tier == Moves.MEDIUM ? 0xF0B060 : 0xF06050;
-            if (left > 0) label += "  " + (int) Math.ceil(left / 20.0) + "s";
-            g.drawString(mc.font, label, x, y + row * 10, col, true);
-            row++;
+            if (tier == Moves.HEAVY) {
+                g.drawString(font, labels[i], x + col1 + 10, y + r2 * 10, col, true);
+                r2++;
+            } else {
+                if (lastTier >= 0 && tier != lastTier) r1++;          // a gap between light and medium
+                lastTier = tier;
+                g.drawString(font, labels[i], x, y + r1 * 10, col, true);
+                r1++;
+            }
         }
-        g.drawString(mc.font, Component.translatable("being.hollowbell.leave").withStyle(ChatFormatting.YELLOW),
-                x, y + row * 10 + 4, 0xFFFF88, true);
+        y += Math.max(r1, r2) * 10 + 4;
+        g.drawString(font, Component.translatable("being.hollowbell.updown").withStyle(ChatFormatting.GRAY), x, y, 0xBBBBBB, true);
+        g.drawString(font, Component.translatable("being.hollowbell.leave").withStyle(ChatFormatting.YELLOW), x, y + 10, 0xFFFF88, true);
         if (now() - zoomShownAt < 60)
-            g.drawString(mc.font, Component.translatable("being.hollowbell.zoom", Math.round(zoom * 100)).withStyle(ChatFormatting.GRAY),
-                    x, y + row * 10 + 14, 0xBBBBBB, true);
+            g.drawString(font, Component.translatable("being.hollowbell.zoom", Math.round(zoom * 100)).withStyle(ChatFormatting.GRAY),
+                    x, y + 20, 0xBBBBBB, true);
+        g.pose().popPose();
+    }
+
+    private static void meter(GuiGraphics g, int x, int y, int w, String key, float v, int colour) {
+        var font = Minecraft.getInstance().font;
+        Component lab = Component.translatable("codex.hollowbell." + key);
+        g.drawString(font, lab, x, y, 0xFFBBBBBB, true);
+        int lw = 44;
+        int bx = x + lw, bw = Math.max(8, w - lw);
+        g.fill(bx, y - 1, bx + bw, y + 9, 0xFF1A1A1A);
+        int fill = (int) ((bw - 2) * net.minecraft.util.Mth.clamp(v, 0f, 1f));
+        if (fill > 0) g.fill(bx + 1, y, bx + 1 + fill, y + 8, colour);
     }
 }

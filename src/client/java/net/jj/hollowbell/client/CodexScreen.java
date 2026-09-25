@@ -43,6 +43,9 @@ public class CodexScreen extends Screen {
     }
 
     private static float mWind = 1f, mSour;
+    /** his wind and how much he holds against you, as last heard (for the riding screen too) */
+    public static float wind() { return mWind; }
+    public static float grudge() { return mSour; }
     private static int mStage, mHuntDays;
 
     public static void mood(MoodPayload p) {

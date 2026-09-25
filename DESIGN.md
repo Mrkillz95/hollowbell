@@ -5,7 +5,7 @@ He's made from **JJ's KillzAI Hollowbell build** the same way the Mountain was: 
 build is turned into a voxel model, block for block, so every voxel wears the real
 Minecraft block texture from the build.
 
-Status: **built, version 1.1.0** (see `release/`). 1.1 changes are in "Guesses made for 1.1" at the bottom.
+Status: **built, version 1.1.1** (see `release/`). 1.1 changes are in "Guesses made for 1.1" at the bottom.
 
 ---
 
@@ -331,3 +331,15 @@ JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the
   above and inside, climbing and sinking, moving side on (leaning in, strands trailing, swinging back and
   settling), a cow held on a strand tip and taken up, night glow, every heavy move, detail on and off far away,
   and dying.
+
+## Fixes in 1.1.1
+
+- **`/hollowbell` commands work again.** In 1.1.0 `detail` was a command of the client's own, and the game then
+  took every `/hollowbell ...` as the client's and never sent the rest to the server. Now `detail` is part of the
+  server's `/hollowbell` like the rest: anyone can use it (no cheats needed), the server just passes it on to that
+  player's game, which switches and remembers it. Every other `/hollowbell` command still needs cheats. A
+  gametest checks who can use what, and the in-game test types the commands the way a player does.
+- **Riding him:** the list is two columns (light and medium, then heavy), with his health, wind and grudge bars
+  above it and the up/down keys under it. If the window is too short it's drawn smaller, clear of the chat.
+- **Wording:** the book's "Sit on his crown" is now "Ride him" (you sit on top of his dome), and the riding
+  screen says "Riding him".

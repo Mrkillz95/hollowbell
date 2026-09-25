@@ -30,57 +30,70 @@ import java.util.List;
 public final class HollowbellCommand {
     private HollowbellCommand() {}
 
+    /** everything but detail needs cheats on */
+    private static final java.util.function.Predicate<CommandSourceStack> OP = s -> s.hasPermission(2);
+
+    private static int detail(CommandContext<CommandSourceStack> c, int what) throws CommandSyntaxException {
+        ServerPlayer p = c.getSource().getPlayerOrException();
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new net.jj.hollowbell.net.DetailPayload(what));
+        return 1;
+    }
+
     private static final String[] MOODS = {"calm", "hunting", "guardian"};
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("hollowbell").requires(s -> s.hasPermission(2))
-                .then(Commands.literal("summon").executes(c -> summon(c, HollowbellEntity.HUNTER, 1f))
+        d.register(Commands.literal("hollowbell")
+                // detail: anyone, cheats or not (it only changes how their own game draws him)
+                .then(Commands.literal("detail").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.ASK))
+                        .then(Commands.literal("on").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.ON)))
+                        .then(Commands.literal("off").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.OFF))))
+                .then(Commands.literal("summon").requires(OP).executes(c -> summon(c, HollowbellEntity.HUNTER, 1f))
                         .then(Commands.argument("mood", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
                                 .executes(c -> summon(c, mood(c), 1f))
                                 .then(Commands.argument("size", FloatArgumentType.floatArg(HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
                                         .executes(c -> summon(c, mood(c), FloatArgumentType.getFloat(c, "size"))))))
-                .then(Commands.literal("do").then(Commands.argument("move", StringArgumentType.word())
+                .then(Commands.literal("do").requires(OP).then(Commands.argument("move", StringArgumentType.word())
                         .suggests((c, b) -> SharedSuggestionProvider.suggest(Arrays.copyOfRange(Moves.NAMES, 1, Moves.NAMES.length), b))
                         .executes(HollowbellCommand::doMove)))
-                .then(Commands.literal("list").executes(HollowbellCommand::list))
-                .then(Commands.literal("mood").then(Commands.argument("mood", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
+                .then(Commands.literal("list").requires(OP).executes(HollowbellCommand::list))
+                .then(Commands.literal("mood").requires(OP).then(Commands.argument("mood", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
                         .executes(c -> near(c, h -> { h.setVariant(mood(c)); if (h.isGuardian()) h.setHome(h.position()); }, "mood"))))
-                .then(Commands.literal("size").then(Commands.argument("size", FloatArgumentType.floatArg(HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
+                .then(Commands.literal("size").requires(OP).then(Commands.argument("size", FloatArgumentType.floatArg(HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
                         .executes(c -> near(c, h -> h.setBellScale(FloatArgumentType.getFloat(c, "size")), "size"))))
-                .then(Commands.literal("hurt").then(Commands.argument("amount", FloatArgumentType.floatArg(0f))
+                .then(Commands.literal("hurt").requires(OP).then(Commands.argument("amount", FloatArgumentType.floatArg(0f))
                         .executes(c -> near(c, h -> h.hurtBy(FloatArgumentType.getFloat(c, "amount")), "hurt"))))
-                .then(Commands.literal("sethealth").then(Commands.argument("n", FloatArgumentType.floatArg(1f))
+                .then(Commands.literal("sethealth").requires(OP).then(Commands.argument("n", FloatArgumentType.floatArg(1f))
                         .executes(c -> near(c, h -> h.setHealthTo(FloatArgumentType.getFloat(c, "n")), "sethealth"))))
-                .then(Commands.literal("heal").executes(c -> near(c, h -> { h.heal(); h.mendPods(); }, "heal")))
-                .then(Commands.literal("popped").then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
+                .then(Commands.literal("heal").requires(OP).executes(c -> near(c, h -> { h.heal(); h.mendPods(); }, "heal")))
+                .then(Commands.literal("popped").requires(OP).then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
                         .executes(c -> near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "n")), "popped"))))
-                .then(Commands.literal("goto").then(Commands.argument("x", FloatArgumentType.floatArg()).then(Commands.argument("z", FloatArgumentType.floatArg())
+                .then(Commands.literal("goto").requires(OP).then(Commands.argument("x", FloatArgumentType.floatArg()).then(Commands.argument("z", FloatArgumentType.floatArg())
                         .executes(c -> near(c, h -> {
                             double x = FloatArgumentType.getFloat(c, "x"), z = FloatArgumentType.getFloat(c, "z");
                             h.setGoal(new Vec3(x, h.groundAt(x, z), z));
                         }, "goto")))))
-                .then(Commands.literal("stay").then(Commands.argument("on", BoolArgumentType.bool())
+                .then(Commands.literal("stay").requires(OP).then(Commands.argument("on", BoolArgumentType.bool())
                         .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "on")), "stay"))))
-                .then(Commands.literal("height").then(Commands.argument("blocks", FloatArgumentType.floatArg(0f, 400f))
+                .then(Commands.literal("height").requires(OP).then(Commands.argument("blocks", FloatArgumentType.floatArg(0f, 400f))
                         .executes(c -> near(c, h -> h.setCruise(FloatArgumentType.getFloat(c, "blocks")), "height"))))
-                .then(Commands.literal("ride").executes(c -> {
+                .then(Commands.literal("ride").requires(OP).executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
                     HollowbellEntity h = nearest(c.getSource());
                     if (h == null) return none(c);
                     if (h.carrying()) h.dropRider(); else h.possess(p);
                     return 1;
                 }))
-                .then(Commands.literal("kill").executes(c -> all(c, h -> h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE), "kill")))
-                .then(Commands.literal("remove").executes(c -> all(c, h -> h.discard(), "remove")))
-                .then(Commands.literal("health").then(Commands.argument("n", FloatArgumentType.floatArg(10f))
+                .then(Commands.literal("kill").requires(OP).executes(c -> all(c, h -> h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE), "kill")))
+                .then(Commands.literal("remove").requires(OP).executes(c -> all(c, h -> h.discard(), "remove")))
+                .then(Commands.literal("health").requires(OP).then(Commands.argument("n", FloatArgumentType.floatArg(10f))
                         .executes(c -> set(c, () -> HollowbellConfig.V.health = FloatArgumentType.getFloat(c, "n"), "health", FloatArgumentType.getFloat(c, "n")))))
-                .then(Commands.literal("damage").then(Commands.argument("x", FloatArgumentType.floatArg(0f, 100f))
+                .then(Commands.literal("damage").requires(OP).then(Commands.argument("x", FloatArgumentType.floatArg(0f, 100f))
                         .executes(c -> set(c, () -> HollowbellConfig.V.damageMultiplier = FloatArgumentType.getFloat(c, "x"), "damage", FloatArgumentType.getFloat(c, "x")))))
-                .then(Commands.literal("griefing").then(Commands.argument("on", BoolArgumentType.bool())
+                .then(Commands.literal("griefing").requires(OP).then(Commands.argument("on", BoolArgumentType.bool())
                         .executes(c -> set(c, () -> HollowbellConfig.V.griefing = BoolArgumentType.getBool(c, "on"), "griefing", BoolArgumentType.getBool(c, "on")))))
-                .then(Commands.literal("shake").then(Commands.argument("on", BoolArgumentType.bool())
+                .then(Commands.literal("shake").requires(OP).then(Commands.argument("on", BoolArgumentType.bool())
                         .executes(c -> set(c, () -> HollowbellConfig.V.screenShake = BoolArgumentType.getBool(c, "on"), "shake", BoolArgumentType.getBool(c, "on")))))
-                .then(Commands.literal("reload").executes(c -> { HollowbellConfig.load(); c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.reloaded"), true); return 1; })));
+                .then(Commands.literal("reload").requires(OP).executes(c -> { HollowbellConfig.load(); c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.reloaded"), true); return 1; })));
     }
 
     private static int mood(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
