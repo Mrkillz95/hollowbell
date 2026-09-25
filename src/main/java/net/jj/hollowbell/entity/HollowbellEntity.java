@@ -1015,6 +1015,9 @@ public class HollowbellEntity extends Monster {
         if (level().isClientSide || isDeadOrDying()) return false;
         Entity att = src.getEntity();
         float dealt = amount * worth(bone, inside);
+        // the weak-spot rule is for players with a sword: another giant's blast, the Unmake's burning, a boss's
+        // blow that isn't aimed at any one block of him lands in full
+        if (bone < 0 && !(att instanceof Player) && !src.is(DamageTypes.EXPLOSION) && !src.is(DamageTypes.PLAYER_EXPLOSION)) dealt = amount;
         if (resting()) dealt *= 1.3f;                       // down on the ground he can really be hurt
         if (bone >= 0) {
             BellRig.Kind k = rig.kind[bone];
