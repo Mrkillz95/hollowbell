@@ -32,6 +32,8 @@ public final class BellAnim {
     private long steps;
 
     // body springs: value, speed, and the value a tick ago
+    /** 0 to 1 while he's dead and sinking away into the ground */
+    private float sinkingIn;
     private static final int LOWER = 0, TX = 1, TZ = 2, SQUEEZE = 3, RIPPLE = 4, DEATH = 5, DROOP = 6, GLOW = 7, SWELL = 8, SHAKE = 9,
             SPIN = 10, DX = 11, DY = 12, DZ = 13, CLIMB = 14, SINK = 15, FOLD = 16, N = 17;
     private final float[] x = new float[N], v = new float[N], xl = new float[N];
@@ -119,6 +121,7 @@ public final class BellAnim {
         // (the rest of the way down he flies himself)
         float ground = Float.isNaN(in.groundUnder) ? 0f : Mth.clamp(in.groundUnder, -40f, 20f);
         float sinkIn = in.dying < 0 ? 0f : Mth.clamp((in.dying - 190f) / 120f, 0f, 1f);
+        sinkingIn = sinkIn;
         float lowerT = in.hangLower + x[FOLD] * (rig.rimY - 12f - ground) + sinkIn * (rig.crownY + 10f) + in.lowerAdd + (in.tired ? 4f : 0f);
         spring(LOWER, lowerT, 0.06f, 0.8f, first);
 
@@ -269,7 +272,8 @@ public final class BellAnim {
                 }
                 // never into the ground: it rests on it and drags
                 if (!Float.isNaN(gy)) {
-                    float floor = gy + (ch.arm ? 1.2f : 0.5f);
+                    // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under with him)
+                    float floor = gy + (ch.arm ? 1.2f : 0.5f) - sinkingIn * (rig.crownY + 30f);
                     if (p[o + 1] < floor) {
                         p[o + 1] = floor;
                         knockedAt[c] = steps;

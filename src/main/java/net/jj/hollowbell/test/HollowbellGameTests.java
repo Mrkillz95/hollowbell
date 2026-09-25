@@ -487,6 +487,16 @@ public class HollowbellGameTests implements FabricGameTest {
             p[0].setInvulnerable(true);
             h.assertTrue(e.forceMove(Moves.GRAB, p[0]), "no grab");
         });
+        // while it's held, the pig stays on the end of the strand holding it
+        for (int k = 8; k <= 18; k += 5) {
+            int at = k;
+            h.runAfterDelay(20 + Moves.REACH + at, () -> {
+                if (!p[0].isPassenger()) return;
+                Vec3 tip = e.strandTipWorld(e.moveArg());
+                double d = p[0].position().add(0, p[0].getBbHeight() * 0.5, 0).distanceTo(tip);
+                h.assertTrue(d < 3.0, "the held pig is " + String.format("%.1f", d) + " blocks from the strand tip " + at + " ticks in");
+            });
+        }
         h.runAfterDelay(20 + Moves.REACH + 20, () -> {
             h.assertTrue(e.moves().grabbed() == p[0], "the strand didn't take hold of the pig");
             h.assertTrue(p[0].isPassenger(), "the pig isn't held");

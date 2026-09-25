@@ -11,13 +11,18 @@ waitmodel
 wait 400
 cmd hollowbell stay true
 cmd hollowbell height 12
-wait 300
+wait 200
+# face the way he'll go first, so the camera can sit side on to it
+cmd hollowbell goto 1400 106
+wait 120
+cmd hollowbell stay true
+wait 260
 status
-view 0 70 -270 -60 90 0
+view 250 60 -60 -60 80 0
 fixed
 wait 10
 shot motion_0_still
-cmd hollowbell goto 700 106
+cmd hollowbell goto 1400 106
 wait 80
 shot motion_1_setting_off
 status
@@ -34,7 +39,7 @@ shot motion_5_swing_back
 wait 40
 shot motion_6_settling
 status
-view 0 60 -270 0 150 0
+view 250 60 0 0 150 0
 fixed
 cmd hollowbell stay false
 cmd hollowbell height 90

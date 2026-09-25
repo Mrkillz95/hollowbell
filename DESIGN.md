@@ -5,7 +5,7 @@ He's made from **JJ's KillzAI Hollowbell build** the same way the Mountain was: 
 build is turned into a voxel model, block for block, so every voxel wears the real
 Minecraft block texture from the build.
 
-Status: **built, version 1.0.0** (see `release/`).
+Status: **built, version 1.1.0** (see `release/`). 1.1 changes are in "Guesses made for 1.1" at the bottom.
 
 ---
 
@@ -310,3 +310,15 @@ JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the
 - **`/hollowbell detail`** is a command of the client's own (no cheats needed, it only changes your own game):
   `on` (the default) keeps the far-away simple version as it was, `off` draws him in full at every distance.
   Nothing else changes with it. It's saved as `simpleFarAway` in `config/hollowbell.json` on that computer.
+- **A fresh one comes down out of the sky.** One from an egg or `/hollowbell summon` starts high up (about 150
+  blocks over the ground at full size, less for small ones) and sinks down with his bell open, taking about 15
+  seconds. One loaded from a save is already settled and doesn't do it again.
+- **He doesn't freeze far off.** The game only moves a creature while the chunk at its middle is near a player,
+  and he's far bigger than that, so he used to stop dead in the air when watched from a way off. While a player is
+  within about 440 blocks of a full-size one, a chunk ticket keeps his middle and the ground under him going (the
+  `chunkLoading` setting), and the client moves him on its own if the game skips him for a tick.
+- **New commands for testing and for JJ:** `/hollowbell height <blocks>`, `/hollowbell goto <x> <z>` and
+  `/hollowbell stay true|false`.
+- **Lighter to draw:** each part of him is checked against the view on its own, so the parts behind you aren't
+  drawn.
+- **Drops stay the same** as 1.0.

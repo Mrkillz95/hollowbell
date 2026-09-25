@@ -21,7 +21,7 @@ shot check_arm_close
 view 45 55 -85 20 60 0
 wait 20
 shot check_strands_close
-view 0 240 -70 0 195 0
+view 0 228 -95 0 190 0
 wait 20
 shot check_dome_top
 view -45 150 5 20 165 -10
@@ -64,13 +64,14 @@ view 0 110 -270 0 120 0
 wait 40
 shot v11_night
 cmd time set 6000
-cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon cow ~5 ~ ~5 {NoAI:1b}
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon cow ~8 -60 ~8 {NoAI:1b}
 wait 5
 cmd execute as @e[type=cow,limit=1] run hollowbell do grab
-view 10 40 -150 5 30 0
-wait 70
-shot v11_grab_hold
+view 50 0 -75 5 -5 5
 wait 60
+shot v11_grab_hold
+view 55 30 -85 5 20 5
+wait 40
 shot v11_grab_lift
 wait 140
 view -120 150 -40 -20 150 10
