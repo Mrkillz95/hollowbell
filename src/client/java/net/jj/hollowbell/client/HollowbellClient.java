@@ -45,8 +45,8 @@ public class HollowbellClient implements ClientModInitializer {
             var pl = ctx.client().player;
             if (pl != null) Shake.crash(Math.sqrt(pl.distanceToSqr(p.x(), p.y(), p.z())), p.power());
         }));
-        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); });
-        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); });
+        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); });
+        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); });
         HudRenderCallback.EVENT.register((g, t) -> BeingHim.hud(g));
         // the glass goes on after every other creature, so whatever he has caught shows through it
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> BellRenderer.drawGlass());
