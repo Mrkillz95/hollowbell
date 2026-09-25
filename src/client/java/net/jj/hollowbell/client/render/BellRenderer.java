@@ -95,9 +95,11 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         // far away, fewer, bigger blocks
         var cam = mc.gameRenderer.getMainCamera().getPosition();
         double dist = Math.sqrt(e.distanceToSqr(cam.x, cam.y, cam.z));
-        int lod = BellMeshes.FULL;
-        if (HollowbellConfig.V.simpleFarAway && dist > HollowbellConfig.V.simpleFarAwayAt * Math.max(0.25f, s)) lod = BellMeshes.FAR;
-        if (s < 0.06f && dist > 40 || dist > HollowbellConfig.V.simpleFarAwayAt * 4 * Math.max(0.25f, s)) lod = BellMeshes.TINY;
+        int lod = switch (net.jj.hollowbell.Detail.lod(dist, s)) {
+            case net.jj.hollowbell.Detail.TINY -> BellMeshes.TINY;
+            case net.jj.hollowbell.Detail.FAR -> BellMeshes.FAR;
+            default -> BellMeshes.FULL;
+        };
 
         RenderType rt = RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
         rt.setupRenderState();

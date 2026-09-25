@@ -75,6 +75,7 @@ public final class AutoTest {
             // view: the camera at a spot in his own model space, looking at another, and kept there as he moves
             if (s.startsWith("view ")) { follow = s.substring(5).trim(); view(mc, follow); continue; }
             if (s.equals("fixed")) { follow = null; continue; }
+            if (s.startsWith("detail ")) { net.jj.hollowbell.Detail.set(s.endsWith("on")); continue; }
             if (s.startsWith("shot ")) {
                 String name = s.substring(5).trim() + ".png";
                 Screenshot.grab(mc.gameDirectory, name, mc.getMainRenderTarget(), c -> HollowbellMod.LOG.info("autotest shot {}", name));

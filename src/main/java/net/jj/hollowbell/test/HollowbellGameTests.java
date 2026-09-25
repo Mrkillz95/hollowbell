@@ -369,6 +369,27 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "detail")
+    public void detailOnOnlySimplifiesFarAway(GameTestHelper h) {
+        boolean was = net.jj.hollowbell.Detail.on();
+        try {
+            net.jj.hollowbell.Detail.set(true);
+            h.assertTrue(net.jj.hollowbell.Detail.lod(20, 1f) == net.jj.hollowbell.Detail.FULL, "detail on: not full close up");
+            h.assertTrue(net.jj.hollowbell.Detail.lod(400, 1f) != net.jj.hollowbell.Detail.FULL, "detail on: not simpler far away");
+            h.assertTrue(net.jj.hollowbell.Detail.lod(3000, 1f) == net.jj.hollowbell.Detail.TINY, "detail on: not simplest very far away");
+            net.jj.hollowbell.Detail.set(false);
+            for (double d : new double[]{5, 200, 800, 5000})
+                for (float s : new float[]{0.03f, 0.2f, 1f, 2f})
+                    h.assertTrue(net.jj.hollowbell.Detail.lod(d, s) == net.jj.hollowbell.Detail.FULL, "detail off but simplified at " + d + " size " + s);
+            // it's kept in the settings file
+            HollowbellConfig.load();
+            h.assertTrue(!net.jj.hollowbell.Detail.on(), "detail off wasn't saved");
+        } finally {
+            net.jj.hollowbell.Detail.set(was);
+        }
+        h.succeed();
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "sounds")
     public void hisSoundsAreAllThere(GameTestHelper h) {
         var json = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(
