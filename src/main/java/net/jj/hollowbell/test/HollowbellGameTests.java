@@ -212,6 +212,185 @@ public class HollowbellGameTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "move_drop") public void moveDrop(GameTestHelper h) { moveRuns(h, Moves.DROP, 17); }
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "move_shed") public void moveShed(GameTestHelper h) { moveRuns(h, Moves.SHED, 18); }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "move_volley") public void moveVolley(GameTestHelper h) { moveRuns(h, Moves.VOLLEY, 21); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "move_lash") public void moveLash(GameTestHelper h) { moveRuns(h, Moves.LASH, 22); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "move_flash") public void moveFlash(GameTestHelper h) { moveRuns(h, Moves.FLASH, 23); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "move_spores") public void moveSpores(GameTestHelper h) { moveRuns(h, Moves.SPORES, 24); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "move_podburst") public void movePodBurst(GameTestHelper h) { moveRuns(h, Moves.POD_BURST, 25); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "move_eggrain") public void moveEggRain(GameTestHelper h) { moveRuns(h, Moves.EGG_RAIN, 26); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "move_whirlpool") public void moveWhirlpool(GameTestHelper h) { moveRuns(h, Moves.WHIRLPOOL, 27); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "move_skydive") public void moveSkyDive(GameTestHelper h) { moveRuns(h, Moves.SKY_DIVE, 28); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "move_deeptoll") public void moveDeepToll(GameTestHelper h) { moveRuns(h, Moves.DEEP_TOLL, 29); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "move_armstorm") public void moveArmStorm(GameTestHelper h) { moveRuns(h, Moves.ARM_STORM, 33); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "move_stingerstorm") public void moveStingerStorm(GameTestHelper h) { moveRuns(h, Moves.STINGER_STORM, 34); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "move_sunlances") public void moveSunLances(GameTestHelper h) { moveRuns(h, Moves.SUN_LANCES, 35); }
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "move_undertow") public void moveUndertow(GameTestHelper h) { moveRuns(h, Moves.UNDERTOW, 36); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "tiers")
+    public void everyMoveHasAStrength(GameTestHelper h) {
+        int[] n = new int[3];
+        for (int m : Moves.ORDER) n[Moves.tier(m)]++;
+        h.assertTrue(Moves.ORDER.length == Moves.NAMES.length - 1, "the move order misses some: " + Moves.ORDER.length);
+        h.assertTrue(Moves.NAMES.length - 1 >= 16, "fewer than 16 moves: " + (Moves.NAMES.length - 1));
+        h.assertTrue(n[Moves.LIGHT] >= 4 && n[Moves.MEDIUM] >= 5 && n[Moves.HEAVY] >= 6, "light/medium/heavy: " + n[0] + "/" + n[1] + "/" + n[2]);
+        for (int m = 1; m < Moves.NAMES.length; m++) {
+            h.assertTrue(net.jj.hollowbell.net.CodexOrders.windCost(net.jj.hollowbell.net.CodexPayload.ATTACK_MOVE, m) > 0f, Moves.NAMES[m] + " costs no wind");
+            if (Moves.tier(m) == Moves.HEAVY) h.assertTrue(net.jj.hollowbell.net.CodexOrders.windCost(net.jj.hollowbell.net.CodexPayload.ATTACK_MOVE, m) >= 0.4f, Moves.NAMES[m] + " is heavy but cheap");
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "tired")
+    public void aHeavyMoveWearsHimOut(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.HUNTER, 37);
+        h.runAfterDelay(20, () -> { e.setStay(true); h.assertTrue(e.forceMove(Moves.DEEP_TOLL, null), "no deep toll"); });
+        h.runAfterDelay(20 + Moves.length(Moves.DEEP_TOLL) + 5, () -> {
+            h.assertTrue(e.tired() && e.moves().isTired(), "not worn out after a heavy move");
+            h.assertTrue(e.maxSpeed() < 0.5 * (0.10 + 0.16 * Math.sqrt(S)), "worn out but not slower: " + e.maxSpeed());
+        });
+        h.runAfterDelay(20 + Moves.length(Moves.DEEP_TOLL) + 130, () -> {
+            h.assertTrue(!e.tired(), "still worn out long after");
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    // ------------------------------------------------------------------ he really kills things
+
+    private static <T extends net.minecraft.world.entity.Mob> T mob(GameTestHelper h, EntityType<T> type, Vec3 at) {
+        T m = type.create(h.getLevel());
+        m.moveTo(at.x, at.y, at.z, 0f, 0f);
+        m.setNoAi(true);
+        m.setPersistenceRequired();
+        // a helmet so the sun can't be what kills it
+        m.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEATHER_HELMET));
+        h.getLevel().addFreshEntity(m);
+        return m;
+    }
+
+    /** starts a move at full size with the creature right where it lands, then checks it's dead a little after */
+    private static void killsWith(GameTestHelper h, int move, EntityType<? extends net.minecraft.world.entity.Mob> type, int slot, int within) {
+        HollowbellEntity e = spawnAway(h, 1f, HollowbellEntity.HUNTER, slot);
+        net.minecraft.world.entity.Mob[] m = new net.minecraft.world.entity.Mob[1];
+        float[] hp = new float[1];
+        h.runAfterDelay(30, () -> {
+            e.setStay(true);
+            Vec3 at = under(e);
+            if (move == Moves.SLAM) { Vec3 tip = e.armTipWorld(0); at = new Vec3(tip.x, e.groundAt(tip.x, tip.z), tip.z); }
+            if (move == Moves.SWEEP) at = under(e).add(e.bellRadius() * 0.8, 0, 0);
+            m[0] = mob(h, type, at);
+            hp[0] = m[0].getHealth();
+            e.moves().restNow();
+            h.assertTrue(e.forceMove(move, m[0]), "couldn't start " + Moves.NAMES[move]);
+        });
+        h.runAfterDelay(30 + within, () -> {
+            h.assertTrue(!m[0].isAlive(), "the " + type.getDescription().getString() + " (" + hp[0] + " health) lived through " + Moves.NAMES[move]
+                    + " with " + m[0].getHealth() + " left");
+            m[0].discard();
+            e.moves().letGoOfEverything(false);
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "kill_zombie")
+    public void theSweepKillsAZombie(GameTestHelper h) { killsWith(h, Moves.SWEEP, EntityType.ZOMBIE, 100, Moves.length(Moves.SWEEP)); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "kill_skeleton")
+    public void theArmSlamKillsASkeleton(GameTestHelper h) { killsWith(h, Moves.SLAM, EntityType.SKELETON, 102, Moves.length(Moves.SLAM)); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "kill_golem")
+    public void theDropKillsAnIronGolem(GameTestHelper h) { killsWith(h, Moves.DROP, EntityType.IRON_GOLEM, 104, Moves.DROP_WIND + Moves.DROP_FALL + 20); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "kill_golem2")
+    public void theDeepTollKillsAnIronGolem(GameTestHelper h) { killsWith(h, Moves.DEEP_TOLL, EntityType.IRON_GOLEM, 106, Moves.TOLL_BIG + 30); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 700, batch = "kill_cow")
+    public void aCowTakenIntoTheDomeDies(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.25f, HollowbellEntity.HUNTER, 108);
+        net.minecraft.world.entity.animal.Cow[] c = new net.minecraft.world.entity.animal.Cow[1];
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            c[0] = mob(h, EntityType.COW, under(e));
+            h.assertTrue(e.forceMove(Moves.HARVEST, c[0]), "no harvest");
+        });
+        h.runAfterDelay(20 + Moves.length(Moves.HARVEST) + 60, () -> {
+            h.assertTrue(!c[0].isAlive(), "the cow is still alive " + (e.moves().isInside(c[0]) ? "inside the dome" : "outside") + " with " + c[0].getHealth());
+            c[0].discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1500, batch = "guardian_clears")
+    public void aGuardianClearsOutHostileMobs(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.5f, HollowbellEntity.GUARDIAN, 110);
+        java.util.List<net.minecraft.world.entity.Mob> zs = new java.util.ArrayList<>();
+        h.runAfterDelay(20, () -> {
+            e.setHome(e.position());
+            e.setMoveCooldown(0);
+            e.moves().restNow();
+            for (int i = 0; i < 4; i++) {
+                double a = i * Math.PI / 2;
+                Vec3 at = e.position().add(Math.cos(a) * 25, 0, Math.sin(a) * 25);
+                Vec3 where = new Vec3(at.x, e.groundAt(at.x, at.z), at.z);
+                zs.add(i % 2 == 0 ? mob(h, EntityType.ZOMBIE, where) : mob(h, EntityType.SKELETON, where));
+            }
+        });
+        h.runAfterDelay(1400, () -> {
+            long alive = zs.stream().filter(net.minecraft.world.entity.LivingEntity::isAlive).count();
+            h.assertTrue(alive == 0, alive + " of 4 hostile mobs are still alive round a guardian after a minute");
+            for (var z : zs) z.discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "netherite")
+    public void aHeavyMoveBadlyHurtsAPlayerInNetherite(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 1f, HollowbellEntity.HUNTER, 112);
+        ServerPlayer[] pl = new ServerPlayer[1];
+        h.runAfterDelay(30, () -> {
+            e.setStay(true);
+            pl[0] = player(h, under(e).add(8, 0, 0));
+            pl[0].setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHERITE_HELMET));
+            pl[0].setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHERITE_CHESTPLATE));
+            pl[0].setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHERITE_LEGGINGS));
+            pl[0].setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHERITE_BOOTS));
+            e.moves().restNow();
+            h.assertTrue(e.forceMove(Moves.DROP, pl[0]), "no drop");
+        });
+        h.runAfterDelay(30 + Moves.DROP_WIND + Moves.DROP_FALL + 10, () -> {
+            float lost = 20f - pl[0].getHealth();
+            h.assertTrue(!pl[0].isAlive() || lost >= 10f, "a player in netherite only lost " + lost + " health to the drop");
+            drop(pl[0]);
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "sounds")
+    public void hisSoundsAreAllThere(GameTestHelper h) {
+        var json = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(
+                HollowbellGameTests.class.getResourceAsStream("/assets/hollowbell/sounds.json"), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        var lang = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(
+                HollowbellGameTests.class.getResourceAsStream("/assets/hollowbell/lang/en_us.json"), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        for (var ev : net.jj.hollowbell.ModSounds.ALL) {
+            var id = ev.getLocation();
+            h.assertTrue(BuiltInRegistries.SOUND_EVENT.containsKey(id), "not registered: " + id);
+            h.assertTrue(json.has(id.getPath()), "no sounds.json entry for " + id);
+            var o = json.getAsJsonObject(id.getPath());
+            h.assertTrue(o.getAsJsonArray("sounds").size() > 0, "no sounds for " + id);
+            h.assertTrue(lang.has(o.get("subtitle").getAsString()), "no subtitle text for " + id);
+            for (var snd : o.getAsJsonArray("sounds")) {
+                String name = snd.getAsJsonObject().get("name").getAsString();
+                if (name.startsWith("hollowbell:"))
+                    h.assertTrue(HollowbellGameTests.class.getResource("/assets/hollowbell/sounds/" + name.substring(11) + ".ogg") != null, "missing file for " + name);
+            }
+        }
+        h.succeed();
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "slam_hits")
     public void theArmSlamHurtsWhatItLandsOn(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.HUNTER, 19);
@@ -605,10 +784,11 @@ public class HollowbellGameTests implements FabricGameTest {
     private static final class PoseWatch {
         float[][] last, last2; Vector3f lastCrown, lastCrown2; float worstJerk, worstStep; String where = "", whereStep = "";
         final java.util.List<float[][]> hist = new java.util.ArrayList<>(); int wc = -1, wi, wt, tick;
+        final java.util.List<String> body = new java.util.ArrayList<>();
         String trail() {
             if (wc < 0) return "";
             StringBuilder b = new StringBuilder(" path:");
-            for (int t = Math.max(0, wt - 5); t < Math.min(hist.size(), wt + 3); t++) { float[] q = hist.get(t)[wc]; b.append(String.format(" [%.1f %.1f %.1f]", q[wi], q[wi + 1], q[wi + 2])); }
+            for (int t = Math.max(0, wt - 5); t < Math.min(hist.size(), wt + 3); t++) { float[] q = hist.get(t)[wc]; b.append(String.format(" [%.1f %.1f %.1f | %s]", q[wi], q[wi + 1], q[wi + 2], body.get(t))); }
             return b.toString();
         }
         void see(HollowbellEntity e, String when) {
@@ -636,6 +816,7 @@ public class HollowbellGameTests implements FabricGameTest {
             float[][] snap = new float[st.chain.length][];
             for (int c = 0; c < st.chain.length; c++) snap[c] = st.chain[c].clone();
             hist.add(snap);
+            body.add(String.format("low %.1f sq %.2f tilt %.2f,%.2f y %.2f vy %.3f", st.lower, st.squeeze, st.tiltX, st.tiltZ, e.getY(), e.velocity().y));
             tick++;
             last2 = last; lastCrown2 = lastCrown;
             last = new float[st.chain.length][];

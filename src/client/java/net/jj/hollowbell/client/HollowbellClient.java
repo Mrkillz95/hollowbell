@@ -34,6 +34,7 @@ public class HollowbellClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.HOLLOWBELL, BellRenderer::new);
         EntityRendererRegistry.register(ModEntities.BELLING, BellingRenderer::new);
         EntityRendererRegistry.register(ModEntities.SEAT, NoopRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SHOT, ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<>(ctx, 2.2f, false));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CROWN, RenderType.cutout());
         CodexItem.openPages = () -> { var mc = Minecraft.getInstance(); if (mc.screen == null) mc.setScreen(new CodexScreen()); };
 

@@ -20,16 +20,18 @@ import org.lwjgl.glfw.GLFW;
 public final class BeingHim {
     private BeingHim() {}
 
-    /** the attacks you can set off, in the order they are listed, and the key for each */
-    private static final int[] SLOT = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    /** the attacks you can set off, in the order they are listed (light, medium, heavy), and the key for each */
+    private static final int[] SLOT = Moves.ORDER;
     private static final int[] KEY = {
             GLFW.GLFW_KEY_1, GLFW.GLFW_KEY_2, GLFW.GLFW_KEY_3, GLFW.GLFW_KEY_4, GLFW.GLFW_KEY_5,
-            GLFW.GLFW_KEY_6, GLFW.GLFW_KEY_7, GLFW.GLFW_KEY_8, GLFW.GLFW_KEY_9};
-    private static final String[] KEY_NAME = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
+            GLFW.GLFW_KEY_6, GLFW.GLFW_KEY_7, GLFW.GLFW_KEY_8, GLFW.GLFW_KEY_9, GLFW.GLFW_KEY_0,
+            GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_V, GLFW.GLFW_KEY_B, GLFW.GLFW_KEY_N, GLFW.GLFW_KEY_M,
+            GLFW.GLFW_KEY_R, GLFW.GLFW_KEY_H, GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K, GLFW.GLFW_KEY_U};
+    private static final String[] KEY_NAME = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Z", "X", "C", "V", "B", "N", "M", "R", "H", "J", "K", "U"};
     private static final int LEAVE_KEY = GLFW.GLFW_KEY_G;
 
     /** the same numbers the server keeps */
-    private static final int ATTACK_COOL = 400, ANY_COOL = 60;
+    private static final int ANY_COOL = net.jj.hollowbell.net.CodexOrders.ANY_COOL;
     private static final long[] used = new long[Moves.NAMES.length];
     static { java.util.Arrays.fill(used, Long.MIN_VALUE / 4); }
 
@@ -105,7 +107,7 @@ public final class BeingHim {
     }
 
     private static long coolLeft(int attack) {
-        return Math.max(0, Math.max(ATTACK_COOL - (now() - used[attack]), ANY_COOL - (now() - used[0])));
+        return Math.max(0, Math.max(net.jj.hollowbell.net.CodexOrders.attackCool(attack) - (now() - used[attack]), ANY_COOL - (now() - used[0])));
     }
 
     public static void tick(Minecraft mc) {
@@ -158,27 +160,35 @@ public final class BeingHim {
         Minecraft mc = Minecraft.getInstance();
         if (inId < 0 || mc.player == null) return;
         HollowbellEntity m = him();
-        int x = 6, y = 24;          // high enough up that all fourteen lines clear the hotbar and the chat
+        int x = 6, y = 8;           // high enough up that all the lines clear the hotbar and the chat
         g.drawString(mc.font, Component.translatable("being.hollowbell.title").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF, true);
         if (m != null) {
             int pct = Math.round(100f * m.healthNow() / Math.max(1f, m.healthMax()));
             g.drawString(mc.font, Component.literal(pct + "%  ").append(Component.translatable("being.hollowbell.held"))
                     .withStyle(ChatFormatting.GRAY), x, y + 10, 0xBBBBBB, true);
         }
-        y += 24;
+        y += 22;
+        // the moves in their three strengths, light (pale), medium (orange), heavy (red)
+        int row = 0, lastTier = -1;
         for (int i = 0; i < KEY.length; i++) {
             int which = SLOT[i];
+            int tier = Moves.tier(which);
+            if (tier != lastTier) {
+                if (lastTier >= 0) row++;
+                lastTier = tier;
+            }
             long left = coolLeft(which);
             String name = Component.translatable("move.hollowbell." + Moves.NAMES[which]).getString();
             String label = "[" + KEY_NAME[i] + "] " + name;
-            int col = left > 0 ? 0x666666 : 0xE9C9BC;
+            int col = left > 0 ? 0x666666 : tier == Moves.LIGHT ? 0xE9E3D0 : tier == Moves.MEDIUM ? 0xF0B060 : 0xF06050;
             if (left > 0) label += "  " + (int) Math.ceil(left / 20.0) + "s";
-            g.drawString(mc.font, label, x, y + i * 11, col, true);
+            g.drawString(mc.font, label, x, y + row * 10, col, true);
+            row++;
         }
         g.drawString(mc.font, Component.translatable("being.hollowbell.leave").withStyle(ChatFormatting.YELLOW),
-                x, y + KEY.length * 11 + 6, 0xFFFF88, true);
+                x, y + row * 10 + 4, 0xFFFF88, true);
         if (now() - zoomShownAt < 60)
             g.drawString(mc.font, Component.translatable("being.hollowbell.zoom", Math.round(zoom * 100)).withStyle(ChatFormatting.GRAY),
-                    x, y + KEY.length * 11 + 17, 0xBBBBBB, true);
+                    x, y + row * 10 + 14, 0xBBBBBB, true);
     }
 }

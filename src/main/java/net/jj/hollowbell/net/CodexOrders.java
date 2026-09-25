@@ -57,7 +57,16 @@ public final class CodexOrders {
     }
 
     // ------------------------------------------------------------------ how often the book can ask for a move
-    public static final int ATTACK_COOL = 400, ANY_COOL = 60;
+    public static final int ANY_COOL = 60;
+
+    /** how long before the book can ask for the same move again: light ones soon, heavy ones not for a good while */
+    public static int attackCool(int move) {
+        return switch (Moves.tier(move)) {
+            case Moves.LIGHT -> 120;
+            case Moves.MEDIUM -> 300;
+            default -> 700;
+        };
+    }
     private static final java.util.Map<java.util.UUID, long[]> lastUse = new java.util.HashMap<>();
 
     private static long[] book(ServerPlayer p) {
@@ -71,11 +80,24 @@ public final class CodexOrders {
     public static long coolLeft(ServerPlayer p, int move) {
         long[] t = book(p);
         long now = p.level().getGameTime();
-        return Math.max(0, Math.max(ATTACK_COOL - (now - t[move]), ANY_COOL - (now - t[0])));
+        return Math.max(0, Math.max(attackCool(move) - (now - t[move]), ANY_COOL - (now - t[0])));
     }
 
     /** what each move takes out of him, 1 being all his wind */
-    private static final float[] MOVE_WIND = {0f, 0.14f, 0.10f, 0.20f, 0.14f, 0.12f, 0.16f, 0.30f, 0.40f, 0.22f};
+    /**
+     * What each move takes out of him, 1 being all his wind. Like the Mountain's: the light ones are cheap, the heavy
+     * ones take nearly half of him each.
+     */
+    private static final float[] MOVE_WIND = new float[Moves.NAMES.length];
+    static {
+        float[][] w = {
+                {Moves.GRAB, 0.10f}, {Moves.HARVEST, 0.08f}, {Moves.VOLLEY, 0.07f}, {Moves.LASH, 0.07f}, {Moves.FLASH, 0.09f},
+                {Moves.CURTAIN, 0.18f}, {Moves.SWEEP, 0.15f}, {Moves.SLAM, 0.15f}, {Moves.WRAP, 0.16f}, {Moves.PULSE, 0.22f},
+                {Moves.SHED, 0.22f}, {Moves.SPORES, 0.18f}, {Moves.POD_BURST, 0.20f}, {Moves.EGG_RAIN, 0.22f},
+                {Moves.DROP, 0.42f}, {Moves.WHIRLPOOL, 0.45f}, {Moves.SKY_DIVE, 0.55f}, {Moves.DEEP_TOLL, 0.50f}, {Moves.ARM_STORM, 0.48f},
+                {Moves.STINGER_STORM, 0.45f}, {Moves.SUN_LANCES, 0.48f}, {Moves.UNDERTOW, 0.46f}};
+        for (float[] e : w) MOVE_WIND[(int) e[0]] = e[1];
+    }
 
     public static float windCost(int action, int arg) {
         return switch (action) {
@@ -90,12 +112,14 @@ public final class CodexOrders {
 
     /** the moves he takes badly: the ones that cost him pieces of himself */
     public static boolean takesItBadly(int action, int arg) {
-        return action == CodexPayload.ATTACK_MOVE && (arg == Moves.SHED || arg == Moves.DROP);
+        return action == CodexPayload.ATTACK_MOVE && (arg == Moves.SHED || arg == Moves.EGG_RAIN || arg == Moves.POD_BURST || Moves.tier(arg) == Moves.HEAVY);
     }
 
     private static float sourCost(int action, int arg) {
         if (action != CodexPayload.ATTACK_MOVE) return 0f;
-        return arg == Moves.SHED ? 0.2f : arg == Moves.DROP ? 0.08f : 0f;
+        if (arg == Moves.SHED || arg == Moves.EGG_RAIN) return 0.2f;
+        if (arg == Moves.POD_BURST) return 0.1f;
+        return Moves.tier(arg) == Moves.HEAVY ? 0.08f : 0f;
     }
 
     /** a move pressed while riding his crown: the same clock the book uses */
@@ -332,6 +356,7 @@ public final class CodexOrders {
     public static String doing(HollowbellEntity m) {
         if (m.carrying()) return "ridden";
         if (m.sunk()) return "sunk";
+        if (m.tired()) return "tired";
         if (m.moveNow() == Moves.DROP) return "down";
         if (m.moveNow() != Moves.NONE) return "fighting";
         if (m.staying()) return "still";

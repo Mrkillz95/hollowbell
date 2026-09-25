@@ -1,0 +1,1054 @@
+{
+  "hum": {
+    "subtitle": "subtitles.hollowbell.hum",
+    "sounds": [
+      {
+        "name": "hollowbell:hum",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "attenuation_distance": 96,
+        "stream": true
+      }
+    ]
+  },
+  "drift": {
+    "subtitle": "subtitles.hollowbell.drift",
+    "sounds": [
+      {
+        "name": "hollowbell:drift",
+        "pitch": 1.0,
+        "volume": 0.8,
+        "attenuation_distance": 64,
+        "stream": true
+      }
+    ]
+  },
+  "pulse": {
+    "subtitle": "subtitles.hollowbell.pulse",
+    "sounds": [
+      {
+        "name": "hollowbell:pulse",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "hollowbell:pulse",
+        "pitch": 0.85,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "pulse_water": {
+    "subtitle": "subtitles.hollowbell.pulse_water",
+    "sounds": [
+      {
+        "name": "minecraft:liquid/swim1",
+        "pitch": 0.5,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:liquid/swim2",
+        "pitch": 0.5,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:liquid/swim3",
+        "pitch": 0.5,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:liquid/swim4",
+        "pitch": 0.5,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:liquid/swim5",
+        "pitch": 0.5,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "ripple": {
+    "subtitle": "subtitles.hollowbell.ripple",
+    "sounds": [
+      {
+        "name": "minecraft:ambient/underwater/enter1",
+        "pitch": 0.55,
+        "volume": 0.7,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:ambient/underwater/enter2",
+        "pitch": 0.55,
+        "volume": 0.7,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:ambient/underwater/enter3",
+        "pitch": 0.55,
+        "volume": 0.7,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "hurt": {
+    "subtitle": "subtitles.hollowbell.hurt",
+    "sounds": [
+      {
+        "name": "minecraft:block/amethyst/break1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/amethyst/break2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/amethyst/break3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/amethyst/break4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:mob/guardian/elder_hit1",
+        "pitch": 0.6,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:mob/guardian/elder_hit2",
+        "pitch": 0.6,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:mob/guardian/elder_hit3",
+        "pitch": 0.6,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:mob/guardian/elder_hit4",
+        "pitch": 0.6,
+        "volume": 0.8,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "hurt_heavy": {
+    "subtitle": "subtitles.hollowbell.hurt_heavy",
+    "sounds": [
+      {
+        "name": "minecraft:mob/guardian/elder_hit1",
+        "pitch": 0.42,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:mob/guardian/elder_hit2",
+        "pitch": 0.42,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:mob/guardian/elder_hit3",
+        "pitch": 0.42,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:mob/guardian/elder_hit4",
+        "pitch": 0.42,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "death": {
+    "subtitle": "subtitles.hollowbell.death",
+    "sounds": [
+      {
+        "name": "minecraft:mob/guardian/elder_death",
+        "pitch": 0.45,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "death_fall": {
+    "subtitle": "subtitles.hollowbell.death_fall",
+    "sounds": [
+      {
+        "name": "hollowbell:toll",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "tired": {
+    "subtitle": "subtitles.hollowbell.tired",
+    "sounds": [
+      {
+        "name": "minecraft:mob/warden/listening_1",
+        "pitch": 0.5,
+        "volume": 0.9,
+        "attenuation_distance": 64
+      },
+      {
+        "name": "minecraft:mob/warden/listening_2",
+        "pitch": 0.5,
+        "volume": 0.9,
+        "attenuation_distance": 64
+      },
+      {
+        "name": "minecraft:mob/warden/listening_3",
+        "pitch": 0.5,
+        "volume": 0.9,
+        "attenuation_distance": 64
+      },
+      {
+        "name": "minecraft:mob/warden/listening_4",
+        "pitch": 0.5,
+        "volume": 0.9,
+        "attenuation_distance": 64
+      },
+      {
+        "name": "minecraft:mob/warden/listening_5",
+        "pitch": 0.5,
+        "volume": 0.9,
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "strand": {
+    "subtitle": "subtitles.hollowbell.strand",
+    "sounds": [
+      {
+        "name": "minecraft:block/honeyblock/slide1",
+        "pitch": 0.6,
+        "volume": 0.9,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:block/honeyblock/slide2",
+        "pitch": 0.6,
+        "volume": 0.9,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:block/honeyblock/slide3",
+        "pitch": 0.6,
+        "volume": 0.9,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:block/honeyblock/slide4",
+        "pitch": 0.6,
+        "volume": 0.9,
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "grab": {
+    "subtitle": "subtitles.hollowbell.grab",
+    "sounds": [
+      {
+        "name": "minecraft:mob/slime/big1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/slime/big2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/slime/big3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/slime/big4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "sting": {
+    "subtitle": "subtitles.hollowbell.sting",
+    "sounds": [
+      {
+        "name": "minecraft:mob/bee/sting",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "pod_pop": {
+    "subtitle": "subtitles.hollowbell.pod_pop",
+    "sounds": [
+      {
+        "name": "minecraft:block/frogspawn/break1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/frogspawn/break2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/frogspawn/break3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/frogspawn/break4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/honeyblock/break1",
+        "pitch": 0.55,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/honeyblock/break2",
+        "pitch": 0.55,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/honeyblock/break3",
+        "pitch": 0.55,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/honeyblock/break4",
+        "pitch": 0.55,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/honeyblock/break5",
+        "pitch": 0.55,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "egg_burst": {
+    "subtitle": "subtitles.hollowbell.egg_burst",
+    "sounds": [
+      {
+        "name": "minecraft:block/frogspawn/hatch1",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:block/frogspawn/hatch2",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:block/frogspawn/hatch3",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:block/frogspawn/hatch4",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:block/frogspawn/hatch5",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      }
+    ]
+  },
+  "goo": {
+    "subtitle": "subtitles.hollowbell.goo",
+    "sounds": [
+      {
+        "name": "minecraft:mob/slime/attack1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:mob/slime/attack2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      }
+    ]
+  },
+  "spores": {
+    "subtitle": "subtitles.hollowbell.spores",
+    "sounds": [
+      {
+        "name": "minecraft:block/sculk/spread1",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/sculk/spread2",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/sculk/spread3",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/sculk/spread4",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "minecraft:block/sculk/spread5",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "belling": {
+    "subtitle": "subtitles.hollowbell.belling",
+    "sounds": [
+      {
+        "name": "minecraft:mob/allay/idle_without_item1",
+        "pitch": 1.35,
+        "volume": 0.6,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "minecraft:mob/allay/idle_without_item2",
+        "pitch": 1.35,
+        "volume": 0.6,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "minecraft:mob/allay/idle_without_item3",
+        "pitch": 1.35,
+        "volume": 0.6,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "minecraft:mob/allay/idle_without_item4",
+        "pitch": 1.35,
+        "volume": 0.6,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "belling_hurt": {
+    "subtitle": "subtitles.hollowbell.belling_hurt",
+    "sounds": [
+      {
+        "name": "minecraft:mob/allay/hurt1",
+        "pitch": 1.3,
+        "volume": 0.8,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "minecraft:mob/allay/hurt2",
+        "pitch": 1.3,
+        "volume": 0.8,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "belling_death": {
+    "subtitle": "subtitles.hollowbell.belling_death",
+    "sounds": [
+      {
+        "name": "minecraft:mob/allay/death1",
+        "pitch": 1.3,
+        "volume": 0.8,
+        "attenuation_distance": 16
+      },
+      {
+        "name": "minecraft:mob/allay/death2",
+        "pitch": 1.3,
+        "volume": 0.8,
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "heartbeat": {
+    "subtitle": "subtitles.hollowbell.heartbeat",
+    "sounds": [
+      {
+        "name": "hollowbell:heartbeat",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "echo": {
+    "subtitle": "subtitles.hollowbell.echo",
+    "sounds": [
+      {
+        "name": "hollowbell:echo",
+        "pitch": 1.0,
+        "volume": 0.8,
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "toll": {
+    "subtitle": "subtitles.hollowbell.toll",
+    "sounds": [
+      {
+        "name": "hollowbell:toll",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      }
+    ]
+  },
+  "toll_big": {
+    "subtitle": "subtitles.hollowbell.toll_big",
+    "sounds": [
+      {
+        "name": "hollowbell:toll",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 256
+      },
+      {
+        "name": "hollowbell:toll",
+        "pitch": 0.75,
+        "volume": 1.0,
+        "attenuation_distance": 256
+      }
+    ]
+  },
+  "slam": {
+    "subtitle": "subtitles.hollowbell.slam",
+    "sounds": [
+      {
+        "name": "minecraft:random/explode1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:random/explode2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:random/explode3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:random/explode4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "shock": {
+    "subtitle": "subtitles.hollowbell.shock",
+    "sounds": [
+      {
+        "name": "minecraft:mob/warden/sonic_boom1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/warden/sonic_boom2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/warden/sonic_boom3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/warden/sonic_boom4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "flash": {
+    "subtitle": "subtitles.hollowbell.flash",
+    "sounds": [
+      {
+        "name": "minecraft:block/amethyst/shimmer",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 64
+      },
+      {
+        "name": "minecraft:block/beacon/activate",
+        "pitch": 1.4,
+        "volume": 0.8,
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "whip": {
+    "subtitle": "subtitles.hollowbell.whip",
+    "sounds": [
+      {
+        "name": "minecraft:entity/player/attack/sweep1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:entity/player/attack/sweep2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:entity/player/attack/sweep3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:entity/player/attack/sweep4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:entity/player/attack/sweep5",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:entity/player/attack/sweep6",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:entity/player/attack/sweep7",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 40
+      }
+    ]
+  },
+  "volley": {
+    "subtitle": "subtitles.hollowbell.volley",
+    "sounds": [
+      {
+        "name": "minecraft:item/trident/throw1",
+        "pitch": 1.4,
+        "volume": 0.9,
+        "attenuation_distance": 40
+      },
+      {
+        "name": "minecraft:item/trident/throw2",
+        "pitch": 1.4,
+        "volume": 0.9,
+        "attenuation_distance": 40
+      }
+    ]
+  },
+  "beam": {
+    "subtitle": "subtitles.hollowbell.beam",
+    "sounds": [
+      {
+        "name": "minecraft:block/beacon/ambient",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "splash": {
+    "subtitle": "subtitles.hollowbell.splash",
+    "sounds": [
+      {
+        "name": "minecraft:liquid/heavy_splash",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "churn": {
+    "subtitle": "subtitles.hollowbell.churn",
+    "sounds": [
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient5",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "swoop": {
+    "subtitle": "subtitles.hollowbell.swoop",
+    "sounds": [
+      {
+        "name": "minecraft:mob/phantom/swoop1",
+        "pitch": 0.45,
+        "volume": 1.0,
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:mob/phantom/swoop2",
+        "pitch": 0.45,
+        "volume": 1.0,
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:mob/phantom/swoop3",
+        "pitch": 0.45,
+        "volume": 1.0,
+        "attenuation_distance": 128
+      },
+      {
+        "name": "minecraft:mob/phantom/swoop4",
+        "pitch": 0.45,
+        "volume": 1.0,
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "click": {
+    "subtitle": "subtitles.hollowbell.click",
+    "sounds": [
+      {
+        "name": "minecraft:mob/warden/tendril_clicks_1",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/warden/tendril_clicks_2",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/warden/tendril_clicks_3",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/warden/tendril_clicks_4",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/warden/tendril_clicks_5",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/warden/tendril_clicks_6",
+        "pitch": 0.7,
+        "volume": 1.0,
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "warn_drop": {
+    "subtitle": "subtitles.hollowbell.warn_drop",
+    "sounds": [
+      {
+        "name": "minecraft:mob/warden/sonic_charge1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/warden/sonic_charge2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/warden/sonic_charge3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/warden/sonic_charge4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "warn_whirlpool": {
+    "subtitle": "subtitles.hollowbell.warn_whirlpool",
+    "sounds": [
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient1",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient2",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient3",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient4",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:block/bubble_column/whirlpool_ambient5",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "warn_dive": {
+    "subtitle": "subtitles.hollowbell.warn_dive",
+    "sounds": [
+      {
+        "name": "minecraft:mob/phantom/swoop1",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/phantom/swoop2",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/phantom/swoop3",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/phantom/swoop4",
+        "pitch": 0.35,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/warden/roar_1",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/warden/roar_2",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/warden/roar_3",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/warden/roar_4",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      },
+      {
+        "name": "minecraft:mob/warden/roar_5",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 192
+      }
+    ]
+  },
+  "warn_toll": {
+    "subtitle": "subtitles.hollowbell.warn_toll",
+    "sounds": [
+      {
+        "name": "hollowbell:toll",
+        "pitch": 0.55,
+        "volume": 1.0,
+        "attenuation_distance": 256
+      }
+    ]
+  },
+  "warn_arms": {
+    "subtitle": "subtitles.hollowbell.warn_arms",
+    "sounds": [
+      {
+        "name": "minecraft:mob/ravager/roar1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/ravager/roar2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/ravager/roar3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/ravager/roar4",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "warn_stingers": {
+    "subtitle": "subtitles.hollowbell.warn_stingers",
+    "sounds": [
+      {
+        "name": "minecraft:mob/breeze/charge1",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/breeze/charge2",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:mob/breeze/charge3",
+        "pitch": 0.6,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "warn_lances": {
+    "subtitle": "subtitles.hollowbell.warn_lances",
+    "sounds": [
+      {
+        "name": "minecraft:block/beacon/power1",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:block/beacon/power2",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      },
+      {
+        "name": "minecraft:block/beacon/power3",
+        "pitch": 0.5,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  },
+  "warn_undertow": {
+    "subtitle": "subtitles.hollowbell.warn_undertow",
+    "sounds": [
+      {
+        "name": "minecraft:block/bubble_column/upwards_inside",
+        "pitch": 0.45,
+        "volume": 1.0,
+        "attenuation_distance": 160
+      }
+    ]
+  }
+}
