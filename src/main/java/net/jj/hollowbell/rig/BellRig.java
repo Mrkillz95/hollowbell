@@ -29,22 +29,21 @@ public final class BellRig {
         return instance;
     }
 
-    public enum Kind { BELL, RIM, CROWN, SPOT, ARM, STRAND, POD, EGG, THREAD }
+    public enum Kind { BELL, RIM, CROWN, SPOT, ARM, STRAND, POD, EGG }
 
     public final String[] boneNames;
     public final int[] parent;
     public final Vector3f[] pivot;
     public final Kind[] kind;
-    /** which arm / strand / pod / egg / thread / spot the bone belongs to, and which segment of it */
+    /** which arm / strand / pod / egg / spot the bone belongs to, and which segment of it */
     public final int[] part, seg;
     public final Map<String, Integer> index = new HashMap<>();
 
-    public final int crownY, rimY, threadTop, fadeFrom;
+    public final int crownY, rimY;
     public final ArmDef[] arms;
     public final StrandDef[] strands;
     public final BlobDef[] pods, eggs, spots;
     public final BlobDef crown;
-    public final ThreadDef[] threads;
     /** the dome, one row per height from the rim up: y, inner wall radius, outer radius */
     public final float[][] dome;
     public final int bellBone, rimBone, crownBone;
@@ -52,13 +51,10 @@ public final class BellRig {
     public record ArmDef(int k, int[] bones, Vector3f[] joints, Vector3f tip, Vector3f centre, float angle) {}
     public record StrandDef(int k, int[] bones, Vector3f[] joints, Vector3f bottom, float top, float low) {}
     public record BlobDef(int k, int bone, Vector3f centre, float radius) {}
-    public record ThreadDef(int k, int[] bones, Vector3f base, float top, int ring, float angle) {}
 
     private BellRig(JsonObject j) {
         crownY = j.get("crownY").getAsInt();
         rimY = j.get("rimY").getAsInt();
-        threadTop = j.get("threadTop").getAsInt();
-        fadeFrom = j.get("fadeFrom").getAsInt();
         JsonArray bs = j.getAsJsonArray("bones");
         int nb = bs.size();
         boneNames = new String[nb]; parent = new int[nb]; pivot = new Vector3f[nb]; kind = new Kind[nb];
@@ -85,7 +81,6 @@ public final class BellRig {
                 case "strand" -> Kind.STRAND;
                 case "pod" -> Kind.POD;
                 case "egg" -> Kind.EGG;
-                case "thread" -> Kind.THREAD;
                 default -> throw new IllegalStateException("unknown bone " + n);
             };
             part[i] = w.length > 1 ? Integer.parseInt(w[1]) : 0;
@@ -112,13 +107,6 @@ public final class BellRig {
         spots = blobs(j.getAsJsonArray("spots"));
         JsonObject c = j.getAsJsonObject("crown");
         crown = new BlobDef(0, c.get("bone").getAsInt(), vec(c.getAsJsonArray("centre")), c.get("radius").getAsFloat());
-        a = j.getAsJsonArray("threads");
-        threads = new ThreadDef[a.size()];
-        for (int i = 0; i < threads.length; i++) {
-            JsonObject o = a.get(i).getAsJsonObject();
-            threads[i] = new ThreadDef(i, ints(o.getAsJsonArray("bones")), vec(o.getAsJsonArray("base")), o.get("top").getAsFloat(),
-                    o.get("ring").getAsInt(), o.get("angle").getAsFloat());
-        }
         a = j.getAsJsonArray("dome");
         dome = new float[a.size()][];
         for (int i = 0; i < dome.length; i++) {
@@ -165,7 +153,6 @@ public final class BellRig {
     public boolean shown(BellState st, int b) {
         return switch (kind[b]) {
             case EGG -> !st.eggGone[part[b]];
-            case THREAD -> seg[b] == 0 ? st.threadGrowth[part[b]] > 0.001f : st.threadGrowth[part[b]] >= 0.999f;
             default -> true;
         };
     }
@@ -232,7 +219,7 @@ public final class BellRig {
             }
             int par = parent[b];
             Quaternionf local = s.q.identity();
-            float stretchY = 1f;
+            float stretchY = 1f, podGrow = 1f;
             Vector3f pv = pivot[b];
             switch (k) {
                 case ARM -> armLocal(st, b, local, fold);
@@ -244,23 +231,8 @@ public final class BellRig {
                     float ph = part[b] * 1.7f + (k == Kind.EGG ? 0.5f : 0f);
                     float a = 0.05f + 0.04f * Math.abs(p);
                     local.rotateX(a * (float) Math.sin(t * 0.17f + ph)).rotateZ(a * (float) Math.cos(t * 0.13f + ph * 1.3f));
-                }
-                case THREAD -> {
-                    ThreadDef T = threads[part[b]];
-                    if (seg[b] == 0) {
-                        // straight up whatever way he leans: they hang from the sky, not from him
-                        local.set(tilt).conjugate();
-                        float lean = -Mth.clamp((float) Math.sqrt(st.driftX * st.driftX + st.driftZ * st.driftZ) * 0.9f, 0f, 0.12f);
-                        Quaternionf q2 = swing(s.q2, st.driftX, st.driftZ, lean);
-                        local.premul(q2);
-                        float sw = 0.012f + 0.004f * T.ring;
-                        local.premul(s.q2.identity().rotateX(sw * (float) Math.sin(t * 0.05f + T.angle * 3f))
-                                .rotateZ(sw * (float) Math.cos(t * 0.043f + T.angle * 5f)));
-                        stretchY = Math.max(0.06f, st.threadGrowth[T.k()]);
-                    } else {
-                        float sw = 0.02f;
-                        local.rotateX(sw * (float) Math.sin(t * 0.07f + T.angle * 2f)).rotateZ(sw * (float) Math.cos(t * 0.061f + T.angle * 4f));
-                    }
+                    // a popped pod grows back from small
+                    if (k == Kind.POD) podGrow = 0.3f + 0.7f * st.podGrowth[part[b]];
                 }
                 default -> {}
             }
@@ -272,6 +244,7 @@ public final class BellRig {
             s.stretch[b] = stretchY;
             pose[b].identity().translate(at).rotate(rot[b]);
             if (stretchY != 1f) pose[b].scale(1f, stretchY, 1f);
+            if (podGrow != 1f) pose[b].scale(podGrow);
             pose[b].translate(-pv.x, -pv.y, -pv.z);
         }
     }

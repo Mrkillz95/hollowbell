@@ -39,13 +39,13 @@ public final class BellState {
     public boolean[] podPopped;
     /** per egg clump: gone (shed) */
     public boolean[] eggGone;
-    /** per thread: how much of it there is, 0 cut, 1 whole */
-    public float[] threadGrowth;
+    /** per pod: how far it has grown back, 0 just popped, 1 whole */
+    public float[] podGrowth;
 
     public BellState(BellRig rig) {
         podPopped = new boolean[rig.pods.length];
         eggGone = new boolean[rig.eggs.length];
-        threadGrowth = new float[rig.threads.length];
-        java.util.Arrays.fill(threadGrowth, 1f);
+        podGrowth = new float[rig.pods.length];
+        java.util.Arrays.fill(podGrowth, 1f);
     }
 }

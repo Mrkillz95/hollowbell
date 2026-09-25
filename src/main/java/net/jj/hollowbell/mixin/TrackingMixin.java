@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 /**
  * He is far wider and taller than the game expects an entity to be. A player is only sent an entity while they are
  * within view distance of its one position (the middle of the ground under him), so standing under his rim, or
- * watching his threads from a way off, he vanished. Here the range he is sent at is stretched to cover all of him.
+ * watching his dome from a way off, he vanished. Here the range he is sent at is stretched to cover all of him.
  */
 @Mixin(targets = "net.minecraft.server.level.ChunkMap$TrackedEntity")
 public class TrackingMixin {

@@ -37,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
  * like it does in the world (and follows the resource pack). Built on a worker thread the first time he is seen.
  *
  * Each bone has up to three meshes: solid blocks, glowing blocks (drawn at full light), and see-through ones
- * (stained and tinted glass, and the fading tops of the threads). The see-through ones keep what they need to be
+ * (stained and tinted glass). The see-through ones keep what they need to be
  * re-sorted back to front as you move around, so the dome looks right from any side.
  * There is also a far-away version with every 2x2x2 lump of blocks merged into one, and a tiny one (8x8x8) for the
  * Bellings and for him when he is very small or very far.

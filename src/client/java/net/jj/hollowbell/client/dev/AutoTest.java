@@ -107,8 +107,8 @@ public final class AutoTest {
                 MinecraftServer sv = mc.getSingleplayerServer();
                 if (sv != null) sv.execute(() -> {
                     for (var l : sv.getAllLevels()) for (var hb : l.getEntities(net.jj.hollowbell.ModEntities.HOLLOWBELL, x -> true))
-                        HollowbellMod.LOG.info("autotest status: hp {}/{} pods {} threads {} move {} inside {} at {}", hb.healthNow(), hb.healthMax(),
-                                hb.podsLeft(), hb.threadsHolding(), hb.moveNow(), hb.moves().insideCount(), hb.position());
+                        HollowbellMod.LOG.info("autotest status: hp {}/{} pods {} move {} inside {} at {}", hb.healthNow(), hb.healthMax(),
+                                hb.podsLeft(), hb.moveNow(), hb.moves().insideCount(), hb.position());
                 });
                 continue;
             }

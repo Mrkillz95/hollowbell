@@ -43,7 +43,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     /** the glass waiting to be drawn this frame */
     private static final List<Glass> glass = new ArrayList<>();
     private record Glass(Matrix4f entity, Matrix4f view, Matrix4f proj, Matrix4f[] bones, int lod, float lit, float hurt, boolean red,
-                         float fogStart, float fogEnd, Vector3f l0, Vector3f l1, float threadFade, boolean[] shown) {}
+                         float fogStart, float fogEnd, Vector3f l0, Vector3f l1, boolean[] shown) {}
 
     public BellRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
@@ -94,8 +94,6 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         int lod = BellMeshes.FULL;
         if (HollowbellConfig.V.simpleFarAway && dist > HollowbellConfig.V.simpleFarAwayAt * Math.max(0.25f, s)) lod = BellMeshes.FAR;
         if (s < 0.06f && dist > 40 || dist > HollowbellConfig.V.simpleFarAwayAt * 4 * Math.max(0.25f, s)) lod = BellMeshes.TINY;
-        // the threads fade out with distance too, and go altogether a long way off
-        float threadFade = Mth.clamp(1f - (float) (dist - 250 * Math.max(0.3f, s)) / (250f * Math.max(0.3f, s)), 0f, 1f);
 
         RenderType rt = RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
         rt.setupRenderState();
@@ -111,7 +109,6 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         boolean[] shown = new boolean[rig.boneCount()];
         for (int b = 0; b < shown.length; b++) {
             shown[b] = rig.shown(e.state, b);
-            if (rig.kind[b] == BellRig.Kind.THREAD && threadFade <= 0f) shown[b] = false;
         }
         Matrix4f mv = new Matrix4f(), boneWorld = new Matrix4f();
         Matrix3f rot = new Matrix3f();
@@ -143,7 +140,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         if (nether) Lighting.setupNetherLevel(); else Lighting.setupLevel();
         rt.clearRenderState();
-        glass.add(new Glass(entity, view, proj, draw, lod, lit * (1f - 0.2f * dying), hurt, e.state.red, fs, fe, l0w, l1w, threadFade, shown));
+        glass.add(new Glass(entity, view, proj, draw, lod, lit * (1f - 0.2f * dying), hurt, e.state.red, fs, fe, l0w, l1w, shown));
     }
 
     private static void upload(Uniform u, Matrix4f m) { if (u != null) { u.set(m); u.upload(); } }
@@ -209,7 +206,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
                 if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
                 float k = gl.lit;
-                float a = rig.kind[b] == BellRig.Kind.THREAD ? gl.threadFade : 1f;
+                float a = 1f;
                 if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(k, k * (1f - gl.hurt), k * (1f - gl.hurt), a); shader.COLOR_MODULATOR.upload(); }
                 m.vb.bind();
                 m.vb.draw();

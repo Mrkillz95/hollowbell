@@ -88,8 +88,8 @@ public class HollowbellMod implements ModInitializer {
 
         BellRig rig = BellRig.get();
         BellModel.preload();
-        LOG.info("Hollowbell is ready: {} bones, {} strands, {} pods, {} egg clumps, {} threads", rig.boneCount(), rig.strands.length,
-                rig.pods.length, rig.eggs.length, rig.threads.length);
+        LOG.info("Hollowbell is ready: {} bones, {} strands, {} pods, {} egg clumps", rig.boneCount(), rig.strands.length,
+                rig.pods.length, rig.eggs.length);
     }
 
     /** gives one of the mod's advancements */
