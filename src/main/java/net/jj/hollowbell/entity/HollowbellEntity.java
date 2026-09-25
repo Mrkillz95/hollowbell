@@ -761,6 +761,9 @@ public class HollowbellEntity extends Monster {
         setDeltaMovement(Vec3.ZERO);
         entityData.set(DATA_VEL, new Vector3f((float) vel.x, (float) vel.y, (float) vel.z));
         if (tickCount % 10 == 0 && HollowbellConfig.V.griefing && hv.lengthSqr() > 0.001) moves.flattenUnderStrands();
+        // his strands slide over each other as he goes
+        if (tickCount % 50 == 0 && hv.length() > max * 0.3 && random.nextInt(2) == 0)
+            sound(strandTipWorld(random.nextInt(rig.strands.length)), ModSounds.STRAND, 0.8f, 0.9f + random.nextFloat() * 0.2f);
     }
 
     /** how hard the bell is pushing, age ticks into a pulse: rises with the squeeze and fades, 0 to 1 */
@@ -787,6 +790,7 @@ public class HollowbellEntity extends Monster {
         Vec3 at = toWorld(new Vector3f(0, rig.rimY + 20, 0));
         sound(at, ModSounds.PULSE, 1.2f + power, 1.05f - 0.1f * power);
         if (power >= 1f) sound(at, ModSounds.PULSE_WATER, 0.8f + 0.6f * power, 1f);
+        if (power >= 1.2f) sound(boneWorld(rig.sectors[random.nextInt(rig.sectors.length)].bone(), new Vector3f(0, rig.rimY, 0)), ModSounds.RIPPLE, 1.5f, 1f);
     }
 
     // ------------------------------------------------------------------ who he goes after

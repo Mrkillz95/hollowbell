@@ -299,3 +299,11 @@ JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the
 - **The sky dive** climbs 70 blocks (at full size) above him or what he's after, turns over, dives bell first and
   lands crown down. The shock wave reaches about 100 blocks out (at full size).
 - **Being him**: keys 1 to 0, then Z X C V B N M, then R H J K U for the 22 moves, light first.
+- **Sounds.** 42 sound events of his own, each with a subtitle. Six are made from scratch by
+  `tools/make_sounds.py` (no recordings): a low breathing hum and a wet drifting sound (both loop and follow him,
+  the drift louder the faster he goes), the whoosh of each pulse, a muffled heartbeat and the dome's echo (only
+  while you're inside), and a deep bell toll built from a bell's own overtones. The rest are the game's own sounds
+  pitched down and mixed for him (amethyst, elder guardian, warden, conduit, bubbles, slime, frogspawn, allay...),
+  set out in `tools/sounds.py`, which checks every one against the game's sound list. Every heavy move has its own
+  warning sound. A bigger Hollowbell is louder, heard further, and deeper; a small one higher. `ambientSounds` in
+  the config turns the hum and drift off.
