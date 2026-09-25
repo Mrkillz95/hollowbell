@@ -1,0 +1,19 @@
+world flat
+gui off
+render 12
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 0.3
+waitmodel
+wait 40
+cmd give @p minecraft:diamond_sword
+wait 5
+view 0 60 -10 0 5 0
+wait 20
+pick
+status
+swing
+wait 5
+status
+quit

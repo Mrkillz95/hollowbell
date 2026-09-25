@@ -1,0 +1,69 @@
+world flat
+gui off
+render 16
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 1
+waitmodel
+wait 80
+cmd hollowbell mood calm
+view 0 120 -235 0 125 0
+wait 80
+shot full_front
+view 160 250 -160 0 140 0
+wait 60
+shot full_high
+view 0 440 -40 0 200 0
+wait 60
+shot full_top
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon cow ~ ~ ~ {NoAI:1b}
+wait 5
+cmd hollowbell do harvest
+wait 300
+status
+view -120 150 -40 -20 150 10
+wait 40
+shot cow_inside
+view -55 140 0 -40 140 30
+wait 40
+shot cow_close
+view -18.7 76 10.3 -18.7 95 10.3
+wait 20
+pick
+swing
+wait 2
+swing
+wait 2
+swing
+wait 5
+status
+cmd hollowbell do drop
+wait 40
+view 0 70 -230 0 50 0
+wait 20
+shot drop
+wait 300
+cmd hollowbell hurt 3500
+cmd time set 18000
+view 0 120 -235 0 120 0
+wait 60
+shot night_red
+gui on
+cmd give @p hollowbell:hollowbell_codex
+wait 10
+page 0
+wait 20
+shot book_orders
+page 1
+wait 20
+shot book_moves
+page 3
+wait 20
+shot book_safe
+close
+cmd time set 6000
+cmd hollowbell ride
+wait 60
+shot riding
+quit
