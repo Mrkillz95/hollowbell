@@ -1,3 +1,4 @@
+# a short run for looking into one thing at a time (here: the sky dive)
 world flat
 gui off
 render 20
@@ -5,28 +6,23 @@ sim 20
 cmd time set 6000
 cmd tp @p 0 -60 0 0 0
 wait 20
-cmd hollowbell summon calm 1
+cmd hollowbell summon hunting 1
 waitmodel
-wait 300
+wait 420
+cmd hollowbell mood calm
 cmd hollowbell stay true
-cmd hollowbell height 12
-wait 100
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon zombie ~30 ~ ~10 {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b}
+wait 5
+view 0 170 -270 0 200 0
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sky_dive
+wait 170
 status
-cmd hollowbell goto 700 106
-view 0 60 -120 0 60 0
-fixed
+shot dbg_a
+wait 20
+status
+shot dbg_b
+wait 20
+status
+shot dbg_c
 wait 60
-status
-wait 60
-status
-cmd tp @p ~ ~ ~-150
-wait 60
-status
-wait 60
-status
-cmd tp @p ~ ~ ~-100
-wait 60
-status
-wait 60
-status
 quit

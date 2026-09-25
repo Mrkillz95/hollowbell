@@ -14,8 +14,7 @@ cmd hollowbell height 3
 wait 200
 cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon cow ~6 -60 ~4 {NoAI:1b}
 wait 5
-view 110 25 -60 10 25 10
-fixed
+cowcam 5 1.5 5
 cmd execute as @e[type=cow,limit=1] run hollowbell do grab
 wait 25
 shot grab_1_reach
@@ -27,4 +26,6 @@ wait 25
 shot grab_4_lift
 wait 30
 shot grab_5_in
+wait 20
+shot grab_6_in
 quit

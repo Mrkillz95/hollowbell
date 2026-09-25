@@ -1127,8 +1127,17 @@ public final class BellMoves {
             h.setLift(lift);
             // everything is carried after the pose (afterPose); here only the sting of being held
             if (grabbed != null && !gentle && t % 30 == 0 && !(grabbed instanceof Player p && p.isCreative())) {
-                blow(grabbed, 4f, tip, 0, 0);
-                sting(grabbed);
+                if (grabbed instanceof Player) {
+                    blow(grabbed, 4f, tip, 0, 0);
+                    sting(grabbed);
+                } else {
+                    // a creature is squeezed hard but kept alive until it's in the dome, so you see it taken in
+                    float d = Math.min(h.dmg(7f, grabbed), grabbed.getHealth() - 1f);
+                    grabbed.invulnerableTime = 0;
+                    if (d > 0) grabbed.hurt(h.damageSources().mobAttack(h), d);
+                    grabbed.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
+                    h.sound(grabbed.position(), ModSounds.STING, 1f, 1f);
+                }
             }
             if (t % 20 == 0) h.sound(tip, ModSounds.STRAND, 1.5f, 0.7f);
             return;

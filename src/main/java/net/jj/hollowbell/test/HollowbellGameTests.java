@@ -315,6 +315,9 @@ public class HollowbellGameTests implements FabricGameTest {
             c[0] = mob(h, EntityType.COW, under(e));
             h.assertTrue(e.forceMove(Moves.HARVEST, c[0]), "no harvest");
         });
+        // it's hurt on the way up but lives to be taken in, so you see it go into the dome
+        h.runAfterDelay(20 + Moves.REACH + Moves.LIFT - 5, () ->
+                h.assertTrue(c[0].isAlive(), "the cow died on the way up, before it got to the dome"));
         h.runAfterDelay(20 + Moves.length(Moves.HARVEST) + 60, () -> {
             h.assertTrue(!c[0].isAlive(), "the cow is still alive " + (e.moves().isInside(c[0]) ? "inside the dome" : "outside") + " with " + c[0].getHealth());
             c[0].discard();
@@ -911,6 +914,28 @@ public class HollowbellGameTests implements FabricGameTest {
         h.runAfterDelay(300, () -> {
             boolean ok = Double.isFinite(e.getX()) && Double.isFinite(e.getY()) && !e.isRemoved() && e.position().distanceTo(e.home()) < 200;
             h.assertTrue(ok, "he went wrong:" + path);
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 700, batch = "dive_unhurt")
+    public void aFullSizeSkyDiveDoesntHurtHim(GameTestHelper h) {
+        // turned over at full size, the point he's measured from goes deep under the ground: that mustn't hurt him
+        HollowbellEntity e = spawnAway(h, 1f, HollowbellEntity.CALM, 114);
+        Pig[] p = new Pig[1];
+        float[] hp = new float[1];
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            p[0] = pig(h, under(e));
+            p[0].setInvulnerable(true);
+            hp[0] = e.healthNow();
+            h.assertTrue(e.forceMove(Moves.SKY_DIVE, p[0]), "no sky dive");
+        });
+        h.runAfterDelay(20 + Moves.length(Moves.SKY_DIVE) + 20, () -> {
+            h.assertTrue(e.moveNow() != Moves.SKY_DIVE, "the sky dive never finished");
+            h.assertTrue(e.healthNow() >= hp[0] - 0.01f, "his own sky dive hurt him: " + hp[0] + " -> " + e.healthNow());
+            p[0].discard();
             release(h, e);
             h.succeed();
         });
