@@ -15,6 +15,7 @@ const { load } = require('./lib/load');
 const { classify } = require('./lib/classify');
 const { buildRig } = require('./lib/rig');
 const { isGlass } = require('./lib/names');
+const { thinSpeckles, dropFloating } = require('./lib/tidy');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'src', 'main', 'resources', 'hollowbell');
@@ -27,12 +28,16 @@ function main() {
   const R = buildRig(M, C);
   console.log('parts:', JSON.stringify(R.stats));
 
-  // one list of every voxel: build + threads
+  // one list of every voxel
   const palette = [];
   const palIdx = new Map();
   const pal = name => { if (!palIdx.has(name)) { palIdx.set(name, palette.length); palette.push(name); } return palIdx.get(name); };
   const vox = [];   // [x, y, z, pal, bone, alpha]
-  for (let k = 0; k < C.n; k++) vox.push([C.X[k], C.Y[k], C.Z[k], pal(M.palette[C.PAL[k]]), R.boneOf[k], 255]);
+  for (let k = 0; k < C.n; k++) if (!R.gone[k]) vox.push([C.X[k], C.Y[k], C.Z[k], pal(M.palette[C.PAL[k]]), R.boneOf[k], 255]);
+  // 1.1: a little less cluttered
+  const floating = dropFloating(vox, R.bones);
+  const thinned = thinSpeckles(vox, R.bones, palette, pal);
+  console.log(`tidied: ${R.stats.eggsTakenOff} egg clumps and ${R.stats.floatingTakenOff + floating} floating blocks taken off, ${thinned.arm} arm speckles and ${thinned.strand} strand dots thinned out`);
   const occupied = new Map();
   const key = (x, y, z) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
   for (let i = 0; i < vox.length; i++) occupied.set(key(vox[i][0], vox[i][1], vox[i][2]), i);

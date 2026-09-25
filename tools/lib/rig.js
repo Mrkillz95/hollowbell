@@ -3,6 +3,35 @@
 const { N26 } = require('./classify');
 
 const STRAND_SEGS = 4;
+const EGGS_KEPT = 30;
+
+// Picks the egg clumps to keep: groups of three or four close together, the groups spread out from each other,
+// the fullest spots first.
+function pickEggGroups(eggs, X, Y, Z, n, want, stuck) {
+  const mid = [];
+  for (let k = 0; k < n; k++) {
+    const i = eggs.of[k]; if (i < 0) continue;
+    const m = mid[i] || (mid[i] = [0, 0, 0, 0]); m[0] += X[k]; m[1] += Y[k]; m[2] += Z[k]; m[3]++;
+  }
+  const c = mid.map(m => [m[0] / m[3], m[1] / m[3], m[2] / m[3], m[3]]);
+  const d = (a, b) => Math.hypot(a[0] - b[0], (a[1] - b[1]) * 0.8, a[2] - b[2]);
+  const R = 17, APART = 30;
+  const free = new Set(c.map((_, i) => i).filter(i => stuck.has(i)));
+  const keep = new Set();
+  while (keep.size < want && free.size) {
+    let best = -1, bs = -1;
+    for (const i of free) {
+      let s = 0; for (const j of free) if (j !== i && d(c[i], c[j]) < R) s++;
+      const score = s * 1000 + c[i][3];
+      if (score > bs) { bs = score; best = i; }
+    }
+    const near = [...free].filter(j => j !== best && d(c[best], c[j]) < R).sort((a, b) => d(c[best], c[a]) - d(c[best], c[b]));
+    const group = [best, ...near.slice(0, Math.min(3, want - keep.size - 1))];
+    for (const i of group) keep.add(i);
+    for (const i of [...free]) if (group.some(g => d(c[g], c[i]) < APART) || group.includes(i)) free.delete(i);
+  }
+  return keep;
+}
 const ARM_SEGS = 3;
 
 function hash(x, y, z, s) {
@@ -142,6 +171,42 @@ function buildRig(M, C) {
   }
   const pods = lumps(200, 60);
   const eggs = lumps(300, 60);
+  // 1.1: floating lumps that touch nothing else of him are taken off: only the one big piece of him stays
+  const gone = new Uint8Array(n);
+  let floatingOff = 0;
+  {
+    const comp = new Int32Array(n).fill(-1); const sizes = [];
+    for (let s = 0; s < n; s++) {
+      if (comp[s] >= 0) continue;
+      const id = sizes.length; let size = 0; const st = [s]; comp[s] = id;
+      while (st.length) {
+        const k = st.pop(); size++;
+        for (const [a, b, c] of N26) { const j = find(X[k] + a, Y[k] + b, Z[k] + c); if (j !== undefined && comp[j] < 0) { comp[j] = id; st.push(j); } }
+      }
+      sizes.push(size);
+    }
+    const big = sizes.indexOf(Math.max(...sizes));
+    for (let k = 0; k < n; k++) if (comp[k] !== big) { gone[k] = 1; floatingOff++; if (eggs.of[k] >= 0) eggs.of[k] = -1; }
+  }
+  // 1.1: fewer egg clumps (about a third of them), kept in clear groups; the rest are taken off the model
+  {
+    // only clumps really stuck on to a strand or an arm can stay (a clump on its own would float)
+    const stuck = new Set();
+    for (let k = 0; k < n; k++) {
+      if (eggs.of[k] < 0 || stuck.has(eggs.of[k])) continue;
+      for (const [a, b, c] of N26) {
+        const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+        if (j !== undefined && !gone[j] && (strandOf[j] >= 0 || (label[j] === null && lab[j] >= 0 && lab[j] < 8))) { stuck.add(eggs.of[k]); break; }
+      }
+    }
+    const keep = pickEggGroups(eggs, X, Y, Z, n, EGGS_KEPT, stuck);
+    let removed = 0;
+    for (let k = 0; k < n; k++) if (eggs.of[k] >= 0 && !keep.has(eggs.of[k])) { eggs.of[k] = -1; gone[k] = 1; removed++; }
+    const ren = new Map(); [...keep].sort((a, b) => a - b).forEach((i, r) => ren.set(i, r));
+    for (let k = 0; k < n; k++) if (eggs.of[k] >= 0) eggs.of[k] = ren.get(eggs.of[k]);
+    eggs.removed = eggs.count - keep.size; eggs.removedVox = removed;
+    eggs.count = keep.size;
+  }
   // loose bits turned into strand stuff: give them to the nearest strand voxel's strand
   for (let pass = 0; pass < 40; pass++) {
     let left = 0;
@@ -261,13 +326,14 @@ function buildRig(M, C) {
   for (let pass = 0; pass < 30; pass++) {
     const set = [];
     for (let k = 0; k < n; k++) {
-      if (boneOf[k] >= 0) continue;
+      if (boneOf[k] >= 0 || gone[k]) continue;
       for (const [a, b, c] of N26) { const j = find(X[k] + a, Y[k] + b, Z[k] + c); if (j !== undefined && boneOf[j] >= 0) { set.push([k, boneOf[j]]); break; } }
     }
     if (!set.length) break;
     for (const [k, b] of set) boneOf[k] = b;
   }
-  for (let k = 0; k < n; k++) if (boneOf[k] < 0) { boneOf[k] = boneIndex.get('rim'); orphans++; }
+  // whatever is still left touches nothing of him at all: a floating bit, taken off
+  for (let k = 0; k < n; k++) if (boneOf[k] < 0 && !gone[k]) { gone[k] = 1; orphans++; }
 
   // ---------------- the dome's shape, for the inside: the inner wall's radius at each height, and its outside
   const inner = {}, outer = {};
@@ -287,7 +353,7 @@ function buildRig(M, C) {
   for (let y = 132; y <= crownY; y++) profile.push([y, Math.round((inner[y] || 0) * 10) / 10, Math.round((outer[y] || 0) * 10) / 10]);
 
   return {
-    bones, boneOf,
+    bones, boneOf, gone,
     rig: {
       version: 1,
       note: 'Hollowbell rig: model space is blocks at size 1, y 0 is the ground under his strands, x and z are centred on the crown.',
@@ -298,7 +364,7 @@ function buildRig(M, C) {
       crown: spotDef(C, boneIndex.get('crown'), 'crown'),
       dome: profile,
     },
-    stats: { strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, orphans, loosePods: pods.loose, looseEggs: eggs.loose },
+    stats: { strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
   };
 }
 
