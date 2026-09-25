@@ -1,0 +1,136 @@
+{
+ "type": "minecraft:entity",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "hollowbell:stinger"
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "hollowbell:bell_glass",
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 8,
+        "max": 16
+       }
+      },
+      {
+       "function": "minecraft:enchanted_count_increase",
+       "enchantment": "minecraft:looting",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 0,
+        "max": 1
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "hollowbell:hollowbell_pod",
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 3,
+        "max": 6
+       }
+      },
+      {
+       "function": "minecraft:enchanted_count_increase",
+       "enchantment": "minecraft:looting",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 0,
+        "max": 1
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "hollowbell:hollowbell_crown"
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:oxidized_copper",
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 8,
+        "max": 20
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:bone_block",
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 6,
+        "max": 14
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:verdant_froglight",
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 2,
+        "max": 6
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

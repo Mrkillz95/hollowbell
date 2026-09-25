@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.hollowbell.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "AttackMixin",
+    "CameraMixin",
+    "DriveZoomMixin",
+    "FrozenBodyMixin",
+    "PickMixin",
+    "VisibleMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,24 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "misc",
+ "pattern": [
+  " P ",
+  "GBG",
+  " G "
+ ],
+ "key": {
+  "P": {
+   "item": "hollowbell:hollowbell_pod"
+  },
+  "G": {
+   "item": "hollowbell:bell_glass"
+  },
+  "B": {
+   "item": "minecraft:book"
+  }
+ },
+ "result": {
+  "id": "hollowbell:hollowbell_codex",
+  "count": 1
+ }
+}

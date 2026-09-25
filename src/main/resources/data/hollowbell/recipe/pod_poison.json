@@ -1,0 +1,21 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "misc",
+ "ingredients": [
+  {
+   "item": "hollowbell:hollowbell_pod"
+  },
+  {
+   "item": "minecraft:glass_bottle"
+  }
+ ],
+ "result": {
+  "id": "minecraft:potion",
+  "count": 1,
+  "components": {
+   "minecraft:potion_contents": {
+    "potion": "minecraft:long_poison"
+   }
+  }
+ }
+}
