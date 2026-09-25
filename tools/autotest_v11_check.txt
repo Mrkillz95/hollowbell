@@ -1,0 +1,79 @@
+# 1.1 check pass, part 1: textures up close, climbing and sinking, moving and stopping, night glow, holding a cow
+world flat
+gui off
+render 20
+sim 20
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 1
+waitmodel
+view 0 220 -270 0 150 0
+wait 60
+shot v11_arrive
+wait 380
+status
+cmd hollowbell stay true
+wait 40
+view 125 100 -40 70 90 -20
+wait 30
+shot check_arm_close
+view 45 55 -85 20 60 0
+wait 20
+shot check_strands_close
+view 0 240 -70 0 195 0
+wait 20
+shot check_dome_top
+view -45 150 5 20 165 -10
+wait 20
+shot check_inside_dome
+view 0 20 -170 0 90 0
+wait 20
+shot check_from_below
+view 0 100 -270 0 110 0
+cmd hollowbell stay false
+cmd hollowbell height 80
+wait 14
+shot v11_climb_a
+wait 5
+shot v11_climb_b
+wait 5
+shot v11_climb_c
+wait 240
+cmd hollowbell height 0
+wait 45
+shot v11_sink_a
+wait 30
+shot v11_sink_b
+wait 200
+cmd hollowbell height 15
+cmd hollowbell goto 600 0
+wait 30
+view 0 90 -270 0 100 0
+wait 200
+shot v11_moving
+cmd hollowbell stay true
+wait 30
+shot v11_stopping
+wait 30
+shot v11_swing_back
+wait 60
+shot v11_settled
+cmd time set 18000
+view 0 110 -270 0 120 0
+wait 40
+shot v11_night
+cmd time set 6000
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon cow ~5 ~ ~5 {NoAI:1b}
+wait 5
+cmd execute as @e[type=cow,limit=1] run hollowbell do grab
+view 10 40 -150 5 30 0
+wait 70
+shot v11_grab_hold
+wait 60
+shot v11_grab_lift
+wait 140
+view -120 150 -40 -20 150 10
+wait 20
+shot v11_grab_inside
+quit

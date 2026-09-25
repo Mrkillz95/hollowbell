@@ -1,0 +1,56 @@
+# 1.1 check pass, part 3: how he moves, seen from a camera that stays put
+world flat
+gui off
+render 20
+sim 20
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 1
+waitmodel
+wait 400
+cmd hollowbell stay true
+cmd hollowbell height 12
+wait 300
+status
+view 0 70 -270 -60 90 0
+fixed
+wait 10
+shot motion_0_still
+cmd hollowbell goto 700 106
+wait 80
+shot motion_1_setting_off
+status
+wait 80
+shot motion_2_going
+status
+wait 80
+shot motion_3_going
+cmd hollowbell stay true
+wait 20
+shot motion_4_stopping
+wait 25
+shot motion_5_swing_back
+wait 40
+shot motion_6_settling
+status
+view 0 60 -270 0 150 0
+fixed
+cmd hollowbell stay false
+cmd hollowbell height 90
+wait 20
+shot motion_7_climb
+wait 6
+shot motion_8_climb
+wait 6
+shot motion_9_climb
+wait 120
+status
+shot motion_10_up
+cmd hollowbell height 5
+wait 60
+shot motion_11_sinking
+wait 60
+shot motion_12_sinking
+status
+quit

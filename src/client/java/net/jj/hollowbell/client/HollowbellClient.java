@@ -47,6 +47,10 @@ public class HollowbellClient implements ClientModInitializer {
         }));
         ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); });
         ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); });
+        // he's ticked even when the game would skip him for having his middle too far off (see tickIfSkipped)
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(level -> {
+            for (var e : level.entitiesForRendering()) if (e instanceof net.jj.hollowbell.entity.HollowbellEntity h) h.tickIfSkipped();
+        });
         HudRenderCallback.EVENT.register((g, t) -> BeingHim.hud(g));
         // the glass goes on after every other creature, so whatever he has caught shows through it
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> BellRenderer.drawGlass());

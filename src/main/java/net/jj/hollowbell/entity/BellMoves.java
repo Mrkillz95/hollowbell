@@ -347,7 +347,7 @@ public final class BellMoves {
             return;
         }
         if (cooldown > 0) { cooldown--; return; }
-        if (tired > 0) return;
+        if (tired > 0 || h.arriving()) return;
         if (h.carrying()) return;              // whoever is on his crown picks the moves
         choose();
     }

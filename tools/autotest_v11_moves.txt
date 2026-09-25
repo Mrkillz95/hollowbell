@@ -1,0 +1,76 @@
+# 1.1 check pass, part 2: heavy moves, detail on and off far away, dying
+world flat
+gui off
+render 20
+sim 20
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon hunting 1
+waitmodel
+wait 420
+cmd hollowbell mood calm
+cmd hollowbell stay true
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon zombie ~30 ~ ~10 {NoAI:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+view 0 90 -270 0 90 0
+cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_storm
+wait 30
+shot heavy_arm_storm_up
+wait 45
+shot heavy_arm_storm_crash
+wait 120
+cmd execute as @e[type=zombie,limit=1] run hollowbell do whirlpool
+wait 70
+shot heavy_whirlpool
+wait 150
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sun_lances
+wait 70
+shot heavy_sun_lances
+wait 130
+cmd execute as @e[type=zombie,limit=1] run hollowbell do stinger_storm
+wait 60
+shot heavy_stinger_storm
+wait 130
+cmd execute as @e[type=zombie,limit=1] run hollowbell do deep_toll
+wait 90
+shot heavy_deep_toll_building
+wait 24
+shot heavy_deep_toll_ring
+wait 130
+cmd execute as @e[type=zombie,limit=1] run hollowbell do undertow
+wait 50
+shot heavy_undertow
+wait 120
+cmd execute as @e[type=zombie,limit=1] run hollowbell do drop
+wait 50
+shot heavy_drop
+wait 350
+view 0 170 -270 0 200 0
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sky_dive
+wait 80
+shot heavy_sky_dive_up
+wait 30
+shot heavy_sky_dive_turn
+wait 20
+shot heavy_sky_dive_fall
+wait 30
+shot heavy_sky_dive_land
+wait 150
+view 0 100 -270 0 100 0
+detail on
+wait 30
+shot detail_on_far
+detail off
+wait 30
+shot detail_off_far
+detail on
+view 0 100 -270 0 90 0
+cmd hollowbell kill
+wait 70
+shot death_a
+wait 90
+shot death_b
+wait 110
+shot death_c
+quit

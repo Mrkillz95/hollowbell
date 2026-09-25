@@ -83,6 +83,7 @@ public class HollowbellMod implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((d, access, env) -> HollowbellCommand.register(d));
         ServerTickEvents.END_SERVER_TICK.register(CodexOrders::serverTick);
+        ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> { if (entity instanceof HollowbellEntity h) h.clearBars(); });
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> { if (entity instanceof HollowbellEntity h) HollowbellCommand.keepToTheLimit(h, world); });
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> CodexOrders.forgetEverything());

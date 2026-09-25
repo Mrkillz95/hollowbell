@@ -54,6 +54,13 @@ public final class HollowbellCommand {
                 .then(Commands.literal("heal").executes(c -> near(c, h -> { h.heal(); h.mendPods(); }, "heal")))
                 .then(Commands.literal("popped").then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
                         .executes(c -> near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "n")), "popped"))))
+                .then(Commands.literal("goto").then(Commands.argument("x", FloatArgumentType.floatArg()).then(Commands.argument("z", FloatArgumentType.floatArg())
+                        .executes(c -> near(c, h -> {
+                            double x = FloatArgumentType.getFloat(c, "x"), z = FloatArgumentType.getFloat(c, "z");
+                            h.setGoal(new Vec3(x, h.groundAt(x, z), z));
+                        }, "goto")))))
+                .then(Commands.literal("stay").then(Commands.argument("on", BoolArgumentType.bool())
+                        .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "on")), "stay"))))
                 .then(Commands.literal("height").then(Commands.argument("blocks", FloatArgumentType.floatArg(0f, 400f))
                         .executes(c -> near(c, h -> h.setCruise(FloatArgumentType.getFloat(c, "blocks")), "height"))))
                 .then(Commands.literal("ride").executes(c -> {

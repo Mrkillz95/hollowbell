@@ -51,6 +51,7 @@ public class HollowbellGameTests implements FabricGameTest {
         e.setBellScale(scale);
         e.setVariant(variant);
         e.setMoveCooldown(100000);          // he only does what the test tells him
+        e.skipArrival();
         h.getLevel().addFreshEntity(e);
         return e;
     }
@@ -364,6 +365,26 @@ public class HollowbellGameTests implements FabricGameTest {
             float lost = 20f - pl[0].getHealth();
             h.assertTrue(!pl[0].isAlive() || lost >= 10f, "a player in netherite only lost " + lost + " health to the drop");
             drop(pl[0]);
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 900, batch = "arrive")
+    public void aNewOneComesDownOutOfTheSky(GameTestHelper h) {
+        BlockPos o = h.absolutePos(BlockPos.ZERO);
+        int x = o.getX() + 20000 + 95 * 400, z = o.getZ() + 5000;
+        for (int cx = (x >> 4) - 3; cx <= (x >> 4) + 3; cx++) for (int cz = (z >> 4) - 3; cz <= (z >> 4) + 3; cz++) { h.getLevel().setChunkForced(cx, cz, true); h.getLevel().getChunk(cx, cz); }
+        int y = h.getLevel().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+        HollowbellEntity e = ModEntities.HOLLOWBELL.create(h.getLevel());
+        e.moveTo(x + 0.5, y, z + 0.5, 0f, 0f);
+        e.setBellScale(S);
+        e.setVariant(HollowbellEntity.CALM);
+        h.getLevel().addFreshEntity(e);
+        double[] top = new double[1];
+        h.runAfterDelay(5, () -> { top[0] = e.getY(); h.assertTrue(top[0] > y + 20, "he didn't start up in the sky: " + top[0] + " over ground " + y); });
+        h.runAfterDelay(850, () -> {
+            h.assertTrue(e.getY() < top[0] - 20 && e.getY() < y + 60 * S + 8, "he didn't come down: at " + e.getY() + " (started " + top[0] + ", ground " + y + ")");
             release(h, e);
             h.succeed();
         });

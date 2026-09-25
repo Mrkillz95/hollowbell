@@ -83,6 +83,14 @@ public final class AutoTest {
             }
             if (s.startsWith("gui ")) { mc.options.hideGui = !s.endsWith("on"); continue; }
             if (s.startsWith("render ")) { mc.options.renderDistance().set(Integer.parseInt(s.substring(7).trim())); continue; }
+            // how far from the camera things keep moving (he's big: the camera often sits a long way off)
+            if (s.startsWith("sim ")) {
+                int n = Integer.parseInt(s.substring(4).trim());
+                mc.options.simulationDistance().set(n);
+                MinecraftServer sv = mc.getSingleplayerServer();
+                if (sv != null) sv.execute(() -> sv.getPlayerList().setSimulationDistance(n));
+                continue;
+            }
             if (s.startsWith("page ")) {
                 if (mc.screen != null) mc.screen.onClose();
                 net.jj.hollowbell.client.CodexScreen.showPage(Integer.parseInt(s.substring(5).trim()));
@@ -109,6 +117,8 @@ public final class AutoTest {
                 continue;
             }
             if (s.equals("status")) {
+                for (var en : mc.level.entitiesForRendering()) if (en instanceof HollowbellEntity hh)
+                    HollowbellMod.LOG.info("autotest client sees him at {} (camera {}) fps {}", hh.position(), mc.gameRenderer.getMainCamera().getPosition(), mc.getFps());
                 MinecraftServer sv = mc.getSingleplayerServer();
                 if (sv != null) sv.execute(() -> {
                     for (var l : sv.getAllLevels()) for (var hb : l.getEntities(net.jj.hollowbell.ModEntities.HOLLOWBELL, x -> true))

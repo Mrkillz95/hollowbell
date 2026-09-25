@@ -123,8 +123,30 @@ public class HollowbellEntity extends Monster {
     private double cruise = -1, wantY = Double.NaN;
     /** the being-him keys: up (1), down (-1) */
     private int driveUp;
-    /** a fresh one comes down out of the sky; ticks left of that */
+    /** a fresh one comes down out of the sky; ticks left of that. settled: he has arrived (saved) */
     private int arriving;
+    private boolean settled;
+
+    /** for the tests: a fresh one starts where it's put, not up in the sky */
+    public void skipArrival() { settled = true; }
+    public boolean arriving() { return arriving > 0; }
+
+    /** a new one comes down out of the sky over where he was put, bell open, slowly */
+    private void arrive() {
+        settled = true;
+        if (level().isClientSide) return;
+        float s = bellScale();
+        double g = groundAt(getX(), getZ());
+        double top = level().getMaxBuildHeight() - (rig.crownY + 10) * s;
+        double y = Math.min(top, g + 110 * s + 40);
+        if (y <= getY() + 4) return;
+        setPos(getX(), y, getZ());
+        animAt = null;
+        arriving = 400;
+        vel = new Vec3(0, -0.05, 0);
+        sound(position().add(0, rig.rimY * s, 0), ModSounds.TOLL, 5f, 1.1f);
+        particles(net.minecraft.core.particles.ParticleTypes.CLOUD, position().add(0, (rig.rimY + 40) * s, 0), 120, 60 * s + 4, 0.02);
+    }
     private int wanderIn;
     private boolean stay;
     private int angerTicks;
@@ -470,7 +492,23 @@ public class HollowbellEntity extends Monster {
         serverTick();
     }
 
+    /** the client's last tick of him (see tickIfSkipped) */
+    private long clientTickedAt = -1;
+
+    /**
+     * The game only moves a creature on your screen while the chunk at its very middle is near you. He's so big you
+     * can be watching him with his middle further off than that, and he'd freeze. Called after the client's own
+     * ticking: if the game skipped him this tick, he's ticked here instead.
+     */
+    public void tickIfSkipped() {
+        if (!level().isClientSide || isRemoved() || isPassenger() || clientTickedAt == level().getGameTime()) return;
+        setOldPosAndRot();
+        tickCount++;
+        tick();
+    }
+
     private void clientTick() {
+        clientTickedAt = level().getGameTime();
         // carried on at the speed the server says, and eased toward where it last said he was, so he glides
         // between its updates instead of stepping
         Vector3f sv = entityData.get(DATA_VEL);
@@ -497,6 +535,7 @@ public class HollowbellEntity extends Monster {
 
     private void serverTick() {
         if (bornAt < 0) bornAt = level().getGameTime();
+        if (!settled) arrive();
         if (home == null) home = position();
         mood.tick();
         if (angerTicks > 0) angerTicks--;
@@ -669,7 +708,7 @@ public class HollowbellEntity extends Monster {
 
         // ---- the height he's making for
         double wy;
-        if (arriving > 0) { arriving--; wy = gAvg + cruise; }
+        if (arriving > 0) { arriving--; wy = gAvg + cruise; if (getY() - wy < 3 * s + 1) arriving = 0; }
         else if (dying || down) wy = gC;
         else if (rider != null) {
             if (Double.isNaN(wantY)) wantY = getY();
@@ -712,7 +751,7 @@ public class HollowbellEntity extends Monster {
         } else if (e < -climbAt || down) {
             // sinking, bell open: slow and steady
             // coming down to hit something (or to the ground in a drop), he lets himself fall faster
-            boolean hurry = (down && !dying) || moves.wantsHeight() != null;
+            boolean hurry = (down && !dying) || moves.wantsHeight() != null || arriving > 0;
             double sinkMax = (0.04 + 0.16 * Math.pow(s, 0.7)) * (hurry ? 2.6 : 1.0);
             double vt = -Math.min(sinkMax, Math.max(0, -e) * 0.035);
             vy += (vt - vy) * 0.045;
@@ -1376,6 +1415,7 @@ public class HollowbellEntity extends Monster {
         tag.putLong("SunkFor", Math.max(0, sunkUntil - now));
         if (home != null) { tag.putDouble("HomeX", home.x); tag.putDouble("HomeY", home.y); tag.putDouble("HomeZ", home.z); }
         tag.putBoolean("Stay", stay);
+        tag.putBoolean("Settled", settled);
         if (hunted != null) tag.putUUID("Hunted", hunted);
         mood.save(tag);
     }
@@ -1422,6 +1462,8 @@ public class HollowbellEntity extends Monster {
         pendingWaits = true;
         if (tag.contains("HomeX")) home = new Vec3(tag.getDouble("HomeX"), tag.getDouble("HomeY"), tag.getDouble("HomeZ"));
         setStay(tag.getBoolean("Stay"));
+        // one from an older save, or from a spawn egg's tag, is where it's meant to be (an egg's comes down)
+        settled = tag.getBoolean("Settled") || (!tag.contains("HollowbellEgg") && tag.contains("BellHpMax"));
         hunted = tag.hasUUID("Hunted") ? tag.getUUID("Hunted") : null;
         mood.load(tag);
         partsDirty = true;
