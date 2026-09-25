@@ -154,6 +154,23 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "command_rights")
+    public void detailIsForEveryoneTheRestNeedsCheats(GameTestHelper h) {
+        var d = h.getLevel().getServer().getCommands().getDispatcher();
+        var base = h.getLevel().getServer().createCommandSourceStack().withLevel(h.getLevel()).withSuppressedOutput();
+        var player = base.withPermission(0);
+        var op = base.withPermission(2);
+        h.assertTrue(!d.parse("hollowbell detail on", player).getReader().canRead() && d.parse("hollowbell detail on", player).getExceptions().isEmpty(),
+                "a player without cheats can't use /hollowbell detail");
+        h.assertTrue(d.parse("hollowbell summon", player).getReader().canRead(), "a player without cheats can use /hollowbell summon");
+        for (String c : new String[]{"hollowbell summon calm 0.3", "hollowbell list", "hollowbell do sky_dive", "hollowbell height 20",
+                "hollowbell goto 10 10", "hollowbell stay true", "hollowbell ride", "hollowbell detail", "hollowbell reload"}) {
+            var p = d.parse(c, op);
+            h.assertTrue(!p.getReader().canRead() && p.getExceptions().isEmpty(), "/" + c + " doesn't parse with cheats on");
+        }
+        h.succeed();
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ray")
     public void aSwingFindsTheRightBlock(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 2);

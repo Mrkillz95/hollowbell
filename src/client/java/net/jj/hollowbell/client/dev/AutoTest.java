@@ -72,6 +72,9 @@ public final class AutoTest {
             if (s.startsWith("wait ")) { wait = Integer.parseInt(s.substring(5).trim()); return; }
             if (s.equals("waitmodel")) { if (!BellMeshes.INSTANCE.ensureReady()) { line--; wait = 10; } return; }
             if (s.startsWith("cmd ")) { run(mc, s.substring(4).trim()); continue; }
+            // chat /...: typed the way a player types it, through the client (so client-side command handling counts)
+            if (s.startsWith("chat /")) { String c = s.substring(6).trim(); HollowbellMod.LOG.info("autotest chat: /{}", c); mc.player.connection.sendCommand(c); continue; }
+            if (s.startsWith("guiscale ")) { mc.options.guiScale().set(Integer.parseInt(s.substring(9).trim())); mc.resizeDisplay(); continue; }
             // view: the camera at a spot in his own model space, looking at another, and kept there as he moves
             if (s.startsWith("view ")) { follow = s.substring(5).trim(); view(mc, follow); continue; }
             if (s.equals("fixed")) { follow = null; continue; }

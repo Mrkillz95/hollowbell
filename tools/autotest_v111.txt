@@ -1,0 +1,33 @@
+# 1.1.1: /hollowbell commands typed through the client, and the riding screen at two GUI sizes
+world flat
+gui on
+render 12
+sim 12
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+chat /hollowbell summon calm 0.3
+waitmodel
+wait 300
+chat /hollowbell list
+wait 5
+chat /hollowbell detail
+wait 5
+chat /hollowbell detail off
+wait 5
+chat /hollowbell detail on
+wait 5
+chat /hollowbell stay true
+wait 5
+chat /hollowbell ride
+wait 100
+guiscale 2
+wait 20
+shot riding_gui2
+guiscale 4
+wait 20
+shot riding_gui4
+guiscale 3
+wait 20
+shot riding_gui3
+quit
