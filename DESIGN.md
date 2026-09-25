@@ -5,7 +5,7 @@ He's made from **JJ's KillzAI Hollowbell build** the same way the Mountain was: 
 build is turned into a voxel model, block for block, so every voxel wears the real
 Minecraft block texture from the build.
 
-Status: **draft, nothing built yet.**
+Status: **built, version 1.0.0** (see `release/`).
 
 ---
 
