@@ -11,6 +11,7 @@ import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
+import net.jj.hollowbell.world.Away;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -56,6 +57,15 @@ public final class HollowbellCommand {
                         .suggests((c, b) -> SharedSuggestionProvider.suggest(Arrays.copyOfRange(Moves.NAMES, 1, Moves.NAMES.length), b))
                         .executes(HollowbellCommand::doMove)))
                 .then(Commands.literal("list").requires(OP).executes(HollowbellCommand::list))
+                .then(Commands.literal("where").executes(HollowbellCommand::where))
+                .then(Commands.literal("away").requires(OP).executes(c -> awaySay(c))
+                        .then(Commands.literal("on").executes(c -> set(c, () -> HollowbellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
+                        .then(Commands.literal("off").executes(c -> set(c, () -> HollowbellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
+                        .then(Commands.literal("blocks").then(Commands.argument("n", IntegerArgumentType.integer(0, 100000))
+                                .executes(c -> set(c, () -> HollowbellConfig.V.awayBlocks = IntegerArgumentType.getInteger(c, "n"), "awayBlocks", IntegerArgumentType.getInteger(c, "n")))))
+                        .then(Commands.literal("now").executes(HollowbellCommand::awayNow)))
+                .then(Commands.literal("bossbar").requires(OP).then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
+                        .executes(c -> set(c, () -> HollowbellConfig.V.bossBarRange = IntegerArgumentType.getInteger(c, "blocks"), "bossBarRange", IntegerArgumentType.getInteger(c, "blocks")))))
                 .then(Commands.literal("mood").requires(OP).then(Commands.argument("mood", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
                         .executes(c -> near(c, h -> { h.setVariant(mood(c)); if (h.isGuardian()) h.setHome(h.position()); }, "mood"))))
                 .then(Commands.literal("size").requires(OP).then(Commands.argument("size", FloatArgumentType.floatArg(HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
@@ -84,7 +94,12 @@ public final class HollowbellCommand {
                     return 1;
                 }))
                 .then(Commands.literal("kill").requires(OP).executes(c -> all(c, h -> h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE), "kill")))
-                .then(Commands.literal("remove").requires(OP).executes(c -> all(c, h -> h.discard(), "remove")))
+                .then(Commands.literal("remove").requires(OP).executes(c -> {
+                    int out = Away.get(c.getSource().getServer()).count();
+                    Away.get(c.getSource().getServer()).forgetAll();
+                    if (allOf(c.getSource()).isEmpty() && out > 0) { c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove"), true); return out; }
+                    return all(c, h -> h.discard(), "remove");
+                }))
                 .then(Commands.literal("health").requires(OP).then(Commands.argument("n", FloatArgumentType.floatArg(10f))
                         .executes(c -> set(c, () -> HollowbellConfig.V.health = FloatArgumentType.getFloat(c, "n"), "health", FloatArgumentType.getFloat(c, "n")))))
                 .then(Commands.literal("damage").requires(OP).then(Commands.argument("x", FloatArgumentType.floatArg(0f, 100f))
@@ -138,13 +153,59 @@ public final class HollowbellCommand {
 
     private static int list(CommandContext<CommandSourceStack> c) {
         List<HollowbellEntity> all = allOf(c.getSource());
-        if (all.isEmpty()) return none(c);
+        List<Away.Rec> out = Away.get(c.getSource().getServer()).all();
+        if (all.isEmpty() && out.isEmpty()) return none(c);
         for (HollowbellEntity h : all) {
             c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.list_line", (int) h.getX(), (int) h.getY(), (int) h.getZ(),
                     String.format("%.2f", h.bellScale()), Component.translatable("mode.hollowbell." + h.variant()),
                     (int) h.healthNow(), (int) h.healthMax(), h.podsLeft(), h.rig.pods.length), false);
         }
-        return all.size();
+        long now = c.getSource().getLevel().getGameTime();
+        for (Away.Rec r : out) awayLine(c, r, now);
+        return all.size() + out.size();
+    }
+
+    private static void awayLine(CommandContext<CommandSourceStack> c, Away.Rec r, long now) {
+        Vec3 s = r.spot(now);
+        Component line = r.going
+                ? Component.translatable("command.hollowbell.away_going", (int) s.x, (int) s.z, r.dim, (int) r.toX, (int) r.toZ, Math.max(1, r.minutesLeft(now)),
+                        String.format("%.2f", r.scale), (int) r.hp, (int) r.hpMax)
+                : Component.translatable("command.hollowbell.away_still", (int) s.x, (int) s.z, r.dim, String.format("%.2f", r.scale), (int) r.hp, (int) r.hpMax);
+        c.getSource().sendSuccess(() -> line, false);
+    }
+
+    /** where every one of them is: in the world, or out of it and where the sum says */
+    private static int where(CommandContext<CommandSourceStack> c) {
+        List<HollowbellEntity> all = allOf(c.getSource());
+        List<Away.Rec> out = Away.get(c.getSource().getServer()).all();
+        if (all.isEmpty() && out.isEmpty()) return none(c);
+        for (HollowbellEntity h : all)
+            c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.where_in", (int) h.getX(), (int) h.getY(), (int) h.getZ(),
+                    h.level().dimension().location().toString(), (int) h.healthNow(), (int) h.healthMax()), false);
+        long now = c.getSource().getLevel().getGameTime();
+        for (Away.Rec r : out) awayLine(c, r, now);
+        return all.size() + out.size();
+    }
+
+    private static int awaySay(CommandContext<CommandSourceStack> c) {
+        int b = HollowbellConfig.V.awayBlocks;
+        c.getSource().sendSuccess(() -> Component.translatable(HollowbellConfig.V.offscreenTravel ? "command.hollowbell.away_is_on" : "command.hollowbell.away_is_off",
+                b > 0 ? String.valueOf(b) : (int) Away.awayRange(c.getSource().getServer(), 1f) + " (auto)", Away.get(c.getSource().getServer()).count()), false);
+        return 1;
+    }
+
+    /** every one with nobody near steps out right now */
+    private static int awayNow(CommandContext<CommandSourceStack> c) {
+        int n = 0;
+        for (HollowbellEntity h : allOf(c.getSource())) {
+            boolean near = false;
+            double r = Away.awayRange(c.getSource().getServer(), h.bellScale());
+            for (ServerPlayer p : ((ServerLevel) h.level()).players()) if (p.distanceToSqr(h.getX(), p.getY(), h.getZ()) < r * r) { near = true; break; }
+            if (!near && h.stepAside()) n++;
+        }
+        final int f = n;
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.away_now", f), true);
+        return n;
     }
 
     private interface Act { void on(HollowbellEntity h) throws CommandSyntaxException; }
@@ -195,6 +256,10 @@ public final class HollowbellCommand {
         if (max <= 0 || h.tickCount > 0) return;
         List<HollowbellEntity> all = new ArrayList<>(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && e != h));
         all.sort(Comparator.comparingLong(HollowbellEntity::bornAt));
+        // the ones out of the world count too, and go first
+        Away a = Away.get(l.getServer());
+        List<Away.Rec> out = a.all();
+        while (all.size() + out.size() >= max && !out.isEmpty()) a.forget(out.remove(0).id);
         while (all.size() >= max) all.remove(0).discard();
     }
 }

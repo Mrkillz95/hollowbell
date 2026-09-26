@@ -1181,7 +1181,7 @@ public class HollowbellEntity extends Monster {
         barPods.setProgress(podsLeft() / (float) Math.max(1, rig.pods.length));
         barPods.setName(Component.translatable(sunk() ? "bar.hollowbell.pods_sunk" : "bar.hollowbell.pods", podsLeft(), rig.pods.length));
         barPods.setColor(sunk() ? BossEvent.BossBarColor.PURPLE : BossEvent.BossBarColor.YELLOW);
-        double r = 90 * bellScale() + 90;
+        double r = barRange(bellScale());
         List<ServerPlayer> want = new ArrayList<>();
         if (level() instanceof ServerLevel sl) for (ServerPlayer p : sl.players()) {
             if (p.distanceToSqr(getX(), p.getY(), getZ()) < r * r || moves.caught(p) || p == rider) want.add(p);
@@ -1194,12 +1194,76 @@ public class HollowbellEntity extends Monster {
 
     @Override
     public void remove(RemovalReason why) {
-        if (!level().isClientSide && why != RemovalReason.UNLOADED_TO_CHUNK && why != RemovalReason.UNLOADED_WITH_PLAYER)
+        if (!level().isClientSide && !steppedOut && why != RemovalReason.UNLOADED_TO_CHUNK && why != RemovalReason.UNLOADED_WITH_PLAYER)
             HollowbellMod.LOG.info("Hollowbell removed at {} ({})", position(), why);
         clearBars();
         if (!level().isClientSide) { dropRider(); moves.letGoOfEverything(why == RemovalReason.KILLED || why == RemovalReason.DISCARDED); }
         super.remove(why);
     }
+
+    /** how far off his boss bars still show */
+    public static double barRange(float scale) {
+        int set = HollowbellConfig.V.bossBarRange;
+        return set > 0 ? set : 300 * scale + 250;
+    }
+
+    // ------------------------------------------------------------------ out of the world and back
+
+    /** how far he drifts in a tick, for the sum that keeps him going while nobody is near */
+    public double travelSpeed() {
+        if (sunk()) return 0.01;
+        float s = bellScale();
+        return (0.10 + 0.16 * Math.sqrt(s)) * (angry() ? 1.15 : 1.0) * 0.8;
+    }
+
+    /** ticks with nobody anywhere near him */
+    private int aloneOut;
+    /** he's just been put back: don't step straight out again */
+    private int justBack;
+    /** the world already has him written down: remove() must not do anything more with him */
+    private boolean steppedOut;
+
+    /** put back from being a sum, still going where he was going */
+    public void backFromAway(@Nullable Vec3 to, boolean stayPut) {
+        justBack = 200;
+        settled = true;
+        setStay(stayPut);
+        goal = to;
+    }
+
+    /** Once a second, from the server: nobody near for a few seconds and he steps out of the world. */
+    public void stepAsideIfAlone(int every) {
+        if (tickCount < 40) return;
+        if (justBack > 0) { justBack = Math.max(0, justBack - every); return; }
+        if (!(level() instanceof ServerLevel sl) || isRemoved() || isDeadOrDying()) return;
+        // never while somebody has a stake in him being here
+        if (rider != null || comingForSomebody() || moveNow() != Moves.NONE) { aloneOut = 0; return; }
+        double away = net.jj.hollowbell.world.Away.awayRange(sl.getServer(), bellScale());
+        for (ServerPlayer p : sl.players())
+            if (!p.isSpectator() && p.distanceToSqr(getX(), p.getY(), getZ()) < away * away) { aloneOut = 0; return; }
+        aloneOut += every;
+        if (aloneOut < 40) return;
+        stepAside();
+    }
+
+    /** hands him to the world as a sum and takes him out of the game */
+    public boolean stepAside() {
+        if (!(level() instanceof ServerLevel sl) || isRemoved() || isDeadOrDying()) return false;
+        stopFetch();
+        dropRider();
+        moves.letGoOfEverything(false);
+        Vec3 dest = stay ? null : goal != null ? goal : wanderTo;
+        double lift = Math.max(0, getY() - groundAt(getX(), getZ()));
+        CompoundTag body = new CompoundTag();
+        saveWithoutId(body);
+        net.jj.hollowbell.world.Away.get(sl.getServer()).takeAway(sl, this, body, dest, travelSpeed(), lift);
+        steppedOut = true;
+        clearBars();
+        discard();
+        return true;
+    }
+
+    public boolean steppedOut() { return steppedOut; }
 
     // ------------------------------------------------------------------ riding on his crown: being him
 

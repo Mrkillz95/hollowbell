@@ -6,6 +6,7 @@ import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Mood;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.item.CodexItem;
+import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.BellWorld;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -224,10 +225,10 @@ public final class CodexOrders {
             case CodexPayload.SPARE_ME -> { spare(p, p); return; }
             case CodexPayload.SPARE_NEAR -> { spareNear(p); return; }
             case CodexPayload.SAFE_GET -> { sendSafeList(p); return; }
-            case CodexPayload.WHERE -> { where(p, m); return; }
+            case CodexPayload.WHERE -> { if (m != null) where(p, m); else awayOrder(p, pay); return; }
             default -> {}
         }
-        if (m == null) { say(p, "codex_none"); return; }
+        if (m == null) { awayOrder(p, pay); return; }
         if (!already && !gate(p, m, pay)) return;
         int mind = m.mood().stage(p.getUUID());
         switch (action) {
@@ -292,6 +293,46 @@ public final class CodexOrders {
             case CodexPayload.CALL_OFF -> { m.clearHitList(); m.setGoal(null); say(p, "codex_calloff"); }
             default -> {}
         }
+    }
+
+    /**
+     * No Hollowbell in reach, but one out of the world, drifting on his own as a sum: the book still reaches him
+     * wherever he is. Moving him works; anything that needs him right in front of you says so.
+     */
+    private static void awayOrder(ServerPlayer p, CodexPayload pay) {
+        ServerLevel sl = (ServerLevel) p.level();
+        Away a = Away.get(p.server);
+        Away.Rec r = a.nearest(sl, p.position());
+        if (r == null) { say(p, "codex_none"); return; }
+        long now = sl.getGameTime();
+        switch (pay.action()) {
+            case CodexPayload.WHERE -> {
+                Vec3 s = r.spot(now);
+                double dx = s.x - p.getX(), dz = s.z - p.getZ();
+                int seg = (int) Math.round(Math.atan2(dx, dz) / (Math.PI / 4)) & 7;
+                String[] way = {"south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"};
+                say(p, "compass", (int) Math.sqrt(dx * dx + dz * dz), way[seg], (int) s.x, (int) s.z);
+                if (r.going) say2(p, "compass_away_going", (int) r.toX, (int) r.toZ, Math.max(1, r.minutesLeft(now)));
+                else say2(p, "compass_away_still");
+                return;
+            }
+            case CodexPayload.COME -> { a.send(sl, r.id, p.position()); sayFar(p, r, now); }
+            case CodexPayload.GO_TO_XZ -> { a.send(sl, r.id, new Vec3(pay.x(), 0, pay.z())); sayFar(p, r, now); }
+            case CodexPayload.GO_THERE -> {
+                HitResult h = looking(p, 320);
+                if (h == null) { say(p, "codex_nowhere"); return; }
+                a.send(sl, r.id, h.getLocation());
+                sayFar(p, r, now);
+            }
+            case CodexPayload.STAY -> { a.stay(sl, r.id, !r.stay); say(p, r.stay ? "codex_stay" : "codex_free"); }
+            case CodexPayload.CALL_OFF -> { a.stay(sl, r.id, false); r.going = false; a.setDirty(); say(p, "codex_calloff"); }
+            default -> say(p, "codex_far_away");
+        }
+    }
+
+    private static void sayFar(ServerPlayer p, Away.Rec r, long now) {
+        Vec3 s = r.spot(now);
+        say(p, "codex_away_sent", (int) Math.hypot(s.x - p.getX(), s.z - p.getZ()), (int) r.toX, (int) r.toZ, Math.max(1, r.minutesLeft(now)));
     }
 
     /** whatever you are looking at goes on your list: a player by name, anything else by its kind */

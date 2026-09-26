@@ -23,7 +23,8 @@ public final class KeepAwake {
     public static void tick(ServerLevel level) {
         if (!HollowbellConfig.V.chunkLoading || level.getGameTime() % 20 != 0) return;
         for (HollowbellEntity h : level.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved())) {
-            double r = 300 * Math.max(0.15f, h.bellScale()) + 140;
+            // out to where he'd step out of the world, so he's never left frozen short of it
+            double r = Math.max(300 * Math.max(0.15f, h.bellScale()) + 140, Away.awayRange(level.getServer(), h.bellScale()) + 32);
             boolean seen = false;
             for (ServerPlayer p : level.players()) if (!p.isSpectator() && p.distanceToSqr(h.getX(), p.getY(), h.getZ()) < r * r) { seen = true; break; }
             if (!seen) continue;
