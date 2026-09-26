@@ -136,6 +136,10 @@
   "message.hollowbell.codex_free": "He drifts again.",
   "message.hollowbell.compass": "He's %s blocks away, to the %s (%s, %s).",
   "message.hollowbell.compass_doing": "He's %s.",
+  "message.hollowbell.compass_away_going": "Nobody's near him, so he's out of the world, drifting to %s, %s (about %s min left). He comes back when you get near.",
+  "message.hollowbell.compass_away_still": "Nobody's near him, so he's out of the world, holding still. He comes back when you get near.",
+  "message.hollowbell.codex_away_sent": "He's %s blocks off, out of the world. He heads for %s, %s (about %s min).",
+  "message.hollowbell.codex_far_away": "He's too far off for that. Call him to you first.",
   "message.hollowbell.had_enough": "The Hollowbell has had enough of you. The book won't keep him off you now.",
   "message.hollowbell.lets_it_go": "He lets it go. %s more and he stops listening to the book.",
   "message.hollowbell.pod_popped": "A pod pops! %s left.",
@@ -263,5 +267,11 @@
   "command.hollowbell.detail_on": "Detail on: far away he'll be drawn simpler, so he runs faster.",
   "command.hollowbell.detail_off": "Detail off: he'll always be drawn in full, however far away.",
   "command.hollowbell.done_goto": "He's on his way there.",
-  "command.hollowbell.done_stay": "Done."
+  "command.hollowbell.done_stay": "Done.",
+  "command.hollowbell.where_in": "In the world at %s %s %s (%s), health %s/%s",
+  "command.hollowbell.away_going": "Out of the world, about %s %s (%s), drifting to %s %s, %s min left. Size %s, health %s/%s",
+  "command.hollowbell.away_still": "Out of the world at about %s %s (%s), holding still. Size %s, health %s/%s",
+  "command.hollowbell.away_is_on": "Away is on: with nobody within %s blocks he steps out of the world and keeps going. %s out there now.",
+  "command.hollowbell.away_is_off": "Away is off: he stays in the world. (%s blocks when on, %s out there now.)",
+  "command.hollowbell.away_now": "%s stepped out of the world."
 }

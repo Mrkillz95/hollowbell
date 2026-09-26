@@ -66,6 +66,12 @@ public final class HollowbellConfig {
         public float grudgeRate = 1.0f;
         /** How far the book reaches him, in blocks. */
         public int bookRange = 600;
+        /** How far away (in blocks) his boss bars still show. 0 = worked out from his size (550 at full size). */
+        public int bossBarRange = 0;
+        /** With nobody near him he steps out of the world and keeps going as a sum, and comes back when somebody gets near. */
+        public boolean offscreenTravel = true;
+        /** How far the nearest player has to be before he steps out. 0 = worked out from his size and the game's own settings. */
+        public int awayBlocks = 0;
     }
 
     public static Values V = new Values();

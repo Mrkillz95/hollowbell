@@ -1,8 +1,15 @@
-# Hollowbell (Java mod) — version 1.1.3
+# Hollowbell (Java mod) — version 1.2.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.2.0
+
+- **He steps out of the world when nobody is near him**, like Pitchgut. Once no player is close, he's written down (health, pods, mood, where he was going) and taken out of the game, so he costs nothing. He keeps drifting where he was going while he's gone. When anybody comes near where he should be by then, he's put back there, the same as he left.
+- **The book still reaches him out there.** "Come to me", "Go there", the X/Z boxes, "Stay" and "Call off" all work, and "Where is he?" tells you where he's got to and how long he has left. Anything that needs him in front of you says so.
+- **`/hollowbell where`** says where every one is, in the world or out of it. `/hollowbell away on/off`, `/hollowbell away blocks <n>` and `/hollowbell away now` control it.
+- **His boss bars show from much further off**: about 550 blocks at full size, up from 180. `/hollowbell bossbar <blocks>` sets your own (0 = worked out from his size).
 
 ## What's new in 1.1.3
 
@@ -39,7 +46,7 @@ He's made from your build block for block. Every block wears its real texture, a
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.1.3.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut and Furrowmaw.
+2. Put `hollowbell-1.2.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut and Furrowmaw.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
@@ -183,6 +190,11 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell summon [calm/hunting/guardian] [size]` | makes one in front of you |
 | `/hollowbell do <move>` | makes the nearest one do a move at you. Light: `grab`, `harvest`, `sting_volley`, `strand_lash`, `glow_flash`. Medium: `curtain`, `sweep`, `arm_slam`, `arm_wrap`, `pulse_wave`, `shed`, `spore_cloud`, `pod_burst`, `egg_rain`. Heavy: `drop`, `whirlpool`, `sky_dive`, `deep_toll`, `arm_storm`, `stinger_storm`, `sun_lances`, `undertow` |
 | `/hollowbell list` | where they all are, their health and pods |
+| `/hollowbell where` | where every one is, in the world or out of it (works without cheats) |
+| `/hollowbell away on/off` | whether he steps out of the world when nobody is near. On its own it says which. |
+| `/hollowbell away blocks <n>` | how far off everybody has to be before he steps out (0 = worked out for you) |
+| `/hollowbell away now` | every one with nobody near steps out now |
+| `/hollowbell bossbar <blocks>` | how far off his boss bars show (0 = worked out from his size) |
 | `/hollowbell mood <mood>` | changes the nearest one's mood |
 | `/hollowbell size <size>` | resizes the nearest one |
 | `/hollowbell hurt <amount>` | takes that much off the nearest one |
@@ -194,7 +206,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell stay true/false` | makes the nearest one hold still where he is, or drift again |
 | `/hollowbell ride` | puts you straight on top of him to ride him (or takes you off) |
 | `/hollowbell kill` | kills them (he still folds down and sinks) |
-| `/hollowbell remove` | removes them straight away |
+| `/hollowbell remove` | removes them straight away, and the ones out of the world too |
 | `/hollowbell health <n>` | full-size health for new ones |
 | `/hollowbell damage <x>` | multiplies how hard he hits |
 | `/hollowbell griefing true/false` | whether he pulls up trees and flattens plants |
@@ -217,6 +229,8 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 - `maxHollowbells`: how many the world holds at once (0 = no limit). Past that, the oldest one goes.
 - `bookCosts`, `windSeconds`, `freeHits`, `grudgeRate`, `bookRange`: how the book works, the same as the Mountain's
 - `screenShake`, `bossBar`, `soundVolume`, `renderDistance`
+- `bossBarRange`: how far off his boss bars show (0 = worked out from his size, about 550 at full size)
+- `offscreenTravel` (on) and `awayBlocks` (0): whether he steps out of the world when nobody is near, and how far off they have to be (0 = worked out for you)
 - `ambientSounds`: his hum and drifting sound (off keeps the rest)
 - `chunkLoading`: keeps the ground under him loaded and him moving while a player is near him
 - `simpleFarAway` / `simpleFarAwayAt`: far away he's drawn with bigger blocks so he runs faster (`/hollowbell detail` changes the first one)
