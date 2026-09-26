@@ -1,0 +1,60 @@
+package net.jj.hollowbell.entity;
+
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.TraceableEntity;
+import net.minecraft.world.entity.projectile.Projectile;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Set;
+
+/**
+ * The giants: JJ's five bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell and the Lantern Willow). They
+ * all follow the same rules with each other: a blow from one giant lands on another by the other's own armour
+ * against giants, and none of them ever picks another up, swallows it or drags it about. Each one tags itself
+ * {@link #TAG}; the ids below catch the others even from older versions that don't.
+ */
+public final class Giants {
+    private Giants() {}
+
+    /** the scoreboard tag every giant (and each part of one) carries */
+    public static final String TAG = "jj_giant";
+
+    private static final Set<String> IDS = Set.of(
+            "mountain_breathes:mountain", "mountain_breathes:mountain_part",
+            "furrowmaw:furrowmaw", "furrowmaw:furrowmaw_part",
+            "fire_ice_cerberus:cerberus", "fire_ice_cerberus:cerberus_part",
+            "hollowbell:hollowbell", "lanternwillow:lanternwillow");
+
+    /** one of the giants, or a part of one */
+    public static boolean isGiant(@Nullable Entity e) {
+        if (e == null) return false;
+        if (e.getTags().contains(TAG)) return true;
+        return IDS.contains(BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString());
+    }
+
+    /** who is really behind a blow: the one who threw or shot it, if it was thrown or shot */
+    public static @Nullable Entity behind(DamageSource src) {
+        Entity e = src.getEntity();
+        if (e == null) e = src.getDirectEntity();
+        for (int i = 0; i < 3 && e != null; i++) {
+            Entity owner = e instanceof Projectile p ? p.getOwner() : e instanceof TraceableEntity t ? t.getOwner() : null;
+            if (owner == null || owner == e) break;
+            e = owner;
+        }
+        return e;
+    }
+
+    /** the blow came from another giant (not from this one) */
+    public static boolean fromGiant(DamageSource src, Entity self) {
+        Entity e = behind(src);
+        return e != null && e != self && isGiant(e);
+    }
+
+    /** a giant, or riding one, or anything that mustn't be picked up or dragged about by a giant */
+    public static boolean carriesGiant(@Nullable Entity e) {
+        for (int i = 0; i < 4 && e != null; i++) { if (isGiant(e)) return true; e = e.getVehicle(); }
+        return false;
+    }
+}

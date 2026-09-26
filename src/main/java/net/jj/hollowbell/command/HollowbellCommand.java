@@ -93,6 +93,21 @@ public final class HollowbellCommand {
                     if (h.carrying()) h.dropRider(); else h.possess(p);
                     return 1;
                 }))
+                .then(Commands.literal("carry").requires(OP).executes(c -> {
+                    // he comes to you and a strand lifts you up onto his crown, like "sit on his crown" in the book
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    HollowbellEntity h = nearest(c.getSource());
+                    if (h == null) return none(c);
+                    if (h.carrying() || !h.comeAndGetMe(p)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot_carry")); return 0; }
+                    c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_carry"), false);
+                    return 1;
+                }))
+                .then(Commands.literal("giants").requires(OP)
+                        .executes(c -> { c.getSource().sendSuccess(() -> Component.translatable(HollowbellConfig.V.fightGiants ? "command.hollowbell.giants_is_on" : "command.hollowbell.giants_is_off"), false); return 1; })
+                        .then(Commands.literal("on").executes(c -> set(c, () -> HollowbellConfig.V.fightGiants = true, "fightGiants", true)))
+                        .then(Commands.literal("off").executes(c -> set(c, () -> HollowbellConfig.V.fightGiants = false, "fightGiants", false))))
+                .then(Commands.literal("volume").requires(OP).then(Commands.argument("x", FloatArgumentType.floatArg(0f, 2f))
+                        .executes(c -> set(c, () -> HollowbellConfig.V.soundVolume = FloatArgumentType.getFloat(c, "x"), "soundVolume", FloatArgumentType.getFloat(c, "x")))))
                 .then(Commands.literal("kill").requires(OP).executes(c -> all(c, h -> h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE), "kill")))
                 .then(Commands.literal("remove").requires(OP).executes(c -> {
                     int out = Away.get(c.getSource().getServer()).count();

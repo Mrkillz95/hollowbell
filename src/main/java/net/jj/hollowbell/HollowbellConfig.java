@@ -22,6 +22,10 @@ public final class HollowbellConfig {
         public float damageMultiplier = 1.0f;
         /** His hits on anything that isn't a player are multiplied by this. */
         public float mobDamage = 2.5f;
+        /** How much of a blow from another of JJ's bosses (Pitchgut, Furrowmaw, Cerberus, the Lantern Willow) he takes. */
+        public float giantArmor = 0.55f;
+        /** He picks fights with JJ's other bosses ("/hollowbell giants on"). Off = he leaves them alone. */
+        public boolean fightGiants = true;
         /** Lets him pull trees up, flatten plants with his strands and crack the ground with his arm (also needs the mobGriefing gamerule). */
         public boolean griefing = true;
         /** He pulls cows, villagers and trees up into his dome. */
@@ -29,7 +33,9 @@ public final class HollowbellConfig {
         /** Things he pulls all the way up end up inside his dome. Off = he squeezes them and lets go instead. */
         public boolean insideDome = true;
         /** How long a popped pod takes to start growing back, in seconds (it then takes about 20 more to grow). */
-        public int podRegrowSeconds = 90;
+        public int podRegrowSeconds = 150;
+        /** How much of his health a popped pod takes with it (0.01 = 1%). */
+        public float podPopShare = 0.010f;
         /** How many of his pods (as a share, 0.34 = a third) have to be popped before he loses his lift and sinks. */
         public float podsToSink = 0.34f;
         /** Once he sinks, he stays down at least this long, in seconds. */
@@ -79,7 +85,7 @@ public final class HollowbellConfig {
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json"); }
 
     public static void save() {
-        V.configVersion = 2;
+        V.configVersion = 3;
         try { Files.writeString(file(), new GsonBuilder().setPrettyPrinting().create().toJson(V)); }
         catch (Exception e) { HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString()); }
     }
@@ -92,10 +98,12 @@ public final class HollowbellConfig {
                 if (v != null) {
                     // 1.1: he hits creatures much harder (1.0 barely killed them)
                     if (v.configVersion < 2) v.mobDamage = Math.max(v.mobDamage, 2.5f);
+                    // 1.3: pods take longer to grow back, so they can't be farmed
+                    if (v.configVersion < 3 && v.podRegrowSeconds == 90) v.podRegrowSeconds = 150;
                     V = v;
                 }
             }
-            V.configVersion = 2;
+            V.configVersion = 3;
             Files.writeString(file(), gson.toJson(V));
         } catch (Exception e) {
             HollowbellMod.LOG.warn("Could not read {}, using defaults: {}", file(), e.toString());

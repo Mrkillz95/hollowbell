@@ -1098,4 +1098,121 @@ public class HollowbellGameTests implements FabricGameTest {
                 "he never steps out while you can still see his bars");
         h.succeed();
     }
+
+    // ------------------------------------------------------------------ the other giants (JJ's other bosses)
+
+    /** a stand-in for another of JJ's bosses: anything tagged as a giant counts as one */
+    private static net.minecraft.world.entity.monster.Zombie fakeGiant(GameTestHelper h, Vec3 at) {
+        net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(h.getLevel());
+        z.moveTo(at.x, at.y, at.z, 0f, 0f);
+        z.setNoAi(true);
+        z.setPersistenceRequired();
+        z.addTag(net.jj.hollowbell.entity.Giants.TAG);
+        h.getLevel().addFreshEntity(z);
+        return z;
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "giants_armour")
+    public void aGiantsBlowLandsByHisArmourAgainstGiants(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 120);
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            h.assertTrue(e.getTags().contains(net.jj.hollowbell.entity.Giants.TAG), "he isn't tagged as a giant");
+            var g = fakeGiant(h, under(e));
+            float before = e.healthNow();
+            e.hurt(e.damageSources().mobAttack(g), 100f);
+            float took = before - e.healthNow();
+            float want = 100f * HollowbellConfig.V.giantArmor;
+            h.assertTrue(Math.abs(took - want) < 0.5f, "a giant's blow of 100 took " + took + ", not " + want);
+            // a blast that isn't a giant's: a bit over a third
+            before = e.healthNow();
+            e.hurt(e.damageSources().explosion(null, null), 100f);
+            took = before - e.healthNow();
+            h.assertTrue(Math.abs(took - 35f) < 0.5f, "a blast of 100 took " + took + ", not 35");
+            // an ordinary zombie's blow still lands in full
+            var z = EntityType.ZOMBIE.create(h.getLevel());
+            z.moveTo(e.getX(), e.getY(), e.getZ(), 0f, 0f);
+            before = e.healthNow();
+            e.hurt(e.damageSources().mobAttack(z), 100f);
+            took = before - e.healthNow();
+            h.assertTrue(Math.abs(took - 100f) < 0.5f, "a zombie's blow of 100 took " + took);
+            g.discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "giants_nocarry")
+    public void heNeverCarriesAGiant(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.HUNTER, 121);
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            var g = fakeGiant(h, under(e));
+            h.assertFalse(HollowbellEntity.canCarry(g), "a giant (even a small one) can't be picked up");
+            h.assertFalse(e.forceMove(Moves.GRAB, g), "he doesn't try to grab it");
+            h.assertFalse(e.forceMove(Moves.WRAP, g), "or wrap it");
+            h.assertTrue(g.getVehicle() == null, "it got picked up anyway");
+            g.discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "giants_off")
+    public void withGiantsOffHeLeavesThemAlone(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.HUNTER, 122);
+        h.runAfterDelay(20, () -> {
+            var g = fakeGiant(h, under(e));
+            boolean was = HollowbellConfig.V.fightGiants;
+            try {
+                HollowbellConfig.V.fightGiants = true;
+                h.assertTrue(e.fairGame(g), "with giants on, another giant is fair game");
+                HollowbellConfig.V.fightGiants = false;
+                h.assertFalse(e.fairGame(g), "with giants off, he leaves it alone");
+            } finally { HollowbellConfig.V.fightGiants = was; }
+            g.discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "pod_worth")
+    public void aPoppedPodTakesOnePercent(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 123);
+        h.runAfterDelay(20, () -> {
+            h.assertTrue(new HollowbellConfig.Values().podRegrowSeconds == 150, "pods should take 150 s to start growing back");
+            float before = e.healthNow();
+            e.popPods(1);
+            float took = before - e.healthNow();
+            h.assertTrue(Math.abs(took - e.healthMax() * 0.01f) < 0.05f, "a pod took " + took + " of " + e.healthMax());
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "sweep_reach")
+    public void hisSweepReachesAllTheWayOut(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.HUNTER, 124);
+        net.minecraft.world.entity.monster.Husk[] z = new net.minecraft.world.entity.monster.Husk[1];
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            // out past the box round his body (112 at full size), still inside the sweep (88 x 1.35 + 4)
+            double d = e.bellRadius() * 1.33 + 2;
+            double dx = e.getX() + d, dz = e.getZ();
+            h.assertTrue(d > 112 * e.bellScale() + 2, "the test spot is inside his box anyway: " + d);
+            z[0] = EntityType.HUSK.create(h.getLevel());
+            z[0].moveTo(dx, e.groundAt(dx, dz), dz, 0f, 0f);
+            z[0].setNoAi(true);
+            z[0].setPersistenceRequired();
+            h.getLevel().addFreshEntity(z[0]);
+            e.setTarget(z[0]);
+            h.assertTrue(e.forceMove(Moves.SWEEP, z[0]), "could not start the sweep");
+        });
+        h.runAfterDelay(20 + Moves.length(Moves.SWEEP) + 10, () -> {
+            h.assertTrue(z[0].getLastHurtByMob() == e || z[0].isDeadOrDying(), "the sweep never reached the husk " + (int) e.horiz(z[0].position()) + " blocks out");
+            z[0].discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
 }

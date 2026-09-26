@@ -475,7 +475,8 @@ public final class BellMoves {
                     Vector3f a = h.aim();
                     Vec3 dir = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10)).subtract(h.position()).normalize();
                     double r = bell * 1.35 + 4;
-                    for (LivingEntity e : near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s * 0.8))) {
+                    // (the box round him only reaches 112 out; the sweep reaches further)
+                    for (LivingEntity e : near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.8))) {
                         if (struckThisMove.contains(e.getUUID()) || h.horiz(e.position()) > r) continue;
                         struckThisMove.add(e.getUUID());
                         blow(e, 18f, h.position(), 0, 0.6);
@@ -554,7 +555,7 @@ public final class BellMoves {
                     double dirA = Math.atan2(a.z, a.x);
                     Vec3 dir = h.toWorld(new Vector3f((float) Math.cos(dirA), 0, (float) Math.sin(dirA)).mul(10)).subtract(h.position()).normalize();
                     double r = bell * 1.35 + 3;
-                    for (LivingEntity e : near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s * 0.9))) {
+                    for (LivingEntity e : near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.9))) {
                         if (struckThisMove.contains(e.getUUID())) continue;
                         Vec3 to = e.position().subtract(h.position()).multiply(1, 0, 1);
                         double d = to.length();
