@@ -1,8 +1,21 @@
-# Hollowbell (Java mod) — version 1.2.0
+# Hollowbell (Java mod) — version 1.3.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.3.0
+
+A balance round across all five bosses, so they're fair against each other and fit how they move.
+
+- **Pods can't be farmed.** A popped pod takes 1% of his health now, not 1.5%, and it takes 150 seconds to start growing back, not 90.
+- **His sweeps reach all the way out.** Before, the outer edge of a sweep often missed.
+- Explosions do about a third to him (they did almost nothing before).
+- **Fights with the other bosses** (Pitchgut, Furrowmaw, Cerberus, the Lantern Willow): a blow from one of them lands by his armour against giants (a bit over half), not by where it hits. He never picks one up. He still hurts it.
+- New command `/hollowbell carry`: he comes to you and a strand lifts you up onto his crown, like "sit on his crown" in the book.
+- New command `/hollowbell giants on/off`: whether he picks fights with the other bosses.
+- New command `/hollowbell volume <0-2>`: how loud he is.
+- New settings `giantArmor`, `fightGiants` and `podPopShare`.
 
 ## What's new in 1.2.0
 
@@ -131,8 +144,8 @@ A very small Hollowbell has no room inside: he squeezes you and drops you instea
 | An egg clump | a little |
 | The copper and bone (dome, rim, arms, strands) | very little |
 
-- **Pods** hang among the strands and can be reached from the ground. Each popped pod takes a good piece of his health and drops a pod.
-- **The pods hold him up.** Each popped pod makes him hang a little lower and lean toward that side. Pop a third of them (8 of 23 at full size) and he sinks right down for at least 30 seconds, until enough have grown back. A popped pod starts growing back after 90 seconds.
+- **Pods** hang among the strands and can be reached from the ground. Each popped pod takes 1% of his health on top of the hit, and drops a pod.
+- **The pods hold him up.** Each popped pod makes him hang a little lower and lean toward that side. Pop a third of them (8 of 23 at full size) and he sinks right down for at least 30 seconds, until enough have grown back. A popped pod starts growing back after 150 seconds.
 - While he's down (after a drop, or with his pods popped), everything hits him a bit harder, and his dome and rim are in reach from the ground. The crown and spots are high up, so bring a bow.
 - **Boss bars:** his health, and how many pods are left (it turns purple while he's down).
 - He has 6,000 health at full size. Smaller ones have less, and he gets more when several players fight him.
@@ -211,6 +224,9 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell damage <x>` | multiplies how hard he hits |
 | `/hollowbell griefing true/false` | whether he pulls up trees and flattens plants |
 | `/hollowbell shake true/false` | screen shake |
+| `/hollowbell carry` | he comes to you and a strand lifts you up onto his crown |
+| `/hollowbell giants on/off` | whether he picks fights with the other bosses. On its own it says which. |
+| `/hollowbell volume <0-2>` | how loud he is (1 is normal) |
 | `/hollowbell reload` | reads the settings file again |
 | `/hollowbell detail on/off` | on (the default): he's drawn simpler far away so the game runs faster. Off: always full detail. On its own it says which. This one works without cheats and only changes your own game. |
 
@@ -223,9 +239,12 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 - `griefing` covers pulling up trees, flattening plants and cracking the ground. It also needs the mobGriefing gamerule on.
 - `harvest`: whether he pulls up creatures and trees on his own
 - `insideDome`: off and he squeezes what he lifts and drops it instead of taking it inside
-- `podRegrowSeconds` (90): how long a popped pod takes to start growing back
+- `podRegrowSeconds` (150): how long a popped pod takes to start growing back
+- `podPopShare` (0.01): how much of his health a popped pod takes
 - `podsToSink` (0.34): how many of his pods have to be popped before he sinks, and `sunkSeconds` (30): how long he stays down at least
 - `shedCount`: how many egg clumps he sheds at a time (0 = never)
+- `giantArmor` (0.55): how much of a blow from another boss he takes
+- `fightGiants` (on): whether he picks fights with the other bosses
 - `maxHollowbells`: how many the world holds at once (0 = no limit). Past that, the oldest one goes.
 - `bookCosts`, `windSeconds`, `freeHits`, `grudgeRate`, `bookRange`: how the book works, the same as the Mountain's
 - `screenShake`, `bossBar`, `soundVolume`, `renderDistance`
@@ -237,7 +256,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 
 ## Tips
 
-- Pop the pods first. They're low down among the strands and each one is a big chunk of his health.
+- Pop the pods first. They're low down among the strands, and popping a third of them brings him down.
 - If a strand grabs you, hit that strand. If you'd rather go up, hit the glowing spots once you're inside.
 - Pop a third of his pods to bring him down, then hit him while he can't rise.
 - Watch for the bell squeezing hard: that's the pulse wave. Don't be flying near him when it goes.

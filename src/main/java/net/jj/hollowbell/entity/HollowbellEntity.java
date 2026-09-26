@@ -179,6 +179,7 @@ public class HollowbellEntity extends Monster {
         this.setNoGravity(true);
         this.xpReward = 500;
         this.noCulling = true;
+        addTag(Giants.TAG);
         for (int i = 0; i < podHp.length; i++) podHp[i] = 1f;
     }
 
@@ -878,7 +879,7 @@ public class HollowbellEntity extends Monster {
      * part of one, anything from JJ's other boss mods (so future ones are covered too), or anything simply huge.
      */
     public static boolean canCarry(@Nullable Entity e) {
-        if (e == null) return false;
+        if (e == null || Giants.carriesGiant(e)) return false;
         EntityType<?> t = e.getType();
         if (t.is(NOT_CARRIED) || t.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags.BOSSES)) return false;
         String cls = e.getClass().getName();
@@ -888,7 +889,9 @@ public class HollowbellEntity extends Monster {
 
     public boolean fairGame(@Nullable LivingEntity e) {
         return e != null && e.isAlive() && !e.isRemoved() && e.level() == level() && !spares(e)
-                && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand) && e != rider && !moves.caught(e);
+                && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand) && e != rider && !moves.caught(e)
+                // (another giant only if he's allowed to fight them: "/hollowbell giants off")
+                && (HollowbellConfig.V.fightGiants || !Giants.isGiant(e));
     }
 
     private void pickTarget() {
@@ -1015,9 +1018,16 @@ public class HollowbellEntity extends Monster {
         if (level().isClientSide || isDeadOrDying()) return false;
         Entity att = src.getEntity();
         float dealt = amount * worth(bone, inside);
-        // the weak-spot rule is for players with a sword: another giant's blast, the Unmake's burning, a boss's
-        // blow that isn't aimed at any one block of him lands in full
-        if (bone < 0 && !(att instanceof Player) && !src.is(DamageTypes.EXPLOSION) && !src.is(DamageTypes.PLAYER_EXPLOSION)) dealt = amount;
+        if (Giants.fromGiant(src, this)) {
+            // another giant's blow (or its blast, or what it threw): by his armour against giants, wherever it lands
+            dealt = amount * HollowbellConfig.V.giantArmor;
+        } else if (src.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) {
+            dealt = amount * 0.35f;                           // any other blast: the same for all the giants
+        } else if (bone < 0 && !(att instanceof Player)) {
+            // the weak-spot rule is for players with a sword: the Unmake's burning, a creature's blow that isn't
+            // aimed at any one block of him lands in full
+            dealt = amount;
+        }
         if (resting()) dealt *= 1.3f;                       // down on the ground he can really be hurt
         if (bone >= 0) {
             BellRig.Kind k = rig.kind[bone];
@@ -1080,8 +1090,8 @@ public class HollowbellEntity extends Monster {
         sound(c, ModSounds.POD_POP, 3f, 1f);
         sound(c, net.minecraft.sounds.SoundEvents.GLASS_BREAK, 2f, 0.5f);
         particles(net.minecraft.core.particles.ParticleTypes.SQUID_INK, c, 40, rig.pods[i].radius() * bellScale() * 0.6, 0.2);
-        // a pod out of his twenty-three is worth a good piece of him
-        float worth = healthMax() * 0.015f;
+        // a pod out of his twenty-three is worth a piece of him
+        float worth = healthMax() * Mth.clamp(HollowbellConfig.V.podPopShare, 0f, 0.2f);
         hp = Math.max(0f, healthNow() - worth);
         entityData.set(DATA_HP, hp);
         if (by instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable("message.hollowbell.pod_popped", podsLeft()), true);
