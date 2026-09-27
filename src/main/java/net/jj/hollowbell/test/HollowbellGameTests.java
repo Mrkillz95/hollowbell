@@ -1269,6 +1269,27 @@ public class HollowbellGameTests implements FabricGameTest {
         return b;
     }
 
+    /**
+     * How the strand carrying somebody looks right now: the biggest angle between two neighbouring pieces of it
+     * (degrees), and how stretched it is (its length now over its length as built), both over the pieces that are
+     * paid out (the ones still drawn in at its root, short stubs, don't count), and how many are drawn in.
+     */
+    private static float[] ropeLook(HollowbellEntity e, int strand) {
+        var ch = e.rig.chains[e.rig.strandChain[strand]];
+        float[] p = e.chainNow(ch.id);
+        float len = 0f, rest = 0f, worst = 0f, in = 0f;
+        Vector3f[] d = new Vector3f[ch.points() - 1];
+        boolean[] out = new boolean[d.length];
+        for (int i = 0; i < d.length; i++) {
+            d[i] = new Vector3f(p[3 * i + 3] - p[3 * i], p[3 * i + 4] - p[3 * i + 1], p[3 * i + 5] - p[3 * i + 2]);
+            out[i] = d[i].length() >= 0.5f * ch.restLen[i];
+            if (out[i]) { len += d[i].length(); rest += ch.restLen[i]; } else in++;
+        }
+        for (int i = 0; i + 1 < d.length; i++)
+            if (out[i] && out[i + 1]) worst = Math.max(worst, (float) Math.toDegrees(d[i].angle(d[i + 1])));
+        return new float[]{worst, rest > 0f ? len / rest : 1f, in};
+    }
+
     /** keeps the chunks round him loaded, n chunks each way, for a big one that moves about */
     private static void forceAround(GameTestHelper h, HollowbellEntity e, int n) {
         int x = e.getBlockX(), z = e.getBlockZ();
@@ -1304,6 +1325,8 @@ public class HollowbellGameTests implements FabricGameTest {
         ServerPlayer[] pl = new ServerPlayer[1];
         double limit = 0.4 + 1.6 * s, near = 2 + 3 * s;
         double[] worst = new double[2];
+        // how the strand looks: biggest bend between two pieces, most and least stretched
+        float[] look = {0f, 0f, 99f, 0f};
         Vec3[] prev = new Vec3[1];
         int[] st = {0, 0, -1};           // 0 before the grab, 1 carried, 2 on the crown, 3 done; ticks carried; strand
         long[] t0 = {0};
@@ -1316,7 +1339,12 @@ public class HollowbellGameTests implements FabricGameTest {
         });
         h.onEachTick(() -> {
             ServerPlayer p = pl[0];
-            if (p == null || st[0] >= 2) return;
+            if (p == null) return;
+            if (st[2] >= 0 && e.moveNow() == Moves.GRAB) {
+                float[] l = ropeLook(e, st[2]);
+                look[0] = Math.max(look[0], l[0]); look[1] = Math.max(look[1], l[1]); look[2] = Math.min(look[2], l[1]); look[3] = Math.max(look[3], l[2]);
+            }
+            if (st[0] >= 2) return;
             boolean held = e.moves().grabbed() == p;
             boolean onCrown = e.rider() == p;
             Vec3 now = mid(p);
@@ -1366,6 +1394,11 @@ public class HollowbellGameTests implements FabricGameTest {
             h.assertTrue(tipY < e.rig.rimY, "the strand is still up over his rim: " + tipY);
             if (st[0] == 2) {
                 st[0] = 3;
+                net.jj.hollowbell.HollowbellMod.LOG.info("carry at size {}: the strand's biggest bend between two pieces {} degrees, stretched {} to {} times its length (up to {} of its 6 pieces drawn in at a time)",
+                        s, String.format("%.0f", look[0]), String.format("%.2f", look[2]), String.format("%.2f", look[1]), (int) look[3]);
+                // it reads as one smooth rope: no sharp kink between two pieces, and not pulled out much longer than it is
+                h.assertTrue(look[0] <= 75f, "the strand bent " + look[0] + " degrees between two pieces");
+                h.assertTrue(look[1] <= 1.25f && look[2] >= 0.6f, "the strand was stretched " + look[2] + " to " + look[1] + " times its length");
                 e.dropRider();
                 drop(pl[0]);
                 release(h, e);

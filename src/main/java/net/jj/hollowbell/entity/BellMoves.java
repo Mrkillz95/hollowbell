@@ -1357,7 +1357,7 @@ public final class BellMoves {
         back = true;
         backFrom = carryU;
         backT = 0;
-        backLen = Math.max(30, Math.round(carryLen * 0.45f * backFrom));
+        backLen = Math.max(30, Math.round(carryLen * 0.7f * backFrom));
     }
 
     /** how far along a carry is at k (0-1) of its time: easing in and out, steady in the middle */
