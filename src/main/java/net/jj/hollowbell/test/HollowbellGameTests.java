@@ -1225,6 +1225,35 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "giants_once")
+    public void aGiantOfManyPartsHitsOnceATick(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 136);
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            var g = fakeGiant(h, under(e));
+            float armour = HollowbellConfig.V.giantArmor;
+            float before = e.healthNow();
+            // four parts of one giant land at once
+            for (int i = 0; i < 4; i++) e.hurt(e.damageSources().mobAttack(g), 100f);
+            float took = before - e.healthNow();
+            h.assertTrue(Math.abs(took - 100f * armour) < 0.5f, "four parts' blows of 100 in one tick took " + took + ", not " + 100f * armour);
+            // a bigger one the same tick: only what it's over the first
+            before = e.healthNow();
+            e.hurt(e.damageSources().mobAttack(g), 150f);
+            took = before - e.healthNow();
+            h.assertTrue(Math.abs(took - 50f * armour) < 0.5f, "a bigger blow the same tick took " + took + ", not " + 50f * armour);
+            float[] next = {e.healthNow()};
+            h.runAfterDelay(1, () -> {
+                e.hurt(e.damageSources().mobAttack(g), 100f);
+                float t2 = next[0] - e.healthNow();
+                h.assertTrue(Math.abs(t2 - 100f * armour) < 0.5f, "the next tick's blow took " + t2);
+                g.discard();
+                release(h, e);
+                h.succeed();
+            });
+        });
+    }
+
     // ------------------------------------------------------------------ "ride him": carried up onto his crown
 
     /** the middle of something */

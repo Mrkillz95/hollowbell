@@ -1096,6 +1096,10 @@ public class HollowbellEntity extends Monster {
         if (Giants.fromGiant(src, this)) {
             // another giant's blow (or its blast, or what it threw): by his armour against giants, wherever it lands
             dealt = amount * HollowbellConfig.V.giantArmor;
+            // a giant made of many parts (every ring of a Furrowmaw) lands one blow on him, not one per part: once
+            // per giant per tick, the biggest
+            dealt = onceATick(Giants.behind(src), dealt);
+            if (dealt <= 0f) return false;
         } else if (src.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) {
             dealt = amount * 0.35f;                           // any other blast: the same for all the giants
         } else if (bone < 0 && !(att instanceof Player)) {
@@ -1123,6 +1127,22 @@ public class HollowbellEntity extends Monster {
         }
         if (att instanceof LivingEntity le && moves.caught(le)) moves.hurtFromInside(dealt);
         return takeDamage(src, dealt);
+    }
+
+    /** per giant that hit him: the game tick, and the biggest blow it landed that tick */
+    private final java.util.Map<java.util.UUID, float[]> giantHits = new java.util.HashMap<>();
+
+    /** how much of this blow is new: all of it the first time this tick, only what it's over the last one after that */
+    private float onceATick(@Nullable Entity by, float dealt) {
+        if (by == null) return dealt;
+        long now = level().getGameTime();
+        if (giantHits.size() > 16) giantHits.values().removeIf(v -> v[0] < now);
+        float[] v = giantHits.get(by.getUUID());
+        if (v == null || v[0] != now) { giantHits.put(by.getUUID(), new float[]{now, dealt}); return dealt; }
+        float more = dealt - v[1];
+        if (more <= 0f) return 0f;
+        v[1] = dealt;
+        return more;
     }
 
     private boolean takeDamage(DamageSource src, float dealt) {
