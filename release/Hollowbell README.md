@@ -1,8 +1,12 @@
-# Hollowbell (Java mod) — version 1.3.3
+# Hollowbell (Java mod) — version 1.3.4
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.3.4
+
+- The bosses take a bit more from each other now, so their fights don't drag on. Against another boss he takes 70% of a blow (it was 55%).
 
 ## What's new in 1.3.3
 
@@ -261,7 +265,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 - `podPopShare` (0.01): how much of his health a popped pod takes
 - `podsToSink` (0.34): how many of his pods have to be popped before he sinks, and `sunkSeconds` (30): how long he stays down at least
 - `shedCount`: how many egg clumps he sheds at a time (0 = never)
-- `giantArmor` (0.55): how much of a blow from another boss he takes
+- `giantArmor` (0.7): how much of a blow from another boss he takes
 - `fightGiants` (on): whether he picks fights with the other bosses
 - `maxHollowbells`: how many the world holds at once (0 = no limit). Past that, the oldest one goes.
 - `bookCosts`, `windSeconds`, `freeHits`, `grudgeRate`, `bookRange`: how the book works, the same as the Mountain's
