@@ -70,6 +70,8 @@ public class Seat extends Entity {
     }
 
     @Override protected Vec3 getPassengerAttachmentPoint(Entity e, EntityDimensions d, float f) { return Vec3.ZERO; }
+    /** let go of, whatever holds it stays where it is (it isn't lifted onto the top of the seat first) */
+    @Override public Vec3 getDismountLocationForPassenger(net.minecraft.world.entity.LivingEntity p) { return p.position(); }
     @Override public boolean isPickable() { return false; }
     @Override public boolean isPushable() { return false; }
     @Override public boolean hurt(DamageSource src, float amount) { return false; }

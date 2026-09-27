@@ -1515,6 +1515,106 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    /**
+     * Getting off (G): he sinks to the ground, a strand comes up over the dome, takes the rider off the crown and
+     * carries them back down his side, and sets them on their feet beside him. The same checks as the pick-up,
+     * every tick from the moment the strand has them to when they stand on the ground: steps no bigger than
+     * 0.4 + 1.6 x size, the strand's end no more than 2 + 3 x size from their middle, nothing of him in them.
+     */
+    private static void setDownCase(GameTestHelper h, float s, int slot) {
+        HollowbellEntity e = spawnAway(h, s, HollowbellEntity.CALM, slot);
+        int n = (int) Math.ceil((260 * s + 40) / 16.0);
+        forceAround(h, e, n);
+        int ox = e.getBlockX(), oz = e.getBlockZ();
+        ServerPlayer[] pl = new ServerPlayer[1];
+        double limit = 0.4 + 1.6 * s, near = 2 + 3 * s;
+        double[] worst = new double[2];
+        float[] look = {0f, 0f, 99f, 0f};
+        Vec3[] prev = new Vec3[1];
+        int[] st = {0, 0, -1};            // 0 on the crown, 1 carried down, 2 on the ground, 3 done; ticks carried; strand
+        h.runAfterDelay(20, () -> {
+            pl[0] = player(h, e.position().add(40 * s + 5, 0, 0));
+            h.assertTrue(e.possess(pl[0]), "couldn't get on him");
+        });
+        // up a way first, so he has to come down for it
+        for (int i = 25; i < 85; i += 5) h.runAfterDelay(i, () -> e.drive(pl[0], 0f, 0f, 0f, 1));
+        h.runAfterDelay(90, () -> {
+            h.assertTrue(e.getY() > e.groundAt(e.getX(), e.getZ()) + 3 * s + 1, "he didn't go up");
+            e.setMeDown(pl[0]);
+            h.assertTrue(e.moves().settingDown(), "he isn't setting the player down");
+        });
+        h.onEachTick(() -> {
+            ServerPlayer p = pl[0];
+            if (p == null || h.getTick() < 90) return;
+            if (st[2] >= 0 && e.moveNow() == Moves.GRAB) {
+                float[] l = ropeLook(e, st[2]);
+                look[0] = Math.max(look[0], l[0]); look[1] = Math.max(look[1], l[1]); look[2] = Math.min(look[2], l[1]); look[3] = Math.max(look[3], l[2]);
+            }
+            if (st[0] >= 2) return;
+            boolean held = e.moves().grabbed() == p;
+            Vec3 now = mid(p);
+            if (st[0] == 0 && !held) {
+                h.assertTrue(e.rider() == p, "fell off before the strand came");
+                prev[0] = now;
+                if (e.moveNow() == Moves.GRAB) st[2] = e.moveArg();
+                h.assertTrue(h.getTick() < 90 + 1600, "the strand never came for the player");
+                return;
+            }
+            if (st[0] == 0) st[0] = 1;
+            st[1]++;
+            double step = now.distanceTo(prev[0]);
+            worst[0] = Math.max(worst[0], step);
+            h.assertTrue(step <= limit, String.format("tick %d of the set-down: the player moved %.2f blocks in one tick (limit %.2f)", st[1], step, limit));
+            if (held) {
+                double gap = e.strandTipWorld(st[2]).distanceTo(now);
+                worst[1] = Math.max(worst[1], gap);
+                h.assertTrue(gap <= near, String.format("tick %d of the set-down: the strand's end is %.2f blocks from the player (limit %.2f)", st[1], gap, near));
+            }
+            AABB box = held ? sitting(p) : p.getBoundingBox();
+            Vec3 d = now.subtract(prev[0]);
+            int k = Math.max(1, (int) Math.ceil(d.length() / (0.2 * Math.max(0.25, s))));
+            for (int i = 0; i <= k; i++) {
+                AABB b = box.move(d.scale(-(double) (k - i) / k));
+                String part = e.partIn(b, st[2]);
+                h.assertTrue(part == null, String.format("tick %d of the set-down: the player is inside his %s at %s", st[1], part, b.getCenter()));
+            }
+            prev[0] = now;
+            h.assertTrue(st[1] < 20 * 60, "the set-down never finished");
+            if (!held) {
+                // let go: standing on the ground beside him
+                h.assertTrue(!p.isPassenger() && e.rider() == null, "not let go properly");
+                double over = p.getY() - e.groundAt(p.getX(), p.getZ());
+                h.assertTrue(over > -0.2 && over < 1.0, "set down " + over + " over the ground");
+                st[0] = 2;
+                net.jj.hollowbell.HollowbellMod.LOG.info("set down at size {}: {} ticks, biggest step {} (limit {}), biggest gap to the strand's end {} (limit {}), nothing of him in the way, put down {} over the ground",
+                        s, st[1], String.format("%.3f", worst[0]), String.format("%.2f", limit), String.format("%.3f", worst[1]), String.format("%.2f", near), String.format("%.2f", over));
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(st[0] >= 2, "not down yet");
+            h.assertTrue(e.moveNow() == Moves.NONE, "the strand is still busy");
+            if (st[0] == 2) {
+                st[0] = 3;
+                net.jj.hollowbell.HollowbellMod.LOG.info("set down at size {}: the strand's biggest bend between two pieces {} degrees, stretched {} to {} times its length",
+                        s, String.format("%.0f", look[0]), String.format("%.2f", look[2]), String.format("%.2f", look[1]));
+                h.assertTrue(look[0] <= 75f, "the strand bent " + look[0] + " degrees between two pieces");
+                h.assertTrue(look[1] <= 1.25f && look[2] >= 0.6f, "the strand was stretched " + look[2] + " to " + look[1] + " times its length");
+                drop(pl[0]);
+                release(h, e);
+                unforceAround(h, ox, oz, n);
+            }
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1400, batch = "setdown_small")
+    public void setDownFromTheCrownSmall(GameTestHelper h) { setDownCase(h, 0.1f, 145); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1800, batch = "setdown_mid")
+    public void setDownFromTheCrownMid(GameTestHelper h) { setDownCase(h, 0.3f, 146); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2600, batch = "setdown_full")
+    public void setDownFromTheCrownFullSize(GameTestHelper h) { setDownCase(h, 1.0f, 147); }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "carry_small")
     public void carriedUpOntoTheCrownSmall(GameTestHelper h) { carriedUp(h, 0.1f, 130); }
 

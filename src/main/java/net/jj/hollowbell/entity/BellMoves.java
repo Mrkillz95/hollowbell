@@ -76,6 +76,16 @@ public final class BellMoves {
      * how far up it is now (0-1).
      */
     private boolean back;
+    /**
+     * Setting whoever rides the crown down (G): who asked, the strand and the spot on the ground chosen, how long
+     * he's been sinking to it; then, as a gentle grab with down set, the strand going up empty (phase UP) and coming
+     * back down with them (phase DOWN).
+     */
+    private @Nullable LivingEntity downWho;
+    private int downStrand = -1, downWait, carryPhase;
+    private @Nullable Vec3 downSpot;
+    private boolean down;
+    private static final int PHASE_UP = 1, PHASE_DOWN = 2;
     private int reachHurt;
     private int carryT, carryLen, backT, backLen;
     private float backFrom, carryU;
@@ -333,7 +343,7 @@ public final class BellMoves {
     private void end() {
         int was = move;
         if (move == Moves.GRAB || move == Moves.HARVEST) letGoOfGrab(false);
-        gentle = false; back = false; carryU = 0f;
+        gentle = false; back = false; down = false; carryU = 0f; carryPhase = 0; carryWho = null;
         if (move == Moves.WRAP) letGoOfWrap();
         move = Moves.NONE; t = 0; arg = -1; target = null;
         h.setMove(Moves.NONE, -1, new Vector3f());
@@ -361,6 +371,18 @@ public final class BellMoves {
         if (tired > 0 && --tired == 0) h.setTired(false);
         if (h.isDeadOrDying()) return;
         if (fetchPause > 0) fetchPause--;
+        if (downWho != null) {
+            // setting the rider down: whatever else he was doing stops (a strand already busy with a carry finishes first)
+            if (h.rider() != downWho || !downWho.isAlive()) downWho = null;
+            else if (move != Moves.NONE && !gentle) end();
+            else if (move == Moves.NONE) {
+                downWait++;
+                // (right down at the ground, so the strand reaches it without stretching; or he's tried a good while)
+                boolean there = downSpot != null && Math.abs(h.getY() - downSpot.y) < 0.3 + 1.5 * s();
+                if ((there && downWait > 10) || downWait > 20 * 30) startCarryDown();
+                return;
+            }
+        }
         if (move != Moves.NONE) {
             t++;
             run();
@@ -377,7 +399,7 @@ public final class BellMoves {
             fetchWait++;
             boolean near = h.horiz(spot) < 1.5 + 3 * s;
             fetchThere = near ? fetchThere + 1 : 0;
-            boolean level = Math.abs(h.getY() - fetch.getY()) < 3 + 12 * s || fetchThere > 60;
+            boolean level = Math.abs(h.getY() - fetch.getY()) < 0.3 + 1.5 * s || fetchThere > 200;
             // (if he somehow can't get to the spot, he tries from where he is after a good while)
             boolean waited = fetchWait > 20 * 45 && h.horiz(fetch.position()) < h.bellRadius() * 1.4;
             if (((near && level) || waited) && startCarry(fetch)) { fetchWait = 0; fetchThere = 0; return; }
@@ -1310,6 +1332,7 @@ public final class BellMoves {
     }
 
     private void runCarry() {
+        if (down) { runSetDown(); return; }
         LivingEntity who = target;
         float s = s();
         if (t <= Moves.REACH) {
@@ -1368,6 +1391,132 @@ public final class BellMoves {
             }
             return;
         }
+        backT++;
+        carryU = backFrom * (1f - ease(backT / (float) backLen));
+        h.setLift(Moves.CARRY_PHASE + carryU);
+        if (backT >= backLen) end();
+    }
+
+    // ------------------------------------------------------------------ setting the rider down again
+
+    /** true while he's setting whoever rode his crown down (sinking to the ground for it, or the strand at it) */
+    public boolean settingDown() { return downWho != null || (gentle && down && move == Moves.GRAB); }
+
+    /** the height he sinks to before the strand comes up for the rider (the ground at the spot), or null */
+    public @Nullable Double setDownGround() { return downWho != null && move == Moves.NONE && downSpot != null ? downSpot.y : null; }
+
+    /** starts setting the rider down: picks the strand and the spot on the ground for them. False if there's nowhere */
+    public boolean startSetDown(LivingEntity who) {
+        if (h.sunk() || h.isDeadOrDying()) return false;
+        float s = s();
+        double best = Double.MAX_VALUE;
+        downStrand = -1; downSpot = null;
+        Vec3 look = who.getLookAngle();
+        for (int k : net.jj.hollowbell.rig.CarryPath.candidates(rig)) {
+            var cp = carryPath(k, who);
+            float r = cp.radiusAt((float) (who.getBbHeight() * 0.5 / s));
+            Vec3 off = h.toWorld(new Vector3f(r * (float) Math.cos(cp.theta), 0, r * (float) Math.sin(cp.theta))).subtract(h.position());
+            double x = h.getX() + off.x, z = h.getZ() + off.z;
+            BlockPos col = BlockPos.containing(x, h.getY(), z);
+            if (!level().hasChunkAt(col)) continue;
+            double y = level().getHeight(Heightmap.Types.MOTION_BLOCKING, col.getX(), col.getZ());
+            AABB box = who.getDimensions(net.minecraft.world.entity.Pose.STANDING).makeBoundingBox(x, y, z);
+            if (!level().noCollision(who, box) || level().containsAnyLiquid(box) || level().containsAnyLiquid(box.move(0, -1, 0))) continue;
+            // the side they're looking at, on ground as level with where he is as can be
+            double score = Math.abs(y - h.groundAt(h.getX(), h.getZ())) * 4 - off.normalize().dot(new Vec3(look.x, 0, look.z)) * 10;
+            if (score < best) { best = score; downStrand = k; downSpot = new Vec3(x, y, z); }
+        }
+        if (downStrand < 0) return false;
+        downWho = who;
+        downWait = 0;
+        if (who instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable("message.hollowbell.setting_down"), true);
+        return true;
+    }
+
+    private void startCarryDown() {
+        LivingEntity who = downWho;
+        downWho = null;
+        if (who == null || downSpot == null || downStrand < 0) return;
+        target = null;
+        struckThisMove.clear();
+        hitAt.clear();
+        slapped.clear();
+        move = Moves.GRAB; t = 0; arg = downStrand; lastArg = downStrand; landed = false; lastMove = Moves.GRAB;
+        grabbed = null; grabSeat = null; lift = 0f; strandHits = 0f;
+        gentle = true; down = true; back = false; carryT = 0; carryLen = 0; backT = 0; backLen = 0; carryU = 0f; carryPhase = 0;
+        downWho = who;
+        // the strand's end goes to where the middle of them will be, standing on the spot; he stays at this height
+        h.holdHeight();
+        h.setMove(Moves.GRAB, arg, h.toModel(downSpot.add(0, who.getBbHeight() * 0.5, 0)));
+        h.setLift(Moves.CARRY_PHASE);
+        h.setCarry(carryD(who), carryEnd(who));
+        warn(Moves.GRAB, arg);
+        downWho = null;
+        carryWho = who;
+    }
+
+    /** the one the strand is going up to fetch down (still on his crown until it gets there) */
+    private @Nullable LivingEntity carryWho;
+
+    private void runSetDown() {
+        float s = s();
+        if (carryPhase == 0) {
+            // reaching out to the spot on the ground first
+            if (carryWho == null || h.rider() != carryWho) { end(); return; }
+            if (t < Moves.REACH) return;
+            var cp = carryPath(arg, carryWho);
+            h.ensurePose();
+            float len = cp.new Run(h.restOf(h.aim()), rig.crownY + 1 + carryEnd(carryWho)).length() * s;
+            carryLen = Mth.clamp(Mth.ceil(len / (0.12f + 1.0f * s)), 60, 20 * 30);
+            carryPhase = PHASE_UP;
+            carryT = 0;
+            return;
+        }
+        if (carryPhase == PHASE_UP && !back) {
+            // up his side, round the rim and over the dome to the crown, empty
+            int upLen = carryLen;
+            carryT++;
+            carryU = ease(carryT / (float) upLen);
+            h.setLift(Moves.CARRY_PHASE + carryU);
+            if (carryT % 20 == 0) h.sound(h.strandTipWorld(arg), ModSounds.STRAND, 1.2f, 0.8f);
+            if (carryT < upLen) return;
+            // at the crown: the seat they ride on becomes the strand's, so they're never taken off it
+            LivingEntity who = carryWho;
+            Seat st = who != null && h.rider() == who ? h.handRiderToStrand() : null;
+            carryWho = null;
+            if (st == null) { goBack(); return; }
+            grabbed = who;
+            grabSeat = st;
+            st.follow(Seat.CARRY, arg);
+            carryPhase = PHASE_DOWN;
+            carryT = 0;
+            h.sound(h.crownWorld(), ModSounds.GRAB, 2f, 1.1f);
+            return;
+        }
+        if (carryPhase == PHASE_DOWN && !back) {
+            if (grabbed == null || !grabbed.isAlive() || grabbed.isRemoved() || grabSeat == null || grabSeat.isRemoved() || grabbed.getVehicle() != grabSeat) {
+                if (grabbed != null) letGoOfGrab(true);
+                goBack();
+                return;
+            }
+            // back down the way they came up, and on to their feet on the spot
+            carryT++;
+            carryU = 1f - ease(carryT / (float) carryLen);
+            h.setLift(Moves.CARRY_PHASE + carryU);
+            if (carryT % 20 == 0) h.sound(h.strandTipWorld(arg), ModSounds.STRAND, 1.2f, 0.8f);
+            if (carryT < carryLen) return;
+            LivingEntity who = grabbed;
+            Seat st = grabSeat;
+            grabbed = null; grabSeat = null;
+            dropSeat(st);
+            who.fallDistance = 0;
+            who.setDeltaMovement(Vec3.ZERO);
+            who.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, false, false));
+            if (who instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable("message.hollowbell.set_down"), true);
+            end();
+            return;
+        }
+        // the strand going back down empty (they got off some other way)
         backT++;
         carryU = backFrom * (1f - ease(backT / (float) backLen));
         h.setLift(Moves.CARRY_PHASE + carryU);

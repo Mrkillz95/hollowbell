@@ -285,7 +285,7 @@ public final class CodexOrders {
                 say(p, "codex_mode", Component.translatable("mode.hollowbell." + v));
             }
             case CodexPayload.RIDE -> {
-                if (m.carrying()) { m.dropRider(); say(p, "codex_off"); }
+                if (m.carrying()) { m.setMeDown(p); say(p, "codex_off"); }
                 else if (m.comingForSomebody()) { m.stopFetch(); say(p, "codex_never_mind"); }
                 else if (m.comeAndGetMe(p)) say(p, "codex_coming");
                 else say(p, "codex_cannot_ride");
