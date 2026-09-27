@@ -1440,6 +1440,63 @@ public class HollowbellEntity extends Monster {
         return true;
     }
 
+    /**
+     * A player is leaving the game (see LogOffMixin): if anything of his has them (on his crown, being carried up,
+     * held by a strand or an arm, or inside his dome) he lets go, and they're put on the ground beside him first,
+     * so they're saved standing there and not up in the air, where they'd fall when they came back.
+     */
+    public static void putDownOnLeaving(ServerPlayer p) {
+        if (!(p.getVehicle() instanceof Seat st) || !(p.level().getEntity(st.ownerId()) instanceof HollowbellEntity h)) return;
+        h.letGoOnLeaving(p);
+    }
+
+    private void letGoOnLeaving(ServerPlayer p) {
+        if (rider == p) {
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new net.jj.hollowbell.net.BeingHimPayload(getId(), false));
+            rider = null;
+            setFlag(F_RIDDEN, false);
+            driveF = driveS = 0f;
+            if (riderSeat != null) { riderSeat.ejectPassengers(); riderSeat.discard(); riderSeat = null; }
+        }
+        if (fetching != null && fetching.equals(p.getUUID())) fetching = null;
+        moves.letGo(p);
+        p.stopRiding();
+        Vec3 at = safeSpotBeside(p);
+        p.moveTo(at.x, at.y, at.z, p.getYRot(), p.getXRot());
+        p.fallDistance = 0f;
+        p.setDeltaMovement(Vec3.ZERO);
+        p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOW_FALLING, 100, 0, false, false));
+    }
+
+    /**
+     * Somewhere on the ground beside him to stand: out past his arms and strands (the side they were on first, then
+     * round him), not in blocks or water.
+     */
+    public Vec3 safeSpotBeside(Entity who) {
+        float s = bellScale();
+        Vec3 from = who.position();
+        Vec3 out = new Vec3(from.x - getX(), 0, from.z - getZ());
+        if (out.lengthSqr() < 1e-4) out = new Vec3(1, 0, 0);
+        out = out.normalize();
+        for (double r = 100 * s + 3; r < 100 * s + 40; r += 4 * s + 3) {
+            for (int turn = 0; turn < 16; turn++) {
+                double a = Math.PI / 8 * ((turn + 1) / 2) * (turn % 2 == 0 ? 1 : -1);
+                double dx = out.x * Math.cos(a) - out.z * Math.sin(a), dz = out.x * Math.sin(a) + out.z * Math.cos(a);
+                double x = getX() + dx * r, z = getZ() + dz * r;
+                BlockPos col = BlockPos.containing(x, getY(), z);
+                if (!level().hasChunkAt(col)) continue;
+                int top = level().getHeight(Heightmap.Types.MOTION_BLOCKING, col.getX(), col.getZ());
+                for (int up = 0; up < 6; up++) {
+                    AABB box = who.getDimensions(net.minecraft.world.entity.Pose.STANDING).makeBoundingBox(x, top + up, z);
+                    if (level().noCollision(who, box) && !level().containsAnyLiquid(box) && !level().containsAnyLiquid(box.move(0, -1, 0)))
+                        return new Vec3(x, top + up, z);
+                }
+            }
+        }
+        // nowhere better: the ground right under where they are
+        return new Vec3(from.x, groundAt(from.x, from.z), from.z);
+    }
+
     public void dropRider() {
         if (rider instanceof ServerPlayer sp)
             net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new net.jj.hollowbell.net.BeingHimPayload(getId(), false));

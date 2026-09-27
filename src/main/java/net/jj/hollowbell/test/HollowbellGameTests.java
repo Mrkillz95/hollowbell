@@ -1254,6 +1254,114 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    // ------------------------------------------------------------------ leaving the game while he has you
+
+    /** after a player left the game while he had them: on the ground beside him, let go, falling gently */
+    private static void checkPutDown(GameTestHelper h, HollowbellEntity e, ServerPlayer p, String how) {
+        h.assertTrue(p.getVehicle() == null, how + ": still riding something");
+        double over = p.getY() - e.groundAt(p.getX(), p.getZ());
+        h.assertTrue(over > -0.2 && over < 1.0, how + ": saved " + over + " over the ground");
+        h.assertTrue(e.horiz(p.position()) > e.bellRadius(), how + ": put down under him, " + e.horiz(p.position()) + " from his middle");
+        h.assertTrue(h.getLevel().noCollision(p, p.getBoundingBox()) && !h.getLevel().containsAnyLiquid(p.getBoundingBox()), how + ": put down inside blocks or water");
+        h.assertTrue(p.hasEffect(MobEffects.SLOW_FALLING), how + ": no slow falling");
+        h.assertTrue(e.rider() != p && !e.moves().caught(p) && e.moves().grabbed() != p && e.moves().wrapped() != p && !e.moves().isInside(p), how + ": he still has them");
+        net.jj.hollowbell.HollowbellMod.LOG.info("leaving while {}: saved {} over the ground, {} from his middle", how,
+                String.format("%.2f", over), String.format("%.1f", e.horiz(p.position())));
+    }
+
+    /**
+     * A player leaves the game while he has them one way or another (kind: riding his crown, being carried up onto
+     * it, held by a strand, wrapped by an arm, inside his dome): they're let go and saved on the ground beside him.
+     */
+    private static void leaveCase(GameTestHelper h, String kind, int slot) {
+        float s = 0.3f;
+        HollowbellEntity e = spawnAway(h, s, HollowbellEntity.CALM, slot);
+        forceAround(h, e, 5);
+        int ox = e.getBlockX(), oz = e.getBlockZ();
+        ServerPlayer[] pl = new ServerPlayer[1];
+        int[] st = {0, 0};
+        h.runAfterDelay(20, () -> {
+            e.ensurePose();
+            switch (kind) {
+                case "riding" -> {
+                    e.setStay(true);
+                    pl[0] = player(h, e.position().add(40 * s + 5, 0, 0));
+                    h.assertTrue(e.possess(pl[0]), "couldn't get on him");
+                }
+                case "carried up" -> {
+                    double x = e.getX() + 75 * s + 3, z = e.getZ() + 30 * s + 1;
+                    pl[0] = player(h, new Vec3(x, e.groundAt(x, z), z));
+                    h.assertTrue(e.comeAndGetMe(pl[0]), "he won't come for the player");
+                }
+                case "held by a strand", "inside the dome" -> {
+                    e.setStay(true);
+                    pl[0] = player(h, under(e));
+                    pl[0].setInvulnerable(true);
+                    h.assertTrue(e.forceMove(Moves.GRAB, pl[0]), "no grab");
+                }
+                case "wrapped by an arm" -> {
+                    e.setStay(true);
+                    pl[0] = player(h, e.armTipWorld(0));
+                    pl[0].setInvulnerable(true);
+                    h.assertTrue(e.forceMove(Moves.WRAP, pl[0]), "no wrap");
+                }
+                default -> throw new IllegalArgumentException(kind);
+            }
+        });
+        h.onEachTick(() -> {
+            ServerPlayer p = pl[0];
+            if (p == null || st[0] == 2) return;
+            // (the arm closes where its end is: the player is put right there as it does)
+            if (st[0] == 0 && kind.equals("wrapped by an arm") && e.moveNow() == Moves.WRAP && e.moves().t() == Moves.WRAP_REACH - 1)
+                p.teleportTo(h.getLevel(), e.armTipWorld(e.moveArg()).x, e.armTipWorld(e.moveArg()).y, e.armTipWorld(e.moveArg()).z, 0f, 0f);
+            if (st[0] == 0) {
+                boolean has = switch (kind) {
+                    case "riding" -> e.rider() == p && p.getY() > e.getY() + 50 * s;
+                    case "carried up" -> e.moves().grabbed() == p && p.getY() > e.groundAt(p.getX(), p.getZ()) + 20 * s;
+                    case "held by a strand" -> e.moves().grabbed() == p && e.moves().t() > Moves.REACH + 20;
+                    case "inside the dome" -> e.moves().isInside(p);
+                    default -> e.moves().wrapped() == p && e.moves().t() > Moves.WRAP_REACH + 10;
+                };
+                h.assertTrue(h.getTick() < 20 + 800, "he never got hold of the player (" + kind + ")");
+                if (!has) return;
+                h.assertTrue(p.getVehicle() instanceof net.jj.hollowbell.entity.Seat, kind + ": not on one of his seats");
+                drop(p);
+                checkPutDown(h, e, p, kind);
+                st[0] = 1;
+                return;
+            }
+            // a strand that was carrying them up goes back down and hangs again
+            if (++st[1] > 5 && (!kind.equals("carried up") || e.moveNow() == Moves.NONE)) {
+                h.assertTrue(e.moveNow() != Moves.GRAB || kind.equals("inside the dome"), kind + ": the strand is still holding on");
+                if (kind.equals("carried up")) {
+                    int strand = e.rig.strands.length > 0 ? e.moves().lastStrand() : 0;
+                    float tipY = e.toModel(e.strandTipWorld(strand)).y;
+                    h.assertTrue(tipY < e.rig.rimY, "the strand didn't go back down: " + tipY);
+                }
+                checkPutDown(h, e, p, kind + " (a few ticks on)");
+                st[0] = 2;
+                release(h, e);
+                unforceAround(h, ox, oz, 5);
+                h.succeed();
+            }
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "leave_riding")
+    public void leavingWhileOnHisCrownPutsYouDown(GameTestHelper h) { leaveCase(h, "riding", 140); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "leave_carried")
+    public void leavingWhileBeingCarriedUpPutsYouDown(GameTestHelper h) { leaveCase(h, "carried up", 141); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "leave_grabbed")
+    public void leavingWhileAStrandHoldsYouPutsYouDown(GameTestHelper h) { leaveCase(h, "held by a strand", 142); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "leave_wrapped")
+    public void leavingWhileAnArmHoldsYouPutsYouDown(GameTestHelper h) { leaveCase(h, "wrapped by an arm", 143); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "leave_inside")
+    public void leavingWhileInsideHisDomePutsYouDown(GameTestHelper h) { leaveCase(h, "inside the dome", 144); }
+
     // ------------------------------------------------------------------ "ride him": carried up onto his crown
 
     /** the middle of something */
