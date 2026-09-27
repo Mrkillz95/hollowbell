@@ -80,8 +80,8 @@ public final class AutoTest {
             if (s.equals("fixed")) { follow = null; continue; }
             // cowcam dx dy dz: the camera that far from the cow (in blocks), looking at it, kept there as it moves
             if (s.startsWith("cowcam ")) { follow = "cow " + s.substring(7).trim(); view(mc, follow); continue; }
-            // carrycam dist height: side on to the strand carrying somebody up onto his crown, dist model blocks off
-            // the upright plane it goes up in, looking at height (model) in that plane; kept there as he moves
+            // carrycam dist height [out]: side on to the strand carrying somebody up onto his crown, dist model blocks
+            // off the upright plane it goes up in, looking at height (model), out from his middle, in that plane
             if (s.startsWith("carrycam ")) { follow = "carry " + s.substring(9).trim(); view(mc, follow); continue; }
             if (s.startsWith("detail ")) { net.jj.hollowbell.Detail.set(s.endsWith("on")); continue; }
             if (s.startsWith("shot ")) {
@@ -169,7 +169,7 @@ public final class AutoTest {
     private static float carryTheta = 0f;
 
     private static void carryView(MinecraftServer srv, String[] a) {
-        float dist = Float.parseFloat(a[0]), height = Float.parseFloat(a[1]);
+        float dist = Float.parseFloat(a[0]), height = Float.parseFloat(a[1]), out = a.length > 2 ? Float.parseFloat(a[2]) : 50f;
         srv.execute(() -> {
             if (srv.getPlayerList().getPlayers().isEmpty()) return;
             var player = srv.getPlayerList().getPlayers().get(0);
@@ -181,8 +181,8 @@ public final class AutoTest {
                 carryTheta = (float) Math.atan2(j0.z, j0.x);
             }
             float c = (float) Math.cos(carryTheta), sn = (float) Math.sin(carryTheta);
-            var tgt = m.toWorld(new Vector3f(c * 50f, height, sn * 50f));
-            var cam = m.toWorld(new Vector3f(c * 50f - sn * dist, height, sn * 50f + c * dist));
+            var tgt = m.toWorld(new Vector3f(c * out, height, sn * out));
+            var cam = m.toWorld(new Vector3f(c * out - sn * dist, height, sn * out + c * dist));
             var d = tgt.subtract(cam).normalize();
             float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
             player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);

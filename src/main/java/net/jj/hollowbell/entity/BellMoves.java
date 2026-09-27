@@ -200,6 +200,8 @@ public final class BellMoves {
     public boolean caught(@Nullable Entity e) {
         if (e == null) return false;
         if (e == grabbed || e == wrapped) return true;
+        // (whoever a strand is reaching out to carry up onto his crown is as good as held: it doesn't sting them)
+        if (gentle && move == Moves.GRAB && e == target) return true;
         for (Inside i : inside) if (i.e == e) return true;
         return false;
     }
