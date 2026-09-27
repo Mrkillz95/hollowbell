@@ -69,6 +69,21 @@ public final class BellMoves {
     private float strandHits;
     private boolean gentle;
     private Vec3 intoFrom = Vec3.ZERO;
+    /**
+     * Carrying somebody up onto his crown (a gentle grab, see runCarry): back once the strand is on its way back down
+     * (they're on the crown, or were let go); ticks into the
+     * way up and how long it takes; ticks into the strand going back down, how long that takes and from how far up;
+     * how far up it is now (0-1).
+     */
+    private boolean back;
+    private int reachHurt;
+    private int carryT, carryLen, backT, backLen;
+    private float backFrom, carryU;
+    /** coming to pick somebody up: the strand that will do it, a pause after a miss, how long he's been at it */
+    private int fetchStrand = -1, fetchPause, fetchWait, fetchThere;
+    /** where the one being reached for stood, and their health, when the strand set out */
+    private Vec3 reachFrom = Vec3.ZERO;
+    private float reachHp;
     /** the arm wrap */
     private @Nullable LivingEntity wrapped;
     private @Nullable Seat wrapSeat;
@@ -131,7 +146,8 @@ public final class BellMoves {
     /** he stays where he is for this (he still rises and sinks) */
     public boolean holdsStill() {
         return switch (move) {
-            case Moves.GRAB, Moves.HARVEST -> t <= Moves.REACH;
+            case Moves.GRAB -> gentle ? !back : t <= Moves.REACH;
+            case Moves.HARVEST -> t <= Moves.REACH;
             case Moves.DROP, Moves.CURTAIN, Moves.WRAP, Moves.WHIRLPOOL, Moves.DEEP_TOLL, Moves.ARM_STORM, Moves.UNDERTOW, Moves.SUN_LANCES,
                  Moves.STINGER_STORM, Moves.FLASH, Moves.POD_BURST -> true;
             case Moves.SLAM -> t > 20;
@@ -146,6 +162,8 @@ public final class BellMoves {
         double tg = target != null ? target.getY() : Double.NaN;
         switch (move) {
             case Moves.GRAB, Moves.HARVEST -> {
+                // (carrying somebody up, he keeps his height: see HollowbellEntity.fly)
+                if (gentle) return null;
                 // the strand ends down at what it's reaching for
                 if (t <= Moves.REACH + 4) {
                     if (target != null) return tg - 1.5 * s;
@@ -202,6 +220,8 @@ public final class BellMoves {
     /** makes him do a move now. False if he can't (down, nothing to do it to). Cuts off whatever he was doing. */
     public boolean force(int which, @Nullable LivingEntity at) {
         if (h.isDeadOrDying() || which <= 0 || which >= Moves.NAMES.length) return false;
+        // a strand carrying somebody up onto his crown (or on its way back down from there) finishes first
+        if (gentle && move == Moves.GRAB) return false;
         if (move != Moves.NONE) end();
         return start(which, at);
     }
@@ -309,6 +329,7 @@ public final class BellMoves {
     private void end() {
         int was = move;
         if (move == Moves.GRAB || move == Moves.HARVEST) letGoOfGrab(false);
+        gentle = false; back = false; carryU = 0f;
         if (move == Moves.WRAP) letGoOfWrap();
         move = Moves.NONE; t = 0; arg = -1; target = null;
         h.setMove(Moves.NONE, -1, new Vector3f());
@@ -335,16 +356,27 @@ public final class BellMoves {
         cloudsTick();
         if (tired > 0 && --tired == 0) h.setTired(false);
         if (h.isDeadOrDying()) return;
+        if (fetchPause > 0) fetchPause--;
         if (move != Moves.NONE) {
             t++;
             run();
-            if (move != Moves.NONE && t >= Moves.length(move)) end();
+            // (a carry up onto his crown takes as long as the way up is long, and ends itself)
+            if (move != Moves.NONE && (gentle ? t > 20 * 120 : t >= Moves.length(move))) end();
             return;
         }
-        Player fetch = h.fetchingNow();
-        if (fetch != null && h.horiz(fetch.position()) < h.bellRadius() * 0.8 + 2 && !h.resting()) {
-            if (start(Moves.GRAB, fetch)) gentle = true;
-            return;
+        LivingEntity fetch = h.fetchingNow();
+        if (fetch == null) { fetchStrand = -1; fetchWait = 0; fetchThere = 0; }
+        else if (!h.resting() && fetchPause == 0) {
+            // he comes alongside: the one who asked just outside his arms, in line with the strand that will carry them
+            Vec3 spot = fetchSpot(fetch);
+            float s = s();
+            fetchWait++;
+            boolean near = h.horiz(spot) < 1.5 + 3 * s;
+            fetchThere = near ? fetchThere + 1 : 0;
+            boolean level = Math.abs(h.getY() - fetch.getY()) < 3 + 12 * s || fetchThere > 60;
+            // (if he somehow can't get to the spot, he tries from where he is after a good while)
+            boolean waited = fetchWait > 20 * 45 && h.horiz(fetch.position()) < h.bellRadius() * 1.4;
+            if (((near && level) || waited) && startCarry(fetch)) { fetchWait = 0; fetchThere = 0; return; }
         }
         if (cooldown > 0) { cooldown--; return; }
         if (tired > 0 || h.arriving()) return;
@@ -1099,6 +1131,7 @@ public final class BellMoves {
     // ------------------------------------------------------------------ grab and harvest
 
     private void runGrab() {
+        if (gentle) { runCarry(); return; }
         float s = s();
         Vec3 tip = h.strandTipWorld(arg);
         if (t < Moves.REACH) {
@@ -1146,14 +1179,7 @@ public final class BellMoves {
         }
         if (t == into0) {
             if (grabbed != null && grabSeat != null) intoFrom = grabSeat.position();
-            // the one who asked to ride is put on the crown; everything else goes in the dome, if it fits
-            if (gentle && grabbed != null) {
-                LivingEntity who = grabbed;
-                dropSeat(grabSeat); grabSeat = null; grabbed = null;
-                h.seatOnCrown(who);
-                end();
-                return;
-            }
+            // everything goes in the dome, if it fits
             if (!domeFits() || !HollowbellConfig.V.insideDome || inside.size() >= slotCount()) {
                 // too small (or not allowed) to take it in: a squeeze, and it's let go
                 if (grabbed != null) blow(grabbed, 12f, h.position(), 0, 0);
@@ -1183,6 +1209,164 @@ public final class BellMoves {
     }
 
     private boolean domeFits() { return 60 * s() >= 4f; }
+
+    // ------------------------------------------------------------------ carrying somebody up onto his crown
+
+    /**
+     * "Ride him": a strand reaches out and takes the one who asked round the middle (its end right on them, so they
+     * never jump to it), then carries them up his side, round the rim and over the dome, and lets them down onto
+     * the crown, where they stay on the same seat. Then the strand goes back the way it came and hangs again.
+     * The way (CarryPath) keeps them a set distance from every part of him. Both sides lay the strand out from the
+     * same numbers (the grab's phase, 2 + how far up, and the carry's size in DATA_CARRY); the seat follows the end
+     * of the strand on each side.
+     */
+    private boolean startCarry(LivingEntity who) {
+        if (h.sunk() || h.isDeadOrDying() || grabbed != null || grabbedTree != null || !HollowbellEntity.canCarry(who) || who.isPassenger() && !(who.getVehicle() instanceof Seat)) return false;
+        int k = fetchStrand >= 0 ? fetchStrand : bestCarryStrand(who, -1);
+        if (k < 0) return false;
+        if (move != Moves.NONE) end();
+        target = who;
+        struckThisMove.clear();
+        hitAt.clear();
+        slapped.clear();
+        move = Moves.GRAB; t = 0; arg = k; landed = false; lastMove = Moves.GRAB;
+        grabbed = null; lift = 0f; strandHits = 0f;
+        gentle = true; back = false; carryT = 0; carryLen = 0; backT = 0; backLen = 0; carryU = 0f;
+        reachFrom = who.position();
+        reachHp = who.getHealth();
+        reachHurt = who.hurtTime;
+        h.setMove(Moves.GRAB, k, h.toModel(middle(who)));
+        h.setLift(Moves.CARRY_PHASE);
+        h.setCarry(carryD(who), carryEnd(who));
+        warn(Moves.GRAB, k);
+        return true;
+    }
+
+    /** true while a strand is taking somebody up to his crown (not once they're on it) */
+    public boolean carryingUp() { return gentle && move == Moves.GRAB && !back; }
+
+    /** stop a carry up to the crown: whoever is on the way up is let go gently, and the strand goes back */
+    public void cancelCarry() {
+        if (!gentle || move != Moves.GRAB || back) return;
+        if (t < Moves.REACH) { end(); return; }
+        if (grabbed != null) letGoOfGrab(true);
+    }
+
+    private static Vec3 middle(LivingEntity e) { return e.position().add(0, e.getBbHeight() * 0.5, 0); }
+    private float carryD(LivingEntity who) { return net.jj.hollowbell.rig.CarryPath.clearance(who.getBbWidth(), who.getBbHeight(), s()); }
+    /** how high over the crown seat the middle of the one carried is once they sit on it (model blocks) */
+    private float carryEnd(LivingEntity who) { return (float) (-h.carryDrop(who) / s()); }
+
+    private net.jj.hollowbell.rig.CarryPath carryPath(int k, LivingEntity who) { return net.jj.hollowbell.rig.CarryPath.get(rig, k, carryD(who)); }
+
+    /** where he goes to pick somebody up: them just outside his arms, in line with the strand that will carry them */
+    public Vec3 fetchSpot(LivingEntity who) {
+        if (fetchStrand < 0 || h.tickCount % 20 == 0) fetchStrand = bestCarryStrand(who, fetchStrand);
+        return fetchStrand < 0 ? who.position() : spotFor(fetchStrand, who);
+    }
+
+    private Vec3 spotFor(int k, LivingEntity who) {
+        var cp = carryPath(k, who);
+        float s = s();
+        float r = cp.radiusAt((float) (who.getBbHeight() * 0.5 / s));
+        Vec3 off = h.toWorld(new Vector3f(r * (float) Math.cos(cp.theta), 0, r * (float) Math.sin(cp.theta))).subtract(h.position());
+        return new Vec3(who.getX() - off.x, who.getY(), who.getZ() - off.z);
+    }
+
+    /** of the strands that can carry somebody, the one he has least far to go to use (keeping the one he has unless another is a lot nearer) */
+    private int bestCarryStrand(LivingEntity who, int now) {
+        int best = -1;
+        double bd = Double.MAX_VALUE, nowD = Double.MAX_VALUE;
+        for (int k : net.jj.hollowbell.rig.CarryPath.candidates(rig)) {
+            double d = h.horiz(spotFor(k, who));
+            if (k == now) nowD = d;
+            if (d < bd) { bd = d; best = k; }
+        }
+        if (now >= 0 && nowD < bd + 5 + 10 * s()) return now;
+        return best;
+    }
+
+    private void runCarry() {
+        LivingEntity who = target;
+        float s = s();
+        if (t <= Moves.REACH) {
+            if (who == null || !who.isAlive() || who.isRemoved() || who.level() != h.level() || !HollowbellEntity.canCarry(who)) { end(); return; }
+            // it misses if they walk off, and lets go if they're hurt while it reaches: he tries again in a moment
+            boolean moved = who.position().distanceTo(reachFrom) > 2.5 + 5 * s;
+            boolean hurt = who.getHealth() < reachHp - 0.01f || who.hurtTime > reachHurt;
+            reachHurt = who.hurtTime;
+            if (moved || hurt) {
+                if (who instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable(hurt ? "message.hollowbell.carry_hurt" : "message.hollowbell.carry_moved"), true);
+                fetchPause = 60;
+                end();
+                return;
+            }
+            // the end of the strand goes to the middle of them (the pose this tick puts it right there at REACH)
+            h.setAim(h.toModel(middle(who)));
+            if (t < Moves.REACH) return;
+            // got them: they sit on a seat right where they are, so they don't move at all as it closes round them
+            grabbed = who;
+            Seat st = new Seat(level(), h);
+            Vec3 at = who.position().add(0, who.getVehicleAttachmentPoint(st).y, 0);
+            st.setPos(at.x, at.y, at.z);
+            st.follow(Seat.CARRY, arg);
+            level().addFreshEntity(st);
+            who.stopRiding();
+            who.startRiding(st, true);
+            grabSeat = st;
+            // how long the way up takes: about a block a tick at his full size, slower when he's small
+            var cp = carryPath(arg, who);
+            h.ensurePose();
+            float len = cp.new Run(h.restOf(h.toModel(middle(who))), rig.crownY + 1 + carryEnd(who)).length() * s;
+            carryLen = Mth.clamp(Mth.ceil(len / (0.12f + 1.0f * s)), 60, 20 * 30);
+            carryT = 0; carryU = 0f;
+            h.sound(middle(who), ModSounds.GRAB, 2f, 1.1f);
+            if (who instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable("message.hollowbell.lifting_you"), true);
+            return;
+        }
+        if (!back) {
+            if (grabbed == null || !grabbed.isAlive() || grabbed.isRemoved() || grabSeat == null || grabSeat.isRemoved() || grabbed.getVehicle() != grabSeat) {
+                // they're gone (or were let go): the strand goes back down from where it got to
+                if (grabbed != null) letGoOfGrab(true);
+                goBack();
+                return;
+            }
+            carryT++;
+            carryU = ease(carryT / (float) carryLen);
+            h.setLift(Moves.CARRY_PHASE + carryU);
+            if (carryT % 20 == 0) h.sound(h.strandTipWorld(arg), ModSounds.STRAND, 1.2f, 0.8f);
+            if (carryT >= carryLen) {
+                // on the crown: the seat they came up on becomes the crown seat
+                LivingEntity rideOn = grabbed;
+                Seat keep = grabSeat;
+                grabbed = null; grabSeat = null;
+                h.seatOnCrown(rideOn, keep);
+                goBack();
+            }
+            return;
+        }
+        backT++;
+        carryU = backFrom * (1f - ease(backT / (float) backLen));
+        h.setLift(Moves.CARRY_PHASE + carryU);
+        if (backT >= backLen) end();
+    }
+
+    private void goBack() {
+        back = true;
+        backFrom = carryU;
+        backT = 0;
+        backLen = Math.max(30, Math.round(carryLen * 0.45f * backFrom));
+    }
+
+    /** how far along a carry is at k (0-1) of its time: easing in and out, steady in the middle */
+    static float ease(float k) {
+        k = Mth.clamp(k, 0f, 1f);
+        float a = 0.15f;
+        float v = 1f / (1f - a);
+        if (k < a) return 0.5f * v * k * k / a;
+        if (k > 1f - a) { float r = 1f - k; return 1f - 0.5f * v * r * r / a; }
+        return 0.5f * v * a + v * (k - a);
+    }
 
     /** hits on the strand that has hold of something: enough and it lets go */
     public void strandHit(int strand, float amount, @Nullable Entity by) {
@@ -1267,7 +1451,14 @@ public final class BellMoves {
 
     /** after the pose is worked out each tick: move the seats and trees to where the strands and arms are now */
     public void afterPose() {
-        if (grabSeat != null || grabbedTree != null) {
+        if (gentle && move == Moves.GRAB && grabSeat != null && grabbed != null && arg >= 0) {
+            // carried up onto his crown: held round the middle by the end of the strand, wherever it is now
+            grabSeat.follow(Seat.CARRY, arg);
+            Vec3 at = h.seatSpot(Seat.CARRY, arg, grabbed);
+            grabSeat.moveTo(at.x, at.y, at.z);
+            if (grabbed.getVehicle() != grabSeat) grabbed.startRiding(grabSeat, true);
+            grabbed.fallDistance = 0;
+        } else if (grabSeat != null || grabbedTree != null) {
             if ((move == Moves.GRAB || move == Moves.HARVEST) && t < Moves.REACH + Moves.LIFT && arg >= 0) {
                 if (grabSeat != null && grabbed != null) {
                     grabSeat.follow(Seat.STRAND_TIP, arg);

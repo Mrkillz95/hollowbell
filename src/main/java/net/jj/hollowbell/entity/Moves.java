@@ -67,6 +67,8 @@ public final class Moves {
     }
 
     public static final int REACH = 30, LIFT = 190, INTO = 24;
+    /** the grab's phase from here up is a carry onto his crown (see Moves.pose) */
+    public static final float CARRY_PHASE = 2f;
     /** the drop: the warning (the bell lifts and glows), the fall, down, and back up */
     public static final int DROP_WIND = 30, DROP_FALL = 24, DROP_DOWN = 130, DROP_RISE = 150;
     /** when in the pulse wave the shock goes out */
@@ -120,12 +122,30 @@ public final class Moves {
      * over he's turned), or -1.
      */
     public static void pose(BellRig rig, BellState st, BellAnim.In in, int move, float t, int arg, float tx, float ty, float tz, float phase) {
+        pose(rig, st, in, move, t, arg, tx, ty, tz, phase, 0f, 0f);
+    }
+
+    /**
+     * The same, with what a carry up onto his crown needs: phase 2 and up is a carry (2 + how far up), carryD how far
+     * from him the one carried is kept and carryEnd how high over the crown their middle ends.
+     */
+    public static void pose(BellRig rig, BellState st, BellAnim.In in, int move, float t, int arg, float tx, float ty, float tz, float phase,
+                            float carryD, float carryEnd) {
         st.clearMoves();
         in.clearAsks();
         int len = length(move);
         switch (move) {
             case GRAB, HARVEST -> {
                 if (arg < 0 || arg >= rig.strands.length) return;
+                if (move == GRAB && phase >= CARRY_PHASE) {
+                    // carrying somebody up onto his crown: the strand reaches out to them, then takes them up
+                    st.carryStrand = arg;
+                    st.carryReach = smooth(t / REACH);
+                    st.carryU = Mth.clamp(phase - CARRY_PHASE, 0f, 1f);
+                    st.carryD = carryD; st.carryEnd = carryEnd;
+                    st.carryX = tx; st.carryY = ty; st.carryZ = tz;
+                    return;
+                }
                 st.grabStrand = arg;
                 st.grabReach = smooth(t / REACH);
                 float lift = phase >= 0f ? phase : Mth.clamp((t - REACH) / LIFT, 0f, 1f);

@@ -14,14 +14,15 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Something he is holding rides this while he carries it: at the end of a strand, inside his dome, round an arm,
- * or on his crown. He moves the seat every tick; when he lets go the seat goes.
+ * being carried up onto his crown, or on his crown. He moves the seat every tick; when he lets go the seat goes.
  */
 public class Seat extends Entity {
     private static final EntityDataAccessor<Integer> DATA_OWNER = SynchedEntityData.defineId(Seat.class, EntityDataSerializers.INT);
     /** what the seat follows (see HollowbellEntity.seatSpot): 0 nothing (the server moves it), then which */
     private static final EntityDataAccessor<Integer> DATA_MODE = SynchedEntityData.defineId(Seat.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_INDEX = SynchedEntityData.defineId(Seat.class, EntityDataSerializers.INT);
-    public static final int FREE = 0, STRAND_TIP = 1, ARM_TIP = 2, INSIDE = 3, CROWN = 4;
+    /** CARRY: being carried up onto the crown, held round the middle by the end of a strand */
+    public static final int FREE = 0, STRAND_TIP = 1, ARM_TIP = 2, INSIDE = 3, CROWN = 4, CARRY = 5;
     private int empty;
     private int ownerless;
 

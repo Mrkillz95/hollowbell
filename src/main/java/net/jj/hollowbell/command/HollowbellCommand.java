@@ -94,8 +94,9 @@ public final class HollowbellCommand {
                     return 1;
                 }))
                 .then(Commands.literal("carry").requires(OP).executes(c -> {
-                    // he comes to you and a strand lifts you up onto his crown, like "sit on his crown" in the book
-                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    // he comes to you and a strand carries you up onto his crown, like "ride him" in the book
+                    // (with /execute as, anything alive can be fetched: handy for watching it from the side)
+                    if (!(c.getSource().getEntity() instanceof net.minecraft.world.entity.LivingEntity p)) { c.getSource().getPlayerOrException(); return 0; }
                     HollowbellEntity h = nearest(c.getSource());
                     if (h == null) return none(c);
                     if (h.carrying() || !h.comeAndGetMe(p)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot_carry")); return 0; }

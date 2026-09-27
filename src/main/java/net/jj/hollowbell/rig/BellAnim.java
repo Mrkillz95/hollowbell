@@ -190,9 +190,10 @@ public final class BellAnim {
                 System.arraycopy(raw, 0, tg, 0, raw.length);
                 System.arraycopy(raw, 0, p, 0, raw.length);
                 System.arraycopy(raw, 0, q, 0, raw.length);
-                System.arraycopy(raw, 0, last[c], 0, raw.length);
                 groundAt[c] = in.ground.at(raw[3 * m], raw[3 * m + 2]);
                 held[c] = 0f;
+                if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
+                System.arraycopy(p, 0, last[c], 0, p.length);
                 continue;
             }
             // a move takes hold of a chain quickly and lets go of it slowly, and the shape it asks for is eased
@@ -296,7 +297,89 @@ public final class BellAnim {
                     q[o + a] = p[o + a] - nv;
                 }
             }
+            // a strand carrying somebody up onto his crown is laid out along the way they go (see CarryPath)
+            if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
         }
+        if (st.carryStrand < 0) { carryChain = -1; carryP0 = null; }
+    }
+
+    // ------------------------------------------------------------------ carrying somebody up onto his crown
+
+    /** the carrying strand as it was when the carry started (rest space), which chain that was, and the pick-up spot */
+    private float[] carryFrom;
+    private int carryChain = -1;
+    private @org.jetbrains.annotations.Nullable Vector3f carryP0;
+    private float[] ropeScratch = new float[0];
+
+    /**
+     * Lays the carrying strand out: while it reaches (carryReach below 1) it eases from where it hung toward a
+     * straight line from its root to the middle of the one it's picking up, ending right on them; then it is a rope
+     * from its root to them as they are taken up the way in CarryPath. Worked out in his rest space and put where his
+     * body is now, so it leans and bobs with him. Both sides do the same from the same synced numbers.
+     */
+    private void carry(BellRig.Chain ch, int c, float[] p, float[] q) {
+        BellState st = now;
+        int n = ch.points();
+        if (carryChain != c) {
+            carryChain = c;
+            carryFrom = new float[p.length];
+            for (int i = 0; i < n; i++) {
+                mInv.transformPosition(tv.set(p[3 * i], p[3 * i + 1], p[3 * i + 2]));
+                carryFrom[3 * i] = tv.x; carryFrom[3 * i + 1] = tv.y; carryFrom[3 * i + 2] = tv.z;
+            }
+            carryP0 = null;
+        }
+        Vector3f root = mInv.transformPosition(new Vector3f(p[0], p[1], p[2]));
+        Vector3f aim = mInv.transformPosition(new Vector3f(st.carryX, st.carryY, st.carryZ));
+        CarryPath cp = CarryPath.get(rig, ch.index, st.carryD);
+        if (ropeScratch.length < 3 * cp.maxRopePoints()) ropeScratch = new float[3 * cp.maxRopePoints()];
+        float[] rope = ropeScratch;
+        int rn;
+        float w = Mth.clamp(st.carryReach, 0f, 1f);
+        if (w < 1f) {
+            rope[0] = root.x; rope[1] = root.y; rope[2] = root.z;
+            rope[3] = aim.x; rope[4] = aim.y; rope[5] = aim.z;
+            rn = 2;
+        } else {
+            // the spot it picked them up at stays put (in his own space) for the rest of the carry
+            if (carryP0 == null) carryP0 = aim;
+            CarryPath.Run run = cp.new Run(carryP0, carryEndY(st));
+            rn = run.rope(root, st.carryU, rope);
+        }
+        // the joints spaced along the rope the way they are spaced along the strand as built
+        float total = 0f;
+        for (float l : ch.restLen) total += l;
+        float ropeLen = 0f;
+        for (int i = 1; i < rn; i++) ropeLen += dist(rope, i - 1, i);
+        float along = 0f;
+        int seg = 1;
+        float segStart = 0f;
+        for (int i = 0; i < n; i++) {
+            if (i > 0) along += ch.restLen[i - 1];
+            float want = i == n - 1 ? ropeLen : ropeLen * along / total;
+            while (seg < rn - 1 && segStart + dist(rope, seg - 1, seg) < want) { segStart += dist(rope, seg - 1, seg); seg++; }
+            float sl = rn > 1 ? dist(rope, seg - 1, seg) : 0f;
+            float f = sl > 1e-5f ? Mth.clamp((want - segStart) / sl, 0f, 1f) : 1f;
+            int a = 3 * (seg - 1), b = 3 * Math.min(seg, rn - 1);
+            float x = rope[a] + (rope[b] - rope[a]) * f, y = rope[a + 1] + (rope[b + 1] - rope[a + 1]) * f, z = rope[a + 2] + (rope[b + 2] - rope[a + 2]) * f;
+            if (w < 1f && i > 0) {
+                float k = w;
+                x = carryFrom[3 * i] + (x - carryFrom[3 * i]) * k;
+                y = carryFrom[3 * i + 1] + (y - carryFrom[3 * i + 1]) * k;
+                z = carryFrom[3 * i + 2] + (z - carryFrom[3 * i + 2]) * k;
+            }
+            mBody.transformPosition(tv.set(x, y, z));
+            if (i > 0) { p[3 * i] = tv.x; p[3 * i + 1] = tv.y; p[3 * i + 2] = tv.z; }
+            q[3 * i] = p[3 * i]; q[3 * i + 1] = p[3 * i + 1]; q[3 * i + 2] = p[3 * i + 2];
+        }
+    }
+
+    /** the height (rest space) the middle of the one carried ends at, over the crown: right where his crown seat is */
+    private float carryEndY(BellState st) { return rig.crownY + rig.stretchY(st) + st.carryEnd; }
+
+    private static float dist(float[] r, int i, int j) {
+        float dx = r[3 * j] - r[3 * i], dy = r[3 * j + 1] - r[3 * i + 1], dz = r[3 * j + 2] - r[3 * i + 2];
+        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     /** was this chain knocked by the ground or his bell in the last few ticks (for the tests) */
@@ -307,7 +390,7 @@ public final class BellAnim {
 
     private static boolean scripted(BellRig.Chain ch, BellState st) {
         if (ch.arm) return ch.index == st.slamArm || ch.index == st.wrapArm || (ch.index < st.armRaise.length && Math.abs(st.armRaise[ch.index]) > 0.03f);
-        return ch.index == st.grabStrand || ch.index == st.lashStrand;
+        return ch.index == st.grabStrand || ch.index == st.lashStrand || ch.index == st.carryStrand;
     }
 
     // ------------------------------------------------------------------ the shape asked for
