@@ -1,0 +1,73 @@
+# 1.3.2: "ride him" filmed from the side. He fetches a villager (the camera is the player, so it can't be the one
+# picked up), a strand takes it round the middle and carries it up his side, round the rim, over the dome and onto
+# the crown. Run with: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runAutotest -Pscript=tools/autotest_carry.txt
+world flat
+gui off
+render 12
+sim 12
+cmd time set 6000
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 0.3
+waitmodel
+wait 300
+cmd hollowbell stay true
+wait 60
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon villager ~22 -60 ~9 {NoAI:1b}
+wait 5
+cmd execute as @e[type=villager,limit=1] run hollowbell carry
+view 0 90 330 0 90 0
+wait 40
+shot carry_00
+carrycam 250 105
+wait 20
+shot carry_01
+wait 20
+shot carry_02
+wait 20
+shot carry_03
+wait 20
+shot carry_04
+wait 20
+shot carry_05
+wait 20
+shot carry_06
+wait 20
+shot carry_07
+wait 20
+shot carry_08
+wait 20
+shot carry_09
+wait 20
+shot carry_10
+wait 20
+shot carry_11
+wait 20
+shot carry_12
+wait 20
+shot carry_13
+wait 20
+shot carry_14
+wait 20
+shot carry_15
+wait 20
+shot carry_16
+wait 20
+shot carry_17
+wait 20
+shot carry_18
+wait 20
+shot carry_19
+wait 20
+shot carry_20
+wait 20
+shot carry_21
+wait 20
+shot carry_22
+wait 20
+shot carry_23
+wait 20
+shot carry_24
+wait 20
+shot carry_25
+quit

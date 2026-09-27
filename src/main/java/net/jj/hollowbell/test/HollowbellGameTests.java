@@ -1224,4 +1224,173 @@ public class HollowbellGameTests implements FabricGameTest {
             h.succeed();
         });
     }
+
+    // ------------------------------------------------------------------ "ride him": carried up onto his crown
+
+    /** the middle of something */
+    private static Vec3 mid(net.minecraft.world.entity.Entity e) { return e.getBoundingBox().getCenter(); }
+
+    /**
+     * The body of a rider as it really is: a sitting rider's legs go out in front, but the game keeps their box
+     * standing and sinks it below the seat (0.6 for a player), so the box's bottom is taken up to the seat.
+     */
+    private static AABB sitting(net.minecraft.world.entity.Entity e) {
+        AABB b = e.getBoundingBox();
+        if (e.getVehicle() != null) b = b.setMinY(Math.max(b.minY, e.getVehicle().getY()));
+        return b;
+    }
+
+    /** keeps the chunks round him loaded, n chunks each way, for a big one that moves about */
+    private static void forceAround(GameTestHelper h, HollowbellEntity e, int n) {
+        int x = e.getBlockX(), z = e.getBlockZ();
+        for (int cx = (x >> 4) - n; cx <= (x >> 4) + n; cx++) for (int cz = (z >> 4) - n; cz <= (z >> 4) + n; cz++) {
+            h.getLevel().setChunkForced(cx, cz, true);
+            h.getLevel().getChunk(cx, cz);
+        }
+    }
+
+    private static void unforceAround(GameTestHelper h, int x, int z, int n) {
+        for (int cx = (x >> 4) - n; cx <= (x >> 4) + n; cx++) for (int cz = (z >> 4) - n; cz <= (z >> 4) + n; cz++) h.getLevel().setChunkForced(cx, cz, false);
+    }
+
+    /**
+     * The whole pick-up, the way the book's "ride him" does it: he comes alongside, a strand takes the player round
+     * the middle and carries them up his side, round the rim and over the dome, and sets them on his crown.
+     * Checked every tick from the moment the strand closes round them until they sit on the crown:
+     *  - they never move more than 0.4 + 1.6 x size blocks in a tick. The way up is paced at about 0.14 + 1.2 x
+     *    size at its fastest (about a block a tick at his full size, like his own top speed with a strand's pull
+     *    on top); the rest is room for his body bobbing as he swims. A jump onto the crown from the strand's end
+     *    would be tens of blocks at any size.
+     *  - the end of the strand holding them (worked out on the server's own pose) is never more than 2 + 3 x size
+     *    blocks from their middle;
+     *  - no block of him (other than the strand holding them) is ever inside them, at each tick or anywhere on the
+     *    straight line between one tick and the next (so they can't go through the glass, the copper or the rim);
+     *  - they end on the crown seat, riding him.
+     */
+    private static void carriedUp(GameTestHelper h, float s, int slot) {
+        HollowbellEntity e = spawnAway(h, s, HollowbellEntity.CALM, slot);
+        int n = (int) Math.ceil((260 * s + 40) / 16.0);
+        forceAround(h, e, n);
+        int ox = e.getBlockX(), oz = e.getBlockZ();
+        ServerPlayer[] pl = new ServerPlayer[1];
+        double limit = 0.4 + 1.6 * s, near = 2 + 3 * s;
+        double[] worst = new double[2];
+        Vec3[] prev = new Vec3[1];
+        int[] st = {0, 0, -1};           // 0 before the grab, 1 carried, 2 on the crown, 3 done; ticks carried; strand
+        long[] t0 = {0};
+        h.runAfterDelay(20, () -> {
+            // somewhere off to one side of him, on the ground
+            double x = e.getX() + 75 * s + 3, z = e.getZ() + 30 * s + 1;
+            pl[0] = player(h, new Vec3(x, e.groundAt(x, z), z));
+            h.assertTrue(e.comeAndGetMe(pl[0]), "he won't come for the player");
+            t0[0] = h.getTick();
+        });
+        h.onEachTick(() -> {
+            ServerPlayer p = pl[0];
+            if (p == null || st[0] >= 2) return;
+            boolean held = e.moves().grabbed() == p;
+            boolean onCrown = e.rider() == p;
+            Vec3 now = mid(p);
+            if (st[0] == 0 && !held && !onCrown) {
+                prev[0] = now;
+                h.assertTrue(h.getTick() - t0[0] < 1400, "he never picked the player up");
+                return;
+            }
+            if (st[0] == 0) { st[0] = 1; st[2] = e.moveArg(); }
+            st[1]++;
+            double step = now.distanceTo(prev[0]);
+            worst[0] = Math.max(worst[0], step);
+            h.assertTrue(step <= limit, String.format("tick %d of the carry: the player moved %.2f blocks in one tick (limit %.2f)", st[1], step, limit));
+            if (held) {
+                double gap = e.strandTipWorld(st[2]).distanceTo(now);
+                worst[1] = Math.max(worst[1], gap);
+                h.assertTrue(gap <= near, String.format("tick %d of the carry: the strand's end is %.2f blocks from the player (limit %.2f)", st[1], gap, near));
+                h.assertTrue(p.getVehicle() instanceof net.jj.hollowbell.entity.Seat, "the player isn't held on a seat");
+            } else h.assertTrue(onCrown, "the strand let go of the player " + st[1] + " ticks into the carry");
+            // nothing of him inside them, now or anywhere on the way from last tick
+            AABB box = sitting(p);
+            Vec3 d = now.subtract(prev[0]);
+            int k = Math.max(1, (int) Math.ceil(d.length() / (0.2 * Math.max(0.25, s))));
+            for (int i = 0; i <= k; i++) {
+                AABB b = box.move(d.scale(-(double) (k - i) / k));
+                String part = e.partIn(b, st[2]);
+                h.assertTrue(part == null, String.format("tick %d of the carry: the player is inside his %s at %s", st[1], part, b.getCenter()));
+            }
+            prev[0] = now;
+            h.assertTrue(st[1] < 20 * 60, "the carry never finished");
+            if (onCrown) {
+                st[0] = 2;
+                h.assertTrue(e.ridden() && p.getVehicle() instanceof net.jj.hollowbell.entity.Seat seat && seat.mode() == net.jj.hollowbell.entity.Seat.CROWN,
+                        "not sitting on the crown seat");
+                double off = p.getVehicle().position().distanceTo(e.crownWorld());
+                h.assertTrue(off < 0.05, "the crown seat isn't on the crown: " + off);
+                net.jj.hollowbell.HollowbellMod.LOG.info("carry at size {}: {} ticks, biggest step {} (limit {}), biggest gap to the strand's end {} (limit {}), nothing of him in the way",
+                        s, st[1], String.format("%.3f", worst[0]), String.format("%.2f", limit), String.format("%.3f", worst[1]), String.format("%.2f", near));
+            }
+        });
+        // once on, the strand goes back down and hangs again, and then he's theirs to drive
+        h.succeedWhen(() -> {
+            h.assertTrue(st[0] >= 2, "not on the crown yet");
+            h.assertTrue(e.moveNow() == Moves.NONE, "the strand is still on its way back");
+            h.assertTrue(e.rider() == pl[0], "fell off");
+            float tipY = e.toModel(e.strandTipWorld(st[2])).y;
+            h.assertTrue(tipY < e.rig.rimY, "the strand is still up over his rim: " + tipY);
+            if (st[0] == 2) {
+                st[0] = 3;
+                e.dropRider();
+                drop(pl[0]);
+                release(h, e);
+                unforceAround(h, ox, oz, n);
+            }
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "carry_small")
+    public void carriedUpOntoTheCrownSmall(GameTestHelper h) { carriedUp(h, 0.1f, 130); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1400, batch = "carry_mid")
+    public void carriedUpOntoTheCrownMid(GameTestHelper h) { carriedUp(h, 0.3f, 131); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 2400, batch = "carry_full")
+    public void carriedUpOntoTheCrownFullSize(GameTestHelper h) { carriedUp(h, 1.0f, 133); }
+
+    /** the strand reaching out for you misses if you walk off, and pulls back if you're hurt; he tries again */
+    private static void carryCalledOff(GameTestHelper h, boolean hurt, int slot) {
+        float s = 0.1f;
+        HollowbellEntity e = spawnAway(h, s, HollowbellEntity.CALM, slot);
+        ServerPlayer[] pl = new ServerPlayer[1];
+        int[] st = {0};
+        h.runAfterDelay(20, () -> {
+            double x = e.getX() + 6, z = e.getZ() + 3;
+            pl[0] = player(h, new Vec3(x, e.groundAt(x, z), z));
+            h.assertTrue(e.comeAndGetMe(pl[0]), "he won't come for the player");
+        });
+        h.onEachTick(() -> {
+            ServerPlayer p = pl[0];
+            if (p == null) return;
+            if (st[0] == 0 && e.moves().carryingUp() && e.moves().t() == 12) {
+                h.assertTrue(e.moves().grabbed() == null && !p.isPassenger(), "held before the strand got there");
+                if (hurt) p.hurt(p.damageSources().generic(), 1f);
+                else p.teleportTo(p.getX() + 6, p.getY(), p.getZ() + 2);
+                st[0] = 1;
+            } else if (st[0] == 1) {
+                h.assertTrue(e.moveNow() != Moves.GRAB, "the strand kept reaching");
+                h.assertTrue(!p.isPassenger() && e.moves().grabbed() == null && e.rider() == null, "it took hold anyway");
+                h.assertTrue(e.comingForSomebody(), "he gave up on the player");
+                st[0] = 2;
+            } else if (st[0] == 2 && e.moves().carryingUp()) st[0] = 3;       // and he tries again
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(st[0] == 3, "he didn't try again");
+            e.stopFetch();
+            drop(pl[0]);
+            release(h, e);
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "carry_walk_off")
+    public void theCarryMissesIfYouWalkOff(GameTestHelper h) { carryCalledOff(h, false, 134); }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "carry_hurt")
+    public void theCarryPullsBackIfYouAreHurt(GameTestHelper h) { carryCalledOff(h, true, 135); }
 }

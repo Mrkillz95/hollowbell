@@ -71,6 +71,8 @@ public class HollowbellEntity extends Monster {
     private static final EntityDataAccessor<Long> DATA_MOVE_START = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<Vector3f> DATA_AIM = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.VECTOR3);
     private static final EntityDataAccessor<Float> DATA_LIFT = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
+    /** carrying somebody up onto his crown: how far from him they are kept, how high over the crown their middle ends */
+    private static final EntityDataAccessor<Vector3f> DATA_CARRY = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.VECTOR3);
     private static final EntityDataAccessor<Long> DATA_PULSE_START = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<Float> DATA_PULSE_POWER = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
     /** lower, tilt x, tilt z: what his popped pods do to him */
@@ -200,6 +202,7 @@ public class HollowbellEntity extends Monster {
         b.define(DATA_MOVE_START, 0L);
         b.define(DATA_AIM, new Vector3f());
         b.define(DATA_LIFT, -1f);
+        b.define(DATA_CARRY, new Vector3f());
         b.define(DATA_PULSE_START, -1000L);
         b.define(DATA_PULSE_POWER, 1f);
         b.define(DATA_HANG, new Vector3f());
@@ -272,6 +275,7 @@ public class HollowbellEntity extends Monster {
     /** jumps the move of the moment to t ticks in (the dive, once he's landed) */
     void rewindMove(int t) { entityData.set(DATA_MOVE_START, level().getGameTime() - t); }
     void setLift(float l) { entityData.set(DATA_LIFT, l); }
+    void setCarry(float d, float end) { entityData.set(DATA_CARRY, new Vector3f(d, end, 0f)); }
     Vector3f aim() { return entityData.get(DATA_AIM); }
 
     public int podsLeft() { int n = 0; for (int i = 0; i < rig.pods.length; i++) if (!state.podPopped[i]) n++; return n; }
@@ -299,7 +303,8 @@ public class HollowbellEntity extends Monster {
         double r = 112 * s + 2;
         // brought down onto the ground or flipped in the dive, he can reach well below where he floats
         double below = Math.max(4, (state.lower + 12) * s + 4);
-        return new AABB(getX() - r, getY() - below, getZ() - r, getX() + r, getY() + (rig.crownY + 12) * s, getZ() + r);
+        // (a strand carrying somebody over his dome goes a way above the crown)
+        return new AABB(getX() - r, getY() - below, getZ() - r, getX() + r, getY() + (rig.crownY + 40) * s + 2, getZ() + r);
     }
 
     @Override public AABB getBoundingBoxForCulling() { return bodyBox(); }
@@ -336,6 +341,58 @@ public class HollowbellEntity extends Monster {
         float s = bellScale();
         float a = getYRot() * Mth.DEG_TO_RAD, c = Mth.cos(a), sn = Mth.sin(a);
         return new Vector3f((float) ((d.x * c + d.z * sn) / s), (float) (d.y / s), (float) ((-d.x * sn + d.z * c) / s));
+    }
+
+    /**
+     * For the tests: the name of a part of him that has a block (any of it more than a sliver) inside this box in the
+     * world, or null. skipStrand is a strand not to count (the one holding whatever the box is round).
+     */
+    public @Nullable String partIn(AABB box, int skipStrand) {
+        ensurePose();
+        BellModel m = BellModel.get();
+        float s = bellScale();
+        // a block of him counts if its middle is inside the box grown by just under half a block of his
+        AABB big = box.inflate(0.45 * s);
+        Vector3f lo = new Vector3f(Float.MAX_VALUE), hi = new Vector3f(-Float.MAX_VALUE);
+        for (int i = 0; i < 8; i++) {
+            Vector3f c = toModel(new Vec3((i & 1) == 0 ? big.minX : big.maxX, (i & 2) == 0 ? big.minY : big.maxY, (i & 4) == 0 ? big.minZ : big.maxZ));
+            lo.min(c); hi.max(c);
+        }
+        Vector3f mid = new Vector3f(lo).add(hi).mul(0.5f);
+        float half = new Vector3f(hi).sub(lo).length() * 0.5f;
+        Matrix4f inv = new Matrix4f();
+        Vector3f v = new Vector3f(), cc = new Vector3f();
+        for (int b = 0; b < rig.boneCount(); b++) {
+            float[] bb = m.bounds[b];
+            if (bb == null || !rig.shown(state, b)) continue;
+            if (skipStrand >= 0 && rig.kind[b] == BellRig.Kind.STRAND && rig.part[b] == skipStrand) continue;
+            // quick: the bone's box as a ball where it is now, against the box as a ball
+            cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f);
+            float r = 0.5f * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0]) + (bb[4] - bb[1]) * (bb[4] - bb[1]) + (bb[5] - bb[2]) * (bb[5] - bb[2])) * 1.4f + 1f;
+            pose[b].transformPosition(cc);
+            if (cc.distance(mid) > r + half) continue;
+            pose[b].invert(inv);
+            Vector3f rl = new Vector3f(Float.MAX_VALUE), rh = new Vector3f(-Float.MAX_VALUE);
+            for (int i = 0; i < 8; i++) {
+                inv.transformPosition(v.set((i & 1) == 0 ? lo.x : hi.x, (i & 2) == 0 ? lo.y : hi.y, (i & 4) == 0 ? lo.z : hi.z));
+                rl.min(v); rh.max(v);
+            }
+            int x0 = (int) Math.floor(Math.max(rl.x, bb[0])), x1 = (int) Math.floor(Math.min(rh.x, bb[3]));
+            int y0 = (int) Math.floor(Math.max(rl.y, bb[1])), y1 = (int) Math.floor(Math.min(rh.y, bb[4]));
+            int z0 = (int) Math.floor(Math.max(rl.z, bb[2])), z1 = (int) Math.floor(Math.min(rh.z, bb[5]));
+            for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++) for (int z = z0; z <= z1; z++) {
+                if (!m.has(b, x, y, z)) continue;
+                pose[b].transformPosition(v.set(x + 0.5f, y + 0.5f, z + 0.5f));
+                if (big.contains(toWorld(v))) return rig.boneNames[b];
+            }
+        }
+        return null;
+    }
+
+    /** a model-space point (see toModel) in his rest space: as if he weren't leaning, lowered or turned right now */
+    public Vector3f restOf(Vector3f model) {
+        ensurePose();
+        return rig.body(state, new Matrix4f()).invert().transformPosition(model, new Vector3f());
     }
 
     /** a rest-space point of a bone, where it is in the world right now (server pose) */
@@ -386,8 +443,20 @@ public class HollowbellEntity extends Monster {
             case Seat.ARM_TIP -> index >= 0 && index < rig.arms.length ? armTipWorld(index).add(0, -hgt * 0.5, 0) : position();
             case Seat.INSIDE -> slotWorld(Mth.clamp(index, 0, SLOTS - 1));
             case Seat.CROWN -> crownWorld();
+            // carried up onto the crown: their middle is right at the strand's end, held round the waist
+            case Seat.CARRY -> index >= 0 && index < rig.strands.length ? strandTipWorld(index).add(0, carryDrop(who), 0) : position();
             default -> position();
         };
+    }
+
+    /**
+     * How far below the strand's end the seat of somebody being carried up is, so that their middle is right at it:
+     * half their height, less how far the game sits a rider below the seat (a player sits 0.6 lower).
+     */
+    public double carryDrop(@Nullable Entity who) {
+        if (who == null) return -0.5;
+        Entity v = who.getVehicle() != null ? who.getVehicle() : this;
+        return who.getVehicleAttachmentPoint(v).y - who.getBbHeight() * 0.5;
     }
 
     /** the pose as of this tick, worked out once a tick when something needs it */
@@ -434,7 +503,8 @@ public class HollowbellEntity extends Monster {
         if (level().isClientSide) readParts();
         Vector3f aim = aim();
         int move = moveNow();
-        Moves.pose(rig, anim.now(), in, move, moveT(0f), moveArg(), aim.x, aim.y, aim.z, entityData.get(DATA_LIFT));
+        Vector3f carry = entityData.get(DATA_CARRY);
+        Moves.pose(rig, anim.now(), in, move, moveT(0f), moveArg(), aim.x, aim.y, aim.z, entityData.get(DATA_LIFT), carry.x, carry.y);
         anim.step(in);
         poseTick = Long.MIN_VALUE;
     }
@@ -665,7 +735,8 @@ public class HollowbellEntity extends Monster {
                 want = position().add(fw.scale(driveF * 60).add(rt.scale(driveS * 60)));
             }
         } else if (!still) {
-            if (fetchingNow() != null) want = fetchingNow().position();
+            LivingEntity f = fetchingNow();
+            if (f != null) want = moves.fetchSpot(f);
             else if (goal != null) {
                 want = goal;
                 if (horiz(goal) < 6 + 10 * s) { goal = null; want = null; }
@@ -714,6 +785,10 @@ public class HollowbellEntity extends Monster {
         else if (rider != null) {
             if (Double.isNaN(wantY)) wantY = getY();
             if (driveUp != 0) wantY = getY() + driveUp * (14 * s + 4);
+            wy = wantY;
+        } else if (moves.carryingUp()) {
+            // carrying somebody up: he keeps his height, so the way up stays put
+            if (Double.isNaN(wantY)) wantY = getY();
             wy = wantY;
         } else if (fetchingNow() != null) wy = fetchingNow().getY();
         else if (moves.wantsHeight() != null) wy = moves.wantsHeight();
@@ -1282,32 +1357,48 @@ public class HollowbellEntity extends Monster {
 
     public boolean usesSeat(Seat s) { return s == riderSeat || moves.usesSeat(s); }
 
-    public @Nullable Player fetchingNow() {
+    public @Nullable LivingEntity fetchingNow() {
         if (fetching == null || !(level() instanceof ServerLevel sl)) return null;
-        return sl.getServer().getPlayerList().getPlayer(fetching);
+        Player p = sl.getServer().getPlayerList().getPlayer(fetching);
+        if (p != null) return p.level() == level() ? p : null;
+        // (anything else can be fetched too, with /execute as ... run hollowbell carry: handy for filming it)
+        return sl.getEntity(fetching) instanceof LivingEntity le && le.isAlive() ? le : null;
     }
 
-    /** the book's "sit on his crown": he comes to you, a strand picks you up and puts you on the crown */
-    public boolean comeAndGetMe(Player p) {
-        if (rider != null || isDeadOrDying() || resting()) return false;
-        fetching = p.getUUID();
+    /**
+     * The book's "ride him": he comes alongside you, a strand reaches out and takes you round the middle, and carries
+     * you up his side, round the rim and over the dome, and sets you down on his crown (see BellMoves.runCarry).
+     */
+    public boolean comeAndGetMe(LivingEntity who) {
+        if (rider != null || isDeadOrDying() || resting() || who == this) return false;
+        fetching = who.getUUID();
         setStay(false);
         return true;
     }
-    public void stopFetch() { fetching = null; }
+    /** stop coming (and put down anyone half way up, gently) */
+    public void stopFetch() { fetching = null; moves.cancelCarry(); }
     public boolean comingForSomebody() { return fetching != null; }
 
-    /** called by the moves once a strand has lifted the one who asked up to the crown */
-    void seatOnCrown(LivingEntity who) {
+    /**
+     * Called by the moves once a strand has carried the one who asked up to the crown. keep is the seat they were
+     * carried up on: it stays under them and becomes the crown seat, so they are never taken off it on the way.
+     */
+    void seatOnCrown(LivingEntity who, @Nullable Seat keep) {
         fetching = null;
-        if (riderSeat != null) riderSeat.discard();
-        riderSeat = new Seat(level(), this);
+        if (riderSeat != null && riderSeat != keep) riderSeat.discard();
         Vec3 c = crownWorld();
-        riderSeat.setPos(c.x, c.y, c.z);
-        riderSeat.follow(Seat.CROWN, 0);
-        level().addFreshEntity(riderSeat);
-        who.stopRiding();
-        who.startRiding(riderSeat, true);
+        if (keep != null && !keep.isRemoved() && who.getVehicle() == keep) {
+            riderSeat = keep;
+            riderSeat.follow(Seat.CROWN, 0);
+            riderSeat.moveTo(c.x, c.y, c.z);
+        } else {
+            riderSeat = new Seat(level(), this);
+            riderSeat.setPos(c.x, c.y, c.z);
+            riderSeat.follow(Seat.CROWN, 0);
+            level().addFreshEntity(riderSeat);
+            who.stopRiding();
+            who.startRiding(riderSeat, true);
+        }
         rider = who;
         setFlag(F_RIDDEN, true);
         driveF = driveS = 0f; driveYaw = who.getYRot();
@@ -1322,7 +1413,7 @@ public class HollowbellEntity extends Monster {
     /** straight on to the crown, no strand: the command and the tests */
     public boolean possess(LivingEntity who) {
         if (rider != null || isDeadOrDying()) return false;
-        seatOnCrown(who);
+        seatOnCrown(who, null);
         return true;
     }
 

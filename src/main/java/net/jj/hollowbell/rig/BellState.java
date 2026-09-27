@@ -61,6 +61,13 @@ public final class BellState {
     public float wrapAmt, wrapX, wrapY, wrapZ;
     public int grabStrand = -1;
     public float grabReach, grabLift, grabX, grabY, grabZ;
+    /**
+     * Carrying somebody up onto his crown (see {@link CarryPath}): which strand, how far it has reached out for them
+     * (0-1), how far along the way up they are (0-1), how far from him they are kept and how high over the crown
+     * their middle ends (model blocks), and where they are picked up (model space).
+     */
+    public int carryStrand = -1;
+    public float carryReach, carryU, carryD, carryEnd, carryX, carryY, carryZ;
     /** a strand lashing sideways: which, how far through (0-1), and which way */
     public int lashStrand = -1;
     public float lashT, lashDir;
@@ -89,7 +96,7 @@ public final class BellState {
 
     /** clears what the moves ask for, before the move of the moment fills it in again */
     public void clearMoves() {
-        sweep = 0f; curtain = 0f; slamArm = -1; wrapArm = -1; grabStrand = -1; lashStrand = -1;
+        sweep = 0f; curtain = 0f; slamArm = -1; wrapArm = -1; grabStrand = -1; lashStrand = -1; carryStrand = -1;
         flick = 0f; swirl = 0f; spread = 0f;
         java.util.Arrays.fill(armRaise, 0f);
     }
