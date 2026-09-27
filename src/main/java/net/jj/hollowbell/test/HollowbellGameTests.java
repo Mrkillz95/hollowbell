@@ -1122,7 +1122,7 @@ public class HollowbellGameTests implements FabricGameTest {
             float before = e.healthNow();
             e.hurt(e.damageSources().mobAttack(g), 100f);
             float took = before - e.healthNow();
-            float want = 100f * HollowbellConfig.V.giantArmor;
+            float want = 100f * HollowbellConfig.V.giantArmor * net.jj.hollowbell.entity.Giants.fightPace(e.bellScale(), 1f);
             h.assertTrue(Math.abs(took - want) < 0.5f, "a giant's blow of 100 took " + took + ", not " + want);
             // a blast that isn't a giant's: a bit over a third
             before = e.healthNow();
@@ -1143,7 +1143,7 @@ public class HollowbellGameTests implements FabricGameTest {
             float b3 = e.healthNow();
             e.hurt(e.damageSources().mobAttack(kin), 100f);
             float kinTook = b3 - e.healthNow();
-            float kinWant = 100f * HollowbellConfig.V.giantArmor;
+            float kinWant = 100f * HollowbellConfig.V.giantArmor * net.jj.hollowbell.entity.Giants.fightPace(e.bellScale(), 1f);
             h.assertTrue(Math.abs(kinTook - kinWant) < 0.5f, "a giant's helper's blow of 100 took " + kinTook + ", not " + kinWant);
             g.discard();
             release(h, e);
@@ -1231,7 +1231,7 @@ public class HollowbellGameTests implements FabricGameTest {
         h.runAfterDelay(20, () -> {
             e.setStay(true);
             var g = fakeGiant(h, under(e));
-            float armour = HollowbellConfig.V.giantArmor;
+            float armour = HollowbellConfig.V.giantArmor * net.jj.hollowbell.entity.Giants.fightPace(e.bellScale(), 1f);
             float before = e.healthNow();
             // four parts of one giant land at once
             for (int i = 0; i < 4; i++) e.hurt(e.damageSources().mobAttack(g), 100f);
