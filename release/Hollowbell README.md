@@ -1,8 +1,15 @@
-# Hollowbell (Java mod) — version 1.3.1
+# Hollowbell (Java mod) — version 1.3.2
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.3.2
+
+- **Getting on him is a real ride now.** "Ride him" in the book (or `/hollowbell carry`): he comes up beside you, a strand reaches out and takes you round the middle, and carries you up his side, round the rim and over the dome, then sets you down on his crown. No more jumping from the strand's end to the top. The strand then goes back down the way it came.
+- Stand still while the strand reaches for you. If you walk off, or get hurt, it pulls back and he tries again a moment later.
+- While the strand is still going back down, his moves wait a moment.
+- A boss made of many parts (like the Furrowmaw) now hurts him once per blow, not once per part.
 
 ## What's new in 1.3.1
 
@@ -187,7 +194,7 @@ At the top it says how far away he is, his health, his mood and what he's doing,
 
 ## Being him
 
-*Ride him* in the book: he drifts over to you, a strand picks you up and sets you on top of his dome, and the view swings out behind him, like the Mountain's.
+*Ride him* in the book: he drifts up beside you, a strand takes you round the middle and carries you up his side, round the rim and over the dome, and sets you down on his crown. Stand still while it reaches for you. Then the view swings out behind him, like the Mountain's.
 
 | Key | What it does |
 |---|---|
@@ -228,7 +235,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell damage <x>` | multiplies how hard he hits |
 | `/hollowbell griefing true/false` | whether he pulls up trees and flattens plants |
 | `/hollowbell shake true/false` | screen shake |
-| `/hollowbell carry` | he comes to you and a strand lifts you up onto his crown |
+| `/hollowbell carry` | he comes to you and a strand carries you up his side and over his dome onto his crown |
 | `/hollowbell giants on/off` | whether he picks fights with the other bosses. On its own it says which. |
 | `/hollowbell volume <0-2>` | how loud he is (1 is normal) |
 | `/hollowbell reload` | reads the settings file again |
