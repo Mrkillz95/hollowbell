@@ -1,8 +1,12 @@
-# Hollowbell (Java mod) — version 1.3.0
+# Hollowbell (Java mod) — version 1.3.1
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.3.1
+
+- The other bosses' small helpers (the Willow's mudlings and the like) now count as their boss, so they land by his armour against giants. His own bellings count as him when they sting another boss.
 
 ## What's new in 1.3.0
 

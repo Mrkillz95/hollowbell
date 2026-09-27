@@ -33,6 +33,7 @@ public class Belling extends Monster {
         super(type, level);
         this.setNoGravity(true);
         this.xpReward = 3;
+        addTag(Giants.KIN);
     }
 
     public static AttributeSupplier.Builder createAttributes() {

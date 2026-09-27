@@ -20,6 +20,9 @@ public final class Giants {
 
     /** the scoreboard tag every giant (and each part of one) carries */
     public static final String TAG = "jj_giant";
+    /** the tag a giant's small helpers carry (the Hollowbell's bellings, the Willow's mudlings, ...): their blows
+     *  count as their giant's */
+    public static final String KIN = "jj_giant_kin";
 
     private static final Set<String> IDS = Set.of(
             "mountain_breathes:mountain", "mountain_breathes:mountain_part",
@@ -49,7 +52,7 @@ public final class Giants {
     /** the blow came from another giant (not from this one) */
     public static boolean fromGiant(DamageSource src, Entity self) {
         Entity e = behind(src);
-        return e != null && e != self && isGiant(e);
+        return e != null && e != self && (isGiant(e) || e.getTags().contains(KIN));
     }
 
     /** a giant, or riding one, or anything that mustn't be picked up or dragged about by a giant */

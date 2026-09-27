@@ -1136,6 +1136,15 @@ public class HollowbellGameTests implements FabricGameTest {
             e.hurt(e.damageSources().mobAttack(z), 100f);
             took = before - e.healthNow();
             h.assertTrue(Math.abs(took - 100f) < 0.5f, "a zombie's blow of 100 took " + took);
+            // a giant's small helper (a belling, a mudling, ...) counts as its giant
+            var kin = EntityType.ZOMBIE.create(h.getLevel());
+            kin.moveTo(e.getX(), e.getY(), e.getZ(), 0f, 0f);
+            kin.addTag(net.jj.hollowbell.entity.Giants.KIN);
+            float b3 = e.healthNow();
+            e.hurt(e.damageSources().mobAttack(kin), 100f);
+            float kinTook = b3 - e.healthNow();
+            float kinWant = 100f * HollowbellConfig.V.giantArmor;
+            h.assertTrue(Math.abs(kinTook - kinWant) < 0.5f, "a giant's helper's blow of 100 took " + kinTook + ", not " + kinWant);
             g.discard();
             release(h, e);
             h.succeed();
