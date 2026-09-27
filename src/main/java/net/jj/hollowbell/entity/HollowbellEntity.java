@@ -517,6 +517,9 @@ public class HollowbellEntity extends Monster {
         return (float) ((level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) - getY()) / bellScale());
     }
 
+    /** for the tests: the joints of one of his chains (an arm or strand) as they are this tick, model space */
+    public float[] chainNow(int chain) { return anim.now().chain[chain]; }
+
     /** for the tests: was this arm or strand knocked by the ground or his bell just now */
     public boolean chainKnocked(int c) { return anim.knocked(c); }
 

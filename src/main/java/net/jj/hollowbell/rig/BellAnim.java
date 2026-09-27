@@ -175,6 +175,7 @@ public final class BellAnim {
 
     private void chains(In in, boolean first) {
         BellState st = now;
+        groundRest = Float.isNaN(in.groundUnder) ? -1000f : in.groundUnder + st.lower + 1f;
         rig.body(st, mBody);
         rig.bodyRotation(st, qBody);
         mBody.invert(mInv);
@@ -309,7 +310,6 @@ public final class BellAnim {
     private float[] carryFrom;
     private int carryChain = -1;
     private @org.jetbrains.annotations.Nullable Vector3f carryP0;
-    private float[] ropeScratch = new float[0];
 
     /**
      * Lays the carrying strand out: while it reaches (carryReach below 1) it eases from where it hung toward a
@@ -321,58 +321,44 @@ public final class BellAnim {
         BellState st = now;
         int n = ch.points();
         if (carryChain != c) {
+            // where it hung when the carry started: the rope starts from there (rest space)
             carryChain = c;
             carryFrom = new float[p.length];
             for (int i = 0; i < n; i++) {
                 mInv.transformPosition(tv.set(p[3 * i], p[3 * i + 1], p[3 * i + 2]));
                 carryFrom[3 * i] = tv.x; carryFrom[3 * i + 1] = tv.y; carryFrom[3 * i + 2] = tv.z;
             }
+            carryPos = carryFrom.clone();
+            carryPrev = carryFrom.clone();
             carryP0 = null;
         }
         Vector3f root = mInv.transformPosition(new Vector3f(p[0], p[1], p[2]));
         Vector3f aim = mInv.transformPosition(new Vector3f(st.carryX, st.carryY, st.carryZ));
-        CarryPath cp = CarryPath.get(rig, ch.index, st.carryD);
-        if (ropeScratch.length < 3 * cp.maxRopePoints()) ropeScratch = new float[3 * cp.maxRopePoints()];
-        float[] rope = ropeScratch;
-        int rn;
         float w = Mth.clamp(st.carryReach, 0f, 1f);
+        Vector3f end;
         if (w < 1f) {
-            rope[0] = root.x; rope[1] = root.y; rope[2] = root.z;
-            rope[3] = aim.x; rope[4] = aim.y; rope[5] = aim.z;
-            rn = 2;
+            // reaching out: its end goes from where it hung to the middle of the one it's picking up
+            int e = 3 * (n - 1);
+            end = new Vector3f(carryFrom[e], carryFrom[e + 1], carryFrom[e + 2]).lerp(aim, w);
         } else {
             // the spot it picked them up at stays put (in his own space) for the rest of the carry
             if (carryP0 == null) carryP0 = aim;
-            CarryPath.Run run = cp.new Run(carryP0, carryEndY(st));
-            rn = run.rope(root, st.carryU, rope);
+            end = CarryPath.get(rig, ch.index, st.carryD).new Run(carryP0, carryEndY(st)).at(st.carryU, new Vector3f());
         }
-        // the joints spaced along the rope the way they are spaced along the strand as built
-        float total = 0f;
-        for (float l : ch.restLen) total += l;
-        float ropeLen = 0f;
-        for (int i = 1; i < rn; i++) ropeLen += dist(rope, i - 1, i);
-        float along = 0f;
-        int seg = 1;
-        float segStart = 0f;
+        // (up past the rim, it pays out from under the rim to its edge)
+        Vector3f from = CarryPath.outFrom(root, end.y, rig.rimY, new Vector3f());
+        CarryPath.step(carryPos, carryPrev, ch.restLen, from.x, from.y, from.z, end.x, end.y, end.z, groundRest);
         for (int i = 0; i < n; i++) {
-            if (i > 0) along += ch.restLen[i - 1];
-            float want = i == n - 1 ? ropeLen : ropeLen * along / total;
-            while (seg < rn - 1 && segStart + dist(rope, seg - 1, seg) < want) { segStart += dist(rope, seg - 1, seg); seg++; }
-            float sl = rn > 1 ? dist(rope, seg - 1, seg) : 0f;
-            float f = sl > 1e-5f ? Mth.clamp((want - segStart) / sl, 0f, 1f) : 1f;
-            int a = 3 * (seg - 1), b = 3 * Math.min(seg, rn - 1);
-            float x = rope[a] + (rope[b] - rope[a]) * f, y = rope[a + 1] + (rope[b + 1] - rope[a + 1]) * f, z = rope[a + 2] + (rope[b + 2] - rope[a + 2]) * f;
-            if (w < 1f && i > 0) {
-                float k = w;
-                x = carryFrom[3 * i] + (x - carryFrom[3 * i]) * k;
-                y = carryFrom[3 * i + 1] + (y - carryFrom[3 * i + 1]) * k;
-                z = carryFrom[3 * i + 2] + (z - carryFrom[3 * i + 2]) * k;
-            }
-            mBody.transformPosition(tv.set(x, y, z));
-            if (i > 0) { p[3 * i] = tv.x; p[3 * i + 1] = tv.y; p[3 * i + 2] = tv.z; }
+            mBody.transformPosition(tv.set(carryPos[3 * i], carryPos[3 * i + 1], carryPos[3 * i + 2]));
+            p[3 * i] = tv.x; p[3 * i + 1] = tv.y; p[3 * i + 2] = tv.z;
             q[3 * i] = p[3 * i]; q[3 * i + 1] = p[3 * i + 1]; q[3 * i + 2] = p[3 * i + 2];
         }
     }
+
+    /** the carrying strand as a rope: its joints now and a tick ago (rest space) */
+    private float[] carryPos, carryPrev;
+    /** the ground under his middle in his rest space (a little over it), for the carrying strand to stay above */
+    private float groundRest = -1000f;
 
     /** the height (rest space) the middle of the one carried ends at, over the crown: right where his crown seat is */
     private float carryEndY(BellState st) { return rig.crownY + rig.stretchY(st) + st.carryEnd; }

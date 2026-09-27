@@ -28,6 +28,8 @@ public final class CarryPath {
     /** the same for the dome, the rim and the crown only (what the rope must not cut through) */
     private static float[] shell;
     private static int top;
+    /** how far out the rim goes (as built, all the way round) */
+    private static float rimEdge;
     private static int[] candidates;
     private static final Map<Long, CarryPath> CACHE = new ConcurrentHashMap<>();
 
@@ -146,6 +148,15 @@ public final class CarryPath {
             lBlend = Mth.clamp(1.5f * off + 10f, 10f, Math.max(10f, 0.4f * (lEnd - l0)));
         }
 
+        /** how long a rope from the root to the one carried at progress u has to be, going round his rim and dome */
+        public float need(Vector3f root, float u) {
+            float[] pts = new float[3 * maxRopePoints()];
+            int n = rope(root, u, pts);
+            float l = 0f;
+            for (int i = 1; i < n; i++) l += d3(pts, i - 1, pts, i);
+            return l;
+        }
+
         /** how long the whole way is, model blocks */
         public float length() { return lEnd - l0; }
 
@@ -211,6 +222,232 @@ public final class CarryPath {
 
     static float smooth(float k) { k = Mth.clamp(k, 0f, 1f); return k * k * (3 - 2 * k); }
 
+    // ------------------------------------------------------------------ laying the strand out as a rope
+
+    /** how far the rope keeps off his rim and dome (model blocks): half a strand's width and a little */
+    public static final float ROPE_CLEAR = 5f;
+
+    /**
+     * One tick of the strand that is carrying somebody, as a rope: pos holds its joints now and prev a tick ago (rest
+     * space, x y z each). Its root is held at (rx ry rz) where it hangs from, and its end at (tx ty tz), right on the
+     * one it carries; in between it swings with its weight and the water's drag. Each piece keeps its own length
+     * where it can: with length to spare the rope hangs in a curve; pulled tighter it lies over the rim and dome as
+     * close as it can and only stretches as much as it has to. Its stiffness shares a bend out along it rather than
+     * letting one joint take it all, and nothing of it goes into his rim or dome, or under the ground (floorY).
+     */
+    public static void step(float[] pos, float[] prev, float[] restLen, float rx, float ry, float rz, float tx, float ty, float tz, float floorY) {
+        build(null);
+        int n = restLen.length + 1, e = 3 * (n - 1);
+        float[] g = new float[2];
+        // how much rope the way needs: the rope as it is, pulled tight between its two ends round his rim and dome
+        float[] tight = pos.clone();
+        tight[0] = rx; tight[1] = ry; tight[2] = rz;
+        tight[e] = tx; tight[e + 1] = ty; tight[e + 2] = tz;
+        for (int it = 0; it < 16; it++) {
+            for (int i = 1; i < n - 1; i++) {
+                int o = 3 * i;
+                for (int k = 0; k < 3; k++) tight[o + k] = 0.5f * (tight[o - 3 + k] + tight[o + 3 + k]);
+            }
+            keepOff(tight, n, g);
+        }
+        float need = 0f;
+        for (int i = 0; i < n - 1; i++) need += d3(tight, i, tight, i + 1);
+        // it pays out from its root only as much as the way needs (and a little over, so it hangs in a gentle curve):
+        // the pieces nearest the end come out first, the ones not needed stay drawn in at the root as a short stub
+        float[] tl = new float[restLen.length];
+        float want = need * PAY_SLACK, after = 0f;
+        for (int i = restLen.length - 1; i >= 0; i--) {
+            tl[i] = Mth.clamp(want - after, restLen[i] * STUB, restLen[i]);
+            after += restLen[i];
+        }
+        float bendCos = (float) Math.cos(Math.toRadians(MAX_BEND) * 0.5);
+        // moving on: what speed it had (the water takes some), and its weight
+        for (int i = 1; i < n - 1; i++) {
+            int o = 3 * i;
+            float vx = (pos[o] - prev[o]) * DRAG, vy = (pos[o + 1] - prev[o + 1]) * DRAG - WEIGHT, vz = (pos[o + 2] - prev[o + 2]) * DRAG;
+            float v = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
+            if (v > SPEED) { vx *= SPEED / v; vy *= SPEED / v; vz *= SPEED / v; }
+            prev[o] = pos[o]; prev[o + 1] = pos[o + 1]; prev[o + 2] = pos[o + 2];
+            pos[o] += vx; pos[o + 1] += vy; pos[o + 2] += vz;
+        }
+        // how fast its end is going this tick (the joints may go a few times that, and no more)
+        float endMove = (float) Math.sqrt((tx - pos[e]) * (tx - pos[e]) + (ty - pos[e + 1]) * (ty - pos[e + 1]) + (tz - pos[e + 2]) * (tz - pos[e + 2]));
+        float cap = Math.max(JOINT_MOVE, END_X * endMove);
+        prev[0] = pos[0]; prev[1] = pos[1]; prev[2] = pos[2];
+        prev[e] = pos[e]; prev[e + 1] = pos[e + 1]; prev[e + 2] = pos[e + 2];
+        pos[0] = rx; pos[1] = ry; pos[2] = rz;
+        pos[e] = tx; pos[e + 1] = ty; pos[e + 2] = tz;
+        for (int it = 0; it < ITER; it++) {
+            // stiffness: each joint drawn a little toward the line between its neighbours
+            for (int i = 1; i < n - 1; i++) {
+                int o = 3 * i;
+                for (int k = 0; k < 3; k++) pos[o + k] += STIFF * (0.5f * (pos[o - 3 + k] + pos[o + 3 + k]) - pos[o + k]);
+            }
+            // each piece its own length, both ways along, the two ends held
+            for (int pass = 0; pass < 2; pass++) for (int j = 0; j < n - 1; j++) {
+                int i = pass == 0 ? j : n - 2 - j;
+                int a = 3 * i, b = a + 3;
+                float dx = pos[b] - pos[a], dy = pos[b + 1] - pos[a + 1], dz = pos[b + 2] - pos[a + 2];
+                float dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dl < 1e-5f) continue;
+                float diff = (dl - tl[i]) / dl;
+                boolean fa = i == 0, fb = i + 1 == n - 1;
+                float wa = fa ? 0f : fb ? 1f : 0.5f, wb = fb ? 0f : fa ? 1f : 0.5f;
+                pos[a] += dx * diff * wa; pos[a + 1] += dy * diff * wa; pos[a + 2] += dz * diff * wa;
+                pos[b] -= dx * diff * wb; pos[b + 1] -= dy * diff * wb; pos[b + 2] -= dz * diff * wb;
+            }
+            // it bends, but never sharply at any one joint: two joints apart are kept far enough apart
+            for (int i = 1; i < n - 1; i++) {
+                int a = 3 * (i - 1), b = 3 * (i + 1);
+                float dx = pos[b] - pos[a], dy = pos[b + 1] - pos[a + 1], dz = pos[b + 2] - pos[a + 2];
+                float dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                // (a piece still drawn in at the root doesn't count)
+                if (tl[i - 1] < restLen[i - 1] * 0.5f) continue;
+                float min = (tl[i - 1] + tl[i]) * bendCos;
+                if (dl >= min || dl < 1e-5f) continue;
+                float diff = (dl - min) / dl;
+                boolean fa = i - 1 == 0, fb = i + 1 == n - 1;
+                if (fa && fb) continue;
+                float wa = fa ? 0f : fb ? 1f : 0.5f, wb = fb ? 0f : fa ? 1f : 0.5f;
+                pos[a] += dx * diff * wa; pos[a + 1] += dy * diff * wa; pos[a + 2] += dz * diff * wa;
+                pos[b] -= dx * diff * wb; pos[b + 1] -= dy * diff * wb; pos[b + 2] -= dz * diff * wb;
+                // and the joint between them out to the side it bends to, so they don't just slide
+            }
+            // never into his rim or dome: the joints, and each piece along its length, kept off them
+            keepOff(pos, n, g);
+            for (int i = 1; i < n - 1; i++) if (pos[3 * i + 1] < floorY) pos[3 * i + 1] = floorY;
+            pos[0] = rx; pos[1] = ry; pos[2] = rz;
+            pos[e] = tx; pos[e + 1] = ty; pos[e + 2] = tz;
+        }
+        // however it's pulled about, no joint goes much faster than its end (the rope catches up over the next few ticks)
+        for (int i = 1; i < n - 1; i++) {
+            int o = 3 * i;
+            float dx = pos[o] - prev[o], dy = pos[o + 1] - prev[o + 1], dz = pos[o + 2] - prev[o + 2];
+            float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (d > cap) {
+                float f = cap / d;
+                pos[o] = prev[o] + dx * f; pos[o + 1] = prev[o + 1] + dy * f; pos[o + 2] = prev[o + 2] + dz * f;
+            }
+        }
+    }
+
+    public static float DRAG = 0.8f, WEIGHT = 0.3f, SPEED = 4f, STIFF = 0.25f, PAY_SLACK = 1.05f, STUB = 0.12f, MAX_BEND = 45f, OUT_PAST = 4f, JOINT_MOVE = 3f, END_X = 2f;
+    public static int ITER = 30;
+
+    /**
+     * Where the strand comes out from under the rim right now (rest space). While the one it carries is down his side
+     * it hangs from its own root; as they go up past the rim, its top pays out along the underside of the rim to the
+     * rim's edge (and back in again on the way down), so it comes out over the edge instead of bending hard round it,
+     * and needs less stretch to get over the dome.
+     */
+    public static Vector3f outFrom(Vector3f root, float endY, int rimY, Vector3f out) {
+        build(null);
+        float k = smooth((endY - (rimY - 25f)) / 30f);
+        float r = (float) Math.sqrt(root.x * root.x + root.z * root.z);
+        float to = Math.max(r, rimEdge + OUT_PAST);
+        float f = r > 1e-3f ? (r + (to - r) * k) / r : 1f;
+        return out.set(root.x * f, root.y, root.z * f);
+    }
+
+    /** a rope's joints (not its two ends), and each piece along its length, kept ROPE_CLEAR off his rim and dome */
+    private static void keepOff(float[] pos, int n, float[] g) {
+        for (int i = 1; i < n - 1; i++) pushOut(pos, 3 * i, 1f, g);
+        for (int i = 1; i < n - 1; i++) {
+            int a = 3 * i, b = a + 3;
+            boolean fb = i + 1 == n - 1;
+            for (int q = 1; q <= 3; q++) {
+                float f = q / 4f;
+                float mx = pos[a] + (pos[b] - pos[a]) * f, my = pos[a + 1] + (pos[b + 1] - pos[a + 1]) * f, mz = pos[a + 2] + (pos[b + 2] - pos[a + 2]) * f;
+                float mr = (float) Math.sqrt(mx * mx + mz * mz);
+                float dd = shellDist(mr, my);
+                if (dd >= ROPE_CLEAR) continue;
+                shellGrad(mr, my, g);
+                float push = ROPE_CLEAR - dd;
+                moveR(pos, a, g, push * (fb ? 1f : 1f - f));
+                if (!fb) moveR(pos, b, g, push * f);
+            }
+        }
+    }
+
+    /** a joint kept ROPE_CLEAR off his rim and dome */
+    private static void pushOut(float[] p, int o, float k, float[] g) {
+        float r = (float) Math.sqrt(p[o] * p[o] + p[o + 2] * p[o + 2]);
+        float dd = shellDist(r, p[o + 1]);
+        if (dd >= ROPE_CLEAR) return;
+        shellGrad(r, p[o + 1], g);
+        moveR(p, o, g, (ROPE_CLEAR - dd) * k);
+    }
+
+    /** moves a point by amt along (g[0] outward from his middle, g[1] up) */
+    private static void moveR(float[] p, int o, float[] g, float amt) {
+        float r = (float) Math.sqrt(p[o] * p[o] + p[o + 2] * p[o + 2]);
+        float nr = Math.max(0f, r + g[0] * amt);
+        if (r > 1e-4f) { p[o] *= nr / r; p[o + 2] *= nr / r; }
+        p[o + 1] += g[1] * amt;
+    }
+
+    private static float d3(float[] a, int i, float[] b, int j) {
+        float dx = b[3 * j] - a[3 * i], dy = b[3 * j + 1] - a[3 * i + 1], dz = b[3 * j + 2] - a[3 * i + 2];
+        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    // ---- how far a point (r out, y up) is from his rim, dome and crown: below 0 inside them
+
+    private static final int SR = 150, SY0 = -40, SY1 = 260;
+    private static float[] sdf;
+
+    public static float shellDist(float r, float y) {
+        float fr = Mth.clamp(r, 0f, SR - 1.001f), fy = Mth.clamp(y - SY0, 0f, SY1 - SY0 - 1.001f);
+        int i = (int) fr, j = (int) fy;
+        float a = fr - i, b = fy - j;
+        int w = SY1 - SY0 + 1;
+        float v00 = sdf[i * w + j], v01 = sdf[i * w + j + 1], v10 = sdf[(i + 1) * w + j], v11 = sdf[(i + 1) * w + j + 1];
+        float v = (v00 * (1 - a) + v10 * a) * (1 - b) + (v01 * (1 - a) + v11 * a) * b;
+        // past the edge of the table: add on how far past
+        return v + Math.max(0f, r - (SR - 1)) + Math.max(0f, Math.max(SY0 - y, y - SY1));
+    }
+
+    private static void shellGrad(float r, float y, float[] g) {
+        float gx = shellDist(r + 0.5f, y) - shellDist(Math.max(0f, r - 0.5f), y);
+        float gy = shellDist(r, y + 0.5f) - shellDist(r, y - 0.5f);
+        float l = (float) Math.sqrt(gx * gx + gy * gy);
+        if (l < 1e-5f) { g[0] = 0f; g[1] = 1f; return; }
+        g[0] = gx / l; g[1] = gy / l;
+    }
+
+    private static boolean inShellAt(float r, float y) {
+        int row = (int) Math.floor(y) - Y0;
+        return row >= 0 && row < shell.length && shell[row] > 0f && r < shell[row];
+    }
+
+    private static void buildSdf() {
+        int w = SY1 - SY0 + 1;
+        float[] f = new float[SR * w];
+        List<int[]> edge = new ArrayList<>();
+        for (int i = 0; i < SR; i++) for (int j = 0; j < w; j++) {
+            float r = i, y = j + SY0;
+            boolean in = inShellAt(r, y);
+            // a point of the edge: in, with a neighbour out (or out, with a neighbour in)
+            boolean edgeP = false;
+            for (int k = 0; k < 4 && !edgeP; k++) {
+                float nr = r + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = y + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                if (nr >= 0 && inShellAt(nr, ny) != in) edgeP = true;
+            }
+            if (edgeP && in) edge.add(new int[]{i, j});
+        }
+        for (int i = 0; i < SR; i++) for (int j = 0; j < w; j++) {
+            float best = Float.MAX_VALUE;
+            for (int[] p : edge) {
+                float dx = p[0] - i, dy = p[1] - j;
+                float d2 = dx * dx + dy * dy;
+                if (d2 < best) best = d2;
+            }
+            float d = (float) Math.sqrt(best);
+            f[i * w + j] = inShellAt(i, j + SY0) ? -d : d;
+        }
+        sdf = f;
+    }
+
     // ------------------------------------------------------------------ his outline
 
     private static int firstRow() {
@@ -254,6 +491,7 @@ public final class CarryPath {
 
     private static synchronized void build(BellRig rig) {
         if (all != null) return;
+        if (rig == null) rig = BellRig.get();
         BellModel m = BellModel.get();
         int rows = rig.crownY + 8 - Y0;
         float[] a = new float[rows], sh = new float[rows];
@@ -268,6 +506,7 @@ public final class CarryPath {
                 float cx = Math.abs(xs[i] + 0.5f) + 0.5f, cz = Math.abs(zs[i] + 0.5f) + 0.5f;
                 float r = (float) Math.sqrt(cx * cx + cz * cz);
                 // the bell swells a little when he's worn out or sinking: leave room for it
+                if (k == BellRig.Kind.RIM) rimEdge = Math.max(rimEdge, r);
                 if (body) { r = r * 1.07f + 1f; sh[row] = Math.max(sh[row], r); }
                 a[row] = Math.max(a[row], r);
                 hi = Math.max(hi, ys[i] + 1);
@@ -297,6 +536,7 @@ public final class CarryPath {
             c.add(S.k());
         }
         candidates = c.stream().mapToInt(Integer::intValue).toArray();
+        buildSdf();
         all = a;
     }
 }
