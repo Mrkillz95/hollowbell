@@ -273,6 +273,7 @@
   "command.hollowbell.done_goto": "He's on his way there.",
   "command.hollowbell.done_stay": "Done.",
   "command.hollowbell.done_carry": "He's coming for you.",
+  "command.hollowbell.done_set_down": "He's letting you down.",
   "command.hollowbell.cannot_carry": "He can't come for you right now.",
   "command.hollowbell.giants_is_on": "He fights the other bosses (Pitchgut, Furrowmaw, Cerberus, the Lantern Willow). /hollowbell giants off to stop it.",
   "command.hollowbell.giants_is_off": "He leaves the other bosses alone. /hollowbell giants on to let him fight them.",
