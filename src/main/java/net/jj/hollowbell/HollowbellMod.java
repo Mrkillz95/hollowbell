@@ -66,7 +66,7 @@ public class HollowbellMod implements ModInitializer {
             for (HollowbellEntity m : p.serverLevel().getEntities(ModEntities.HOLLOWBELL, m -> m.rider() == p)) { him = m; break; }
             if (him == null) return;
             switch (pay.what()) {
-                case DrivePayload.LEAVE -> him.dropRider();
+                case DrivePayload.LEAVE -> him.setMeDown(p);
                 case DrivePayload.ATTACK -> CodexOrders.moveFromCrown(p, him, pay.arg());
                 default -> him.drive(p, pay.forward(), pay.strafe(), pay.yaw(), pay.arg());
             }

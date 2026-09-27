@@ -145,6 +145,8 @@
   "message.hollowbell.pod_popped": "A pod pops! %s left.",
   "message.hollowbell.grabbed": "A strand has you! Hit it to make it let go.",
   "message.hollowbell.lifting_you": "Up you go. Hold on, it's a long way up.",
+  "message.hollowbell.setting_down": "He's letting you down. Hold on.",
+  "message.hollowbell.set_down": "You're back on the ground.",
   "message.hollowbell.carry_moved": "You moved, so the strand missed. Stand still and he'll try again.",
   "message.hollowbell.carry_hurt": "You got hurt, so the strand pulled back. He'll try again in a moment.",
   "message.hollowbell.strand_let_go": "The strand lets go.",

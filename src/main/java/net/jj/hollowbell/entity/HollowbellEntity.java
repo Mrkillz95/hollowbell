@@ -785,6 +785,7 @@ public class HollowbellEntity extends Monster {
         double wy;
         if (arriving > 0) { arriving--; wy = gAvg + cruise; if (getY() - wy < 3 * s + 1) arriving = 0; }
         else if (dying || down) wy = gC;
+        else if (moves.setDownGround() != null) { wy = moves.setDownGround(); wantY = wy; }
         else if (rider != null) {
             if (Double.isNaN(wantY)) wantY = getY();
             if (driveUp != 0) wantY = getY() + driveUp * (14 * s + 4);
@@ -1497,6 +1498,34 @@ public class HollowbellEntity extends Monster {
         return new Vec3(from.x, groundAt(from.x, from.z), from.z);
     }
 
+    /**
+     * Getting off (G, or "get off" in the book): he sinks to the ground, a strand comes up round the rim and over the
+     * dome to his crown, takes you round the middle and carries you back down the way you came up, and sets you on
+     * your feet beside him (see BellMoves.runCarry). If he can't (down on the ground, dying, nowhere to put you),
+     * you're set down beside him straight away as before.
+     */
+    public void setMeDown(LivingEntity who) {
+        if (rider != who || moves.settingDown()) return;
+        if (isDeadOrDying() || resting() || !moves.startSetDown(who)) dropRider();
+        else { driveF = driveS = 0f; driveUp = 0; }
+    }
+
+    /** he keeps the height he's at now (a strand is carrying somebody, and the way is fixed to him) */
+    void holdHeight() { wantY = getY(); }
+
+    /** the moves take whoever rides the crown off it for the strand to carry down: the same seat, now the strand's */
+    @Nullable Seat handRiderToStrand() {
+        if (rider == null || riderSeat == null || riderSeat.isRemoved() || rider.getVehicle() != riderSeat) return null;
+        if (rider instanceof ServerPlayer sp)
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new net.jj.hollowbell.net.BeingHimPayload(getId(), false));
+        Seat st = riderSeat;
+        riderSeat = null;
+        rider = null;
+        setFlag(F_RIDDEN, false);
+        driveF = driveS = 0f;
+        return st;
+    }
+
     public void dropRider() {
         if (rider instanceof ServerPlayer sp)
             net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new net.jj.hollowbell.net.BeingHimPayload(getId(), false));
@@ -1518,7 +1547,7 @@ public class HollowbellEntity extends Monster {
 
     /** the being-him keys: which way, and up (1) or down (-1) */
     public void drive(LivingEntity who, float forward, float strafe, float yaw, int up) {
-        if (rider != who) return;
+        if (rider != who || moves.settingDown()) return;
         driveF = Mth.clamp(forward, -1f, 1f);
         driveS = Mth.clamp(strafe, -1f, 1f);
         driveUp = Mth.clamp(up, -1, 1);
@@ -1539,8 +1568,8 @@ public class HollowbellEntity extends Monster {
     }
 
     /** a move pressed while riding: the book's clock applies */
-    public boolean forceMove(int which) { return moves.force(which, getTarget()); }
-    public boolean forceMove(int which, @Nullable LivingEntity at) { return moves.force(which, at != null ? at : getTarget()); }
+    public boolean forceMove(int which) { return !moves.settingDown() && moves.force(which, getTarget()); }
+    public boolean forceMove(int which, @Nullable LivingEntity at) { return !moves.settingDown() && moves.force(which, at != null ? at : getTarget()); }
 
     // ------------------------------------------------------------------ dying
 
