@@ -59,7 +59,7 @@ public final class BellMoves {
     private final HollowbellEntity h;
     private final BellRig rig;
 
-    private int move, t, arg = -1, cooldown = 60, harvestIn = 400;
+    private int move, t, arg = -1, lastArg = -1, cooldown = 60, harvestIn = 400;
     private @Nullable LivingEntity target;
     /** the strand grabbing: who, on which seat, how far up, how many hits it has taken */
     private @Nullable LivingEntity grabbed;
@@ -131,6 +131,8 @@ public final class BellMoves {
     BellMoves(HollowbellEntity h) { this.h = h; this.rig = h.rig; }
 
     public int move() { return move; }
+    /** the arm or strand the move of the moment (or the last one) used */
+    public int lastStrand() { return lastArg; }
     public int t() { return t; }
     public void setCooldown(int c) { cooldown = c; }
     public float lift() { return lift; }
@@ -201,7 +203,7 @@ public final class BellMoves {
         if (e == null) return false;
         if (e == grabbed || e == wrapped) return true;
         // (whoever a strand is reaching out to carry up onto his crown is as good as held: it doesn't sting them)
-        if (gentle && move == Moves.GRAB && e == target) return true;
+        if (gentle && move == Moves.GRAB && e == target && t <= Moves.REACH) return true;
         for (Inside i : inside) if (i.e == e) return true;
         return false;
     }
@@ -1231,7 +1233,7 @@ public final class BellMoves {
         struckThisMove.clear();
         hitAt.clear();
         slapped.clear();
-        move = Moves.GRAB; t = 0; arg = k; landed = false; lastMove = Moves.GRAB;
+        move = Moves.GRAB; t = 0; arg = k; lastArg = k; landed = false; lastMove = Moves.GRAB;
         grabbed = null; lift = 0f; strandHits = 0f;
         gentle = true; back = false; carryT = 0; carryLen = 0; backT = 0; backLen = 0; carryU = 0f;
         reachFrom = who.position();
@@ -1242,6 +1244,25 @@ public final class BellMoves {
         h.setCarry(carryD(who), carryEnd(who));
         warn(Moves.GRAB, k);
         return true;
+    }
+
+    /**
+     * Lets go of one creature, however he has it (a player leaving the game): a strand holding it lets go (one
+     * carrying it up onto his crown goes back down the way it came), an arm unwraps, and it's taken out of his dome.
+     */
+    public void letGo(LivingEntity e) {
+        if (grabbed == e) {
+            letGoOfGrab(false);
+            if (!gentle) end();
+        }
+        if (wrapped == e) letGoOfWrap();
+        for (Iterator<Inside> it = inside.iterator(); it.hasNext(); ) {
+            Inside in = it.next();
+            if (in.e != e) continue;
+            dropSeat(in.seat);
+            it.remove();
+        }
+        if (gentle && move == Moves.GRAB && target == e) { if (t <= Moves.REACH) end(); else target = null; }
     }
 
     /** true while a strand is taking somebody up to his crown (not once they're on it) */
