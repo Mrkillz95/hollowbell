@@ -75,7 +75,10 @@ public class Shot extends ThrowableItemProjectile {
     @Override
     protected void onHitEntity(EntityHitResult r) {
         super.onHitEntity(r);
-        if (level().isClientSide || !(r.getEntity() instanceof LivingEntity le)) return;
+        if (level().isClientSide) return;
+        // (a part box of another giant is that giant)
+        LivingEntity le = r.getEntity().getTags().contains(Giants.TAG) ? Giants.ownerOf(r.getEntity()) : r.getEntity() instanceof LivingEntity l ? l : null;
+        if (le == null || le instanceof HollowbellEntity || !canHitEntity(le)) return;
         if (kind() == STINGER) {
             sting(le);
             playSound(ModSounds.STING, 1f, 0.8f + random.nextFloat() * 0.3f);
@@ -109,8 +112,13 @@ public class Shot extends ThrowableItemProjectile {
         sl.playSound(null, c.x, c.y, c.z, ModSounds.EGG_BURST, SoundSource.HOSTILE, 1.5f * HollowbellConfig.V.soundVolume, 0.8f + random.nextFloat() * 0.3f);
         sl.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.GRAY_CONCRETE.defaultBlockState()), c.x, c.y + 0.3, c.z, 40, radius * 0.4, 0.3, radius * 0.4, 0.15);
         sl.sendParticles(ParticleTypes.ITEM_SLIME, c.x, c.y + 0.3, c.z, 20, radius * 0.4, 0.3, radius * 0.4, 0.1);
-        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(radius), e -> canHitEntity(e) && e.isAlive())) {
-            if (e.position().distanceTo(c) > radius) continue;
+        java.util.List<LivingEntity> hit = new java.util.ArrayList<>(sl.getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(radius), e -> canHitEntity(e) && e.isAlive() && e.position().distanceTo(c) <= radius));
+        // (another giant's part boxes in the burst count as that giant)
+        for (Entity p : sl.getEntities((Entity) null, new AABB(c, c).inflate(radius), x -> !(x instanceof LivingEntity) && x.getTags().contains(Giants.TAG))) {
+            LivingEntity o = Giants.ownerOf(p);
+            if (o != null && !(o instanceof HollowbellEntity) && o.isAlive() && canHitEntity(o) && !hit.contains(o)) hit.add(o);
+        }
+        for (LivingEntity e : hit) {
             e.invulnerableTime = 0;
             e.hurt(damageSources().mobProjectile(this, h), h != null ? h.dmg(damage, e) : damage);
             e.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0));

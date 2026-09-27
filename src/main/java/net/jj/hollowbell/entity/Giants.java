@@ -55,6 +55,24 @@ public final class Giants {
         return e != null && e != self && (isGiant(e) || e.getTags().contains(KIN));
     }
 
+    private static final java.util.Map<Class<?>, java.util.Optional<java.lang.reflect.Method>> OWNER = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The giant a part box belongs to. The other giants are mostly made of part boxes that aren't creatures themselves
+     * (Pitchgut's, the Furrowmaw's rings, the Cerberus's body): each has an {@code owner()}. A creature is its own.
+     */
+    public static @Nullable net.minecraft.world.entity.LivingEntity ownerOf(@Nullable Entity e) {
+        if (e == null) return null;
+        if (e instanceof net.minecraft.world.entity.LivingEntity le) return le;
+        var m = OWNER.computeIfAbsent(e.getClass(), c -> {
+            try { var mm = c.getMethod("owner"); mm.setAccessible(true); return java.util.Optional.of(mm); }
+            catch (Exception x) { return java.util.Optional.empty(); }
+        });
+        if (m.isEmpty()) return null;
+        try { return m.get().invoke(e) instanceof net.minecraft.world.entity.LivingEntity le ? le : null; }
+        catch (Exception x) { return null; }
+    }
+
     /** a giant, or riding one, or anything that mustn't be picked up or dragged about by a giant */
     public static boolean carriesGiant(@Nullable Entity e) {
         for (int i = 0; i < 4 && e != null; i++) { if (isGiant(e)) return true; e = e.getVehicle(); }

@@ -1254,6 +1254,50 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    /** a part box of another giant: not a creature itself, it has an owner() (like Pitchgut's, the Furrowmaw's, the Cerberus's) */
+    public static class FakePart extends net.minecraft.world.entity.Interaction {
+        final net.minecraft.world.entity.LivingEntity owner;
+        public FakePart(net.minecraft.world.level.Level l, net.minecraft.world.entity.LivingEntity owner) {
+            super(EntityType.INTERACTION, l);
+            this.owner = owner;
+            addTag(net.jj.hollowbell.entity.Giants.TAG);
+        }
+        public net.minecraft.world.entity.LivingEntity owner() { return owner; }
+    }
+
+    /**
+     * Another giant made of part boxes (its middle far off, one part right beside him) is struck through the part: his
+     * pulse wave reaches the part and the giant it belongs to is hurt. A part deep under the ground is out of reach.
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "giant_parts")
+    public void heStrikesAnotherGiantThroughItsParts(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 148);
+        net.minecraft.world.entity.monster.Zombie[] g = new net.minecraft.world.entity.monster.Zombie[2];
+        FakePart[] part = new FakePart[2];
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            double far = e.bellRadius() * 3 + 40;
+            // one giant with a part on the ground beside him, one with its only part deep under the ground
+            for (int i = 0; i < 2; i++) {
+                g[i] = fakeGiant(h, e.position().add(i == 0 ? far : -far, 0, 0));
+                g[i].setHealth(20f);
+                part[i] = new FakePart(h.getLevel(), g[i]);
+                double x = e.getX() + (i == 0 ? 1 : -1) * e.bellRadius() * 1.1, z = e.getZ();
+                part[i].moveTo(x, e.groundAt(x, z) - (i == 0 ? 0 : 12), z, 0f, 0f);
+                h.getLevel().addFreshEntity(part[i]);
+                h.assertTrue(net.jj.hollowbell.entity.Giants.ownerOf(part[i]) == g[i], "the part's giant wasn't found");
+            }
+            h.assertTrue(e.forceMove(Moves.PULSE, g[0]), "no pulse wave");
+        });
+        h.runAfterDelay(20 + Moves.length(Moves.PULSE) + 10, () -> {
+            h.assertTrue(g[0].getHealth() < 20f || g[0].isDeadOrDying(), "the pulse wave never struck the giant through its part");
+            h.assertTrue(g[1].getHealth() >= 20f, "a part deep under the ground was struck");
+            for (int i = 0; i < 2; i++) { part[i].discard(); g[i].discard(); }
+            release(h, e);
+            h.succeed();
+        });
+    }
+
     // ------------------------------------------------------------------ leaving the game while he has you
 
     /** after a player left the game while he had them: on the ground beside him, let go, falling gently */

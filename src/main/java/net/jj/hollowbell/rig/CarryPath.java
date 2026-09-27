@@ -331,7 +331,7 @@ public final class CarryPath {
         }
     }
 
-    public static float DRAG = 0.8f, WEIGHT = 0.3f, SPEED = 4f, STIFF = 0.25f, PAY_SLACK = 1.05f, STUB = 0.12f, MAX_BEND = 45f, OUT_PAST = 4f, JOINT_MOVE = 3f, END_X = 2f;
+    public static float DRAG = 0.8f, WEIGHT = 0.3f, SPEED = 4f, STIFF = 0.25f, PAY_SLACK = 1.05f, STUB = 0.04f, MAX_BEND = 45f, OUT_PAST = 4f, JOINT_MOVE = 3f, END_X = 2f;
     public static int ITER = 30;
 
     /**

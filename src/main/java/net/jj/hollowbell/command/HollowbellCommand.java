@@ -99,6 +99,12 @@ public final class HollowbellCommand {
                     if (!(c.getSource().getEntity() instanceof net.minecraft.world.entity.LivingEntity p)) { c.getSource().getPlayerOrException(); return 0; }
                     HollowbellEntity h = nearest(c.getSource());
                     if (h == null) return none(c);
+                    // already up there: he carries you back down the same way
+                    if (h.rider() == p) {
+                        h.setMeDown(p);
+                        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_set_down"), false);
+                        return 1;
+                    }
                     if (h.carrying() || !h.comeAndGetMe(p)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot_carry")); return 0; }
                     c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_carry"), false);
                     return 1;

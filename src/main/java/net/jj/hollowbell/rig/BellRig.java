@@ -368,17 +368,22 @@ public final class BellRig {
         out.identity().translate(pts[3 * i], pts[3 * i + 1], pts[3 * i + 2]).rotate(r);
         float k = l0 > 1e-4f ? l / l0 : 1f;
         if (Math.abs(k - 1f) > 0.01f) {
-            // squash or stretch along the segment's own built direction
+            // squash or stretch along the segment's own built direction; a piece drawn almost all the way in (a
+            // strand carrying somebody pays out only what it needs) shrinks across too, into where it hangs from
+            float cs = k < DRAWN_IN ? Math.max(0.02f, k / DRAWN_IN) : 1f;
             Vector3f u = s.v.set(j1).sub(j0).div(l0);
             Matrix4f sc = s.m.identity();
-            float e = k - 1f;
-            sc.m00(1 + e * u.x * u.x).m01(e * u.x * u.y).m02(e * u.x * u.z)
-              .m10(e * u.y * u.x).m11(1 + e * u.y * u.y).m12(e * u.y * u.z)
-              .m20(e * u.z * u.x).m21(e * u.z * u.y).m22(1 + e * u.z * u.z);
+            float e = k - cs;
+            sc.m00(cs + e * u.x * u.x).m01(e * u.x * u.y).m02(e * u.x * u.z)
+              .m10(e * u.y * u.x).m11(cs + e * u.y * u.y).m12(e * u.y * u.z)
+              .m20(e * u.z * u.x).m21(e * u.z * u.y).m22(cs + e * u.z * u.z);
             out.mul(sc);
         }
         out.translate(-j0.x, -j0.y, -j0.z);
     }
+
+    /** a piece squashed shorter than this (of its built length) is drawn in: it shrinks across as well */
+    public static final float DRAWN_IN = 0.15f;
 
     /** the matrix a chain hangs from right now: its rim sector, the vase, the dome, or the strand it grows from */
     public Matrix4f anchor(BellState st, Chain c, Matrix4f body, Matrix4f out) {

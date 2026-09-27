@@ -366,6 +366,7 @@ public final class BellMoves {
     }
 
     public void tick() {
+        giantAt.clear();
         insideTick();
         cloudsTick();
         if (tired > 0 && --tired == 0) h.setTired(false);
@@ -517,7 +518,7 @@ public final class BellMoves {
                     Vec3 c = h.toWorld(h.aim());
                     double r = 16 * s + 4;
                     for (LivingEntity e : near(new AABB(c, c).inflate(r, 10 + 30 * s, r))) {
-                        Vec3 in = new Vec3(c.x - e.getX(), 0, c.z - e.getZ());
+                        Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
                         double dist = in.length();
                         if (dist > r) continue;
                         if (dist > 1.5) e.setDeltaMovement(e.getDeltaMovement().scale(0.4).add(in.normalize().scale(0.35)));
@@ -535,7 +536,7 @@ public final class BellMoves {
                     double r = bell * 1.35 + 4;
                     // (the box round him only reaches 112 out; the sweep reaches further)
                     for (LivingEntity e : near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.8))) {
-                        if (struckThisMove.contains(e.getUUID()) || h.horiz(e.position()) > r) continue;
+                        if (struckThisMove.contains(e.getUUID()) || h.horiz(at(e)) > r) continue;
                         struckThisMove.add(e.getUUID());
                         blow(e, 18f, h.position(), 0, 0.6);
                         e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 2.0, 0, dir.z * 2.0));
@@ -572,7 +573,7 @@ public final class BellMoves {
                     Vec3 c = h.position().add(0, rig.rimY * s, 0);
                     for (LivingEntity e : near(h.bodyBox().inflate(80 * s + 34, 90 * s + 40, 80 * s + 34))) {
                         if (struckThisMove.contains(e.getUUID())) continue;
-                        double d = e.position().distanceTo(c);
+                        double d = at(e).distanceTo(c);
                         if (d > r) continue;
                         struckThisMove.add(e.getUUID());
                         blow(e, 18f, c, 2.0, 0.6);
@@ -588,7 +589,7 @@ public final class BellMoves {
                     Vec3 c = h.position();
                     double r = bell * 1.2 + 6;
                     for (LivingEntity e : near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + 50 * s + 8))) {
-                        double d = h.horiz(e.position());
+                        double d = h.horiz(at(e));
                         if (d > r) continue;
                         blow(e, 52f * (float) (1 - 0.35 * d / r), c, 2.4, 0.9);
                         knockDown(e);
@@ -615,7 +616,7 @@ public final class BellMoves {
                     double r = bell * 1.35 + 3;
                     for (LivingEntity e : near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.9))) {
                         if (struckThisMove.contains(e.getUUID())) continue;
-                        Vec3 to = e.position().subtract(h.position()).multiply(1, 0, 1);
+                        Vec3 to = at(e).subtract(h.position()).multiply(1, 0, 1);
                         double d = to.length();
                         if (d > r) continue;
                         // in the half of him the strand whips through
@@ -633,7 +634,7 @@ public final class BellMoves {
                     double r = 50 * s + 30;
                     Vec3 c = h.position().add(0, (rig.rimY + 30) * s, 0);
                     for (LivingEntity e : near(new AABB(c, c).inflate(r))) {
-                        if (e.position().distanceTo(c) > r) continue;
+                        if (at(e).distanceTo(c) > r) continue;
                         e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, night ? 200 : 100, 0));
                         e.addEffect(new MobEffectInstance(MobEffects.DARKNESS, night ? 160 : 60, 0));
                         if (night) e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 160, 0));
@@ -684,7 +685,7 @@ public final class BellMoves {
         Vec3 c = new Vec3(tip.x, gy, tip.z);
         double topY = Math.max(tip.y, c.y) + 3 + 4 * s;
         for (LivingEntity e : near(new AABB(c.x - r, c.y - 2, c.z - r, c.x + r, topY, c.z + r))) {
-            double d = Math.hypot(e.getX() - c.x, e.getZ() - c.z);
+            double d = Math.hypot(at(e).x - c.x, at(e).z - c.z);
             if (d > r) continue;
             blow(e, dmg * (float) (1.0 - 0.45 * d / r), c, 1.4, 0.9);
             for (int k = 0; k < 8; k++) if (rig.arms.length > k && h.armTipWorld(k).distanceToSqr(tip) < 1) slapped.add(e.getUUID() + "/" + k);
@@ -721,7 +722,7 @@ public final class BellMoves {
         for (Vec3 p : down) {
             for (LivingEntity e : near(new AABB(p.x - r, p.y - 10 * s - 4, p.z - r, p.x + r, p.y + 6 * s + 3, p.z + r))) {
                 String key = e.getUUID() + "/" + arm;
-                if (slapped.contains(key) || Math.hypot(e.getX() - p.x, e.getZ() - p.z) > r) continue;
+                if (slapped.contains(key) || Math.hypot(at(e).x - p.x, at(e).z - p.z) > r) continue;
                 slapped.add(key);
                 blow(e, dmg, p, 1.4, 0.9);
             }
@@ -819,7 +820,7 @@ public final class BellMoves {
             level().sendParticles(ParticleTypes.SNEEZE, c.x, c.y - 2 * s, c.z, 4, r * 0.3, 1, r * 0.3, 0.02);
             double gy = h.groundAt(c.x, c.z);
             for (LivingEntity e : near(new AABB(c.x - r, gy - 1, c.z - r, c.x + r, c.y, c.z + r))) {
-                if (struckThisMove.contains(e.getUUID()) || Math.hypot(e.getX() - c.x, e.getZ() - c.z) > r) continue;
+                if (struckThisMove.contains(e.getUUID()) || Math.hypot(at(e).x - c.x, at(e).z - c.z) > r) continue;
                 struckThisMove.add(e.getUUID());
                 blow(e, 18f, c, 0, 0);
                 e.addEffect(new MobEffectInstance(MobEffects.POISON, 120, 1));
@@ -859,7 +860,7 @@ public final class BellMoves {
             double R = bell * 1.9 + 6;
             Vec3 c = h.position();
             for (LivingEntity e : near(h.bodyBox().inflate(R - bell + 4, 0, R - bell + 4).setMaxY(h.getY() + rig.rimY * s))) {
-                Vec3 in = new Vec3(c.x - e.getX(), 0, c.z - e.getZ());
+                Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
                 double d = in.length();
                 if (d > R || d < 0.5) continue;
                 Vec3 n = in.normalize();
@@ -881,7 +882,7 @@ public final class BellMoves {
             Vec3 c = h.position();
             double r = bell * 0.75 + 4;
             for (LivingEntity e : near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s))) {
-                if (h.horiz(e.position()) > r) continue;
+                if (h.horiz(at(e)) > r) continue;
                 blow(e, 55f, c, 1.2, 1.6);
             }
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);
@@ -909,7 +910,7 @@ public final class BellMoves {
                 double R = 75 * s + 24;
                 Vec3 c = new Vec3(crown.x, gy, crown.z);
                 for (LivingEntity e : near(new AABB(c, c).inflate(R, 30 * s + 12, R))) {
-                    double d = Math.hypot(e.getX() - c.x, e.getZ() - c.z);
+                    double d = Math.hypot(at(e).x - c.x, at(e).z - c.z);
                     if (d > R) continue;
                     blow(e, 70f * (float) (1 - 0.5 * d / R), c, 3.0, 1.4);
                     knockDown(e);
@@ -956,7 +957,7 @@ public final class BellMoves {
             Vec3 c = h.position();
             for (LivingEntity e : near(h.bodyBox().inflate(R - r0 + 4, 100 * s + 40, R - r0 + 4))) {
                 if (struckThisMove.contains(e.getUUID())) continue;
-                double d = h.horiz(e.position());
+                double d = h.horiz(at(e));
                 if (d > r) continue;
                 struckThisMove.add(e.getUUID());
                 blow(e, 50f * (float) (1 - 0.4 * d / R), c, 3.4, 1.1);
@@ -1007,7 +1008,8 @@ public final class BellMoves {
             if (!near.isEmpty() && h.getRandom().nextInt(3) > 0) {
                 LivingEntity e = near.get(h.getRandom().nextInt(near.size()));
                 double sp = 2 * s + 1.5;
-                to = e.position().add((h.getRandom().nextDouble() - 0.5) * sp, e.getBbHeight() * 0.5, (h.getRandom().nextDouble() - 0.5) * sp);
+                // (at another giant: at the bit of it that's in reach)
+                to = at(e).add((h.getRandom().nextDouble() - 0.5) * sp, giantAt.containsKey(e) ? 0 : e.getBbHeight() * 0.5, (h.getRandom().nextDouble() - 0.5) * sp);
             } else {
                 double a = h.getRandom().nextDouble() * Math.PI * 2, d = Math.sqrt(h.getRandom().nextDouble()) * R;
                 double x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
@@ -1068,7 +1070,7 @@ public final class BellMoves {
                 level().sendParticles(ParticleTypes.LAVA, ground.x, ground.y + 0.2, ground.z, 1, beamR * 0.3, 0.1, beamR * 0.3, 0);
             }
             for (LivingEntity e : near(new AABB(ground.x - beamR, ground.y - 2, ground.z - beamR, ground.x + beamR, top.y, ground.z + beamR))) {
-                if (Math.hypot(e.getX() - ground.x, e.getZ() - ground.z) > beamR || !every(e, 10)) continue;
+                if (Math.hypot(at(e).x - ground.x, at(e).z - ground.z) > beamR || !every(e, 10)) continue;
                 blow(e, 16f, ground, 0.3, 0.2);
                 e.igniteForSeconds(4);
             }
@@ -1089,7 +1091,7 @@ public final class BellMoves {
             double R = bell * 2.2 + 8;
             if (t == Moves.UNDERTOW_PULL) h.sound(c, ModSounds.CHURN, 4f, 0.5f);
             for (LivingEntity e : near(h.bodyBox().inflate(R - bell + 4, 20 * s + 8, R - bell + 4))) {
-                Vec3 in = new Vec3(c.x - e.getX(), 0, c.z - e.getZ());
+                Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
                 double d = in.length();
                 if (d > R || d < 0.5) continue;
                 e.setDeltaMovement(e.getDeltaMovement().scale(0.8).add(in.normalize().scale(0.16 + 0.1 * s)).add(0, 0.05, 0));
@@ -1106,7 +1108,7 @@ public final class BellMoves {
         if (t == Moves.UNDERTOW_SLAM) {
             double r = bell * 0.95 + 5;
             for (LivingEntity e : near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s))) {
-                if (h.horiz(e.position()) > r) continue;
+                if (h.horiz(at(e)) > r) continue;
                 blow(e, 52f, c, 0.8, 0);
                 e.setDeltaMovement(e.getDeltaMovement().x, -1.5, e.getDeltaMovement().z);
                 knockDown(e);
@@ -1894,9 +1896,30 @@ public final class BellMoves {
 
     // ------------------------------------------------------------------ helpers
 
+    /**
+     * What's in the box. JJ's other giants are mostly made of part boxes that aren't creatures themselves: any of those
+     * in the box counts as that giant, and {@link #at} then gives where the nearest bit of it is (a giant is struck
+     * where its body is, not at its middle). Nothing of his digs, so a part more than a block down under the ground
+     * is out of his reach.
+     */
     private List<LivingEntity> near(AABB box) {
-        return level().getEntitiesOfClass(LivingEntity.class, box, e -> h.fairGame(e) || (e == grabbed && !gentle) || e == wrapped);
+        List<LivingEntity> out = level().getEntitiesOfClass(LivingEntity.class, box, e -> h.fairGame(e) || (e == grabbed && !gentle) || e == wrapped);
+        Vec3 mid = box.getCenter();
+        for (Entity p : level().getEntities((Entity) null, box, x -> !(x instanceof LivingEntity) && x.getTags().contains(Giants.TAG))) {
+            LivingEntity o = Giants.ownerOf(p);
+            if (o == null || o == h || !h.fairGame(o)) continue;
+            AABB pb = p.getBoundingBox();
+            if (pb.maxY < h.groundAt(p.getX(), p.getZ()) - 1) continue;
+            Vec3 q = new Vec3(Mth.clamp(mid.x, pb.minX, pb.maxX), Mth.clamp(mid.y, pb.minY, pb.maxY), Mth.clamp(mid.z, pb.minZ, pb.maxZ));
+            if (q.distanceToSqr(mid) < at(o).distanceToSqr(mid)) giantAt.put(o, q);
+            if (!out.contains(o)) out.add(o);
+        }
+        return out;
     }
+
+    /** where the nearest bit of it is: its own spot, or for another giant, the nearest of its part boxes found this tick */
+    private final Map<LivingEntity, Vec3> giantAt = new HashMap<>();
+    private Vec3 at(LivingEntity e) { Vec3 p = giantAt.get(e); return p != null ? p : e.position(); }
 
     private int nearestStrand(Vec3 p) {
         h.ensurePose();

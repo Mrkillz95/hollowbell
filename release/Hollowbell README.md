@@ -1,8 +1,15 @@
-# Hollowbell (Java mod) — version 1.3.2
+# Hollowbell (Java mod) — version 1.3.3
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.3.3
+
+- **Getting off is the ride up in reverse.** Press G (or "get off" in the book): he sinks to the ground, a strand comes up over his dome, takes you off the crown and carries you back down his side to your feet beside him. `/hollowbell ride` still puts you on or off straight away.
+- **The strand that carries you moves like one smooth rope.** It pays out from under the rim only as much as it needs and comes out over the rim's edge, so it no longer bends sharply or stretches much.
+- **Leaving the game while he has you** (on his crown, being carried up or down, held by a strand or an arm, or inside his dome): he lets go and you're put on the ground beside him with slow falling. You don't come back in mid-air.
+- **His attacks hit the other bosses where their bodies really are.** Pitchgut, the Furrowmaw and the Cerberus are made of many parts; before, he could only hit one small box of each. Parts deep under the ground are out of his reach.
 
 ## What's new in 1.3.2
 
@@ -194,7 +201,7 @@ At the top it says how far away he is, his health, his mood and what he's doing,
 
 ## Being him
 
-*Ride him* in the book: he drifts up beside you, a strand takes you round the middle and carries you up his side, round the rim and over the dome, and sets you down on his crown. Stand still while it reaches for you. Then the view swings out behind him, like the Mountain's.
+*Ride him* in the book: he drifts up beside you, a strand takes you round the middle and carries you up his side, round the rim and over the dome, and sets you down on his crown. Stand still while it reaches for you. Then the view swings out behind him, like the Mountain's. To get off, press G: a strand carries you back down the same way.
 
 | Key | What it does |
 |---|---|
@@ -203,7 +210,7 @@ At the top it says how far away he is, his health, his mood and what he's doing,
 | Jump / Sneak | take him up / down |
 | 1 to 0, then Z X C V B N M, then R H J K U | his 22 moves, light ones first (the list sits top left with a clock on each line) |
 | Scroll, or [ and ] | move the view in and out |
-| G | get off (he sets you down beside him) |
+| G | get off (he sinks down and a strand carries you back down beside him) |
 
 Top left you also see his health, and his **wind** and **grudge** bars, the same as in the book. Every move costs him some wind. Push him too hard and the grudge grows.
 
@@ -235,7 +242,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell damage <x>` | multiplies how hard he hits |
 | `/hollowbell griefing true/false` | whether he pulls up trees and flattens plants |
 | `/hollowbell shake true/false` | screen shake |
-| `/hollowbell carry` | he comes to you and a strand carries you up his side and over his dome onto his crown |
+| `/hollowbell carry` | he comes to you and a strand carries you up his side and over his dome onto his crown (if you're already up there, it carries you back down) |
 | `/hollowbell giants on/off` | whether he picks fights with the other bosses. On its own it says which. |
 | `/hollowbell volume <0-2>` | how loud he is (1 is normal) |
 | `/hollowbell reload` | reads the settings file again |
