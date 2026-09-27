@@ -1099,7 +1099,7 @@ public class HollowbellEntity extends Monster {
         float dealt = amount * worth(bone, inside);
         if (Giants.fromGiant(src, this)) {
             // another giant's blow (or its blast, or what it threw): by his armour against giants, wherever it lands
-            dealt = amount * HollowbellConfig.V.giantArmor;
+            dealt = amount * HollowbellConfig.V.giantArmor * Giants.fightPace(bellScale(), 1f);
             // a giant made of many parts (every ring of a Furrowmaw) lands one blow on him, not one per part: once
             // per giant per tick, the biggest
             dealt = onceATick(Giants.behind(src), dealt);

@@ -73,6 +73,22 @@ public final class Giants {
         catch (Exception x) { return null; }
     }
 
+    /**
+     * How much harder a blow from another giant lands on a giant of this size, so that two giants of the same size
+     * take about as long to fight it out whatever their size (their health grows with size faster than their blows do).
+     * 1 at size 0.3, which is where the numbers were tuned; about 2 at full size, about half at 0.1.
+     * hpExponent: how this giant's health grows with its size (1 = in step with it, 0.8 for Pitchgut and the Cerberus).
+     */
+    public static float fightPace(float size, float hpExponent) {
+        return (float) (pace(size, hpExponent) / pace(0.3f, hpExponent));
+    }
+
+    private static double pace(float s, float hpExponent) {
+        s = Math.max(0.02f, s);
+        double blow = Math.min(1.5, Math.max(0.25, 0.2 + 0.8 * Math.pow(s, 0.6)));
+        return Math.pow(s, hpExponent) / blow;
+    }
+
     /** a giant, or riding one, or anything that mustn't be picked up or dragged about by a giant */
     public static boolean carriesGiant(@Nullable Entity e) {
         for (int i = 0; i < 4 && e != null; i++) { if (isGiant(e)) return true; e = e.getVehicle(); }
