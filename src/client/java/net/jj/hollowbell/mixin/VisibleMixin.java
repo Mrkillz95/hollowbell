@@ -1,5 +1,7 @@
 package net.jj.hollowbell.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -11,7 +13,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
@@ -31,9 +32,9 @@ public abstract class VisibleMixin {
         for (Entity e : level.entitiesForRendering()) if (e instanceof HollowbellEntity) hollowbell$spots.add(e.blockPosition().asLong());
     }
 
-    @Redirect(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;isSectionCompiled(Lnet/minecraft/core/BlockPos;)Z"), require = 0)
-    private boolean hollowbell$drawAnyway(LevelRenderer self, BlockPos pos) {
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;isSectionCompiled(Lnet/minecraft/core/BlockPos;)Z"), require = 0)
+    private boolean hollowbell$drawAnyway(LevelRenderer self, BlockPos pos, Operation<Boolean> original) {
         if (hollowbell$spots.contains(pos.asLong())) return true;
-        return isSectionCompiled(pos);
+        return original.call(self, pos);
     }
 }

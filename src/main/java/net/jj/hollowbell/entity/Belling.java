@@ -96,7 +96,9 @@ public class Belling extends Monster {
     @Override protected SoundEvent getHurtSound(DamageSource s) { return net.jj.hollowbell.ModSounds.BELLING_HURT; }
     @Override protected SoundEvent getDeathSound() { return net.jj.hollowbell.ModSounds.BELLING_DEATH; }
     @Override public int getAmbientSoundInterval() { return 120; }
-    @Override public boolean removeWhenFarAway(double d) { return true; }
+    // one that hatched off him lives out its own few minutes (life above), even with nobody near; a stray one
+    // (from an egg) goes like any other monster
+    @Override public boolean removeWhenFarAway(double d) { return owner == null; }
 
     @Override
     public boolean hurt(DamageSource src, float amount) {
