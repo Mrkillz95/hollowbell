@@ -1804,18 +1804,194 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "natural_removed")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "natural_removed")
     public void removingHimStartsTheCountToTheNext(GameTestHelper h) {
         clearAll(h);
         var w = net.jj.hollowbell.world.WorldOne.get(h.getLevel().getServer());
         w.clearForTests();
+        // a remove that can't reach him (asleep far off) changes nothing
+        HollowbellEntity far = ModEntities.HOLLOWBELL.create(h.getLevel());
+        far.moveTo(h.absolutePos(BlockPos.ZERO).getX() + 9000, 0, 0);
+        w.adopt(far);
         BlockPos o = h.absolutePos(new BlockPos(1, 2, 1));
-        w.noteSpot(o.getX() + 4000, o.getZ(), true, -1);
         run(h, Vec3.atCenterOf(o), "hollowbell remove");
-        h.assertTrue(!w.aliveNow(), "removed, the world still thinks he is out there");
-        h.assertTrue(w.daysLeft(h.getLevel()) == HollowbellConfig.V.worldRespawnDays, "the next one is due in " + w.daysLeft(h.getLevel()) + " days");
+        h.assertTrue(w.aliveNow() && w.isTheOne(far.getUUID()), "a remove that didn't reach him ended the world's own one");
+        far.discard();
+        // one that does reach him starts the count
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 214);
+        h.runAfterDelay(20, () -> {
+            w.clearForTests();
+            w.adopt(e);
+            run(h, Vec3.atCenterOf(o), "hollowbell remove");
+            h.assertTrue(!w.aliveNow(), "removed, the world still thinks he is out there");
+            h.assertTrue(w.daysLeft(h.getLevel()) == HollowbellConfig.V.worldRespawnDays, "the next one is due in " + w.daysLeft(h.getLevel()) + " days");
+            w.clearForTests();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 80, batch = "natural_adopts_away")
+    public void theSpawnerTakesOnOneAlreadyOutThere(GameTestHelper h) {
+        clearAll(h);
+        var server = h.getLevel().getServer();
+        var w = net.jj.hollowbell.world.WorldOne.get(server);
         w.clearForTests();
-        h.succeed();
+        boolean was = HollowbellConfig.V.oneInTheWorld;
+        int wasMax = HollowbellConfig.V.maxHollowbells;
+        HollowbellConfig.V.oneInTheWorld = true;
+        HollowbellConfig.V.maxHollowbells = 1;
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.HUNTER, 215);
+        h.runAfterDelay(20, () -> {
+            var away = net.jj.hollowbell.world.Away.get(server);
+            java.util.UUID id = e.getUUID();
+            Vec3 at = e.position();
+            h.assertTrue(e.stepAside(), "he should step out of the world");
+            away.get(id).body.remove("BornAt");                    // one from before ages were kept
+            ServerPlayer p = player(h, Vec3.atCenterOf(h.absolutePos(new BlockPos(1, 2, 1))));
+            w.tick(h.getLevel());
+            h.assertTrue(away.count() == 1 && away.get(id) != null, "the one out of the world was forgotten");
+            h.assertTrue(away.get(id).body.getBoolean("WorldOne") && w.isTheOne(id) && w.aliveNow(), "he wasn't taken on as the world's own");
+            int standing = 0;
+            for (var l : server.getAllLevels()) standing += l.getEntities(ModEntities.HOLLOWBELL, x -> !x.isRemoved()).size();
+            h.assertTrue(standing == 0, "the spawner put a new one down anyway (" + standing + ")");
+            // another one dying now (not the world's own) doesn't start the count
+            HollowbellEntity other = spawnAway(h, S, HollowbellEntity.CALM, 216);
+            other.applyDamage(other.damageSources().generic(), other.healthMax() * 100f, -1, false);
+            h.assertTrue(w.aliveNow() && w.isTheOne(id), "another one dying ended the world's own one, out of the world");
+            release(h, other);
+            away.forget(id);
+            drop(p);
+            force(h, (int) at.x, (int) at.z, 4, false);
+            w.clearForTests();
+            HollowbellConfig.V.oneInTheWorld = was;
+            HollowbellConfig.V.maxHollowbells = wasMax;
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "natural_copies")
+    public void anOldCopyOrADyingOneIsNotTheWorldsOwn(GameTestHelper h) {
+        clearAll(h);
+        var server = h.getLevel().getServer();
+        var w = net.jj.hollowbell.world.WorldOne.get(server);
+        w.clearForTests();
+        int wasMax = HollowbellConfig.V.maxHollowbells;
+        HollowbellConfig.V.maxHollowbells = 1;
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 217);
+        h.runAfterDelay(20, () -> {
+            w.adopt(e);
+            // an old copy of him, still marked, loads: it loses the mark, and nobody is pushed out
+            CompoundTag tag = new CompoundTag();
+            e.saveWithoutId(tag);
+            HollowbellEntity copy = ModEntities.HOLLOWBELL.create(h.getLevel());
+            copy.load(tag);
+            copy.setUUID(java.util.UUID.randomUUID());
+            copy.moveTo(e.getX() + 20, e.getY(), e.getZ());
+            h.getLevel().addFreshEntity(copy);
+            net.jj.hollowbell.world.WorldOne.joinedNow(copy, h.getLevel());
+            h.assertTrue(!copy.isWorldOne() && w.isTheOne(e.getUUID()), "the old copy kept the mark");
+            h.assertTrue(!e.isRemoved() && !copy.isRemoved(), "a copy loading pushed somebody out");
+            copy.discard();
+            // seen from the nether he writes nothing down about the overworld
+            HollowbellEntity nether = ModEntities.HOLLOWBELL.create(server.getLevel(net.minecraft.world.level.Level.NETHER));
+            nether.moveTo(e.getX() + 5000, 64, e.getZ() + 5000);
+            BlockPos before = w.where();
+            net.jj.hollowbell.world.WorldOne.get(server).clearForTests();
+            w.noteSpot(before.getX(), before.getZ(), true, -1);
+            w.adopt(nether);
+            h.assertTrue(w.where().getX() == before.getX() && w.where().getZ() == before.getZ(), "nether spot written as the overworld spot: " + w.where());
+            nether.discard();
+            // he dies and is saved mid-fold: loading him again doesn't bring the world's own one back
+            w.clearForTests();
+            w.adopt(e);
+            e.applyDamage(e.damageSources().generic(), e.healthMax() * 100f, -1, false);
+            h.assertTrue(!w.aliveNow(), "his death didn't count");
+            CompoundTag dying = new CompoundTag();
+            e.saveWithoutId(dying);
+            HollowbellEntity back = ModEntities.HOLLOWBELL.create(h.getLevel());
+            back.load(dying);
+            h.assertTrue(!back.isWorldOne(), "saved mid-fold he is still the world's own");
+            net.jj.hollowbell.world.WorldOne.joinedNow(back, h.getLevel());
+            w.seen(e);
+            h.assertTrue(!w.aliveNow(), "reloading him mid-fold brought him back");
+            back.discard();
+            w.clearForTests();
+            HollowbellConfig.V.maxHollowbells = wasMax;
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "upgrade")
+    public void upgradingNeverThrowsAnybodyAway(GameTestHelper h) {
+        clearAll(h);
+        var server = h.getLevel().getServer();
+        // the settings: an old file with no limit gets the new limit of 1; a new file set to 0 keeps 0
+        var old = new HollowbellConfig.Values();
+        old.configVersion = 4; old.maxHollowbells = 0;
+        HollowbellConfig.migrate(old);
+        h.assertTrue(old.maxHollowbells == 1, "an old file's limit became " + old.maxHollowbells);
+        var mine = new HollowbellConfig.Values();
+        mine.configVersion = 5; mine.maxHollowbells = 0;
+        HollowbellConfig.migrate(mine);
+        h.assertTrue(mine.maxHollowbells == 0, "a player's own 0 was changed to " + mine.maxHollowbells);
+        int wasMax = HollowbellConfig.V.maxHollowbells;
+        HollowbellConfig.V.maxHollowbells = 1;
+        HollowbellEntity a = spawnAway(h, S, HollowbellEntity.CALM, 218);
+        HollowbellEntity b = spawnAway(h, S, HollowbellEntity.HUNTER, 219);
+        HollowbellEntity c = spawnAway(h, S, HollowbellEntity.GUARDIAN, 220);
+        h.runAfterDelay(20, () -> {
+            var away = net.jj.hollowbell.world.Away.get(server);
+            h.assertTrue(c.stepAside(), "he should step out of the world");
+            for (var r : away.all()) r.body.remove("BornAt");
+            // three from an older version, all loading back with the limit now at 1
+            java.util.List<HollowbellEntity> back = new java.util.ArrayList<>();
+            for (HollowbellEntity x : new HollowbellEntity[]{a, b}) {
+                CompoundTag tag = new CompoundTag();
+                x.saveWithoutId(tag);
+                tag.remove("BornAt");
+                HollowbellEntity y = ModEntities.HOLLOWBELL.create(h.getLevel());
+                y.load(tag);
+                h.assertTrue(!y.freshSpawn() && y.bornAt() == 0, "an old one reads as fresh, born " + y.bornAt());
+                y.setUUID(java.util.UUID.randomUUID());
+                y.moveTo(x.getX() + 30, x.getY(), x.getZ());
+                h.getLevel().addFreshEntity(y);
+                net.jj.hollowbell.world.WorldOne.joinedNow(y, h.getLevel());
+                back.add(y);
+            }
+            h.assertTrue(back.stream().noneMatch(HollowbellEntity::isRemoved) && !a.isRemoved() && !b.isRemoved(), "an old one loading pushed somebody out");
+            h.assertTrue(away.count() == 1, "the one out of the world was thrown away on upgrade");
+            for (var y : back) y.discard();
+            for (var r : away.all()) away.forget(r.id);
+            HollowbellConfig.V.maxHollowbells = wasMax;
+            release(h, a);
+            release(h, b);
+            force(h, (int) c.getX(), (int) c.getZ(), 4, false);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 80, batch = "cap_egg")
+    public void aSpawnEggMeetsTheLimit(GameTestHelper h) {
+        clearAll(h);
+        int wasMax = HollowbellConfig.V.maxHollowbells;
+        HollowbellConfig.V.maxHollowbells = 1;
+        HollowbellEntity a = spawnAway(h, S, HollowbellEntity.CALM, 221);
+        h.runAfterDelay(20, () -> {
+            BlockPos at = BlockPos.containing(a.getX() + 30, a.getY(), a.getZ());
+            // the real egg path: the egg's tag is merged into a fresh save of him
+            HollowbellEntity egg = ModEntities.HOLLOWBELL.spawn(h.getLevel(), new net.minecraft.world.item.ItemStack(ModItems.SMALL_EGG), null, at,
+                    net.minecraft.world.entity.MobSpawnType.SPAWN_EGG, true, false);
+            h.assertTrue(egg != null, "the egg made nothing");
+            h.assertTrue(egg.freshSpawn(), "an egg one reads as loaded from a save, so it slips past the limit");
+            net.jj.hollowbell.world.WorldOne.joinedNow(egg, h.getLevel());
+            h.assertTrue(a.isRemoved() && !egg.isRemoved(), "the egg one didn't push the older one out");
+            egg.discard();
+            HollowbellConfig.V.maxHollowbells = wasMax;
+            release(h, a);
+            h.succeed();
+        });
     }
 
     // ------------------------------------------------------------------ the cap
@@ -1978,12 +2154,18 @@ public class HollowbellGameTests implements FabricGameTest {
         h.assertTrue(net.jj.hollowbell.item.BellArmorItem.fullSet(p), "four pieces on and it isn't a full set");
         p.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.POISON, 200, 1));
         float hp = p.getHealth();
-        boolean bit = p.hurt(p.damageSources().magic(), 2f);
+        boolean bit = p.hurt(p.damageSources().magic(), 1f);           // poison's own bite: one point a tick
         h.assertTrue(!bit && p.getHealth() == hp, "poison's bite got through the glass");
         h.assertTrue(!p.hasEffect(MobEffects.POISON), "the poison stayed on");
         p.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.POISON, 200, 1));
         net.jj.hollowbell.item.BellArmorItem.abilities(p);
         h.assertTrue(!p.hasEffect(MobEffects.POISON), "the set didn't take the poison off");
+        // other magic still lands: a potion of harming hurts through the glass
+        p.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.POISON, 200, 1));
+        float hp2 = p.getHealth();
+        p.invulnerableTime = 0;
+        h.assertTrue(p.hurt(p.damageSources().magic(), 6f) && p.getHealth() < hp2, "harming didn't hurt through the glass");
+        p.removeEffect(MobEffects.POISON);
         // three pieces is not the set
         p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.item.ItemStack.EMPTY);
         p.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.POISON, 200, 1));
@@ -2101,6 +2283,23 @@ public class HollowbellGameTests implements FabricGameTest {
             release(h, e);
             h.succeed();
         });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "ward_zero")
+    public void wardBlocksZeroIsNoWard(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        int was = HollowbellConfig.V.wardBlocks;
+        BlockPos o = h.absolutePos(new BlockPos(1, 2, 1));
+        w.startWard(l, o, 2000, 0);
+        HollowbellConfig.V.wardBlocks = 100;
+        h.assertTrue(w.warded(l, o.getX() + 10, o.getZ()), "the ward isn't holding");
+        HollowbellConfig.V.wardBlocks = 0;
+        h.assertTrue(!w.warded(l, o.getX() + 10, o.getZ()), "ward blocks 0 still holds him off");
+        HollowbellConfig.V.wardBlocks = was;
+        w.clearForTests();
+        h.succeed();
     }
 
     // ------------------------------------------------------------------ kept to a circle
@@ -2227,6 +2426,80 @@ public class HollowbellGameTests implements FabricGameTest {
                 net.minecraft.core.QuartPos.fromBlock(z)).is(net.jj.hollowbell.world.HomeGround.BELL_HOLLOWS);
     }
 
+    /** the flat test world has villages: the ground tests want a chunk with no building in it */
+    private static net.minecraft.world.level.chunk.LevelChunk plainChunk(GameTestHelper h, BlockPos at) {
+        var ch = h.getLevel().getChunkAt(at);
+        ch.setAllReferences(new java.util.HashMap<>());
+        ch.setInhabitedTime(0);
+        return ch;
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_trees")
+    public void hisGroundTakesTreesButNotCabins(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 222);
+        w.claimHome(l, c.getX(), c.getZ());
+        var chunk = plainChunk(h, c);
+        int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
+        int g = top(h, x0 + 5, z0 + 5);                                  // the ground
+        var LOG = net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState();
+        var PLANK = net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState();
+        var LEAF = net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState();
+        java.util.List<BlockPos> cabin = new java.util.ArrayList<>();
+        // a log cabin: log walls 3 high round a 5x5, a plank roof over it
+        for (int dx = 2; dx <= 6; dx++) for (int dz = 2; dz <= 6; dz++) {
+            boolean wall = dx == 2 || dx == 6 || dz == 2 || dz == 6;
+            if (wall) for (int y = 1; y <= 3; y++) { BlockPos p = new BlockPos(x0 + dx, g + y, z0 + dz); l.setBlock(p, LOG, 2); cabin.add(p); }
+            BlockPos r = new BlockPos(x0 + dx, g + 4, z0 + dz);
+            l.setBlock(r, PLANK, 2);
+            cabin.add(r);
+        }
+        // a tree: a trunk five high, a leaf cap three across on top
+        int tx = x0 + 11, tz = z0 + 11;
+        for (int y = 1; y <= 5; y++) l.setBlock(new BlockPos(tx, g + y, tz), LOG, 2);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) l.setBlock(new BlockPos(tx + dx, g + 6, tz + dz), LEAF, 2);
+        // placed leaves on a post are somebody's: they stay
+        BlockPos post = new BlockPos(x0 + 13, g + 1, z0 + 3);
+        l.setBlock(post, net.minecraft.world.level.block.Blocks.OAK_FENCE.defaultBlockState(), 2);
+        l.setBlock(post.above(), LEAF.setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 2);
+        net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
+        for (BlockPos p : cabin) h.assertTrue(!l.getBlockState(p).isAir(), "the cabin lost a block at " + p);
+        h.assertTrue(l.getBlockState(new BlockPos(x0 + 4, g, z0 + 4)).is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK), "the floor under the cabin roof was turned");
+        for (int y = 1; y <= 6; y++) h.assertTrue(l.getBlockState(new BlockPos(tx, g + y, tz)).isAir(), "the tree is still there at +" + y);
+        h.assertTrue(l.getBlockState(new BlockPos(tx + 1, g + 6, tz)).isAir(), "the tree's leaves are still there");
+        h.assertTrue(net.jj.hollowbell.world.HomeGround.isPalette(l.getBlockState(new BlockPos(tx, top(h, tx, tz), tz))), "the ground under the tree wasn't turned");
+        h.assertTrue(l.getBlockState(post.above()).is(BlockTags_LEAVES()), "placed leaves were cleared");
+        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) for (int y = g + 1; y <= g + 8; y++)
+            l.setBlock(new BlockPos(x0 + dx, y, z0 + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    private static net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> BlockTags_LEAVES() { return net.minecraft.tags.BlockTags.LEAVES; }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_lived")
+    public void groundPeopleLiveOnIsLeftAlone(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 223);
+        w.claimHome(l, c.getX(), c.getZ());
+        var chunk = plainChunk(h, c);
+        chunk.setInhabitedTime(5000);                                   // players have spent a few minutes here
+        int ty = top(h, c.getX(), c.getZ());
+        var was = l.getBlockState(new BlockPos(c.getX(), ty, c.getZ()));
+        net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
+        h.assertTrue(l.getBlockState(new BlockPos(c.getX(), ty, c.getZ())) == was, "a chunk people live in was turned");
+        h.assertTrue(!hollowsAt(h, c.getX(), ty, c.getZ()), "a chunk people live in became the Bell Hollows");
+        h.assertTrue(w.paintedAlready(chunk.getPos().toLong()), "it will be looked at again and again");
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_paint")
     public void hisGroundTurnsAChunk(GameTestHelper h) {
         var l = h.getLevel();
@@ -2235,7 +2508,7 @@ public class HollowbellGameTests implements FabricGameTest {
         BlockPos c = groundSpot(h, 210);
         h.assertTrue(!hollowsAt(h, c.getX(), top(h, c.getX(), c.getZ()), c.getZ()), "the Bell Hollows before anything was claimed");
         w.claimHome(l, c.getX(), c.getZ());
-        var chunk = l.getChunkAt(c);
+        var chunk = plainChunk(h, c);
         net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
         h.assertTrue(w.paintedAlready(chunk.getPos().toLong()), "the chunk isn't noted as done");
         int ours = 0;
@@ -2259,7 +2532,7 @@ public class HollowbellGameTests implements FabricGameTest {
         w.clearForTests();
         BlockPos c = groundSpot(h, 211);
         w.claimHome(l, c.getX(), c.getZ());
-        var chunk = l.getChunkAt(c);
+        var chunk = plainChunk(h, c);
         net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
         BlockPos t = new BlockPos(c.getX(), top(h, c.getX(), c.getZ()), c.getZ());
         l.setBlockAndUpdate(t, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
@@ -2280,7 +2553,7 @@ public class HollowbellGameTests implements FabricGameTest {
         w.claimHome(l, c.getX(), c.getZ());
         BlockPos far = new BlockPos(c.getX(), 0, c.getZ() + 800);
         force(h, far.getX(), far.getZ(), 1, true);
-        var chunk = l.getChunkAt(far);
+        var chunk = plainChunk(h, far);
         java.util.List<net.minecraft.world.level.block.state.BlockState> before = new java.util.ArrayList<>();
         for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
             int x = chunk.getPos().getMinBlockX() + dx, z = chunk.getPos().getMinBlockZ() + dz;
