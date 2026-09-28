@@ -68,6 +68,13 @@ public class WorldOne extends SavedData {
     /** for the tests: the ground let go again, so nothing keeps painting near the arenas */
     public void dropHome() { homeClaimed = false; painted.clear(); setDirty(); }
 
+    /** for the tests: a world that has picked nothing yet, no ground, no ward */
+    public void clearForTests() {
+        placed = false; alive = false; dueAt = -1; x = 0; z = 0;
+        forgetWard();
+        dropHome();
+    }
+
     // ------------------------------------------------------------------ the crown holding him off
     /**
      * His own crown, set down and woken, is the one thing he will not drift towards. While it is going he keeps
