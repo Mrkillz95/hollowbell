@@ -4,6 +4,26 @@ Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
+## What's new in 1.4.0
+
+- **The world keeps one of him.** A new world puts one Hollowbell out on its own, 3,000 to 15,000 blocks from spawn, on open, fairly flat land. He's calm and full size. When he dies, the next one comes down out of the sky 10 days later, somewhere else a long way off. If somebody already put one down with an egg or a command, that one counts as the world's own instead.
+  - `/hollowbell natural on/off` turns it on or off. `/hollowbell natural` on its own says whether it's on, where he is or where the next one comes down, and how many days are left.
+- **His own ground, the Bell Hollows.** Where the world's own one comes down, the land turns into a new biome that is only his. It reaches about 320 blocks out, with a ragged edge. The trees come off, and the ground turns to calcite, end stone, diorite, bone, smooth stone and moss with bits of froglight and lime glass. Here and there are shallow bowls with a froglight glowing at the bottom, and little shards of glass sticking up. The fog is pale green-white, the sky is pale and the grass is mint. Nothing else spawns there. There's only one in a world, so it's the rarest place there is. It changes a chunk at a time as the land loads, so nothing stutters.
+  - `/locate biome` can't find it, because the world doesn't make it, he does. The finder can.
+  - When he dies the old Hollows stay the way they are. The next one comes down somewhere new, and the land there turns.
+- **Finder of Hollowbell.** Craft it from a compass, four glass and an amethyst shard. Use it and it says how far he is and which way. If none of him is out there, it says how many days until the next one comes down and which way to go. It shines while he's within 300 blocks.
+- **One at a time.** The world holds 1 Hollowbell at once now (it was no limit). Summon another and the oldest fades away where he floats, with no loot. `/hollowbell limit <n>` changes it, and 0 means no limit again. Ones that step out of the world count too. A world that already has more keeps them until you summon another or change the limit.
+- **Bell glass armor does things now.** Wear all four pieces and:
+  - poison can't touch you,
+  - when you fall fast you drift down slowly instead, like he lets things down.
+  Each piece says so in gold. The armor has new pictures too: pale green-white glass with copper seams, bone ribs down the chest, and a warm rivet here and there. It's see-through when you wear it, like his dome.
+- **His crown holds him off.** Set his crown down, stand within 16 blocks of it and do `/hollowbell ward on`. For 20 minutes he won't come within 700 blocks of it, won't go after anything inside that circle, and the book can't send him in there. If he's inside when it wakes, he leaves. Then the crown needs 20 minutes to gather itself again. Take the crown up and it stops.
+- **Keep him to one place.** `/hollowbell area <x> <z> <radius>` keeps the nearest one inside that circle. `/hollowbell area off` lets him go. In the book, on the "him" page, type how far (empty means 200) and press **Keep to here**, and he stays that close to where you're standing. **Let him roam** frees him. While he's kept, everywhere he drifts, is sent or wanders to is pulled inside, and if he's outside he drifts back in. If someone he's after is far outside, he lets them go. Riding him still takes him anywhere. It's saved on him, so it lasts, and it holds while he's out of the world too.
+- **`/giants`** changes things for all of JJ's bosses at once (Pitchgut, Furrowmaw, Cerberus, the Hollowbell and the Lantern Willow, whichever you have). See the commands below.
+- Fixed: "the oldest goes" at the limit was really a random one after a save, and a Hollowbell just loading back in with its chunk could push another one out. Now only a newly made one counts, and age is saved.
+- Fixed: the limit only counted the Hollowbells in one world (not the nether or the end).
+- Fixed: stingers from an old save disappeared the moment they loaded.
+
 ## What's new in 1.3.5
 
 - Fights between two of the bosses now take about as long at any size. Before, big ones fought for much longer than small ones (about twice as long at full size as at a third of it).
@@ -89,6 +109,15 @@ A balance round across all five bosses, so they're fair against each other and f
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
+
+- **On his own:** the world puts one out, 3,000 to 15,000 blocks from spawn, in his Bell Hollows. No cheats needed. Make a **Finder of Hollowbell** and it points the way:
+
+```
+GAG
+GCG
+```
+
+(G = glass, A = amethyst shard, C = compass)
 
 - **Spawn eggs** (creative, Spawn Eggs tab): Calm, Hunting, Guardian (full size) and Small (hunting, a fifth of the size). There's a Belling egg too.
 - **Command:** `/hollowbell summon hunting` makes a full-size one in front of you. He comes down out of the sky. Add a size for a smaller or bigger one, like `/hollowbell summon calm 0.3`. Anything from 0.03 to 2 works.
@@ -183,9 +212,9 @@ A very small Hollowbell has no room inside: he squeezes you and drops you instea
 | Drop | What it's for |
 |---|---|
 | Stinger | A whip-like sword, a bit stronger than netherite. What it hits is poisoned and slowed. |
-| Bell Glass | Craft it into bell glass armor (like diamond, with more toughness) and into the book. |
+| Bell Glass | Craft it into bell glass armor (like diamond, with more toughness; the full set keeps poison off and slows a fast fall) and into the book. |
 | Hollowbell Pods | For the book, and a pod in a glass bottle makes a poison potion. |
-| Hollowbell Crown | A glowing trophy block to set down. |
+| Hollowbell Crown | A glowing trophy block to set down. Wake it with `/hollowbell ward on` and it holds him off. |
 | Oxidized copper, bone blocks, verdant froglight | From his body. |
 
 ## The book
@@ -202,7 +231,7 @@ Carry it anywhere on you and the nearest Hollowbell within 600 blocks is yours: 
 
 - **Orders:** come to me, drift where I look, grab what I look at, leave it, hold still / let him drift, ride him / get off, let go of everything, where is he, and boxes to type an X and Z to send him to.
 - **Moves:** every move he has, on three tabs: light, medium and heavy. A line goes grey with a count while that move is cooling down. Heavy moves cost a lot more wind.
-- **Him:** calm / hunting / guardian, forget his grudges, whether he breaks blocks, whether he harvests.
+- **Him:** calm / hunting / guardian, forget his grudges, whether he breaks blocks, whether he harvests, and **Keep to here** / **Let him roam** with a box for how many blocks (200 if you leave it empty).
 - **Safe list:** *Spare who I look at* puts the player you're looking at on your list (or, if it's a creature, every one of that kind). *Spare everyone near me* adds every player within 48 blocks. Each name has a ✕ to take it off. The list only counts while you're holding the book.
 
 At the top it says how far away he is, his health, his mood and what he's doing, with bars for his wind and his grudge. Like the Mountain, every order costs him some wind, and if you push him too hard he starts to resent you: first he takes his time, then he ignores some orders, then he picks his own targets, and in the end he turns on you. Hit him five times while the book keeps him off you and he stops listening to it.
@@ -253,8 +282,37 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell carry` | he comes to you and a strand carries you up his side and over his dome onto his crown (if you're already up there, it carries you back down) |
 | `/hollowbell giants on/off` | whether he picks fights with the other bosses. On its own it says which. |
 | `/hollowbell volume <0-2>` | how loud he is (1 is normal) |
+| `/hollowbell natural [on/off]` | whether the world keeps one of him coming down on his own. On its own it says where he is or where the next one comes down, and how many days are left |
+| `/hollowbell limit [n]` | how many of him the world holds at once (0 = no limit). Summoning past it makes the oldest fade away. On its own it says the limit and how many there are |
+| `/hollowbell ward on` | wakes his crown set down within 16 blocks of you: he's held off for a while |
+| `/hollowbell ward off` | stops it, and lets it be used again straight away |
+| `/hollowbell ward` | says whether a crown is awake, or how long until it can be again |
+| `/hollowbell ward minutes <1-1440>` | how long the crown holds him off |
+| `/hollowbell ward rest <0-1440>` | how many minutes the crown sits dark afterwards |
+| `/hollowbell ward blocks <0-20000>` | how far the crown holds him off |
+| `/hollowbell area <x> <z> <radius>` | keeps the nearest one within that many blocks (32 or more) of that spot. `/hollowbell area off` frees him, `/hollowbell area` says which |
 | `/hollowbell reload` | reads the settings file again |
 | `/hollowbell detail on/off` | on (the default): he's drawn simpler far away so the game runs faster. Off: always full detail. On its own it says which. This one works without cheats and only changes your own game. |
+
+### /giants (all of JJ's bosses at once)
+
+Works the same in every one of JJ's boss mods. You only need one of them for it to work. Each boss you have answers on its own line.
+
+| Command | What it does |
+|---|---|
+| `/giants` | one line from each boss: how many are standing, the limit, and the main settings |
+| `/giants natural [on/off]` | whether each world keeps one of each boss coming on its own |
+| `/giants limit <0-20>` | how many of each the world holds at once (0 means no limit) |
+| `/giants fight [on/off]` | whether they fight each other |
+| `/giants away [on/off]` | whether they step out of the world when nobody is near |
+| `/giants volume <0-2>` | how loud they are (1 is normal) |
+| `/giants shake [on/off]` | whether they shake your screen |
+| `/giants bossbar <blocks>` | how far away their boss bars show (0 works it out from size) |
+| `/giants griefing [on/off]` | whether they break blocks |
+| `/giants where` | where each one is (works without cheats) |
+| `/giants list` | every one standing, with size and health |
+| `/giants kill` | kills them all, with loot |
+| `/giants remove` | removes them all, no loot |
 
 ## Settings
 
@@ -271,7 +329,9 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 - `shedCount`: how many egg clumps he sheds at a time (0 = never)
 - `giantArmor` (0.7): how much of a blow from another boss he takes
 - `fightGiants` (on): whether he picks fights with the other bosses
-- `maxHollowbells`: how many the world holds at once (0 = no limit). Past that, the oldest one goes.
+- `maxHollowbells` (1): how many the world holds at once (0 = no limit). Past that, the oldest one goes.
+- `oneInTheWorld` (on): whether the world keeps one of him coming down on his own. `worldScale` (1.0) is how big that one is, `worldRespawnDays` (10) how many days after he dies the next one comes, and `respawnBlocks` (7000) about how far from where he fell
+- `wardBlocks` (700), `wardSeconds` (1200) and `wardRestSeconds` (1200): how far his woken crown holds him off, for how long, and how long it sits dark afterwards
 - `bookCosts`, `windSeconds`, `freeHits`, `grudgeRate`, `bookRange`: how the book works, the same as the Mountain's
 - `screenShake`, `bossBar`, `soundVolume`, `renderDistance`
 - `bossBarRange`: how far off his boss bars show (0 = worked out from his size, about 550 at full size)
