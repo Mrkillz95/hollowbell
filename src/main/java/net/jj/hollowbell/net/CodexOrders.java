@@ -105,7 +105,7 @@ public final class CodexOrders {
             case CodexPayload.ATTACK_MOVE -> arg > 0 && arg < MOVE_WIND.length ? MOVE_WIND[arg] : 0.10f;
             case CodexPayload.RIDE -> 0.06f;
             case CodexPayload.CALM, CodexPayload.HUNTER, CodexPayload.GUARDIAN -> 0.04f;
-            case CodexPayload.ATTACK_THAT -> 0.03f;
+            case CodexPayload.ATTACK_THAT, CodexPayload.BIND_HERE, CodexPayload.FREE_ROAM -> 0.03f;
             case CodexPayload.COME, CodexPayload.GO_THERE, CodexPayload.GO_TO_XZ -> 0.02f;
             default -> 0f;
         };
@@ -140,6 +140,12 @@ public final class CodexOrders {
     private static final java.util.List<Later> waiting = new java.util.ArrayList<>();
 
     public static void forgetEverything() { waiting.clear(); lastUse.clear(); }
+
+    /** a player has left: nothing of theirs is kept hanging about */
+    public static void forgetPlayer(java.util.UUID who) {
+        lastUse.remove(who);
+        waiting.removeIf(l -> l.who().equals(who));
+    }
 
     public static void serverTick(net.minecraft.server.MinecraftServer server) {
         if (!waiting.isEmpty()) {
@@ -229,6 +235,9 @@ public final class CodexOrders {
             default -> {}
         }
         if (m == null) { awayOrder(p, pay); return; }
+        // a woken crown's circle: the book cannot send him in there
+        Vec3 warded = wardedDest(p, pay);
+        if (warded != null) { say(p, "ward_refused"); return; }
         if (!already && !gate(p, m, pay)) return;
         int mind = m.mood().stage(p.getUUID());
         switch (action) {
@@ -291,8 +300,29 @@ public final class CodexOrders {
                 else say(p, "codex_cannot_ride");
             }
             case CodexPayload.CALL_OFF -> { m.clearHitList(); m.setGoal(null); say(p, "codex_calloff"); }
+            case CodexPayload.BIND_HERE -> {
+                int r = net.minecraft.util.Mth.clamp(pay.arg(), 32, 100000);
+                m.bindTo(p.getX(), p.getZ(), r);
+                say(p, "codex_bound", r);
+            }
+            case CodexPayload.FREE_ROAM -> { m.unbind(); say(p, "codex_roam"); }
             default -> {}
         }
+    }
+
+    /** where this order would send him, if that spot is inside a woken crown's circle; null when it is fine */
+    private static @Nullable Vec3 wardedDest(ServerPlayer p, CodexPayload pay) {
+        Vec3 dest = switch (pay.action()) {
+            case CodexPayload.COME -> p.position();
+            case CodexPayload.GO_TO_XZ -> new Vec3(pay.x(), 0, pay.z());
+            case CodexPayload.GO_THERE -> {
+                HitResult h = looking(p, 320);
+                yield h == null ? null : h.getLocation();
+            }
+            default -> null;
+        };
+        if (dest == null) return null;
+        return net.jj.hollowbell.world.WorldOne.get(p.server).warded(p.level(), dest.x, dest.z) ? dest : null;
     }
 
     /**
@@ -304,6 +334,7 @@ public final class CodexOrders {
         Away a = Away.get(p.server);
         Away.Rec r = a.nearest(sl, p.position());
         if (r == null) { say(p, "codex_none"); return; }
+        if (wardedDest(p, pay) != null) { say(p, "ward_refused"); return; }
         long now = sl.getGameTime();
         switch (pay.action()) {
             case CodexPayload.WHERE -> {

@@ -63,11 +63,11 @@ public class CodexScreen extends Screen {
     private static final long[] used = new long[Moves.NAMES.length];
     static { java.util.Arrays.fill(used, Long.MIN_VALUE / 4); }
 
-    private @Nullable EditBox boxX, boxZ;
+    private @Nullable EditBox boxX, boxZ, boxR;
     private boolean asked;
     private final java.util.List<Button> moveLines = new java.util.ArrayList<>();
     private final java.util.List<Integer> moveIds = new java.util.ArrayList<>();
-    private static String lastX = "", lastZ = "";
+    private static String lastX = "", lastZ = "", lastR = "200";
 
     public CodexScreen() { super(Component.translatable("item.hollowbell.hollowbell_codex")); }
 
@@ -102,6 +102,7 @@ public class CodexScreen extends Screen {
     private void rebuild() {
         if (boxX != null) lastX = boxX.getValue();
         if (boxZ != null) lastZ = boxZ.getValue();
+        if (boxR != null) lastR = boxR.getValue();
         clearWidgets();
         init();
     }
@@ -233,6 +234,22 @@ public class CodexScreen extends Screen {
         boolean grief = HollowbellConfig.V.griefing, harvest = HollowbellConfig.V.harvest;
         addRenderableWidget(line(0, 2, grief ? "break_stop" : "break_start", new CodexPayload(CodexPayload.BREAK_BLOCKS, grief ? 0 : 1)));
         addRenderableWidget(line(1, 2, harvest ? "harvest_stop" : "harvest_start", new CodexPayload(CodexPayload.HARVEST, harvest ? 0 : 1)));
+        // keep him to a circle round where you stand: how many blocks, then the two buttons
+        int y = top() + 3 * (H + GAP) + 4;
+        boxR = new EditBox(this.font, left(), y, 56, H, Component.literal("R"));
+        boxR.setHint(Component.literal("200"));
+        boxR.setValue(lastR);
+        boxR.setFilter(s -> s.isEmpty() || s.matches("\\d{0,6}"));
+        addRenderableWidget(boxR);
+        Button keep = Button.builder(Component.translatable("codex.hollowbell.keep_here"), b -> {
+            int r = 200;
+            try { if (boxR != null && !boxR.getValue().isEmpty()) r = Integer.parseInt(boxR.getValue()); } catch (NumberFormatException ignored) {}
+            if (boxR != null) lastR = boxR.getValue();
+            send(new CodexPayload(CodexPayload.BIND_HERE, Math.max(32, Math.min(100000, r))));
+        }).bounds(left() + 56 + GAP, y, W - 56 - GAP, H).build();
+        keep.setTooltip(Tooltip.create(Component.translatable("codex.hollowbell.keep_here_tip")));
+        addRenderableWidget(keep);
+        addRenderableWidget(line(1, 3, "let_roam", new CodexPayload(CodexPayload.FREE_ROAM)));
     }
 
     private void safePage() {

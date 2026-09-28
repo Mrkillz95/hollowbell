@@ -1,6 +1,8 @@
 package net.jj.hollowbell;
 
+import net.jj.hollowbell.item.BellArmorItem;
 import net.jj.hollowbell.item.CodexItem;
+import net.jj.hollowbell.item.FinderItem;
 import net.jj.hollowbell.item.StingerItem;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -36,8 +38,10 @@ public final class ModItems {
             new Item.Properties().rarity(Rarity.EPIC).fireResistant().attributes(SwordItem.createAttributes(Tiers.NETHERITE, 4, -2.2f))));
     public static final Item CODEX = reg("hollowbell_codex", new CodexItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
     public static final Item CROWN = reg("hollowbell_crown", new BlockItem(ModBlocks.CROWN, new Item.Properties().rarity(Rarity.EPIC)));
+    /** "Finder of the Hollowbell": says how far he is and which way, or when the next one comes down */
+    public static final Item FINDER = reg("hollowbell_finder", new FinderItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
-    /** bell glass armor: as tough as diamond, light, and it doesn't care for poison (see HollowbellMod) */
+    /** bell glass armor: as tough as diamond and light; the full set keeps poison off and slows a fast fall (see BellArmorItem) */
     public static final Holder<ArmorMaterial> BELL_GLASS_ARMOR = Registry.registerForHolder(BuiltInRegistries.ARMOR_MATERIAL,
             ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "bell_glass"),
             new ArmorMaterial(Map.of(ArmorItem.Type.BOOTS, 3, ArmorItem.Type.LEGGINGS, 6, ArmorItem.Type.CHESTPLATE, 8,
@@ -51,7 +55,7 @@ public final class ModItems {
     public static final Item BELL_BOOTS = armour("bell_glass_boots", ArmorItem.Type.BOOTS);
 
     private static Item armour(String name, ArmorItem.Type type) {
-        return reg(name, new ArmorItem(BELL_GLASS_ARMOR, type, new Item.Properties().durability(type.getDurability(35))));
+        return reg(name, new BellArmorItem(BELL_GLASS_ARMOR, type, new Item.Properties().durability(type.getDurability(35))));
     }
 
     private static Item reg(String name, Item item) {

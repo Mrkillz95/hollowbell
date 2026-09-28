@@ -12,6 +12,7 @@ import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.world.Away;
+import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -109,6 +110,46 @@ public final class HollowbellCommand {
                     c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_carry"), false);
                     return 1;
                 }))
+                .then(Commands.literal("natural").requires(OP).executes(HollowbellCommand::naturalSay)
+                        .then(Commands.literal("on").executes(c -> setNatural(c, true)))
+                        .then(Commands.literal("off").executes(c -> setNatural(c, false))))
+                .then(Commands.literal("limit").requires(OP).executes(HollowbellCommand::limitSay)
+                        .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20)).executes(HollowbellCommand::setLimit)))
+                .then(Commands.literal("ward").requires(OP).executes(HollowbellCommand::wardSay)
+                        .then(Commands.literal("on").executes(HollowbellCommand::wardOn))
+                        .then(Commands.literal("off").executes(c -> {
+                            WorldOne.get(c.getSource().getServer()).forgetWard();
+                            c.getSource().sendSuccess(() -> Component.literal("The crown is quiet. He can come back."), true);
+                            return 1;
+                        }))
+                        .then(Commands.literal("minutes").then(Commands.argument("minutes", IntegerArgumentType.integer(1, 1440)).executes(c -> {
+                            int v = IntegerArgumentType.getInteger(c, "minutes");
+                            HollowbellConfig.V.wardSeconds = v * 60;
+                            HollowbellConfig.save();
+                            c.getSource().sendSuccess(() -> Component.literal("His crown holds him off for " + v + " minutes once it is woken."), true);
+                            return 1;
+                        })))
+                        .then(Commands.literal("rest").then(Commands.argument("minutes", IntegerArgumentType.integer(0, 1440)).executes(c -> {
+                            int v = IntegerArgumentType.getInteger(c, "minutes");
+                            HollowbellConfig.V.wardRestSeconds = v * 60;
+                            HollowbellConfig.save();
+                            c.getSource().sendSuccess(() -> Component.literal(v == 0
+                                    ? "The crown is ready again the moment it stops."
+                                    : "The crown sits dark for " + v + " minutes afterwards."), true);
+                            return 1;
+                        })))
+                        .then(Commands.literal("blocks").then(Commands.argument("blocks", IntegerArgumentType.integer(0, 20000)).executes(c -> {
+                            int v = IntegerArgumentType.getInteger(c, "blocks");
+                            HollowbellConfig.V.wardBlocks = v;
+                            HollowbellConfig.save();
+                            c.getSource().sendSuccess(() -> Component.literal(v == 0
+                                    ? "His crown holds him off nowhere now." : "His crown holds him off " + v + " blocks."), true);
+                            return 1;
+                        }))))
+                .then(Commands.literal("area").requires(OP).executes(HollowbellCommand::areaSay)
+                        .then(Commands.literal("off").executes(HollowbellCommand::areaFree))
+                        .then(Commands.argument("x", FloatArgumentType.floatArg()).then(Commands.argument("z", FloatArgumentType.floatArg())
+                                .then(Commands.argument("radius", IntegerArgumentType.integer(32, 100000)).executes(HollowbellCommand::areaBind)))))
                 .then(Commands.literal("giants").requires(OP)
                         .executes(c -> { c.getSource().sendSuccess(() -> Component.translatable(HollowbellConfig.V.fightGiants ? "command.hollowbell.giants_is_on" : "command.hollowbell.giants_is_off"), false); return 1; })
                         .then(Commands.literal("on").executes(c -> set(c, () -> HollowbellConfig.V.fightGiants = true, "fightGiants", true)))
@@ -272,16 +313,120 @@ public final class HollowbellCommand {
                 .min(Comparator.comparingDouble(e -> e.distanceToSqr(p))).orElse(null);
     }
 
-    /** the world only holds so many: the oldest go */
-    public static void keepToTheLimit(HollowbellEntity h, ServerLevel l) {
+    // ------------------------------------------------------------------ the new world commands
+
+    /** /hollowbell natural: does the world keep one of him out there, and where things stand */
+    private static int naturalSay(CommandContext<CommandSourceStack> c) {
+        ServerLevel over = c.getSource().getServer().overworld();
+        WorldOne w = WorldOne.get(c.getSource().getServer());
+        String msg;
+        if (!HollowbellConfig.V.oneInTheWorld) msg = "He doesn't rise on his own. /hollowbell natural on and the world keeps one.";
+        else if (w.aliveNow() && w.where() != null)
+            msg = "The world keeps one of him. He's out there near " + w.where().getX() + ", " + w.where().getZ() + ".";
+        else if (w.where() != null) {
+            int days = w.daysLeft(over);
+            msg = days > 0 ? "The world keeps one of him. The next comes down in the Bell Hollows near " + w.where().getX() + ", " + w.where().getZ()
+                    + " in about " + days + (days == 1 ? " day." : " days.")
+                    : "The world keeps one of him. The next comes down in the Bell Hollows near " + w.where().getX() + ", " + w.where().getZ() + " any moment now.";
+        } else msg = "The world keeps one of him. It's still picking his spot.";
+        final String out = msg;
+        c.getSource().sendSuccess(() -> Component.literal(out), false);
+        return 1;
+    }
+
+    private static int setNatural(CommandContext<CommandSourceStack> c, boolean on) {
+        HollowbellConfig.V.oneInTheWorld = on;
+        HollowbellConfig.save();
+        c.getSource().sendSuccess(() -> Component.literal(on
+                ? "The world keeps one of him from here on. He'll rise on pale ground of his own, the Bell Hollows, somewhere far off."
+                : "He only comes when summoned now. One already out there stays."), true);
+        return 1;
+    }
+
+    /** everyone standing, in the world and out of it */
+    private static int countAll(CommandSourceStack src) {
+        return allOf(src).size() + Away.get(src.getServer()).count();
+    }
+
+    private static int limitSay(CommandContext<CommandSourceStack> c) {
         int max = HollowbellConfig.V.maxHollowbells;
-        if (max <= 0 || h.tickCount > 0) return;
-        List<HollowbellEntity> all = new ArrayList<>(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && e != h));
-        all.sort(Comparator.comparingLong(HollowbellEntity::bornAt));
-        // the ones out of the world count too, and go first
-        Away a = Away.get(l.getServer());
-        List<Away.Rec> out = a.all();
-        while (all.size() + out.size() >= max && !out.isEmpty()) a.forget(out.remove(0).id);
-        while (all.size() >= max) all.remove(0).discard();
+        int now = countAll(c.getSource());
+        c.getSource().sendSuccess(() -> Component.literal(max <= 0
+                ? "There is no limit on how many of him there can be. " + now + " standing."
+                : "The world holds " + max + " of him at once. " + now + " standing. Summon another past that and the oldest makes way."), false);
+        return 1;
+    }
+
+    private static int setLimit(CommandContext<CommandSourceStack> c) {
+        int v = IntegerArgumentType.getInteger(c, "how many");
+        HollowbellConfig.V.maxHollowbells = v;
+        HollowbellConfig.save();
+        c.getSource().sendSuccess(() -> Component.literal(v == 0
+                ? "As many of him as you like now. Nothing is turned away and nothing is pushed out."
+                : "The world holds " + v + " of him at once now. Summon another past that and the oldest makes way."), true);
+        if (v > 0) WorldOne.limitNow(null, c.getSource().getServer().overworld());
+        return 1;
+    }
+
+    private static int wardSay(CommandContext<CommandSourceStack> c) {
+        ServerLevel over = c.getSource().getServer().overworld();
+        WorldOne w = WorldOne.get(c.getSource().getServer());
+        var at = w.wardSpot();
+        String msg;
+        if (w.warding(over) && at != null)
+            msg = "His crown is awake at " + at.getX() + ", " + at.getZ() + ". He is held off "
+                    + (int) WorldOne.wardRange() + " blocks for another " + (w.wardLeft(over) / 20) + " seconds.";
+        else if (w.wardRestLeft(over) > 0)
+            msg = "The crown is dark. It gathers itself for another " + (w.wardRestLeft(over) / 20) + " seconds.";
+        else msg = "No crown is awake. Set one down, stand by it and /hollowbell ward on: he is held off "
+                    + (int) WorldOne.wardRange() + " blocks for " + Math.max(1, HollowbellConfig.V.wardSeconds / 60)
+                    + " minutes, then it sits dark for " + Math.max(0, HollowbellConfig.V.wardRestSeconds / 60) + ".";
+        final String out = msg;
+        c.getSource().sendSuccess(() -> Component.literal(out), false);
+        return 1;
+    }
+
+    private static int wardOn(CommandContext<CommandSourceStack> c) {
+        ServerLevel lvl = c.getSource().getLevel();
+        net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(c.getSource().getPosition());
+        net.minecraft.core.BlockPos crown = null;
+        for (net.minecraft.core.BlockPos p : net.minecraft.core.BlockPos.betweenClosed(at.offset(-16, -8, -16), at.offset(16, 8, 16)))
+            if (lvl.getBlockState(p).is(net.jj.hollowbell.ModBlocks.CROWN)) { crown = p.immutable(); break; }
+        if (crown == null) { c.getSource().sendFailure(Component.literal("No crown set down within 16 blocks of you.")); return 0; }
+        WorldOne w = WorldOne.get(c.getSource().getServer());
+        w.startWard(lvl, crown, Math.max(20, HollowbellConfig.V.wardSeconds * 20), Math.max(0, HollowbellConfig.V.wardRestSeconds * 20));
+        for (HollowbellEntity e : lvl.getEntities(ModEntities.HOLLOWBELL, x -> !x.isRemoved()))
+            if (e.warded(e.getX(), e.getZ())) e.pushedBackByWard();
+        final int bx = crown.getX(), bz = crown.getZ();
+        c.getSource().sendSuccess(() -> Component.literal("The crown wakes at " + bx + ", " + bz
+                + ". He is held off " + (int) WorldOne.wardRange() + " blocks."), true);
+        return 1;
+    }
+
+    private static int areaSay(CommandContext<CommandSourceStack> c) {
+        HollowbellEntity h = nearest(c.getSource());
+        if (h == null) return none(c);
+        c.getSource().sendSuccess(() -> Component.literal(h.bound()
+                ? "He keeps within " + h.boundRadius() + " blocks of " + (int) h.boundCentre().x + ", " + (int) h.boundCentre().z + "."
+                : "He roams free."), false);
+        return 1;
+    }
+
+    private static int areaBind(CommandContext<CommandSourceStack> c) {
+        HollowbellEntity h = nearest(c.getSource());
+        if (h == null) return none(c);
+        double x = FloatArgumentType.getFloat(c, "x"), z = FloatArgumentType.getFloat(c, "z");
+        int r = IntegerArgumentType.getInteger(c, "radius");
+        h.bindTo(x, z, r);
+        c.getSource().sendSuccess(() -> Component.literal("He keeps within " + r + " blocks of " + (int) x + ", " + (int) z + " now."), true);
+        return 1;
+    }
+
+    private static int areaFree(CommandContext<CommandSourceStack> c) {
+        HollowbellEntity h = nearest(c.getSource());
+        if (h == null) return none(c);
+        h.unbind();
+        c.getSource().sendSuccess(() -> Component.literal("He roams free again."), true);
+        return 1;
     }
 }
