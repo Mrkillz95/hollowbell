@@ -132,45 +132,75 @@ public final class HomeGround {
         if (lived(chunk) || built(chunk)) return;
         BellPlan p = plan(level, w);
         if (!p.near(chunk.getPos().x, chunk.getPos().z)) return;
+        Survey sv = survey(level, p, chunk, true, wasOld ? w.homeSeed() : null);
+        if (!sv.any) return;
+        BellPlan.Out o = new BellPlan.Out();
+        p.chunk(chunk.getPos().x, chunk.getPos().z, sv.y0, sv.ok, sv.wet, sv.lowest, o);
         int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
-        int[] y0 = new int[256], lowest = new int[256];
-        boolean[] ok = new boolean[256], wet = new boolean[256];
-        boolean any = false;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        List<BlockPos> water = new ArrayList<>();
+        for (int i = 0; i < 256; i++) {
+            if (!o.paint[i]) continue;
+            int wx = x0 + (i & 15), wz = z0 + (i >> 4);
+            if (sv.wet[i]) { paintBed(level, p, wx, wz, sv.y0[i], m); continue; }
+            shape(level, o, i, wx, wz, sv.y0[i], m, water);
+        }
+        keepWaterIn(level, water, x0, z0, m);
+        fillBiome(level, p, chunk);
+        if (WorldOne.IN_TESTS) { lastOut = o; lastY0 = sv.y0; }
+    }
+
+    /** for the tests: what the last chunk turned was asked to become, and where its ground was before */
+    public static BellPlan.Out lastOut;
+    public static int[] lastY0;
+
+    /** a chunk's columns as they stand: where the ground is, whether it may be turned, water, how deep it may be cut */
+    private static final class Survey {
+        final int[] y0 = new int[256], lowest = new int[256];
+        final boolean[] ok = new boolean[256], wet = new boolean[256];
+        boolean any;
+    }
+
+    private static Survey survey(ServerLevel level, BellPlan p, LevelChunk chunk, boolean clear, Long oldSeed) {
+        Survey sv = new Survey();
+        int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int i = 0; i < 256; i++) {
             int wx = x0 + (i & 15), wz = z0 + (i >> 4);
             if (!p.painted(wx, wz)) continue;
-            any = true;
-            clearAbove(level, wx, wz);
-            if (wasOld) stripOldShard(level, w, wx, wz, m);
+            sv.any = true;
+            if (clear) {
+                clearAbove(level, wx, wz);
+                if (oldSeed != null) stripOldShard(level, oldSeed, wx, wz, m);
+            }
             int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
-            y0[i] = top;
+            sv.y0[i] = top;
+            sv.lowest[i] = top;
             if (top <= level.getMinBuildHeight() + 2) continue;
             BlockState s = level.getBlockState(m.set(wx, top, wz));
-            wet[i] = !s.getFluidState().isEmpty();
-            ok[i] = plainGround(level, wx, wz, top, m);
-            if (!ok[i] || wet[i]) { lowest[i] = top; continue; }
+            sv.wet[i] = !s.getFluidState().isEmpty();
+            sv.ok[i] = plainGround(level, wx, wz, top, m);
+            if (!sv.ok[i] || sv.wet[i] || !(natural(s) || isPalette(s))) continue;
+            // cut no deeper than the plain ground goes: the new top is itself plain ground, never air or a cave
             int low = top;
             for (int y = top - 1; y >= top - BellPlan.MAX_DOWN - 1 && y > level.getMinBuildHeight() + 1; y--) {
                 BlockState b = level.getBlockState(m.set(wx, y, wz));
                 if (!(natural(b) || isPalette(b))) break;
                 low = y;
             }
-            // cut no deeper than the plain ground goes: the new top is itself plain ground, never air or a cave
-            lowest[i] = natural(s) || isPalette(s) ? low : top;
+            sv.lowest[i] = low;
         }
-        if (!any) return;
+        return sv;
+    }
+
+    /** for the tests: what this chunk would become, worked out without changing anything */
+    public static BellPlan.Out preview(ServerLevel level, WorldOne w, LevelChunk chunk, int[] y0Out) {
+        BellPlan p = plan(level, w);
+        Survey sv = survey(level, p, chunk, false, null);
         BellPlan.Out o = new BellPlan.Out();
-        p.chunk(chunk.getPos().x, chunk.getPos().z, y0, ok, wet, lowest, o);
-        List<BlockPos> water = new ArrayList<>();
-        for (int i = 0; i < 256; i++) {
-            if (!o.paint[i]) continue;
-            int wx = x0 + (i & 15), wz = z0 + (i >> 4);
-            if (wet[i]) { paintBed(level, p, wx, wz, y0[i], m); continue; }
-            shape(level, o, i, wx, wz, y0[i], m, water);
-        }
-        keepWaterIn(level, water, x0, z0, m);
-        fillBiome(level, p, chunk);
+        p.chunk(chunk.getPos().x, chunk.getPos().z, sv.y0, sv.ok, sv.wet, sv.lowest, o);
+        if (y0Out != null) System.arraycopy(sv.y0, 0, y0Out, 0, 256);
+        return o;
     }
 
     /** a column with only plain ground in its top few blocks (no planks, path, chest or crop): it can be turned */
@@ -186,8 +216,8 @@ public final class HomeGround {
     }
 
     /** the first Hollows' little glass shards stood on the ground: they go before the ground is turned again */
-    private static void stripOldShard(ServerLevel level, WorldOne w, int wx, int wz, BlockPos.MutableBlockPos m) {
-        long h = BellPlan.hash(w.homeSeed(), wx, wz, 29);
+    private static void stripOldShard(ServerLevel level, long seed, int wx, int wz, BlockPos.MutableBlockPos m) {
+        long h = BellPlan.hash(seed, wx, wz, 29);
         if (Math.floorMod(h, 400) == 0 || Math.floorMod(h, 200) != 1) return;
         int n = 1 + (int) Math.floorMod(h >> 8, 3);
         int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;

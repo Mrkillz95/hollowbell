@@ -6,6 +6,7 @@
   "mixins": [
     "ChunkMapAccess",
     "LogOffMixin",
+    "TrackedEntityAccess",
     "TrackingMixin"
   ],
   "injectors": {

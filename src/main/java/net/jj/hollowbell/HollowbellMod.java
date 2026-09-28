@@ -53,6 +53,7 @@ public class HollowbellMod implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.DetailPayload.TYPE, net.jj.hollowbell.net.DetailPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BeingHimPayload.TYPE, BeingHimPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ThumpPayload.TYPE, ThumpPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.FarSightPayload.TYPE, net.jj.hollowbell.net.FarSightPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(CodexPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> CodexOrders.handle(ctx.player(), pay)));
         ServerPlayNetworking.registerGlobalReceiver(SafeDropPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> CodexOrders.dropFromSafeList(ctx.player(), pay.id())));
@@ -92,6 +93,7 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(CodexOrders::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Away::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.WorldOne::serverTick);
+        ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarSight::serverTick);
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
             if (!(entity instanceof HollowbellEntity h)) return;

@@ -58,7 +58,37 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     @Override
     public boolean shouldRender(HollowbellEntity e, Frustum frustum, double x, double y, double z) {
         this.frustum = frustum;
-        return e.shouldRenderAtSqrDistance(e.distanceToSqr(x, y, z)) && frustum.isVisible(e.getBoundingBoxForCulling());
+        if (!e.shouldRenderAtSqrDistance(e.distanceToSqr(x, y, z))) return false;
+        double k = shrink(Math.sqrt(e.distanceToSqr(x, y, z)));
+        return frustum.isVisible(k < 1 ? shrunk(e.getBoundingBoxForCulling(), x, y, z, k) : e.getBoundingBoxForCulling());
+    }
+
+    // ------------------------------------------------------------------ far off
+
+    /**
+     * The game draws nothing past a far limit (four times your render distance). Past most of that he is drawn
+     * smaller and nearer by the same amount, which looks exactly the same from where you stand, so he's never cut
+     * off before far sight reaches.
+     */
+    public static double shrink(double dist) {
+        double safe = Math.max(64, Minecraft.getInstance().gameRenderer.getDepthFar() * 0.8);
+        return dist > safe ? safe / dist : 1;
+    }
+
+    /** a box pulled toward the camera by k, as the shrinking draws it */
+    public static net.minecraft.world.phys.AABB shrunk(net.minecraft.world.phys.AABB b, double cx, double cy, double cz, double k) {
+        return new net.minecraft.world.phys.AABB(cx + (b.minX - cx) * k, cy + (b.minY - cy) * k, cz + (b.minZ - cz) * k,
+                cx + (b.maxX - cx) * k, cy + (b.maxY - cy) * k, cz + (b.maxZ - cz) * k);
+    }
+
+    /** while a stand-in is drawn: how faded in it is (1 = fully), or -1 for the real one */
+    private static float ghostFade = -1;
+
+    /** draws a far-off stand-in (see FarSightClient), faded by fog as it comes and goes */
+    public void renderGhost(HollowbellEntity e, PoseStack ps, float partial, float fade, MultiBufferSource buffers) {
+        ghostFade = Mth.clamp(fade, 0f, 1f);
+        try { render(e, e.getYRot(), partial, ps, buffers, LightTexture.FULL_BRIGHT); }
+        finally { ghostFade = -1; }
     }
 
     @Override
@@ -69,7 +99,14 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         e.fillState(partial);
         rig.computePose(e.state, draw);
         float s = e.bellScale();
-        Matrix4f entity = new Matrix4f(ps.last().pose()).rotateY(-e.getYRot() * Mth.DEG_TO_RAD).scale(s);
+        Minecraft mc0 = Minecraft.getInstance();
+        var cam0 = mc0.gameRenderer.getMainCamera().getPosition();
+        double dist = Math.sqrt(e.distanceToSqr(cam0.x, cam0.y, cam0.z));
+        float k = (float) shrink(dist);
+        // shrunk toward the camera past the far limit; the pose stack is relative to the camera, so this is a plain scale
+        Matrix4f entity = new Matrix4f().scaling(k).mul(ps.last().pose()).rotateY(-e.getYRot() * Mth.DEG_TO_RAD).scale(s);
+        boolean ghost = ghostFade >= 0;
+        Frustum fr = ghost || k < 1 ? null : frustum;
         Matrix4f view = new Matrix4f(RenderSystem.getModelViewMatrix());
         Matrix4f proj = new Matrix4f(RenderSystem.getProjectionMatrix());
         Minecraft mc = Minecraft.getInstance();
@@ -92,10 +129,10 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         float dying = e.isDeadOrDying() ? Mth.clamp((e.deathTime + partial) / 200f, 0f, 1f) : 0f;
         lit *= 1f - 0.35f * dying;
 
-        // far away, fewer, bigger blocks
-        var cam = mc.gameRenderer.getMainCamera().getPosition();
-        double dist = Math.sqrt(e.distanceToSqr(cam.x, cam.y, cam.z));
-        int lod = switch (net.jj.hollowbell.Detail.lod(dist, s)) {
+        // far away, fewer, bigger blocks (a far-off stand-in always the simple one)
+        int far = net.jj.hollowbell.Detail.lod(dist, s);
+        if (ghost) far = Math.max(far, net.jj.hollowbell.Detail.FAR);
+        int lod = switch (far) {
             case net.jj.hollowbell.Detail.TINY -> BellMeshes.TINY;
             case net.jj.hollowbell.Detail.FAR -> BellMeshes.FAR;
             default -> BellMeshes.FULL;
@@ -107,7 +144,17 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         if (shader == null) { rt.clearRenderState(); return; }
         float wantFog = Math.min(HollowbellConfig.V.renderDistance * 1.2f, 420f * Math.max(0.2f, s) + 220f);
         float fogStart0 = RenderSystem.getShaderFogStart(), fogEnd0 = RenderSystem.getShaderFogEnd();
-        float fs = Math.max(fogStart0, wantFog * 0.85f), fe = Math.max(fogEnd0, wantFog);
+        // far sight: he stays in the fog as a pale shape out to farSightBlocks and a bit past it, never gone before
+        float farSight = Math.max(0, Math.min(4096, HollowbellConfig.V.farSightBlocks));
+        float fe = Math.max(fogEnd0, Math.max(wantFog, farSight * 1.25f));
+        float fs = Math.max(fogStart0, Math.min(wantFog * 0.85f, fe * 0.45f));
+        // drawn shrunk, the fog is measured the same shrunk way; a stand-in coming or going fades into the fog
+        fs *= k; fe *= k;
+        if (ghost) {
+            float dk = (float) dist * k;
+            fs = Mth.lerp(ghostFade, dk * 0.5f, fs);
+            fe = Mth.lerp(ghostFade, dk * 0.6f, fe);
+        }
         RenderSystem.setShaderFogStart(fs);
         RenderSystem.setShaderFogEnd(fe);
         shader.setDefaultUniforms(VertexFormat.Mode.QUADS, view, proj, mc.getWindow());
@@ -121,11 +168,11 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         for (int b = 0; b < shown.length; b++) {
             shown[b] = rig.shown(e.state, b);
             float[] bb = model.bounds[b];
-            if (!shown[b] || bb == null || frustum == null) continue;
+            if (!shown[b] || bb == null || fr == null) continue;
             boneAbs.set(abs).mul(draw[b]);
             boneAbs.transformPosition(cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f));
             float r = 0.5f * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0]) + (bb[4] - bb[1]) * (bb[4] - bb[1]) + (bb[5] - bb[2]) * (bb[5] - bb[2])) * s * 1.35f + 1f;
-            if (!frustum.isVisible(new net.minecraft.world.phys.AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r))) shown[b] = false;
+            if (!fr.isVisible(new net.minecraft.world.phys.AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r))) shown[b] = false;
         }
         Matrix4f mv = new Matrix4f(), boneWorld = new Matrix4f();
         Matrix3f rot = new Matrix3f();
