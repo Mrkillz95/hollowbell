@@ -55,16 +55,23 @@ public class BellArmorItem extends ArmorItem {
     }
 
     private static void tick(MinecraftServer server) {
-        if (server.getTickCount() % 10 != 0) return;
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) abilities(p);
+        boolean slow = server.getTickCount() % 10 == 0;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            // the fall is checked every tick (a fall is quick); the rest every half second
+            if (p.fallDistance > 3f || slow) abilities(p);
+        }
     }
 
     /** one pass of the set's gifts (the tests call this straight) */
     public static void abilities(ServerPlayer p) {
         if (p.isSpectator() || !fullSet(p)) return;
         if (p.hasEffect(MobEffects.POISON)) p.removeEffect(MobEffects.POISON);
-        boolean fallingFast = p.fallDistance > 5f || p.getDeltaMovement().y < -0.9;
-        if (fallingFast && !p.isFallFlying() && !p.hasEffect(MobEffects.SLOW_FALLING))
-            p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 70, 0, true, false));
+        // falling fast (more than three blocks, not gliding): he lets you down the way he lets things down
+        if (p.fallDistance > 3f && !p.isFallFlying() && !p.getAbilities().flying && !p.isInWater()) {
+            MobEffectInstance now = p.getEffect(MobEffects.SLOW_FALLING);
+            if (now == null || now.getDuration() < 40)
+                p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 70, 0, true, false, true));
+            p.resetFallDistance();
+        }
     }
 }
