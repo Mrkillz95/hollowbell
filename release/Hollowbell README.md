@@ -1,4 +1,4 @@
-# Hollowbell (Java mod) — version 1.3.5
+# Hollowbell (Java mod) — version 1.4.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
@@ -25,6 +25,8 @@ He's made from your build block for block. Every block wears its real texture, a
 - Fixed: "the oldest goes" at the limit was really a random one after a save, and a Hollowbell just loading back in with its chunk could push another one out. Now only a newly made one counts, and age is saved.
 - Fixed: the limit only counted the Hollowbells in one world (not the nether or the end).
 - Fixed: stingers from an old save disappeared the moment they loaded.
+- Fixed: with Pitchgut or the Lantern Willow installed too, he could vanish when you stepped back from him. Now he stays in sight like before.
+- Fixed: bellings that hatched off him vanished at once if every player was more than 128 blocks from them. Now they live out their few minutes.
 - If the settings file can't be read, it's kept as `hollowbell.json.bad` instead of being lost.
 
 ## What's new in 1.3.5
@@ -108,7 +110,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.3.5.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.4.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
