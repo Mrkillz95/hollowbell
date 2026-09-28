@@ -394,6 +394,18 @@ public final class HollowbellCommand {
             if (lvl.getBlockState(p).is(net.jj.hollowbell.ModBlocks.CROWN)) { crown = p.immutable(); break; }
         if (crown == null) { c.getSource().sendFailure(Component.literal("No crown set down within 16 blocks of you.")); return 0; }
         WorldOne w = WorldOne.get(c.getSource().getServer());
+        ServerLevel over = c.getSource().getServer().overworld();
+        if (w.warding(over)) {
+            var at = w.wardSpot();
+            c.getSource().sendFailure(Component.literal("A crown is already awake at " + at.getX() + ", " + at.getZ() + ", for another "
+                    + (w.wardLeft(over) / 20) + " seconds. /hollowbell ward off stops it."));
+            return 0;
+        }
+        if (w.wardRestLeft(over) > 0) {
+            c.getSource().sendFailure(Component.literal("The crown is dark. It gathers itself for another " + (w.wardRestLeft(over) / 20)
+                    + " seconds. /hollowbell ward off lets it off."));
+            return 0;
+        }
         w.startWard(lvl, crown, Math.max(20, HollowbellConfig.V.wardSeconds * 20), Math.max(0, HollowbellConfig.V.wardRestSeconds * 20));
         for (HollowbellEntity e : lvl.getEntities(ModEntities.HOLLOWBELL, x -> !x.isRemoved()))
             if (e.warded(e.getX(), e.getZ())) e.pushedBackByWard();

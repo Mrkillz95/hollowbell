@@ -357,6 +357,15 @@ public final class CodexOrders {
             }
             case CodexPayload.STAY -> { a.stay(sl, r.id, !r.stay); say(p, r.stay ? "codex_stay" : "codex_free"); }
             case CodexPayload.CALL_OFF -> { a.stay(sl, r.id, false); r.going = false; a.setDirty(); say(p, "codex_calloff"); }
+            // his circle is written on the body he carries, so it holds out there and when he comes back
+            case CodexPayload.BIND_HERE -> {
+                int rad = net.minecraft.util.Mth.clamp(pay.arg(), 32, 100000);
+                r.body.putDouble("BoundX", p.getX()); r.body.putDouble("BoundZ", p.getZ()); r.body.putInt("BoundR", rad);
+                a.setDirty();
+                if (r.going) a.send(sl, r.id, new Vec3(r.toX, 0, r.toZ));      // his trip, kept inside it
+                say(p, "codex_bound", rad);
+            }
+            case CodexPayload.FREE_ROAM -> { r.body.remove("BoundR"); a.setDirty(); say(p, "codex_roam"); }
             default -> say(p, "codex_far_away");
         }
     }

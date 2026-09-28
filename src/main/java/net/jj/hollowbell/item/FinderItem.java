@@ -76,8 +76,8 @@ public class FinderItem extends Item {
         if (at != null && w.aliveNow()) return spot(player, at.getX() + 0.5, at.getZ() + 0.5, true);
         int days = w.daysLeft(sl);
         if (at != null && HollowbellConfig.V.oneInTheWorld && days >= 0) {
-            double hx = (w.homeClaimed() ? w.homeX() : at.getX()) - player.getX();
-            double hz = (w.homeClaimed() ? w.homeZ() : at.getZ()) - player.getZ();
+            // where the next one comes down (his new ground is claimed there when he does)
+            double hx = at.getX() + 0.5 - player.getX(), hz = at.getZ() + 0.5 - player.getZ();
             String far = Math.sqrt(hx * hx + hz * hz) > 2000 ? "far to the " : "to the ";
             return days > 0
                     ? Component.translatable("message.hollowbell.finder_wait", days, far + way(hx, hz))

@@ -74,7 +74,7 @@ public class WorldOne extends SavedData {
      * right out of a circle round it, his moves find nothing in there, and the book cannot send him in. It costs
      * the crown a long rest afterwards.
      */
-    private int wardX, wardZ;
+    private int wardX, wardY = Integer.MIN_VALUE, wardZ;
     private String wardDim = "minecraft:overworld";
     private long wardUntil = -1, wardRestUntil = -1;
 
@@ -86,11 +86,24 @@ public class WorldOne extends SavedData {
 
     /** the crown is woken: he will not come near this place until it is spent */
     public void startWard(ServerLevel l, BlockPos at, int ticks, int restTicks) {
-        wardX = at.getX(); wardZ = at.getZ();
+        wardX = at.getX(); wardY = at.getY(); wardZ = at.getZ();
         wardDim = l.dimension().location().toString();
         wardUntil = l.getGameTime() + ticks;
         wardRestUntil = wardUntil + restTicks;
         setDirty();
+    }
+
+    /** the crown the ward stands on was broken or picked up: the ward stops, and its rest starts now */
+    public void crownTaken(ServerLevel l, BlockPos at) {
+        if (!warding(l) || at.getX() != wardX || at.getZ() != wardZ || (wardY != Integer.MIN_VALUE && at.getY() != wardY)) return;
+        if (!l.dimension().location().toString().equals(wardDim)) return;
+        long now = l.getGameTime();
+        wardRestUntil -= wardUntil - now;
+        wardUntil = now;
+        setDirty();
+        for (net.minecraft.server.level.ServerPlayer p : l.players())
+            if (p.distanceToSqr(at.getX(), at.getY(), at.getZ()) < 64 * 64)
+                p.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.hollowbell.ward_broken"), true);
     }
 
     /** /hollowbell ward off, and a clean slate between tests: the rest is let off as well */
@@ -126,6 +139,7 @@ public class WorldOne extends SavedData {
         for (long k : tag.getLongArray("Painted")) w.painted.add(k);
         if (tag.contains("WardUntil")) {
             w.wardX = tag.getInt("WardX"); w.wardZ = tag.getInt("WardZ");
+            w.wardY = tag.contains("WardY") ? tag.getInt("WardY") : Integer.MIN_VALUE;
             w.wardDim = tag.getString("WardDim");
             w.wardUntil = tag.getLong("WardUntil"); w.wardRestUntil = tag.getLong("WardRest");
             if (w.wardDim == null || w.wardDim.isEmpty()) w.wardDim = "minecraft:overworld";
@@ -145,7 +159,7 @@ public class WorldOne extends SavedData {
         tag.putLong("HomeSeed", homeSeed);
         tag.putLongArray("Painted", painted.toLongArray());
         if (wardUntil > 0 || wardRestUntil > 0) {
-            tag.putInt("WardX", wardX); tag.putInt("WardZ", wardZ); tag.putString("WardDim", wardDim);
+            tag.putInt("WardX", wardX); tag.putInt("WardY", wardY); tag.putInt("WardZ", wardZ); tag.putString("WardDim", wardDim);
             tag.putLong("WardUntil", wardUntil); tag.putLong("WardRest", wardRestUntil);
         }
         return tag;
