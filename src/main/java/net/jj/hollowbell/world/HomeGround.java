@@ -245,6 +245,8 @@ public final class HomeGround {
     private static void feature(ServerLevel level, WorldOne w, int wx, int wz) {
         int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
         if (top <= level.getSeaLevel()) return;                  // not under water
+        BlockState ground = level.getBlockState(new BlockPos(wx, top, wz));
+        if (!(natural(ground) || isPalette(ground))) return;      // never on a roof, a path, somebody's floor
         long h = hash(w.homeSeed(), wx, wz, 29);
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         if (Math.floorMod(h, 400) == 0) {

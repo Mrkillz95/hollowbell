@@ -72,6 +72,7 @@ public class WorldOne extends SavedData {
     /** for the tests: a world that has picked nothing yet, no ground, no ward */
     public void clearForTests() {
         placed = false; alive = false; dueAt = -1; x = 0; z = 0; oneId = null;
+        cooldown = 0;
         forgetWard();
         dropHome();
     }
