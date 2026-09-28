@@ -56,3 +56,15 @@ jar { from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } } 
 afterEvaluate {
     repositories.removeIf { it instanceof MavenArtifactRepository && it.url.toString().contains("repo.maven.apache.org") }
 }
+
+// Draws the Bell Hollows without the game, from the real plan, into pictures/ground/ (map, den, samples).
+// Development only, never in the jar: ./gradlew groundLab   (or -Plab="map" / "den" / "sample")
+jar { exclude 'net/jj/hollowbell/lab/**' }
+tasks.register('groundLab', JavaExec) {
+    dependsOn 'classes'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'net.jj.hollowbell.lab.GroundLab'
+    workingDir = projectDir
+    args = (project.findProperty('lab') ?: 'all').toString().split(' ').toList()
+    jvmArgs '-Xmx3g', '-Djava.awt.headless=true'
+}

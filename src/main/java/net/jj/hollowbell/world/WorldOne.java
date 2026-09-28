@@ -46,6 +46,11 @@ public class WorldOne extends SavedData {
     private long homeSeed;
     private boolean homeClaimed;
     private final it.unimi.dsi.fastutil.longs.LongOpenHashSet painted = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
+    /** 1: the first, smaller Hollows (1.4); 2: the big one with hills, hollows, features and the den (1.5 on) */
+    private int groundVersion = GROUND_VERSION;
+    public static final int GROUND_VERSION = 2;
+    /** chunks the first Hollows turned, waiting to be turned again the new way (unless people have lived there) */
+    private final it.unimi.dsi.fastutil.longs.LongOpenHashSet oldPainted = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
 
     public boolean homeClaimed() { return homeClaimed; }
     public int homeX() { return homeX; }
@@ -54,20 +59,59 @@ public class WorldOne extends SavedData {
     public long homeSeed() { return homeSeed; }
     public boolean paintedAlready(long chunkPos) { return painted.contains(chunkPos); }
     public void notePainted(long chunkPos) { if (painted.add(chunkPos)) setDirty(); }
+    public int groundVersion() { return groundVersion; }
+    /** was this chunk turned by the first Hollows? It is let go of either way. */
+    public boolean forgetOldPaint(long chunkPos) {
+        if (!oldPainted.remove(chunkPos)) return false;
+        setDirty();
+        return true;
+    }
+
+    /** how far a new ground reaches, from the settings */
+    public static int configRadius() { return Mth.clamp(HollowbellConfig.V.homeRadius, 200, 2000); }
+
+    /**
+     * A ground from before 1.5 (small, flat, plain): it keeps its centre and seed, grows to the new size, and the
+     * chunks it had turned are turned again the new way as they load, unless people have lived in them. A newer
+     * ground only ever grows, when the setting has been raised. Returns whether anything changed.
+     */
+    public boolean upgradeGround() {
+        if (!homeClaimed) return false;
+        boolean changed = false;
+        if (groundVersion < GROUND_VERSION) {
+            oldPainted.addAll(painted);
+            painted.clear();
+            groundVersion = GROUND_VERSION;
+            changed = true;
+            HollowbellMod.LOG.info("The Bell Hollows at {}, {} grow to the new, bigger ground; {} chunks will be turned again",
+                    homeX, homeZ, oldPainted.size());
+        }
+        if (homeRadius < configRadius()) { homeRadius = configRadius(); changed = true; }
+        if (changed) setDirty();
+        return changed;
+    }
+
+    /** for the tests: a ground as the first Hollows left it */
+    public void claimOldHome(int atX, int atZ, long seed) {
+        homeX = atX; homeZ = atZ; homeRadius = 320; homeSeed = seed; homeClaimed = true;
+        groundVersion = 1;
+        setDirty();
+    }
 
     /** the ground round this spot becomes his. An old ground stays as it is: the land remembers him. */
     public void claimHome(ServerLevel level, int atX, int atZ) {
         homeX = atX; homeZ = atZ;
-        homeRadius = 320;
+        homeRadius = configRadius();
         homeSeed = level.random.nextLong();
         homeClaimed = true;
+        groundVersion = GROUND_VERSION;
         setDirty();                  // chunks turned for an older ground stay noted, so they are never turned twice
         HomeGround.claimed(level, this);
         HollowbellMod.LOG.info("The Bell Hollows lie at {}, {}", atX, atZ);
     }
 
     /** for the tests: the ground let go again, so nothing keeps painting near the arenas */
-    public void dropHome() { homeClaimed = false; painted.clear(); setDirty(); }
+    public void dropHome() { homeClaimed = false; painted.clear(); oldPainted.clear(); groundVersion = GROUND_VERSION; setDirty(); }
 
     /** for the tests: a world that has picked nothing yet, no ground, no ward */
     public void clearForTests() {
@@ -147,6 +191,9 @@ public class WorldOne extends SavedData {
         w.homeRadius = tag.contains("HomeRadius") ? tag.getInt("HomeRadius") : 320;
         w.homeSeed = tag.getLong("HomeSeed");
         for (long k : tag.getLongArray("Painted")) w.painted.add(k);
+        for (long k : tag.getLongArray("PaintedV1")) w.oldPainted.add(k);
+        w.groundVersion = tag.contains("GroundVersion") ? tag.getInt("GroundVersion") : 1;
+        w.upgradeGround();
         if (tag.contains("WardUntil")) {
             w.wardX = tag.getInt("WardX"); w.wardZ = tag.getInt("WardZ");
             w.wardY = tag.contains("WardY") ? tag.getInt("WardY") : Integer.MIN_VALUE;
@@ -169,6 +216,8 @@ public class WorldOne extends SavedData {
         tag.putInt("HomeRadius", homeRadius);
         tag.putLong("HomeSeed", homeSeed);
         tag.putLongArray("Painted", painted.toLongArray());
+        tag.putInt("GroundVersion", groundVersion);
+        if (!oldPainted.isEmpty()) tag.putLongArray("PaintedV1", oldPainted.toLongArray());
         if (wardUntil > 0 || wardRestUntil > 0) {
             tag.putInt("WardX", wardX); tag.putInt("WardY", wardY); tag.putInt("WardZ", wardZ); tag.putString("WardDim", wardDim);
             tag.putLong("WardUntil", wardUntil); tag.putLong("WardRest", wardRestUntil);
@@ -246,13 +295,14 @@ public class WorldOne extends SavedData {
         oneId = null;
         double far = Math.max(600, HollowbellConfig.V.respawnBlocks);
         double a = level.random.nextDouble() * Math.PI * 2;
-        double d = far * 0.25 + level.random.nextDouble() * far * 0.75;
+        double d = Math.max(clearOfGround(), far * 0.25 + level.random.nextDouble() * far * 0.75);
         // measured from where he fell if that was the overworld, otherwise from where he was last seen in it
         boolean over = h.level().dimension() == net.minecraft.world.level.Level.OVERWORLD;
         double fx = over ? h.getX() : x, fz = over ? h.getZ() : z;
         x = Mth.floor(fx + Math.cos(a) * d);
         z = Mth.floor(fz + Math.sin(a) * d);
         findSpot(level);
+        keepOffOldGround();
         placed = true;
         dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
         setDirty();
@@ -474,6 +524,20 @@ public class WorldOne extends SavedData {
         for (int tries = 0; tries < 8 && !openGround(level, x, z); tries++) hop(level, 400, 1600);
         for (int tries = 0; tries < 6 && !flatEnough(level, x, z); tries++) hop(level, 160, 480);
         avoidWard();
+    }
+
+    /** how far a new ground's centre must be from the old one so the two never overlap */
+    private double clearOfGround() { return (homeClaimed ? homeRadius : 0) + configRadius() + 64; }
+
+    /** the next one comes down far enough off that his new ground never lies over the old one */
+    private void keepOffOldGround() {
+        if (!homeClaimed) return;
+        double dx = x - (homeX + 0.5), dz = z - (homeZ + 0.5);
+        double len = Math.sqrt(dx * dx + dz * dz), keep = clearOfGround();
+        if (len >= keep) return;
+        if (len < 1.0E-4) { dx = 1; dz = 0; len = 1; }
+        x = Mth.floor(homeX + 0.5 + dx / len * keep);
+        z = Mth.floor(homeZ + 0.5 + dz / len * keep);
     }
 
     /** never come down inside a circle a woken crown is holding: pushed out past its edge */

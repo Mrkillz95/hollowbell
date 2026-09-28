@@ -20,14 +20,20 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
 /**
- * The Bell Hollows: his own ground, in exactly one place in the world - where he rises. The land there is
- * turned block by block into pale calcite, bone and green glass as anybody comes near it (a couple of chunks a
- * tick, so nothing ever stutters), and the biome under it becomes hollowbell:bell_hollows, with its own pale
- * fog and drifting motes. The region is an irregular blob round the spot, so the edge looks grown, not drawn.
+ * The Bell Hollows: his own ground, in exactly one place in the world - where he rises. What it looks like is
+ * worked out in {@link BellPlan}; this puts it into the world as anybody comes near (a chunk or two a tick, so
+ * nothing ever stutters): soft hills scooped with hollows, pale calcite and bone with mint grass, fallen glass
+ * shards, spires, ribs, reefs, gardens, pools and lights, and his great glass bell in the middle. The biome under
+ * it becomes hollowbell:bell_hollows, with its own pale fog and drifting motes.
+ *
+ * The safety rules: chunks people have lived in and chunks with a village or other building are left alone; only
+ * wild trees are cleared; a column with anything but plain ground near its top is not touched; nothing is read or
+ * written outside the chunk being turned; water is only ever put where it has a floor and walls.
  */
 public final class HomeGround {
     private HomeGround() {}
@@ -35,59 +41,36 @@ public final class HomeGround {
     public static final ResourceKey<Biome> BELL_HOLLOWS =
             ResourceKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "bell_hollows"));
 
-    /** what the ground is made of, by weight out of a hundred */
+    /** what the first, smaller Hollows were made of: still counted as plain ground when it is turned again */
     private static final Block[] PALETTE = {Blocks.CALCITE, Blocks.END_STONE, Blocks.DIORITE, Blocks.BONE_BLOCK,
             Blocks.SMOOTH_STONE, Blocks.VERDANT_FROGLIGHT, Blocks.LIME_STAINED_GLASS, Blocks.MOSS_BLOCK};
-    private static final int[] WEIGHT = {35, 15, 15, 10, 10, 5, 5, 5};
 
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     // ------------------------------------------------------------------ the shape of his ground
 
-    private static long mix(long a, long b) {
-        long h = a * 0x9E3779B97F4A7C15L ^ b;
-        h ^= h >>> 32; h *= 0xBF58476D1CE4E5B9L; h ^= h >>> 29; h *= 0x94D049BB133111EBL; h ^= h >>> 32;
-        return h;
-    }
+    /** the plan for the ground now claimed, kept while the claim stays the same */
+    private static BellPlan plan;
+    private static long planKey;
+    private static ServerLevel planLevel;
 
-    private static long hash(long seed, int a, int b, int c) {
-        return mix(mix(seed, a), ((long) b << 32) ^ (c & 0xffffffffL));
-    }
-
-    private static float hash01(long seed, int a, int b, int c) {
-        return (hash(seed, a, b, c) >>> 40) / (float) (1 << 24);
-    }
-
-    /** 3-octave hash noise on the angle, 0..1, deterministic for a seed */
-    private static float edgeNoise(long seed, double theta) {
-        float sum = 0f, amp = 0.5f, total = 0f;
-        int freq = 4;
-        for (int o = 0; o < 3; o++) {
-            double t = theta / (Math.PI * 2) * freq;
-            int i0 = (int) Math.floor(t);
-            double f = t - i0;
-            float v0 = hash01(seed, o, Math.floorMod(i0, freq), 7);
-            float v1 = hash01(seed, o, Math.floorMod(i0 + 1, freq), 7);
-            double s = f * f * (3 - 2 * f);
-            sum += amp * (float) (v0 + (v1 - v0) * s);
-            total += amp;
-            amp *= 0.5f; freq *= 2;
+    /** what the ground looks like, worked out from its seed; the land's height comes from the world's generator */
+    public static BellPlan plan(ServerLevel level, WorldOne w) {
+        long key = BellPlan.mix(BellPlan.mix(w.homeSeed(), w.homeX()), BellPlan.mix(w.homeZ(), w.homeRadius()));
+        if (plan == null || planKey != key || planLevel != level) {
+            var src = level.getChunkSource();
+            BellPlan.Ground g = (x, z) -> src.getGenerator().getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, level, src.randomState()) - 1;
+            plan = new BellPlan(w.homeSeed(), w.homeX(), w.homeZ(), w.homeRadius(), level.getSeaLevel(),
+                    level.getMinBuildHeight(), level.getMaxBuildHeight(), g);
+            planKey = key;
+            planLevel = level;
         }
-        return sum / total;
+        return plan;
     }
 
-    /** is this column his? The edge wobbles with the angle, and the outer fringe thins out to nothing. */
-    public static boolean inside(WorldOne w, int wx, int wz) {
-        if (!w.homeClaimed()) return false;
-        double dx = wx + 0.5 - w.homeX(), dz = wz + 0.5 - w.homeZ();
-        double d = Math.sqrt(dx * dx + dz * dz);
-        if (d >= w.homeRadius()) return false;
-        double edge = w.homeRadius() * (0.72 + 0.28 * edgeNoise(w.homeSeed(), Math.atan2(dz, dx) + Math.PI));
-        if (d >= edge) return false;
-        double fringe = edge * 0.85;
-        if (d <= fringe) return true;
-        double t = (d - fringe) / Math.max(1, edge - fringe);
-        return hash01(w.homeSeed(), wx, wz, 13) > t;
+    /** is this column his? The edge wobbles and bulges, and the outer fringe thins out in patches to nothing. */
+    public static boolean inside(ServerLevel level, WorldOne w, int wx, int wz) {
+        return w.homeClaimed() && plan(level, w).painted(wx, wz);
     }
 
     public static boolean isPalette(BlockState s) {
@@ -95,33 +78,193 @@ public final class HomeGround {
         return false;
     }
 
+    /** any block his ground is made of, on it or in it */
+    public static boolean isOurs(BlockState s) {
+        for (BellPlan.Mat m : BellPlan.Mat.values()) {
+            BlockState b = state(m);
+            if (b != null && s.is(b.getBlock())) return true;
+        }
+        return false;
+    }
+
+    /** the real block for each thing the plan asks for */
+    public static BlockState state(BellPlan.Mat m) {
+        return switch (m) {
+            case KEEP -> null;
+            case CALCITE -> Blocks.CALCITE.defaultBlockState();
+            case DIORITE -> Blocks.DIORITE.defaultBlockState();
+            case POLISHED_DIORITE -> Blocks.POLISHED_DIORITE.defaultBlockState();
+            case END_STONE -> Blocks.END_STONE.defaultBlockState();
+            case BONE -> Blocks.BONE_BLOCK.defaultBlockState();
+            case SMOOTH_STONE -> Blocks.SMOOTH_STONE.defaultBlockState();
+            case MOSS -> Blocks.MOSS_BLOCK.defaultBlockState();
+            case GRASS -> Blocks.GRASS_BLOCK.defaultBlockState();
+            case VERDANT -> Blocks.VERDANT_FROGLIGHT.defaultBlockState();
+            case PEARL -> Blocks.PEARLESCENT_FROGLIGHT.defaultBlockState();
+            case OCHRE -> Blocks.OCHRE_FROGLIGHT.defaultBlockState();
+            case LIME_GLASS -> Blocks.LIME_STAINED_GLASS.defaultBlockState();
+            case WHITE_GLASS -> Blocks.WHITE_STAINED_GLASS.defaultBlockState();
+            case GRAY_GLASS -> Blocks.LIGHT_GRAY_STAINED_GLASS.defaultBlockState();
+            case GREEN_GLASS -> Blocks.GREEN_STAINED_GLASS.defaultBlockState();
+            case MOSS_CARPET -> Blocks.MOSS_CARPET.defaultBlockState();
+            case GLOW_LICHEN -> Blocks.GLOW_LICHEN.defaultBlockState().setValue(net.minecraft.world.level.block.MultifaceBlock.getFaceProperty(net.minecraft.core.Direction.DOWN), true);
+            case DRIPLEAF_LOW -> Blocks.SMALL_DRIPLEAF.defaultBlockState().setValue(net.minecraft.world.level.block.SmallDripleafBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER);
+            case DRIPLEAF_HIGH -> Blocks.SMALL_DRIPLEAF.defaultBlockState().setValue(net.minecraft.world.level.block.SmallDripleafBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER);
+            case END_ROD -> Blocks.END_ROD.defaultBlockState();
+            case CHAIN -> Blocks.CHAIN.defaultBlockState();
+            case WATER -> Blocks.WATER.defaultBlockState();
+        };
+    }
+
     // ------------------------------------------------------------------ turning a chunk
 
     /**
-     * Turns one chunk of the world into his ground: blocks, little features, and the biome itself. A chunk people
-     * have spent time in, or one a village or other building on the surface reaches into, is left as it is.
-     * Everything here stays inside the chunk being turned.
+     * Turns one chunk of the world into his ground: the land's shape, its blocks, the things standing on it, and
+     * the biome itself. A chunk people have spent time in, or one a village or other building on the surface
+     * reaches into, is left as it is. Everything here reads and writes only inside the chunk being turned; the
+     * bigger features come out whole because each chunk works out its own part of them from the seed.
      */
     public static void paint(ServerLevel level, WorldOne w, LevelChunk chunk) {
         long key = chunk.getPos().toLong();
         if (!w.homeClaimed() || w.paintedAlready(key)) return;
         w.notePainted(key);
+        boolean wasOld = w.forgetOldPaint(key);          // turned by the first, smaller Hollows: turned again over it
         if (lived(chunk) || built(chunk)) return;
+        BellPlan p = plan(level, w);
+        if (!p.near(chunk.getPos().x, chunk.getPos().z)) return;
         int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
+        int[] y0 = new int[256], lowest = new int[256];
+        boolean[] ok = new boolean[256], wet = new boolean[256];
         boolean any = false;
-        for (int cx = 0; cx < 16; cx++) for (int cz = 0; cz < 16; cz++) {
-            int wx = x0 + cx, wz = z0 + cz;
-            if (!inside(w, wx, wz)) continue;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int i = 0; i < 256; i++) {
+            int wx = x0 + (i & 15), wz = z0 + (i >> 4);
+            if (!p.painted(wx, wz)) continue;
             any = true;
             clearAbove(level, wx, wz);
-            paintColumn(level, w, wx, wz);
+            if (wasOld) stripOldShard(level, w, wx, wz, m);
+            int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
+            y0[i] = top;
+            if (top <= level.getMinBuildHeight() + 2) continue;
+            BlockState s = level.getBlockState(m.set(wx, top, wz));
+            wet[i] = !s.getFluidState().isEmpty();
+            ok[i] = plainGround(level, wx, wz, top, m);
+            if (!ok[i] || wet[i]) { lowest[i] = top; continue; }
+            int low = top;
+            for (int y = top - 1; y >= top - BellPlan.MAX_DOWN - 1 && y > level.getMinBuildHeight() + 1; y--) {
+                BlockState b = level.getBlockState(m.set(wx, y, wz));
+                if (!(natural(b) || isPalette(b))) break;
+                low = y;
+            }
+            // cut no deeper than the plain ground goes: the new top is itself plain ground, never air or a cave
+            lowest[i] = natural(s) || isPalette(s) ? low : top;
         }
         if (!any) return;
-        for (int cx = 2; cx < 14; cx++) for (int cz = 2; cz < 14; cz++) {
-            int wx = x0 + cx, wz = z0 + cz;
-            if (inside(w, wx, wz)) feature(level, w, wx, wz);
+        BellPlan.Out o = new BellPlan.Out();
+        p.chunk(chunk.getPos().x, chunk.getPos().z, y0, ok, wet, lowest, o);
+        List<BlockPos> water = new ArrayList<>();
+        for (int i = 0; i < 256; i++) {
+            if (!o.paint[i]) continue;
+            int wx = x0 + (i & 15), wz = z0 + (i >> 4);
+            if (wet[i]) { paintBed(level, p, wx, wz, y0[i], m); continue; }
+            shape(level, o, i, wx, wz, y0[i], m, water);
         }
-        fillBiome(level, w, chunk);
+        keepWaterIn(level, water, x0, z0, m);
+        fillBiome(level, p, chunk);
+    }
+
+    /** a column with only plain ground in its top few blocks (no planks, path, chest or crop): it can be turned */
+    private static boolean plainGround(ServerLevel level, int wx, int wz, int top, BlockPos.MutableBlockPos m) {
+        for (int k = 0; k < 4; k++) {
+            int y = top - k;
+            if (y <= level.getMinBuildHeight()) break;
+            BlockState s = level.getBlockState(m.set(wx, y, wz));
+            if (s.isAir() || !s.getFluidState().isEmpty() || natural(s) || isPalette(s) || leftAlone(s)) continue;
+            return false;
+        }
+        return true;
+    }
+
+    /** the first Hollows' little glass shards stood on the ground: they go before the ground is turned again */
+    private static void stripOldShard(ServerLevel level, WorldOne w, int wx, int wz, BlockPos.MutableBlockPos m) {
+        long h = BellPlan.hash(w.homeSeed(), wx, wz, 29);
+        if (Math.floorMod(h, 400) == 0 || Math.floorMod(h, 200) != 1) return;
+        int n = 1 + (int) Math.floorMod(h >> 8, 3);
+        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
+        for (int k = 0; k < n; k++, y--) {
+            BlockState s = level.getBlockState(m.set(wx, y, wz));
+            if (!(s.is(Blocks.LIME_STAINED_GLASS) || s.is(Blocks.VERDANT_FROGLIGHT))) break;
+            level.setBlock(m, Blocks.AIR.defaultBlockState(), FLAGS);
+        }
+    }
+
+    /** under water only the bed is turned: the water stays where it is */
+    private static void paintBed(ServerLevel level, BellPlan p, int wx, int wz, int top, BlockPos.MutableBlockPos m) {
+        int y = top;
+        while (y > top - 12 && y > level.getMinBuildHeight() + 1 && !level.getBlockState(m.set(wx, y, wz)).getFluidState().isEmpty()) y--;
+        for (int k = 0; k < 2; k++, y--) {
+            BlockState s = level.getBlockState(m.set(wx, y, wz));
+            if (!natural(s) || !s.getFluidState().isEmpty()) break;
+            level.setBlock(m, state(p.strata(wx, y, wz)), FLAGS);
+        }
+    }
+
+    /** one column: cut down or built up to its new height, its ground turned, and what stands on it set */
+    private static void shape(ServerLevel level, BellPlan.Out o, int i, int wx, int wz, int y0, BlockPos.MutableBlockPos m, List<BlockPos> water) {
+        int top = o.top[i];
+        if (top < y0) {
+            for (int y = y0; y > top; y--) level.setBlock(m.set(wx, y, wz), Blocks.AIR.defaultBlockState(), FLAGS);
+        }
+        for (int k = 0; k < o.layers[i]; k++) {
+            int y = top - k;
+            BellPlan.Mat mat = o.layer[i][k];
+            BlockState s = level.getBlockState(m.set(wx, y, wz));
+            if (y > y0) {
+                // built up: every block from the old ground to the new top is filled, nothing hollow under it
+                if (!(s.isAir() || loose(s))) continue;
+                level.setBlock(m, state(mat == BellPlan.Mat.KEEP ? BellPlan.Mat.CALCITE : mat), FLAGS);
+                continue;
+            }
+            if (mat == BellPlan.Mat.KEEP || !s.getFluidState().isEmpty()) continue;
+            if (!(natural(s) || isPalette(s))) continue;
+            level.setBlock(m, state(mat), FLAGS);
+        }
+        for (int k = 0; k < o.an[i]; k++) {
+            int y = o.ay[i][k];
+            if (y >= level.getMaxBuildHeight()) continue;
+            BlockState s = level.getBlockState(m.set(wx, y, wz));
+            if (!s.isAir()) continue;                         // never into anything already there
+            BellPlan.Mat mat = o.am[i][k];
+            level.setBlock(m, state(mat), FLAGS);
+            if (mat == BellPlan.Mat.WATER) water.add(m.immutable());
+        }
+    }
+
+    /**
+     * A pool is only water where it has a floor and walls. The plan keeps each pool inside one chunk, so this can
+     * be checked here; any water that would run off (air beside or under it) becomes calcite instead.
+     */
+    private static void keepWaterIn(ServerLevel level, List<BlockPos> water, int x0, int z0, BlockPos.MutableBlockPos m) {
+        for (int pass = 0; pass < 4 && !water.isEmpty(); pass++) {
+            boolean changed = false;
+            for (var it = water.iterator(); it.hasNext(); ) {
+                BlockPos w = it.next();
+                boolean leaks = false;
+                for (var d : new net.minecraft.core.Direction[]{net.minecraft.core.Direction.DOWN, net.minecraft.core.Direction.NORTH,
+                        net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.EAST, net.minecraft.core.Direction.WEST}) {
+                    BlockPos n = w.relative(d);
+                    if (n.getX() < x0 || n.getX() > x0 + 15 || n.getZ() < z0 || n.getZ() > z0 + 15) { leaks = true; break; }
+                    BlockState s = level.getBlockState(n);
+                    if (s.getFluidState().isEmpty() && !s.isFaceSturdy(level, n, d.getOpposite())) { leaks = true; break; }
+                }
+                if (leaks) {
+                    level.setBlock(w, Blocks.CALCITE.defaultBlockState(), FLAGS);
+                    it.remove();
+                    changed = true;
+                }
+            }
+            if (!changed) break;
+        }
     }
 
     /** players have spent a minute or more around here: it's somebody's place now */
@@ -208,75 +351,8 @@ public final class HomeGround {
                 || s.is(BlockTags.DIAMOND_ORES) || s.is(BlockTags.EMERALD_ORES);
     }
 
-    private static Block pick(long seed, int wx, int y, int wz) {
-        int roll = (int) Math.floorMod(hash(seed, wx, wz, y), 100);
-        for (int i = 0; i < PALETTE.length; i++) {
-            roll -= WEIGHT[i];
-            if (roll < 0) return PALETTE[i];
-        }
-        return Blocks.CALCITE;
-    }
-
-    /**
-     * The top four blocks of the column become his: pale calcite, bone, old glass. Water stays water. A column
-     * with anything in its top few blocks that isn't plain ground (planks, a path, a chest, a crop) is left whole.
-     */
-    private static void paintColumn(ServerLevel level, WorldOne w, int wx, int wz) {
-        int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
-        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int i = 0; i < 4; i++) {
-            int y = top - i;
-            if (y <= level.getMinBuildHeight()) break;
-            BlockState s = level.getBlockState(p.set(wx, y, wz));
-            if (s.isAir() || !s.getFluidState().isEmpty() || natural(s) || isPalette(s) || leftAlone(s)) continue;
-            return;                                              // somebody's work: the whole column is left alone
-        }
-        for (int i = 0; i < 4; i++) {
-            int y = top - i;
-            if (y <= level.getMinBuildHeight()) break;
-            BlockState s = level.getBlockState(p.set(wx, y, wz));
-            if (!s.getFluidState().isEmpty()) continue;          // water below the sea stays water
-            if (!natural(s)) continue;
-            level.setBlock(p, pick(w.homeSeed(), wx, y, wz).defaultBlockState(), FLAGS);
-        }
-    }
-
-    /** here and there: a shallow bowl with a froglight glowing at the bottom, or a little shard of glass */
-    private static void feature(ServerLevel level, WorldOne w, int wx, int wz) {
-        int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
-        if (top <= level.getSeaLevel()) return;                  // not under water
-        BlockState ground = level.getBlockState(new BlockPos(wx, top, wz));
-        if (!(natural(ground) || isPalette(ground))) return;      // never on a roof, a path, somebody's floor
-        long h = hash(w.homeSeed(), wx, wz, 29);
-        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        if (Math.floorMod(h, 400) == 0) {
-            // a bowl five across, sunk one or two, with a froglight at the bottom
-            for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
-                int t = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx + dx, wz + dz) - 1;
-                int depth = Math.abs(dx) == 2 || Math.abs(dz) == 2 ? 1 : 2;
-                for (int k = 0; k < depth; k++) {
-                    BlockState s = level.getBlockState(p.set(wx + dx, t - k, wz + dz));
-                    if (!s.getFluidState().isEmpty() || !(natural(s) || isPalette(s))) break;   // never into somebody's floor
-                    level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
-                }
-            }
-            int floor = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
-            BlockState under = level.getBlockState(p.set(wx, floor, wz));
-            if (natural(under) || isPalette(under)) level.setBlock(p, Blocks.VERDANT_FROGLIGHT.defaultBlockState(), FLAGS);
-        } else if (Math.floorMod(h, 200) == 1) {
-            // a shard of old glass, one to three tall, sometimes lit
-            int n = 1 + (int) Math.floorMod(h >> 8, 3);
-            for (int k = 0; k < n; k++) {
-                if (top + 1 + k >= level.getMaxBuildHeight() || !level.getBlockState(p.set(wx, top + 1 + k, wz)).isAir()) break;
-                boolean lit = k == n - 1 && n > 1 && (h & 64) != 0;
-                level.setBlock(p.set(wx, top + 1 + k, wz),
-                        (lit ? Blocks.VERDANT_FROGLIGHT : Blocks.LIME_STAINED_GLASS).defaultBlockState(), FLAGS);
-            }
-        }
-    }
-
     /** the ground under his ground says his name: every quart of every section whose column is his */
-    private static void fillBiome(ServerLevel level, WorldOne w, LevelChunk chunk) {
+    private static void fillBiome(ServerLevel level, BellPlan p, LevelChunk chunk) {
         Holder<Biome> home;
         try {
             home = level.registryAccess().registryOrThrow(Registries.BIOME).getHolderOrThrow(BELL_HOLLOWS);
@@ -286,7 +362,7 @@ public final class HomeGround {
         }
         var sampler = level.getChunkSource().randomState().sampler();
         chunk.fillBiomesFromNoise((qx, qy, qz, s) ->
-                inside(w, QuartPos.toBlock(qx) + 2, QuartPos.toBlock(qz) + 2) ? home : chunk.getNoiseBiome(qx, qy, qz), sampler);
+                p.painted(QuartPos.toBlock(qx) + 2, QuartPos.toBlock(qz) + 2) ? home : chunk.getNoiseBiome(qx, qy, qz), sampler);
         chunk.setUnsaved(true);
         level.getChunkSource().chunkMap.resendBiomesForChunks(List.of(chunk));
     }
@@ -346,5 +422,7 @@ public final class HomeGround {
     public static void forgetQueue() {
         queue.clear();
         queued.clear();
+        plan = null;
+        planLevel = null;
     }
 }

@@ -54,6 +54,10 @@ public final class HollowbellConfig {
         public int worldRespawnDays = 10;
         /** How far from where he fell the next one rises, in blocks. */
         public int respawnBlocks = 7000;
+        /** How far his own ground, the Bell Hollows, reaches from its middle, in blocks (200 to 2000). A bigger number only grows a ground, it never shrinks one. */
+        public int homeRadius = 900;
+        /** How far off you can see him coming, in blocks, even past where the game would stop drawing him (0 = off, up to 4096). */
+        public int farSightBlocks = 1024;
         /** How far his crown, woken against him, holds him off, in blocks ("/hollowbell ward blocks"). */
         public int wardBlocks = 700;
         /** How long the ward lasts once it is started, in seconds ("/hollowbell ward minutes"). */
@@ -97,7 +101,7 @@ public final class HollowbellConfig {
     public static Values V = new Values();
 
     /** which version of the settings this build writes; save() and load() both stamp it */
-    private static final int VERSION = 5;
+    private static final int VERSION = 6;
 
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json"); }
 
@@ -138,5 +142,10 @@ public final class HollowbellConfig {
         // 1.4: the world holds one of him by default (0 still means "no limit" if somebody sets it back).
         // Nobody already out there is removed for it: the limit only acts when a new one is made, or on /hollowbell limit.
         if (v.configVersion < 5 && v.maxHollowbells == 0) v.maxHollowbells = 1;
+        // 1.5: his ground is much bigger, and he can be seen from much further off
+        if (v.configVersion < 6 && (v.homeRadius == 0 || v.homeRadius == 320)) v.homeRadius = 900;
+        if (v.configVersion < 6 && v.farSightBlocks == 0) v.farSightBlocks = 1024;
+        v.homeRadius = Math.max(200, Math.min(2000, v.homeRadius));
+        v.farSightBlocks = Math.max(0, Math.min(4096, v.farSightBlocks));
     }
 }
