@@ -396,8 +396,8 @@ public final class HollowbellCommand {
         WorldOne w = WorldOne.get(c.getSource().getServer());
         ServerLevel over = c.getSource().getServer().overworld();
         if (w.warding(over)) {
-            var at = w.wardSpot();
-            c.getSource().sendFailure(Component.literal("A crown is already awake at " + at.getX() + ", " + at.getZ() + ", for another "
+            var awake = w.wardSpot();
+            c.getSource().sendFailure(Component.literal("A crown is already awake at " + awake.getX() + ", " + awake.getZ() + ", for another "
                     + (w.wardLeft(over) / 20) + " seconds. /hollowbell ward off stops it."));
             return 0;
         }
