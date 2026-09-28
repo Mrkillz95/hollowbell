@@ -158,11 +158,13 @@ public final class HollowbellCommand {
                         .executes(c -> set(c, () -> HollowbellConfig.V.soundVolume = FloatArgumentType.getFloat(c, "x"), "soundVolume", FloatArgumentType.getFloat(c, "x")))))
                 .then(Commands.literal("kill").requires(OP).executes(c -> all(c, h -> h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE), "kill")))
                 .then(Commands.literal("remove").requires(OP).executes(c -> {
-                    int out = Away.get(c.getSource().getServer()).count();
-                    Away.get(c.getSource().getServer()).forgetAll();
-                    WorldOne.get(c.getSource().getServer()).gone(c.getSource().getServer().overworld());
+                    var server = c.getSource().getServer();
+                    WorldOne w = WorldOne.get(server);
+                    int out = Away.get(server).count();
+                    for (Away.Rec r : Away.get(server).all()) w.removed(server.overworld(), r.id);
+                    Away.get(server).forgetAll();
                     if (allOf(c.getSource()).isEmpty() && out > 0) { c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove"), true); return out; }
-                    return all(c, h -> h.discard(), "remove");
+                    return all(c, h -> { h.discard(); w.removed(server.overworld(), h.getUUID()); }, "remove");
                 }))
                 .then(Commands.literal("health").requires(OP).then(Commands.argument("n", FloatArgumentType.floatArg(10f))
                         .executes(c -> set(c, () -> HollowbellConfig.V.health = FloatArgumentType.getFloat(c, "n"), "health", FloatArgumentType.getFloat(c, "n")))))
@@ -394,6 +396,10 @@ public final class HollowbellCommand {
         for (net.minecraft.core.BlockPos p : net.minecraft.core.BlockPos.betweenClosed(at.offset(-16, -8, -16), at.offset(16, 8, 16)))
             if (lvl.getBlockState(p).is(net.jj.hollowbell.ModBlocks.CROWN)) { crown = p.immutable(); break; }
         if (crown == null) { c.getSource().sendFailure(Component.literal("No crown set down within 16 blocks of you.")); return 0; }
+        if (HollowbellConfig.V.wardBlocks <= 0) {
+            c.getSource().sendFailure(Component.literal("His crown holds him off nowhere now. Set how far first: /hollowbell ward blocks <n>."));
+            return 0;
+        }
         WorldOne w = WorldOne.get(c.getSource().getServer());
         ServerLevel over = c.getSource().getServer().overworld();
         if (w.warding(over)) {

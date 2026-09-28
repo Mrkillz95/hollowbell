@@ -97,11 +97,16 @@ public final class HomeGround {
 
     // ------------------------------------------------------------------ turning a chunk
 
-    /** turns one chunk of the world into his ground: blocks, little features, and the biome itself */
+    /**
+     * Turns one chunk of the world into his ground: blocks, little features, and the biome itself. A chunk people
+     * have spent time in, or one a village or other building on the surface reaches into, is left as it is.
+     * Everything here stays inside the chunk being turned.
+     */
     public static void paint(ServerLevel level, WorldOne w, LevelChunk chunk) {
         long key = chunk.getPos().toLong();
         if (!w.homeClaimed() || w.paintedAlready(key)) return;
         w.notePainted(key);
+        if (lived(chunk) || built(chunk)) return;
         int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
         boolean any = false;
         for (int cx = 0; cx < 16; cx++) for (int cz = 0; cz < 16; cz++) {
@@ -119,33 +124,88 @@ public final class HomeGround {
         fillBiome(level, w, chunk);
     }
 
-    /** trees and plants over the column go: any log, leaf, mushroom or loose growth down to the real ground */
-    private static void clearAbove(ServerLevel level, int wx, int wz) {
-        int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
-        int floor = Math.max(level.getMinBuildHeight() + 1, top - 56);
-        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int y = top; y >= floor; y--) {
-            BlockState s = level.getBlockState(p.set(wx, y, wz));
-            if (s.isAir()) continue;
-            if (s.is(BlockTags.LOGS) || s.is(BlockTags.LEAVES) || s.is(Blocks.MUSHROOM_STEM)
-                    || s.is(Blocks.RED_MUSHROOM_BLOCK) || s.is(Blocks.BROWN_MUSHROOM_BLOCK)
-                    || s.is(Blocks.VINE) || s.is(Blocks.BEE_NEST) || s.is(Blocks.COCOA)
-                    || (s.canBeReplaced() && s.getFluidState().isEmpty())) {
-                level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
-                continue;
-            }
-            break;                                       // real ground (or water): done here
+    /** players have spent a minute or more around here: it's somebody's place now */
+    public static boolean lived(LevelChunk chunk) { return chunk.getInhabitedTime() > 1200; }
+
+    /** a village, temple or anything else built on the land reaches into this chunk (mines and strongholds don't count) */
+    public static boolean built(LevelChunk chunk) {
+        for (var s : chunk.getAllReferences().entrySet()) {
+            if (s.getValue() == null || s.getValue().isEmpty()) continue;
+            var type = s.getKey().type();
+            if (type == net.minecraft.world.level.levelgen.structure.StructureType.MINESHAFT
+                    || type == net.minecraft.world.level.levelgen.structure.StructureType.STRONGHOLD) continue;
+            return true;
         }
+        return false;
+    }
+
+    /** grass, flowers, snow cover and the like: loose on top of the ground, never somebody's work */
+    private static boolean loose(BlockState s) {
+        if (s.isAir() || s.is(BlockTags.LEAVES) || !s.getFluidState().isEmpty()) return false;
+        return s.is(BlockTags.REPLACEABLE_BY_TREES) || s.is(BlockTags.FLOWERS) || s.is(BlockTags.SAPLINGS) || s.canBeReplaced();
+    }
+
+    /** a leaf that grew on a tree (placed ones are kept) */
+    private static boolean wildLeaf(BlockState s) {
+        return s.is(BlockTags.LEAVES) && !(s.hasProperty(net.minecraft.world.level.block.LeavesBlock.PERSISTENT)
+                && s.getValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT));
+    }
+
+    /** a wild tree or giant mushroom, down to its trunk */
+    private static boolean treePart(BlockState s) {
+        return wildLeaf(s) || s.is(BlockTags.LOGS) || s.is(Blocks.MUSHROOM_STEM) || s.is(Blocks.RED_MUSHROOM_BLOCK)
+                || s.is(Blocks.BROWN_MUSHROOM_BLOCK) || s.is(Blocks.VINE) || s.is(Blocks.BEE_NEST) || s.is(Blocks.COCOA) || loose(s);
+    }
+
+    /** clears the loose plants off the top of the column; returns the height of what is left on top */
+    private static int clearLoose(ServerLevel level, int wx, int wz, BlockPos.MutableBlockPos p) {
+        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
+        int floor = level.getMinBuildHeight() + 1;
+        while (y > floor) {
+            BlockState s = level.getBlockState(p.set(wx, y, wz));
+            if (!loose(s)) break;
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
+            y--;
+        }
+        return y;
+    }
+
+    /**
+     * Wild trees over the column go, and the grass and flowers on the ground. Only when the very top of the
+     * column is a tree's own leaves (or a giant mushroom's cap) is anything but loose plants cleared, and the
+     * clearing stops at the first gap of air or at anything that isn't tree: a log cabin, a roof, a post all stay.
+     */
+    private static void clearAbove(ServerLevel level, int wx, int wz) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int top = clearLoose(level, wx, wz, p);
+        BlockState s = level.getBlockState(p.set(wx, top, wz));
+        if (!(wildLeaf(s) || s.is(Blocks.RED_MUSHROOM_BLOCK) || s.is(Blocks.BROWN_MUSHROOM_BLOCK))) return;
+        int floor = Math.max(level.getMinBuildHeight() + 1, top - 56);
+        for (int y = top; y >= floor; y--) {
+            BlockState b = level.getBlockState(p.set(wx, y, wz));
+            if (!treePart(b)) break;                     // air, ground, or somebody's work: done here
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
+        }
+        clearLoose(level, wx, wz, p);                     // and whatever grew under the canopy
     }
 
     /** the ground blocks people have not touched: only these are turned into his palette */
     private static boolean natural(BlockState s) {
         return s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.PODZOL)
-                || s.is(Blocks.ROOTED_DIRT) || s.is(Blocks.DIRT_PATH) || s.is(Blocks.MYCELIUM)
+                || s.is(Blocks.ROOTED_DIRT) || s.is(Blocks.MYCELIUM)
                 || s.is(BlockTags.BASE_STONE_OVERWORLD) || s.is(Blocks.SAND) || s.is(Blocks.RED_SAND)
-                || s.is(Blocks.SANDSTONE) || s.is(Blocks.GRAVEL) || s.is(Blocks.SNOW) || s.is(Blocks.SNOW_BLOCK)
+                || s.is(Blocks.GRAVEL) || s.is(Blocks.SNOW_BLOCK)
                 || s.is(Blocks.ICE) || s.is(Blocks.CLAY) || s.is(Blocks.MUD) || s.is(BlockTags.TERRACOTTA)
                 || s.is(Blocks.MOSS_BLOCK) || s.is(Blocks.CALCITE);
+    }
+
+    /** natural too, but left as it is: bedrock, sandstone under a desert, ores showing at the top */
+    private static boolean leftAlone(BlockState s) {
+        return s.is(Blocks.BEDROCK) || s.is(Blocks.SANDSTONE) || s.is(Blocks.RED_SANDSTONE) || s.is(Blocks.PACKED_ICE)
+                || s.is(Blocks.BLUE_ICE) || s.is(Blocks.POWDER_SNOW) || s.is(Blocks.SNOW)
+                || s.is(BlockTags.COAL_ORES) || s.is(BlockTags.IRON_ORES) || s.is(BlockTags.COPPER_ORES)
+                || s.is(BlockTags.GOLD_ORES) || s.is(BlockTags.REDSTONE_ORES) || s.is(BlockTags.LAPIS_ORES)
+                || s.is(BlockTags.DIAMOND_ORES) || s.is(BlockTags.EMERALD_ORES);
     }
 
     private static Block pick(long seed, int wx, int y, int wz) {
@@ -157,10 +217,20 @@ public final class HomeGround {
         return Blocks.CALCITE;
     }
 
-    /** the top four blocks of the column become his: pale calcite, bone, old glass. Water stays water. */
+    /**
+     * The top four blocks of the column become his: pale calcite, bone, old glass. Water stays water. A column
+     * with anything in its top few blocks that isn't plain ground (planks, a path, a chest, a crop) is left whole.
+     */
     private static void paintColumn(ServerLevel level, WorldOne w, int wx, int wz) {
         int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int i = 0; i < 4; i++) {
+            int y = top - i;
+            if (y <= level.getMinBuildHeight()) break;
+            BlockState s = level.getBlockState(p.set(wx, y, wz));
+            if (s.isAir() || !s.getFluidState().isEmpty() || natural(s) || isPalette(s) || leftAlone(s)) continue;
+            return;                                              // somebody's work: the whole column is left alone
+        }
         for (int i = 0; i < 4; i++) {
             int y = top - i;
             if (y <= level.getMinBuildHeight()) break;
@@ -258,7 +328,9 @@ public final class HomeGround {
         if (queue.isEmpty()) return;
         ServerLevel over = server.overworld();
         WorldOne w = WorldOne.get(server);
-        for (int i = 0; i < 2 && !queue.isEmpty(); i++) {
+        long started = System.nanoTime();
+        // one chunk, and a second only if the first was quick (about 4 ms a tick at most)
+        for (int i = 0; i < 2 && !queue.isEmpty() && (i == 0 || System.nanoTime() - started < 4_000_000L); i++) {
             long key = queue.poll();
             queued.remove(key);
             if (!w.homeClaimed() || w.paintedAlready(key)) continue;

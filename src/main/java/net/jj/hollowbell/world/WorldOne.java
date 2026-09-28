@@ -37,6 +37,8 @@ public class WorldOne extends SavedData {
     private boolean placed;          // a spot has been chosen at all
     private boolean alive;           // one of them is out there now
     private long dueAt = -1;         // game time the next one comes down, while none is alive
+    /** which one of him is the world's own (null until one is known) */
+    private @Nullable java.util.UUID oneId;
 
     // ------------------------------------------------------------------ his ground (the Bell Hollows)
     /** where his ground lies, how far it reaches, the seed that shapes its edge, and the chunks already made his */
@@ -59,8 +61,7 @@ public class WorldOne extends SavedData {
         homeRadius = 320;
         homeSeed = level.random.nextLong();
         homeClaimed = true;
-        painted.clear();
-        setDirty();
+        setDirty();                  // chunks turned for an older ground stay noted, so they are never turned twice
         HomeGround.claimed(level, this);
         HollowbellMod.LOG.info("The Bell Hollows lie at {}, {}", atX, atZ);
     }
@@ -70,7 +71,7 @@ public class WorldOne extends SavedData {
 
     /** for the tests: a world that has picked nothing yet, no ground, no ward */
     public void clearForTests() {
-        placed = false; alive = false; dueAt = -1; x = 0; z = 0;
+        placed = false; alive = false; dueAt = -1; x = 0; z = 0; oneId = null;
         forgetWard();
         dropHome();
     }
@@ -118,7 +119,7 @@ public class WorldOne extends SavedData {
 
     /** is this spot inside the circle he will not enter? */
     public boolean warded(net.minecraft.world.level.Level l, double x, double z) {
-        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl)) return false;
+        if (wardUntil <= 0 || HollowbellConfig.V.wardBlocks <= 0 || !(l instanceof ServerLevel sl) || !warding(sl)) return false;
         if (!sl.dimension().location().toString().equals(wardDim)) return false;
         double dx = x - (wardX + 0.5), dz = z - (wardZ + 0.5);
         double r = wardRange();
@@ -139,6 +140,7 @@ public class WorldOne extends SavedData {
         w.placed = tag.getBoolean("Placed");
         w.alive = tag.getBoolean("Alive");
         w.dueAt = tag.contains("DueAt") ? tag.getLong("DueAt") : -1;
+        w.oneId = tag.hasUUID("OneId") ? tag.getUUID("OneId") : null;
         w.homeClaimed = tag.getBoolean("HomeClaimed");
         w.homeX = tag.getInt("HomeX"); w.homeZ = tag.getInt("HomeZ");
         w.homeRadius = tag.contains("HomeRadius") ? tag.getInt("HomeRadius") : 320;
@@ -160,6 +162,7 @@ public class WorldOne extends SavedData {
         tag.putBoolean("Placed", placed);
         tag.putBoolean("Alive", alive);
         tag.putLong("DueAt", dueAt);
+        if (oneId != null) tag.putUUID("OneId", oneId);
         tag.putBoolean("HomeClaimed", homeClaimed);
         tag.putInt("HomeX", homeX); tag.putInt("HomeZ", homeZ);
         tag.putInt("HomeRadius", homeRadius);
@@ -182,13 +185,52 @@ public class WorldOne extends SavedData {
     /** whole days until the next one comes down */
     public int daysLeft(ServerLevel l) { long t = dueIn(l); return t < 0 ? -1 : (int) Math.ceil(t / 24000.0); }
 
-    /** a loaded one reports in: the finder points right at him */
+    public @Nullable java.util.UUID oneId() { return oneId; }
+    /** is this the world's own one? */
+    public boolean isTheOne(java.util.UUID id) { return oneId != null && oneId.equals(id); }
+
+    /**
+     * The world's own one reports in: the finder points right at him. Only the overworld is written down (the
+     * spot is an overworld spot), and never while he is dying (that would undo his death).
+     */
     public void seen(HollowbellEntity h) {
-        int nx = Mth.floor(h.getX()), nz = Mth.floor(h.getZ());
-        boolean was = alive && placed && nx == x && nz == z;
-        x = nx; z = nz;
+        if (h.isDeadOrDying()) return;
+        if (oneId != null && !oneId.equals(h.getUUID())) return;
+        boolean changed = oneId == null || !alive || !placed || dueAt >= 0;
+        oneId = h.getUUID();
         placed = true; alive = true; dueAt = -1;
-        if (!was) setDirty();
+        if (h.level().dimension() == net.minecraft.world.level.Level.OVERWORLD) {
+            int nx = Mth.floor(h.getX()), nz = Mth.floor(h.getZ());
+            changed |= nx != x || nz != z;
+            x = nx; z = nz;
+        }
+        if (changed) setDirty();
+    }
+
+    /** this one is the world's own from now on */
+    public void adopt(HollowbellEntity h) {
+        h.markWorldOne();
+        oneId = h.getUUID();
+        seen(h);
+        setDirty();
+    }
+
+    /** this one, out of the world as a sum, is the world's own from now on */
+    public void adoptAway(Away.Rec r, Away away, long now) {
+        r.body.putBoolean("WorldOne", true);
+        away.setDirty();
+        oneId = r.id;
+        placed = true; alive = true; dueAt = -1;
+        if ("minecraft:overworld".equals(r.dim)) {
+            var at = r.spot(now);
+            x = Mth.floor(at.x); z = Mth.floor(at.z);
+        }
+        setDirty();
+    }
+
+    /** a sum came back under a new name (its old one was taken): the world keeps track */
+    public void renamed(java.util.UUID was, java.util.UUID now) {
+        if (isTheOne(was)) { oneId = now; setDirty(); }
     }
 
     /** for the tests: the world told outright where things stand */
@@ -200,11 +242,15 @@ public class WorldOne extends SavedData {
     /** he has been killed: the next one comes down a long way off, on fresh ground of his own */
     public void died(ServerLevel level, HollowbellEntity h) {
         alive = false;
+        oneId = null;
         double far = Math.max(600, HollowbellConfig.V.respawnBlocks);
         double a = level.random.nextDouble() * Math.PI * 2;
         double d = far * 0.25 + level.random.nextDouble() * far * 0.75;
-        x = Mth.floor(h.getX() + Math.cos(a) * d);
-        z = Mth.floor(h.getZ() + Math.sin(a) * d);
+        // measured from where he fell if that was the overworld, otherwise from where he was last seen in it
+        boolean over = h.level().dimension() == net.minecraft.world.level.Level.OVERWORLD;
+        double fx = over ? h.getX() : x, fz = over ? h.getZ() : z;
+        x = Mth.floor(fx + Math.cos(a) * d);
+        z = Mth.floor(fz + Math.sin(a) * d);
         findSpot(level);
         placed = true;
         dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
@@ -212,10 +258,19 @@ public class WorldOne extends SavedData {
         HollowbellMod.LOG.info("The Hollowbell has fallen; the next comes down near {}, {}", x, z);
     }
 
-    /** every one of him was taken away without dying (/hollowbell remove): the count to the next one starts */
-    public void gone(ServerLevel level) {
+    /**
+     * One of him was taken away without dying (/hollowbell remove, /giants remove). Only if it was the world's
+     * own does the count to the next one start; a remove that couldn't reach him (asleep in a far chunk) changes
+     * nothing.
+     */
+    public void removed(ServerLevel level, java.util.UUID id) {
+        if (isTheOne(id)) gone(level);
+    }
+
+    private void gone(ServerLevel level) {
         if (!alive) return;
         alive = false;
+        oneId = null;
         dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
         setDirty();
     }
@@ -235,15 +290,42 @@ public class WorldOne extends SavedData {
         return found;
     }
 
-    /** is the world's own one written down as a sum right now? */
-    private static boolean awayWorldOne(MinecraftServer server) {
-        for (Away.Rec r : Away.get(server).all()) if (r.body.getBoolean("WorldOne")) return true;
-        return false;
+    /** the newest one out of the world as a sum (one already marked as the world's own first), or null */
+    private static @Nullable Away.Rec newestAway(MinecraftServer server) {
+        Away.Rec best = null;
+        for (Away.Rec r : Away.get(server).all()) {
+            if (best == null) { best = r; continue; }
+            boolean bw = best.body.getBoolean("WorldOne"), rw = r.body.getBoolean("WorldOne");
+            if (rw != bw) { if (rw) best = r; continue; }
+            if (born(r) > born(best)) best = r;
+        }
+        return best;
     }
 
-    /** the cap, skipped under the tests (they put several of him down on purpose) */
-    public static boolean keepToTheLimit(@Nullable HollowbellEntity joining, ServerLevel world) {
-        return !IN_TESTS && limitNow(joining, world);
+    private static long born(Away.Rec r) { return r.body.contains("BornAt") ? r.body.getLong("BornAt") : Long.MIN_VALUE / 4; }
+
+    /**
+     * One of him has come into the world (ENTITY_LOAD). Freshly made ones meet the cap. A saved body still marked
+     * as the world's own that isn't the one the world knows (an old copy) loses the mark and meets the cap too.
+     * The spawner's own placement never pushes anybody out.
+     */
+    public static void joined(HollowbellEntity h, ServerLevel world) {
+        if (IN_TESTS) return;
+        joinedNow(h, world);
+    }
+
+    /** as joined(), for the tests, which put several of him down on purpose */
+    public static void joinedNow(HollowbellEntity h, ServerLevel world) {
+        MinecraftServer server = world.getServer();
+        if (server == null || h.isRemoved() || h.isDeadOrDying()) return;   // one saved mid-death is already counted as dead
+        WorldOne w = get(server);
+        if (w.isTheOne(h.getUUID())) return;                     // the world's own, or the spawner putting him down
+        if (h.isWorldOne()) {
+            if (w.oneId == null) { w.adopt(h); return; }         // a world from before names were kept
+            h.clearWorldOne();                                  // an old copy: he's just one of them now
+            return;                                             // (loading from a save never pushes anybody out)
+        }
+        if (h.freshSpawn()) limitNow(h, world);
     }
 
     /** one standing thing at the cap: a loaded one, or one written down as a sum */
@@ -296,15 +378,8 @@ public class WorldOne extends SavedData {
         if (lostTheWorldOne && !list.isEmpty()) {
             Standing keep = list.get(0);
             WorldOne w = get(server);
-            if (keep.e != null) {
-                keep.e.markWorldOne();
-                w.seen(keep.e);
-            } else {
-                keep.r.body.putBoolean("WorldOne", true);
-                away.setDirty();
-                var at = keep.r.spot(world.getGameTime());
-                w.noteSpot(Mth.floor(at.x), Mth.floor(at.z), true, -1);
-            }
+            if (keep.e != null) w.adopt(keep.e);
+            else w.adoptAway(keep.r, away, world.getGameTime());
         }
         return joiningGoes;
     }
@@ -332,21 +407,19 @@ public class WorldOne extends SavedData {
             setDirty();
             HollowbellMod.LOG.info("A Hollowbell drifts near {}, {}", x, z);
         }
-        if (alive) {
-            // gone from under us without dying: only believed when the ground where he was noted is loaded and
-            // empty (a chunk nobody is near just means he is asleep in it, saved with the land)
-            if (level.hasChunk(x >> 4, z >> 4) && anyOther(server, null) == null && Away.get(server).count() == 0) gone(level);
-            return;
-        }
-        // somebody put one down themselves: that is the one, and the world stops counting down to another
+        // only a real death or a remove that reached him ends the world's own one; not finding him means nothing
+        // (he may be asleep in a chunk nobody is near)
+        if (alive) return;
+        // somebody already has one out, in the world or out of it: that is the one, and nothing new comes down
         HollowbellEntity already = anyOther(server, null);
-        if (already != null) {
-            already.markWorldOne();
-            seen(already);
-            return;
-        }
-        if (awayWorldOne(server)) { alive = true; dueAt = -1; setDirty(); return; }
+        if (already != null) { adopt(already); return; }
+        Away away = Away.get(server);
+        Away.Rec rec = newestAway(server);
+        if (rec != null) { adoptAway(rec, away, level.getGameTime()); return; }
         if (dueAt < 0 || level.getGameTime() < dueAt) return;
+        // and the spawner never pushes anybody out to make room
+        int max = HollowbellConfig.V.maxHollowbells;
+        if (max > 0 && away.count() >= max) return;
         put(level);
     }
 
@@ -426,6 +499,7 @@ public class WorldOne extends SavedData {
         e.setBellScale(Mth.clamp(HollowbellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
         e.setVariant(HollowbellEntity.CALM);
         e.markWorldOne();
+        oneId = e.getUUID();                              // named first, so his arrival never meets the cap
         level.getChunkSource().addRegionTicket(TICKET, new ChunkPos(new BlockPos(x, 64, z)), 3, e.getId());
         var chunk = level.getChunk(x >> 4, z >> 4);
         claimHome(level, x, z);

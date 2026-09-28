@@ -108,10 +108,15 @@ public final class GiantsBridge {
             }
             case "remove" -> {
                 int n = Away.get(server).count();
+                WorldOne w = WorldOne.get(server);
+                for (Away.Rec r : Away.get(server).all()) w.removed(server.overworld(), r.id);
                 Away.get(server).forgetAll();
                 for (ServerLevel l : server.getAllLevels())
-                    for (HollowbellEntity h : new ArrayList<>(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved()))) { h.discard(); n++; }
-                WorldOne.get(server).gone(server.overworld());
+                    for (HollowbellEntity h : new ArrayList<>(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved()))) {
+                        h.discard();
+                        w.removed(server.overworld(), h.getUUID());
+                        n++;
+                    }
                 out.add(WHO + (n == 0 ? "none to remove." : "removed " + n + "."));
             }
             case "status" -> {

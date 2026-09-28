@@ -44,9 +44,10 @@ public class BellArmorItem extends ArmorItem {
 
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(BellArmorItem::tick);
-        // poison's own bite (it lands as magic) never reaches somebody in the full set
+        // poison's own bite (one point of magic a tick while poisoned) never reaches somebody in the full set;
+        // other magic, like a potion of harming, still does
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((e, src, amount) -> {
-            if (e instanceof ServerPlayer p && src.is(DamageTypes.MAGIC) && p.hasEffect(MobEffects.POISON) && fullSet(p)) {
+            if (e instanceof ServerPlayer p && src.is(DamageTypes.MAGIC) && amount <= 1.0f && p.hasEffect(MobEffects.POISON) && fullSet(p)) {
                 p.removeEffect(MobEffects.POISON);
                 return false;
             }
