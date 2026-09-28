@@ -45,7 +45,21 @@ public final class HollowbellConfig {
         /** Keeps the chunk at his middle moving and the ground under him loaded while a player can see him, so he never freezes in the air. */
         public boolean chunkLoading = true;
         /** How many of him the world holds at once. Summon another past this and the oldest one goes. 0 = no limit. */
-        public int maxHollowbells = 0;
+        public int maxHollowbells = 1;
+        /** The world keeps one of him out there, rising on his own ("/hollowbell natural on|off"). */
+        public boolean oneInTheWorld = true;
+        /** How big the world's own one is. */
+        public float worldScale = 1.0f;
+        /** Days after he dies before the next one rises. */
+        public int worldRespawnDays = 10;
+        /** How far from where he fell the next one rises, in blocks. */
+        public int respawnBlocks = 7000;
+        /** How far his crown, woken against him, holds him off, in blocks ("/hollowbell ward blocks"). */
+        public int wardBlocks = 700;
+        /** How long the ward lasts once it is started, in seconds ("/hollowbell ward minutes"). */
+        public int wardSeconds = 1200;
+        /** How long the crown sits dark after a ward, in seconds ("/hollowbell ward rest"). */
+        public int wardRestSeconds = 1200;
         /** He gets more health the more players are fighting him. */
         public boolean scaleToPlayers = true;
         /** How loud he is, 0 = silent, 1 = normal. */
@@ -82,10 +96,13 @@ public final class HollowbellConfig {
 
     public static Values V = new Values();
 
+    /** which version of the settings this build writes; save() and load() both stamp it */
+    private static final int VERSION = 5;
+
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json"); }
 
     public static void save() {
-        V.configVersion = 4;
+        V.configVersion = VERSION;
         try { Files.writeString(file(), new GsonBuilder().setPrettyPrinting().create().toJson(V)); }
         catch (Exception e) { HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString()); }
     }
@@ -102,10 +119,12 @@ public final class HollowbellConfig {
                     if (v.configVersion < 3 && v.podRegrowSeconds == 90) v.podRegrowSeconds = 150;
                     // 1.3.4: all the bosses take a bit more from each other, so their fights don't drag on
                     if (v.configVersion < 4 && Math.abs(v.giantArmor - 0.55f) < 1e-4f) v.giantArmor = 0.7f;
+                    // 1.4: the world holds one of him by default (0 still means "no limit" if somebody sets it back)
+                    if (v.configVersion < 5 && v.maxHollowbells == 0) v.maxHollowbells = 1;
                     V = v;
                 }
             }
-            V.configVersion = 4;
+            V.configVersion = VERSION;
             Files.writeString(file(), gson.toJson(V));
         } catch (Exception e) {
             HollowbellMod.LOG.warn("Could not read {}, using defaults: {}", file(), e.toString());

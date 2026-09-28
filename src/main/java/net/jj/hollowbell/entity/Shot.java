@@ -141,7 +141,8 @@ public class Shot extends ThrowableItemProjectile {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        entityData.set(DATA_KIND, tag.getInt("Kind")); damage = tag.getFloat("Damage"); radius = tag.getFloat("Radius"); life = tag.getInt("Life");
+        entityData.set(DATA_KIND, tag.getInt("Kind")); damage = tag.getFloat("Damage"); radius = tag.getFloat("Radius");
+        if (tag.contains("Life")) life = tag.getInt("Life");     // an old save without it keeps the usual life
     }
 
     @Override public boolean isPickable() { return false; }

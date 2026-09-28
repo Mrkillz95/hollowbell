@@ -166,6 +166,13 @@ public final class Away extends SavedData {
     public boolean send(ServerLevel l, UUID id, Vec3 to) {
         Rec r = recs.get(id);
         if (r == null) return false;
+        // bound to a circle, he keeps to it out of the world too
+        if (r.body.getInt("BoundR") > 0) {
+            double bx = r.body.getDouble("BoundX"), bz = r.body.getDouble("BoundZ");
+            int br = r.body.getInt("BoundR");
+            double dx = to.x - bx, dz = to.z - bz, len = Math.hypot(dx, dz);
+            if (len > br) to = new Vec3(bx + dx / len * br, to.y, bz + dz / len * br);
+        }
         long now = l.getGameTime();
         Vec3 at = r.spot(now);
         r.fromX = at.x; r.fromZ = at.z; r.start = now;

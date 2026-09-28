@@ -79,16 +79,30 @@ public class HollowbellMod implements ModInitializer {
             e.accept(ModItems.STINGER); e.accept(ModItems.BELL_HELMET); e.accept(ModItems.BELL_CHESTPLATE); e.accept(ModItems.BELL_LEGGINGS); e.accept(ModItems.BELL_BOOTS);
         });
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.INGREDIENTS).register(e -> { e.accept(ModItems.POD); e.accept(ModItems.BELL_GLASS); });
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(e -> e.accept(ModItems.CODEX));
+        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(e -> { e.accept(ModItems.CODEX); e.accept(ModItems.FINDER); });
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e -> e.accept(ModItems.CROWN));
 
-        CommandRegistrationCallback.EVENT.register((d, access, env) -> HollowbellCommand.register(d));
+        net.jj.hollowbell.item.BellArmorItem.init();
+
+        CommandRegistrationCallback.EVENT.register((d, access, env) -> {
+            HollowbellCommand.register(d);
+            // one mod of the five registers /giants for everyone (see GiantsCommand)
+            if (net.jj.hollowbell.command.GiantsCommand.elected()) net.jj.hollowbell.command.GiantsCommand.register(d);
+        });
         ServerTickEvents.END_SERVER_TICK.register(CodexOrders::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Away::tick);
+        ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.WorldOne::serverTick);
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> { if (entity instanceof HollowbellEntity h) h.clearBars(); });
-        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> { if (entity instanceof HollowbellEntity h) HollowbellCommand.keepToTheLimit(h, world); });
-        ServerLifecycleEvents.SERVER_STOPPED.register(s -> CodexOrders.forgetEverything());
+        // the cap: only for freshly made ones. A saved one loading with its chunk is nobody arriving.
+        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+            if (entity instanceof HollowbellEntity h && h.freshSpawn()) net.jj.hollowbell.world.WorldOne.keepToTheLimit(h, world);
+        });
+        // his ground: chunks near the Bell Hollows are turned as they come in, a couple a tick
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents.CHUNK_LOAD.register(net.jj.hollowbell.world.HomeGround::chunkLoaded);
+        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.HomeGround.forgetQueue(); });
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
+                CodexOrders.forgetPlayer(handler.getPlayer().getUUID()));
 
         BellRig rig = BellRig.get();
         BellModel.preload();

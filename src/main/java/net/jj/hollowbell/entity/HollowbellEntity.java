@@ -153,7 +153,15 @@ public class HollowbellEntity extends Monster {
     private boolean stay;
     private int angerTicks;
     private @Nullable UUID hunted;
+    /** when he first turned up, kept through every save: it decides who is oldest when the world is full */
     private long bornAt = -1;
+    /** the one the world keeps (see WorldOne); saved with him */
+    private boolean worldOne;
+    /** true when he was read back from a save (or from being away), not freshly made: the cap leaves him be */
+    private boolean loadedFromSave;
+    /** bound to a circle he will not leave on his own (the book's "keep to here"); boundR <= 0 = free */
+    private double boundX, boundZ;
+    private int boundR = -1;
 
     // ---- being him
     private @Nullable LivingEntity rider;
@@ -611,6 +619,8 @@ public class HollowbellEntity extends Monster {
         if (bornAt < 0) bornAt = level().getGameTime();
         if (!settled) arrive();
         if (home == null) home = position();
+        // the world's own one keeps the world posted on where he is, for the finder
+        if (worldOne && tickCount % 100 == 0 && level() instanceof ServerLevel sl) net.jj.hollowbell.world.WorldOne.get(sl.getServer()).seen(this);
         mood.tick();
         if (angerTicks > 0) angerTicks--;
         long now = level().getGameTime();
@@ -688,7 +698,7 @@ public class HollowbellEntity extends Monster {
 
     // ------------------------------------------------------------------ where he goes
 
-    public void setGoal(@Nullable Vec3 g) { goal = g; if (g != null) setStay(false); }
+    public void setGoal(@Nullable Vec3 g) { goal = g == null ? null : keptIn(g); if (g != null) setStay(false); }
 
     /** /hollowbell height: how high over the ground he drifts (his strand ends that far up), until he picks again */
     public void setCruise(double blocks) {
@@ -731,6 +741,9 @@ public class HollowbellEntity extends Monster {
         LivingEntity t = getTarget();
         Vec3 want = null;
         boolean still = stay || moves.holdsStill() || dying;
+        // a woken crown's circle: a goal in there is dropped, and standing in there he makes for the way out
+        Vec3 wardOut = rider == null ? wardEscape() : null;
+        if (wardOut == null && goal != null && warded(goal.x, goal.z)) goal = null;
         if (rider != null) {
             if (driveF != 0f || driveS != 0f) {
                 float yr = driveYaw * Mth.DEG_TO_RAD;
@@ -758,6 +771,16 @@ public class HollowbellEntity extends Monster {
                 }
                 if (wanderTo != null && horiz(wanderTo) > 8 * s + 3) want = wanderTo;
             }
+        }
+        if (rider == null) {
+            // his own will keeps to his circle (a rider may drive him out), and never into a warded one
+            if (want != null) {
+                want = keptIn(want);
+                if (warded(want.x, want.z)) want = wardKeepOut(want);
+            } else if (bound() && !still && Math.hypot(getX() - boundX, getZ() - boundZ) > boundR) {
+                want = keptIn(position());          // drifted out somehow: he walks back in
+            }
+            if (wardOut != null) want = wardOut;    // out of the circle first, whatever else he wanted
         }
         if (cruise < 0) cruise = 6 * s + 1;
 
@@ -970,12 +993,19 @@ public class HollowbellEntity extends Monster {
         return e != null && e.isAlive() && !e.isRemoved() && e.level() == level() && !spares(e)
                 && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand) && e != rider && !moves.caught(e)
                 // (another giant only if he's allowed to fight them: "/hollowbell giants off")
-                && (HollowbellConfig.V.fightGiants || !Giants.isGiant(e));
+                && (HollowbellConfig.V.fightGiants || !Giants.isGiant(e))
+                // anything standing where a woken crown holds him off is out of his reach
+                && !warded(e.getX(), e.getZ());
+    }
+
+    /** bound to a circle, anything too far outside it is past his reach and let go */
+    private boolean pastHisCircle(Vec3 at) {
+        return bound() && Math.hypot(at.x - boundX, at.z - boundZ) > boundR + 110 * bellScale() + 40;
     }
 
     private void pickTarget() {
         LivingEntity t = getTarget();
-        if (t != null && (!fairGame(t) || horiz(t.position()) > senseRange() * 1.6 || (isGuardian() && home != null
+        if (t != null && (!fairGame(t) || horiz(t.position()) > senseRange() * 1.6 || pastHisCircle(t.position()) || (isGuardian() && home != null
                 && t.position().distanceTo(home) > guardRange() * 1.3 && angerTicks <= 0))) { setTarget(null); t = null; }
         if (hunted != null && level() instanceof ServerLevel sl) {
             Entity h = sl.getEntity(hunted);
@@ -987,7 +1017,7 @@ public class HollowbellEntity extends Monster {
         double r = senseRange();
         Player best = null; double bd = Double.MAX_VALUE;
         for (Player p : level().players()) {
-            if (!fairGame(p)) continue;
+            if (!fairGame(p) || pastHisCircle(p.position())) continue;
             double d = horiz(p.position());
             if (d > r) continue;
             if (isGuardian() && home != null && p.position().distanceTo(home) > guardRange()) continue;
@@ -1000,7 +1030,7 @@ public class HollowbellEntity extends Monster {
         Vec3 c = isGuardian() && home != null ? home : position();
         LivingEntity mob = null; double md = Double.MAX_VALUE;
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(mr, 60 * bellScale() + 30, mr),
-                e -> e instanceof net.minecraft.world.entity.monster.Enemy && !(e instanceof Player) && fairGame(e))) {
+                e -> e instanceof net.minecraft.world.entity.monster.Enemy && !(e instanceof Player) && fairGame(e) && !pastHisCircle(e.position()))) {
             double d = horiz(e.position());
             if (d < md) { md = d; mob = e; }
         }
@@ -1337,7 +1367,7 @@ public class HollowbellEntity extends Monster {
         justBack = 200;
         settled = true;
         setStay(stayPut);
-        goal = to;
+        goal = to == null ? null : keptIn(to);
     }
 
     /** Once a second, from the server: nobody near for a few seconds and he steps out of the world. */
@@ -1362,10 +1392,12 @@ public class HollowbellEntity extends Monster {
         dropRider();
         moves.letGoOfEverything(false);
         Vec3 dest = stay ? null : goal != null ? goal : wanderTo;
+        if (dest != null) dest = keptIn(dest);      // bound, the sum keeps to his circle too
         double lift = Math.max(0, getY() - groundAt(getX(), getZ()));
         CompoundTag body = new CompoundTag();
         saveWithoutId(body);
         net.jj.hollowbell.world.Away.get(sl.getServer()).takeAway(sl, this, body, dest, travelSpeed(), lift);
+        if (worldOne) net.jj.hollowbell.world.WorldOne.get(sl.getServer()).seen(this);
         steppedOut = true;
         clearBars();
         discard();
@@ -1575,6 +1607,12 @@ public class HollowbellEntity extends Monster {
 
     @Override
     public void die(DamageSource src) {
+        if (!level().isClientSide && !dead && level() instanceof ServerLevel sl) {
+            // the next one is set going whether this was the world's own or one somebody put down themselves,
+            // as long as he was the only one standing: otherwise killing an egg one would quietly end them for good
+            boolean last = worldOne || (HollowbellConfig.V.oneInTheWorld && net.jj.hollowbell.world.WorldOne.anyOther(sl.getServer(), this) == null);
+            if (last) net.jj.hollowbell.world.WorldOne.get(sl.getServer()).died(sl, this);
+        }
         if (!level().isClientSide) {
             HollowbellMod.LOG.info("Hollowbell died at {} ({})", position(), src.getMsgId());
             dropRider();
@@ -1693,6 +1731,97 @@ public class HollowbellEntity extends Monster {
 
     public long bornAt() { return bornAt; }
 
+    /** his birth tick, stamped now if he never got one (a fresh one joining before his first tick) */
+    public long bornAtOr(Level l) {
+        if (bornAt < 0) bornAt = l.getGameTime();
+        return bornAt;
+    }
+
+    // ------------------------------------------------------------------ the one the world keeps
+    public void markWorldOne() { worldOne = true; }
+    public boolean isWorldOne() { return worldOne; }
+    /** freshly made (summon, egg, the world's own), not read back from a save: only these count at the cap */
+    public boolean freshSpawn() { return !loadedFromSave; }
+
+    /** somebody summoned another and he is the one who has to go: gone for good, no loot, no sum */
+    public void takenPlaceOf() {
+        clearBars();
+        if (level() instanceof ServerLevel sl) {
+            Vec3 c = position();
+            float s = bellScale();
+            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SQUID_INK,
+                    c.x, c.y + 60 * s + 2, c.z, 200, 50 * s + 4, 40 * s + 2, 50 * s + 4, 0.3);
+            sound(c, ModSounds.DEATH, 4f, 0.6f);
+            for (ServerPlayer p : sl.players())
+                if (p.distanceToSqr(this) < 400 * 400) p.displayClientMessage(Component.translatable("message.hollowbell.made_way"), false);
+            HollowbellMod.LOG.info("A Hollowbell at {}, {} made way for a newer one", Mth.floor(getX()), Mth.floor(getZ()));
+        }
+        steppedOut = true;                          // remove() has nothing more to note about him
+        discard();
+    }
+
+    // ------------------------------------------------------------------ bound to a circle
+    public boolean bound() { return boundR > 0; }
+    public int boundRadius() { return boundR; }
+    public Vec3 boundCentre() { return new Vec3(boundX, 0, boundZ); }
+
+    public void bindTo(double x, double z, int r) { boundX = x; boundZ = z; boundR = Mth.clamp(r, 32, 100000); }
+    public void unbind() { boundR = -1; }
+
+    /** a spot pulled inside his circle, less his own reach, so all of him stays in; as given when he is free */
+    public Vec3 keptIn(Vec3 want) {
+        if (!bound() || want == null) return want;
+        double keep = Math.max(8, boundR - bellRadius() - 12 * bellScale());
+        double dx = want.x - boundX, dz = want.z - boundZ;
+        double len = Math.hypot(dx, dz);
+        if (len <= keep) return want;
+        return new Vec3(boundX + dx / len * keep, want.y, boundZ + dz / len * keep);
+    }
+
+    // ------------------------------------------------------------------ the crown holding him off
+    /** is that spot inside the circle a woken crown keeps him out of? */
+    public boolean warded(double wx, double wz) {
+        if (level().isClientSide || !(level() instanceof ServerLevel sl)) return false;
+        return net.jj.hollowbell.world.WorldOne.get(sl.getServer()).warded(level(), wx, wz);
+    }
+
+    /** standing inside the circle: a spot outside its edge to make for; otherwise nothing */
+    private @Nullable Vec3 wardEscape() {
+        if (!warded(getX(), getZ())) return null;
+        if (!(level() instanceof ServerLevel sl)) return null;
+        BlockPos at = net.jj.hollowbell.world.WorldOne.get(sl.getServer()).wardSpot();
+        if (at == null) return null;
+        double dx = getX() - (at.getX() + 0.5), dz = getZ() - (at.getZ() + 0.5);
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1.0E-4) { dx = 1; dz = 0; len = 1; }
+        double r = net.jj.hollowbell.world.WorldOne.wardRange() + 32 + bellRadius();
+        return new Vec3(at.getX() + 0.5 + dx / len * r, getY(), at.getZ() + 0.5 + dz / len * r);
+    }
+
+    /** a spot he wants pushed back out of the warded circle, to just past its edge */
+    private Vec3 wardKeepOut(Vec3 want) {
+        if (!(level() instanceof ServerLevel sl)) return want;
+        BlockPos at = net.jj.hollowbell.world.WorldOne.get(sl.getServer()).wardSpot();
+        if (at == null) return want;
+        double dx = want.x - (at.getX() + 0.5), dz = want.z - (at.getZ() + 0.5);
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1.0E-4) { dx = getX() - (at.getX() + 0.5); dz = getZ() - (at.getZ() + 0.5); len = Math.max(1.0E-4, Math.sqrt(dx * dx + dz * dz)); }
+        double r = net.jj.hollowbell.world.WorldOne.wardRange() + 16 + bellRadius();
+        return new Vec3(at.getX() + 0.5 + dx / len * r, want.y, at.getZ() + 0.5 + dz / len * r);
+    }
+
+    /** the crown has woken under him: whatever he was doing here, he is not doing it any more */
+    public void pushedBackByWard() {
+        if (level().isClientSide) return;
+        setTarget(null);
+        goal = null;
+        setStay(false);
+        clearHitList();
+        stopFetch();
+        angerTicks = 0;
+        sound(position(), ModSounds.HURT, 4.5f, 0.45f);
+    }
+
     // ------------------------------------------------------------------ saving
 
     @Override
@@ -1727,6 +1856,9 @@ public class HollowbellEntity extends Monster {
         tag.putBoolean("Stay", stay);
         tag.putBoolean("Settled", settled);
         if (hunted != null) tag.putUUID("Hunted", hunted);
+        if (bornAt >= 0) tag.putLong("BornAt", bornAt);
+        if (worldOne) tag.putBoolean("WorldOne", true);
+        if (bound()) { tag.putDouble("BoundX", boundX); tag.putDouble("BoundZ", boundZ); tag.putInt("BoundR", boundR); }
         mood.save(tag);
     }
 
@@ -1774,7 +1906,13 @@ public class HollowbellEntity extends Monster {
         setStay(tag.getBoolean("Stay"));
         // one from an older save, or from a spawn egg's tag, is where it's meant to be (an egg's comes down)
         settled = tag.getBoolean("Settled") || (!tag.contains("HollowbellEgg") && tag.contains("BellHpMax"));
+        // a saved body carries his own health tag; a fresh one (an egg, a summon) never does
+        loadedFromSave = tag.contains("BellHpMax") || tag.getBoolean("Settled");
         hunted = tag.hasUUID("Hunted") ? tag.getUUID("Hunted") : null;
+        bornAt = tag.contains("BornAt") ? tag.getLong("BornAt") : -1;
+        worldOne = tag.getBoolean("WorldOne");
+        if (tag.contains("BoundR")) { boundX = tag.getDouble("BoundX"); boundZ = tag.getDouble("BoundZ"); boundR = tag.getInt("BoundR"); }
+        else boundR = -1;
         mood.load(tag);
         partsDirty = true;
         refreshDimensions();
