@@ -46,6 +46,7 @@ public final class HomeGround {
             Blocks.SMOOTH_STONE, Blocks.VERDANT_FROGLIGHT, Blocks.LIME_STAINED_GLASS, Blocks.MOSS_BLOCK};
 
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+    private static final boolean DEBUG = Boolean.getBoolean("hollowbell.debug");
 
     // ------------------------------------------------------------------ the shape of his ground
 
@@ -132,6 +133,7 @@ public final class HomeGround {
         if (lived(chunk) || built(chunk)) return;
         BellPlan p = plan(level, w);
         if (!p.near(chunk.getPos().x, chunk.getPos().z)) return;
+        long t0 = System.nanoTime();
         Survey sv = survey(level, p, chunk, true, wasOld ? w.homeSeed() : null);
         if (!sv.any) return;
         BellPlan.Out o = new BellPlan.Out();
@@ -148,6 +150,8 @@ public final class HomeGround {
         keepWaterIn(level, water, x0, z0, m);
         fillBiome(level, p, chunk);
         if (WorldOne.IN_TESTS) { lastOut = o; lastY0 = sv.y0; }
+        if (DEBUG) HollowbellMod.LOG.info("Turned chunk {}, {} into the Bell Hollows in {} ms", chunk.getPos().x, chunk.getPos().z,
+                String.format("%.1f", (System.nanoTime() - t0) / 1e6));
     }
 
     /** for the tests: what the last chunk turned was asked to become, and where its ground was before */
