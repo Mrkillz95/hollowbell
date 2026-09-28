@@ -2408,10 +2408,26 @@ public class HollowbellGameTests implements FabricGameTest {
 
     // ------------------------------------------------------------------ his ground, the Bell Hollows
 
-    /** a spot far off for the ground tests, its chunks loaded */
+    /**
+     * A spot far off for the ground tests, its chunks loaded. The test world is a normal one with a new seed each
+     * time, so the spot walks along until the generator says the land round it is dry (it never loads to look).
+     */
     private static BlockPos groundSpot(GameTestHelper h, int slot) {
+        var l = h.getLevel();
+        var src = l.getChunkSource();
         BlockPos o = h.absolutePos(BlockPos.ZERO);
-        int x = o.getX() + 20000 + slot * 400 + 8, z = o.getZ() + 5000 + 8;
+        int bx = ((o.getX() + 20000 + slot * 400) >> 4 << 4) + 8, bz = ((o.getZ() + 5000) >> 4 << 4) + 8;
+        int x = bx, z = bz;
+        search:
+        for (int tries = 0; tries < 80; tries++) {
+            int tx = bx + (tries % 2 == 0 ? 0 : 160), tz = bz + (tries / 2) * 176;
+            for (int dx = -40; dx <= 40; dx += 20) for (int dz = -40; dz <= 40; dz += 20) {
+                int g = src.getGenerator().getBaseHeight(tx + dx, tz + dz, net.minecraft.world.level.levelgen.Heightmap.Types.OCEAN_FLOOR_WG, l, src.randomState());
+                if (g <= l.getSeaLevel() + 3) continue search;
+            }
+            x = tx; z = tz;
+            break;
+        }
         force(h, x, z, 1, true);
         return new BlockPos(x, 0, z);
     }
@@ -2426,7 +2442,7 @@ public class HollowbellGameTests implements FabricGameTest {
                 net.minecraft.core.QuartPos.fromBlock(z)).is(net.jj.hollowbell.world.HomeGround.BELL_HOLLOWS);
     }
 
-    /** the flat test world has villages: the ground tests want a chunk with no building in it */
+    /** the test world has villages: the ground tests want a chunk with no building in it */
     private static net.minecraft.world.level.chunk.LevelChunk plainChunk(GameTestHelper h, BlockPos at) {
         var ch = h.getLevel().getChunkAt(at);
         ch.setAllReferences(new java.util.HashMap<>());
@@ -2434,19 +2450,35 @@ public class HollowbellGameTests implements FabricGameTest {
         return ch;
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_trees")
+    private static boolean ours(net.minecraft.world.level.block.state.BlockState s) {
+        return net.jj.hollowbell.world.HomeGround.isOurs(s);
+    }
+
+    /** his ground turned, but not grass: plainly his */
+    private static boolean plainlyOurs(net.minecraft.world.level.block.state.BlockState s) {
+        return ours(s) && !s.is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK) && s.getFluidState().isEmpty();
+    }
+
+    /** claims the ground 100 blocks west of the spot: the spot's chunk lies in the pale core, outside the den */
+    private static void claimNear(GameTestHelper h, net.jj.hollowbell.world.WorldOne w, BlockPos c) {
+        w.claimHome(h.getLevel(), c.getX() - 100, c.getZ());
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_trees")
     public void hisGroundTakesTreesButNotCabins(GameTestHelper h) {
         var l = h.getLevel();
         var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
         w.clearForTests();
         BlockPos c = groundSpot(h, 222);
-        w.claimHome(l, c.getX(), c.getZ());
+        claimNear(h, w, c);
         var chunk = plainChunk(h, c);
         int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
         int g = top(h, x0 + 5, z0 + 5);                                  // the ground
         var LOG = net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState();
         var PLANK = net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState();
         var LEAF = net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState();
+        int floorY = top(h, x0 + 4, z0 + 4);
+        var floor = l.getBlockState(new BlockPos(x0 + 4, floorY, z0 + 4));
         java.util.List<BlockPos> cabin = new java.util.ArrayList<>();
         // a log cabin: log walls 3 high round a 5x5, a plank roof over it
         for (int dx = 2; dx <= 6; dx++) for (int dz = 2; dz <= 6; dz++) {
@@ -2458,41 +2490,45 @@ public class HollowbellGameTests implements FabricGameTest {
         }
         // a tree: a trunk five high, a leaf cap three across on top
         int tx = x0 + 11, tz = z0 + 11;
-        for (int y = 1; y <= 5; y++) l.setBlock(new BlockPos(tx, g + y, tz), LOG, 2);
-        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) l.setBlock(new BlockPos(tx + dx, g + 6, tz + dz), LEAF, 2);
+        int tg = top(h, tx, tz);
+        for (int y = 1; y <= 5; y++) l.setBlock(new BlockPos(tx, tg + y, tz), LOG, 2);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) l.setBlock(new BlockPos(tx + dx, tg + 6, tz + dz), LEAF, 2);
         // placed leaves on a post are somebody's: they stay
-        BlockPos post = new BlockPos(x0 + 13, g + 1, z0 + 3);
+        BlockPos post = new BlockPos(x0 + 13, top(h, x0 + 13, z0 + 3) + 1, z0 + 3);
         l.setBlock(post, net.minecraft.world.level.block.Blocks.OAK_FENCE.defaultBlockState(), 2);
         l.setBlock(post.above(), LEAF.setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true), 2);
         net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
         for (BlockPos p : cabin) h.assertTrue(!l.getBlockState(p).isAir(), "the cabin lost a block at " + p);
-        h.assertTrue(l.getBlockState(new BlockPos(x0 + 4, g, z0 + 4)).is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK), "the floor under the cabin roof was turned");
-        for (int y = 1; y <= 6; y++) h.assertTrue(l.getBlockState(new BlockPos(tx, g + y, tz)).isAir(), "the tree is still there at +" + y);
-        h.assertTrue(l.getBlockState(new BlockPos(tx + 1, g + 6, tz)).isAir(), "the tree's leaves are still there");
-        h.assertTrue(net.jj.hollowbell.world.HomeGround.isPalette(l.getBlockState(new BlockPos(tx, top(h, tx, tz), tz))), "the ground under the tree wasn't turned");
-        h.assertTrue(l.getBlockState(post.above()).is(BlockTags_LEAVES()), "placed leaves were cleared");
-        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) for (int y = g + 1; y <= g + 8; y++)
-            l.setBlock(new BlockPos(x0 + dx, y, z0 + dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        h.assertTrue(l.getBlockState(new BlockPos(x0 + 4, floorY, z0 + 4)) == floor, "the floor under the cabin roof was turned");
+        for (int y = 1; y <= 6; y++) {
+            var st = l.getBlockState(new BlockPos(tx, tg + y, tz));
+            h.assertTrue(!st.is(net.minecraft.tags.BlockTags.LOGS) && !st.is(net.minecraft.tags.BlockTags.LEAVES), "the tree is still there at +" + y);
+        }
+        h.assertTrue(!l.getBlockState(new BlockPos(tx + 1, tg + 6, tz)).is(net.minecraft.tags.BlockTags.LEAVES), "the tree's leaves are still there");
+        h.assertTrue(ours(l.getBlockState(new BlockPos(tx, top(h, tx, tz), tz))), "the ground under the tree wasn't turned");
+        h.assertTrue(l.getBlockState(post.above()).is(net.minecraft.tags.BlockTags.LEAVES), "placed leaves were cleared");
+        for (BlockPos p : cabin) l.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        l.setBlock(post, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        l.setBlock(post.above(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
         w.clearForTests();
         force(h, c.getX(), c.getZ(), 1, false);
         h.succeed();
     }
 
-    private static net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> BlockTags_LEAVES() { return net.minecraft.tags.BlockTags.LEAVES; }
-
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_lived")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_lived")
     public void groundPeopleLiveOnIsLeftAlone(GameTestHelper h) {
         var l = h.getLevel();
         var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
         w.clearForTests();
         BlockPos c = groundSpot(h, 223);
-        w.claimHome(l, c.getX(), c.getZ());
+        claimNear(h, w, c);
         var chunk = plainChunk(h, c);
         chunk.setInhabitedTime(5000);                                   // players have spent a few minutes here
         int ty = top(h, c.getX(), c.getZ());
         var was = l.getBlockState(new BlockPos(c.getX(), ty, c.getZ()));
         net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
         h.assertTrue(l.getBlockState(new BlockPos(c.getX(), ty, c.getZ())) == was, "a chunk people live in was turned");
+        h.assertTrue(top(h, c.getX(), c.getZ()) == ty, "a chunk people live in was reshaped");
         h.assertTrue(!hollowsAt(h, c.getX(), ty, c.getZ()), "a chunk people live in became the Bell Hollows");
         h.assertTrue(w.paintedAlready(chunk.getPos().toLong()), "it will be looked at again and again");
         w.clearForTests();
@@ -2500,23 +2536,27 @@ public class HollowbellGameTests implements FabricGameTest {
         h.succeed();
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_paint")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_paint")
     public void hisGroundTurnsAChunk(GameTestHelper h) {
         var l = h.getLevel();
         var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
         w.clearForTests();
         BlockPos c = groundSpot(h, 210);
         h.assertTrue(!hollowsAt(h, c.getX(), top(h, c.getX(), c.getZ()), c.getZ()), "the Bell Hollows before anything was claimed");
-        w.claimHome(l, c.getX(), c.getZ());
+        claimNear(h, w, c);
+        h.assertTrue(w.homeRadius() == net.jj.hollowbell.world.WorldOne.configRadius() && w.homeRadius() >= 900, "a new ground is " + w.homeRadius() + " across");
         var chunk = plainChunk(h, c);
         net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
         h.assertTrue(w.paintedAlready(chunk.getPos().toLong()), "the chunk isn't noted as done");
-        int ours = 0;
+        int ours = 0, plain = 0;
         for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
             int x = chunk.getPos().getMinBlockX() + dx, z = chunk.getPos().getMinBlockZ() + dz;
-            if (net.jj.hollowbell.world.HomeGround.isPalette(l.getBlockState(new BlockPos(x, top(h, x, z), z)))) ours++;
+            var st = l.getBlockState(new BlockPos(x, top(h, x, z), z));
+            if (ours(st)) ours++;
+            if (plainlyOurs(st)) plain++;
         }
-        h.assertTrue(ours >= 250, "only " + ours + " of 256 columns are his ground on top");
+        h.assertTrue(ours >= 230, "only " + ours + " of 256 columns are his ground on top");
+        h.assertTrue(plain >= 100, "only " + plain + " of 256 columns are plainly his (not grass)");
         int ty = top(h, c.getX(), c.getZ());
         h.assertTrue(hollowsAt(h, c.getX(), ty, c.getZ()), "the biome didn't change to the Bell Hollows");
         h.assertTrue(hollowsAt(h, c.getX(), ty + 40, c.getZ()), "the air over his ground isn't the Bell Hollows");
@@ -2525,33 +2565,34 @@ public class HollowbellGameTests implements FabricGameTest {
         h.succeed();
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_again")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_again")
     public void turningAChunkTwiceDoesNothing(GameTestHelper h) {
         var l = h.getLevel();
         var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
         w.clearForTests();
         BlockPos c = groundSpot(h, 211);
-        w.claimHome(l, c.getX(), c.getZ());
+        claimNear(h, w, c);
         var chunk = plainChunk(h, c);
         net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
         BlockPos t = new BlockPos(c.getX(), top(h, c.getX(), c.getZ()), c.getZ());
+        var was = l.getBlockState(t);
         l.setBlockAndUpdate(t, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
         net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
         h.assertTrue(l.getBlockState(t).is(net.minecraft.world.level.block.Blocks.OAK_PLANKS), "the chunk was turned a second time");
-        l.setBlockAndUpdate(t, net.minecraft.world.level.block.Blocks.CALCITE.defaultBlockState());
+        l.setBlockAndUpdate(t, was);
         w.clearForTests();
         force(h, c.getX(), c.getZ(), 1, false);
         h.succeed();
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_outside")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_outside")
     public void groundOutsideHisIsLeftAlone(GameTestHelper h) {
         var l = h.getLevel();
         var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
         w.clearForTests();
         BlockPos c = groundSpot(h, 212);
         w.claimHome(l, c.getX(), c.getZ());
-        BlockPos far = new BlockPos(c.getX(), 0, c.getZ() + 800);
+        BlockPos far = new BlockPos(c.getX(), 0, c.getZ() + w.homeRadius() + 40);
         force(h, far.getX(), far.getZ(), 1, true);
         var chunk = plainChunk(h, far);
         java.util.List<net.minecraft.world.level.block.state.BlockState> before = new java.util.ArrayList<>();
@@ -2570,5 +2611,274 @@ public class HollowbellGameTests implements FabricGameTest {
         force(h, c.getX(), c.getZ(), 1, false);
         force(h, far.getX(), far.getZ(), 1, false);
         h.succeed();
+    }
+
+    /** every block of two chunks side by side, from a little under the ground to well over it */
+    private static java.util.List<net.minecraft.world.level.block.state.BlockState> grab(GameTestHelper h, int x0, int z0, int lo, int hi) {
+        var out = new java.util.ArrayList<net.minecraft.world.level.block.state.BlockState>();
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int x = x0; x < x0 + 32; x++) for (int z = z0; z < z0 + 16; z++) for (int y = lo; y <= hi; y++)
+            out.add(h.getLevel().getBlockState(m.set(x, y, z)));
+        return out;
+    }
+
+    private static void putBack(GameTestHelper h, int x0, int z0, int lo, int hi, java.util.List<net.minecraft.world.level.block.state.BlockState> was) {
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        int k = 0;
+        for (int x = x0; x < x0 + 32; x++) for (int z = z0; z < z0 + 16; z++) for (int y = lo; y <= hi; y++)
+            h.getLevel().setBlock(m.set(x, y, z), was.get(k++), 2 | 16);
+    }
+
+    /** the glass of the bell and the froglight of its crown */
+    private static boolean bell(net.minecraft.world.level.block.state.BlockState s) {
+        return s.is(net.minecraft.world.level.block.Blocks.LIME_STAINED_GLASS) || s.is(net.minecraft.world.level.block.Blocks.WHITE_STAINED_GLASS)
+                || s.is(net.minecraft.world.level.block.Blocks.GREEN_STAINED_GLASS) || s.is(net.minecraft.world.level.block.Blocks.LIGHT_GRAY_STAINED_GLASS)
+                || s.is(net.minecraft.world.level.block.Blocks.PEARLESCENT_FROGLIGHT);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "ground_border")
+    public void bigFeaturesComeOutWholeInAnyOrder(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 224);
+        long seed = 0x5EED0001L;
+        // the den's glass bell is fifty across: it straddles the border between this chunk and the next one east
+        w.claimHome(l, c.getX() + 8, c.getZ(), seed);
+        var a = plainChunk(h, c);
+        var b = plainChunk(h, c.offset(16, 0, 0));
+        int x0 = a.getPos().getMinBlockX(), z0 = a.getPos().getMinBlockZ();
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int x = x0; x < x0 + 32; x++) for (int z = z0; z < z0 + 16; z++) { lo = Math.min(lo, top(h, x, z)); hi = Math.max(hi, top(h, x, z)); }
+        lo -= 12; hi += 40;
+        var before = grab(h, x0, z0, lo, hi);
+        net.jj.hollowbell.world.HomeGround.paint(l, w, a);
+        net.jj.hollowbell.world.HomeGround.paint(l, w, b);
+        var first = grab(h, x0, z0, lo, hi);
+        // the bell really does cross the border: glass or calcite over the ground on both sides of it
+        int east = 0, west = 0;
+        for (int z = z0; z < z0 + 16; z++) for (int y = lo; y <= hi; y++) {
+            if (bell(l.getBlockState(new BlockPos(x0 + 15, y, z)))) west++;
+            if (bell(l.getBlockState(new BlockPos(x0 + 16, y, z)))) east++;
+        }
+        if (west <= 3 || east <= 3) {
+            var o = net.jj.hollowbell.world.HomeGround.lastOut;
+            int pc = 0, an = 0, maxY = Integer.MIN_VALUE;
+            if (o != null) for (int i = 0; i < 256; i++) { if (o.paint[i]) pc++; an += o.an[i]; for (int k = 0; k < o.an[i]; k++) maxY = Math.max(maxY, o.ay[i][k]); }
+            h.fail("the bell doesn't cross the chunk border (" + west + " / " + east + "); last chunk: " + pc + " painted, " + an
+                    + " set above, highest " + maxY + ", looked from " + lo + " to " + hi + ", den at " + net.jj.hollowbell.world.HomeGround.plan(l, w).denY());
+        }
+        // the same ground again, the chunks turned the other way round
+        putBack(h, x0, z0, lo, hi, before);
+        w.clearForTests();
+        w.claimHome(l, c.getX() + 8, c.getZ(), seed);
+        plainChunk(h, c); plainChunk(h, c.offset(16, 0, 0));
+        net.jj.hollowbell.world.HomeGround.paint(l, w, b);
+        net.jj.hollowbell.world.HomeGround.paint(l, w, a);
+        var second = grab(h, x0, z0, lo, hi);
+        int diff = 0;
+        for (int i = 0; i < first.size(); i++) if (first.get(i) != second.get(i)) diff++;
+        h.assertTrue(diff == 0, diff + " blocks came out different when the chunks were turned the other way round");
+        putBack(h, x0, z0, lo, hi, before);
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        force(h, c.getX() + 16, c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "ground_raised")
+    public void raisedGroundIsNeverHollow(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 225);
+        var chunk = plainChunk(h, c);
+        // a claim that puts this chunk out in the hills, where the plan raises plenty of it
+        int best = -1, bestAt = 0;
+        int[][] offs = {{-300, 0}, {0, -300}, {300, 0}, {0, 300}, {-420, 0}, {0, -420}, {-220, -220}, {220, 220}};
+        for (int k = 0; k < offs.length; k++) {
+            w.clearForTests();
+            w.claimHome(l, c.getX() + offs[k][0], c.getZ() + offs[k][1], 0x5EED0100L + k);
+            int[] y0 = new int[256];
+            var o = net.jj.hollowbell.world.HomeGround.preview(l, w, chunk, y0);
+            int up = 0;
+            for (int i = 0; i < 256; i++) if (o.paint[i] && o.top[i] > y0[i]) up++;
+            if (up > best) { best = up; bestAt = k; }
+        }
+        w.clearForTests();
+        w.claimHome(l, c.getX() + offs[bestAt][0], c.getZ() + offs[bestAt][1], 0x5EED0100L + bestAt);
+        plainChunk(h, c);
+        net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
+        var o = net.jj.hollowbell.world.HomeGround.lastOut;
+        int[] y0 = net.jj.hollowbell.world.HomeGround.lastY0;
+        h.assertTrue(o != null, "nothing was worked out");
+        int raised = 0;
+        for (int i = 0; i < 256; i++) {
+            if (!o.paint[i] || o.top[i] <= y0[i]) continue;
+            int x = chunk.getPos().getMinBlockX() + (i & 15), z = chunk.getPos().getMinBlockZ() + (i >> 4);
+            for (int y = y0[i] + 1; y <= o.top[i]; y++) {
+                var st = l.getBlockState(new BlockPos(x, y, z));
+                h.assertTrue(!st.isAir() && st.getFluidState().isEmpty(), "raised ground is hollow at " + x + ", " + y + ", " + z);
+            }
+            raised++;
+        }
+        h.assertTrue(raised >= 10, "only " + raised + " columns were raised; the test proves little");
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "ground_upgrade")
+    public void anOldGroundGrowsAndIsTurnedAgain(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 226);
+        // the first, small Hollows: two chunks turned (smooth stone on top, which the new core never uses), one since lived in
+        w.claimOldHome(c.getX() - 100, c.getZ(), 0x5EED0200L);
+        var fresh = plainChunk(h, c);
+        var lived = plainChunk(h, c.offset(0, 0, 16));
+        for (var ch : new net.minecraft.world.level.chunk.LevelChunk[]{fresh, lived}) {
+            for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
+                int x = ch.getPos().getMinBlockX() + dx, z = ch.getPos().getMinBlockZ() + dz;
+                BlockPos t = new BlockPos(x, top(h, x, z), z);
+                if (l.getBlockState(t).getFluidState().isEmpty()) l.setBlock(t, net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState(), 2);
+            }
+            w.notePainted(ch.getPos().toLong());
+        }
+        lived.setInhabitedTime(5000);
+        java.util.List<net.minecraft.world.level.block.state.BlockState> livedBefore = new java.util.ArrayList<>();
+        java.util.List<Integer> livedTops = new java.util.ArrayList<>();
+        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
+            int x = lived.getPos().getMinBlockX() + dx, z = lived.getPos().getMinBlockZ() + dz;
+            livedTops.add(top(h, x, z));
+            livedBefore.add(l.getBlockState(new BlockPos(x, top(h, x, z), z)));
+        }
+        h.assertTrue(w.groundVersion() == 1 && w.homeRadius() == 320, "the old ground isn't old");
+        h.assertTrue(w.upgradeGround(), "the old ground wasn't brought up to date");
+        h.assertTrue(w.groundVersion() == net.jj.hollowbell.world.WorldOne.GROUND_VERSION && w.homeRadius() >= 900, "the ground didn't grow: " + w.homeRadius());
+        h.assertTrue(!w.paintedAlready(fresh.getPos().toLong()), "the old chunk isn't waiting to be turned again");
+        net.jj.hollowbell.world.HomeGround.paint(l, w, fresh);
+        net.jj.hollowbell.world.HomeGround.paint(l, w, lived);
+        int changed = 0;
+        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
+            int x = fresh.getPos().getMinBlockX() + dx, z = fresh.getPos().getMinBlockZ() + dz;
+            if (!l.getBlockState(new BlockPos(x, top(h, x, z), z)).is(net.minecraft.world.level.block.Blocks.SMOOTH_STONE)) changed++;
+        }
+        h.assertTrue(changed >= 150, "only " + changed + " columns of the unvisited chunk were turned again");
+        h.assertTrue(w.paintedAlready(fresh.getPos().toLong()) && w.paintedAlready(lived.getPos().toLong()), "the chunks aren't noted as done");
+        int k = 0;
+        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
+            int x = lived.getPos().getMinBlockX() + dx, z = lived.getPos().getMinBlockZ() + dz;
+            h.assertTrue(top(h, x, z) == livedTops.get(k) && l.getBlockState(new BlockPos(x, top(h, x, z), z)) == livedBefore.get(k),
+                    "the chunk people lived in was changed at " + x + ", " + z);
+            k++;
+        }
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "ground_den")
+    public void theDenStandsInTheMiddle(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 227);
+        w.claimHome(l, c.getX(), c.getZ(), 0x5EED0300L);
+        var chunk = plainChunk(h, c);
+        net.jj.hollowbell.world.HomeGround.paint(l, w, chunk);
+        int t = top(h, c.getX(), c.getZ());
+        var crown = l.getBlockState(new BlockPos(c.getX(), t, c.getZ()));
+        h.assertTrue(crown.is(net.minecraft.world.level.block.Blocks.PEARLESCENT_FROGLIGHT), "the bell has no crown on top, it has " + crown);
+        int air = 0;
+        for (int y = t - 1; y > t - 30; y--) if (l.getBlockState(new BlockPos(c.getX(), y, c.getZ())).isAir()) air++;
+        h.assertTrue(air >= 10, "the bell isn't hollow under its crown (" + air + " air)");
+        int glass = 0, lights = 0;
+        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) for (int y = t - 30; y <= t; y++) {
+            var st = l.getBlockState(new BlockPos(chunk.getPos().getMinBlockX() + dx, y, chunk.getPos().getMinBlockZ() + dz));
+            if (st.is(net.minecraft.world.level.block.Blocks.LIME_STAINED_GLASS) || st.is(net.minecraft.world.level.block.Blocks.WHITE_STAINED_GLASS)) glass++;
+            if (st.is(net.minecraft.world.level.block.Blocks.CHAIN)) lights++;
+        }
+        h.assertTrue(glass >= 60, "only " + glass + " glass in the bell over the middle chunk");
+        h.assertTrue(lights >= 1, "no lights hang inside the bell");
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    // ------------------------------------------------------------------ seeing him from far off
+
+    private static net.jj.hollowbell.net.FarSightPayload.Far farFor(java.util.List<net.jj.hollowbell.net.FarSightPayload.Far> all, UUID id) {
+        for (var f : all) if (f.id().equals(id)) return f;
+        return null;
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "far_sight")
+    public void farOffHeIsSentToBeDrawn(GameTestHelper h) {
+        HollowbellEntity near = spawnAway(h, S, HollowbellEntity.CALM, 130);
+        HollowbellEntity gone = spawnAway(h, S, HollowbellEntity.HUNTER, 131);
+        var a = net.jj.hollowbell.world.Away.get(h.getLevel().getServer());
+        int keep = HollowbellConfig.V.farSightBlocks;
+        h.runAfterDelay(30, () -> {
+            UUID goneId = gone.getUUID();
+            h.assertTrue(gone.stepAside(), "he should step out of the world");
+            var rec = a.get(goneId);
+            h.assertTrue(rec != null, "and be written down");
+            // a player six hundred blocks from each: the one in the world, and where the sum says the other is
+            Vec3 s = rec.spot(h.getLevel().getGameTime());
+            double mx = (near.getX() + s.x) / 2, mz = (near.getZ() + s.z) / 2;
+            double half = Math.hypot(s.x - near.getX(), s.z - near.getZ()) / 2;
+            double off = Math.sqrt(Math.max(0, 600 * 600 - half * half));
+            ServerPlayer p = player(h, new Vec3(mx, near.getY(), mz + off));
+            h.runAfterDelay(5, () -> {
+                HollowbellConfig.V.farSightBlocks = 1024;
+                h.assertTrue(!net.jj.hollowbell.world.FarSight.tracked(p, near), "six hundred blocks off, he shouldn't be sent as a creature");
+                var list = net.jj.hollowbell.world.FarSight.listFor(p);
+                // through the wire and back, the way the player's game gets it
+                var buf = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), h.getLevel().registryAccess());
+                net.jj.hollowbell.net.FarSightPayload.CODEC.encode(buf, new net.jj.hollowbell.net.FarSightPayload(list));
+                list = net.jj.hollowbell.net.FarSightPayload.CODEC.decode(buf).all();
+                var f1 = farFor(list, near.getUUID());
+                h.assertTrue(f1 != null, "the one in the world isn't listed");
+                h.assertTrue(Math.abs(f1.x() - near.getX()) < 0.01 && Math.abs(f1.z() - near.getZ()) < 0.01 && Math.abs(f1.y() - near.getY()) < 0.01,
+                        "the one in the world is listed in the wrong place");
+                h.assertTrue(Math.abs(f1.scale() - S) < 1e-4 && f1.variant() == HollowbellEntity.CALM, "the one in the world has the wrong size or mood");
+                var f2 = farFor(list, goneId);
+                h.assertTrue(f2 != null, "the one out of the world isn't listed");
+                Vec3 now = rec.spot(h.getLevel().getGameTime());
+                h.assertTrue(Math.abs(f2.x() - now.x) < 0.01 && Math.abs(f2.z() - now.z) < 0.01, "the one out of the world is listed in the wrong place");
+                double wantY = net.jj.hollowbell.world.FarSight.groundUnder(h.getLevel(), now.x, now.z) + rec.lift;
+                h.assertTrue(Math.abs(f2.y() - wantY) < 0.01, "the one out of the world is listed at the wrong height: " + f2.y() + " want " + wantY);
+                h.assertTrue(f2.variant() == HollowbellEntity.HUNTER, "the one out of the world has the wrong mood");
+                // far sight off: nobody is listed
+                HollowbellConfig.V.farSightBlocks = 0;
+                h.assertTrue(net.jj.hollowbell.world.FarSight.listFor(p).isEmpty(), "with far sight off, somebody is still listed");
+                // and nothing past the reach
+                HollowbellConfig.V.farSightBlocks = 300;
+                h.assertTrue(net.jj.hollowbell.world.FarSight.listFor(p).isEmpty(), "somebody past the reach is listed");
+                HollowbellConfig.V.farSightBlocks = keep;
+                a.forget(goneId);
+                drop(p);
+                release(h, near);
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "far_sight_near")
+    public void oneYouAlreadySeeIsNotSentTwice(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 132);
+        int keep = HollowbellConfig.V.farSightBlocks;
+        ServerPlayer p = player(h, new Vec3(e.getX() + 20, e.getY() + 2, e.getZ()));
+        h.runAfterDelay(40, () -> {
+            HollowbellConfig.V.farSightBlocks = 1024;
+            h.assertTrue(net.jj.hollowbell.world.FarSight.tracked(p, e), "twenty blocks off, the player should be sent him as a creature");
+            h.assertTrue(farFor(net.jj.hollowbell.world.FarSight.listFor(p), e.getUUID()) == null, "one the player already sees is listed for far sight too");
+            HollowbellConfig.V.farSightBlocks = keep;
+            drop(p);
+            release(h, e);
+            h.succeed();
+        });
     }
 }

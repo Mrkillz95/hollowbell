@@ -91,6 +91,13 @@ public class WorldOne extends SavedData {
         return changed;
     }
 
+    /** for the tests: a ground claimed with a seed of their choosing, so it can be made twice the same */
+    public void claimHome(ServerLevel level, int atX, int atZ, long seed) {
+        claimHome(level, atX, atZ);
+        homeSeed = seed;
+        setDirty();
+    }
+
     /** for the tests: a ground as the first Hollows left it */
     public void claimOldHome(int atX, int atZ, long seed) {
         homeX = atX; homeZ = atZ; homeRadius = 320; homeSeed = seed; homeClaimed = true;

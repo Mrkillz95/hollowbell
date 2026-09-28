@@ -320,7 +320,21 @@ public class HollowbellEntity extends Monster {
     @Override
     public boolean shouldRenderAtSqrDistance(double d) {
         double r = Math.min(HollowbellConfig.V.renderDistance, 400 * Math.max(0.1f, bellScale()) + 160);
+        r = Math.max(r, Math.min(4096, HollowbellConfig.V.farSightBlocks));     // never lost before far sight reaches
         return d < r * r;
+    }
+
+    // ------------------------------------------------------------------ the stand-in drawn far off
+
+    /** a stand-in a player's game draws far off (see FarSight): never in any world, hangs calm, ground well below */
+    private boolean ghost;
+    public void makeGhost() { ghost = true; }
+    public boolean isGhost() { return ghost; }
+
+    /** the stand-in's own tick: only its body and strands move, gently */
+    public void ghostTick() {
+        tickCount++;
+        animTick();
     }
 
     // ------------------------------------------------------------------ model space and the world
@@ -519,6 +533,7 @@ public class HollowbellEntity extends Monster {
 
     /** the ground under a point of him, in his own model heights (NaN if that ground isn't loaded) */
     private float groundModel(float mx, float mz) {
+        if (ghost) return Float.NaN;
         Vec3 w = toWorld(new Vector3f(mx, 0, mz));
         BlockPos p = BlockPos.containing(w.x, getY(), w.z);
         if (!level().hasChunkAt(p)) return Float.NaN;
@@ -920,6 +935,7 @@ public class HollowbellEntity extends Monster {
 
     /** the top of the ground (or water, or treetops) at a spot */
     public double groundAt(double x, double z) {
+        if (ghost) return getY() - 60 * bellScale();
         BlockPos p = BlockPos.containing(x, getY(), z);
         if (!level().hasChunkAt(p)) return getY();
         return level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());

@@ -41,6 +41,25 @@ public final class HollowbellCommand {
         return 1;
     }
 
+    /** /hollowbell detail far: how far off he can be seen coming */
+    private static int farSay(CommandContext<CommandSourceStack> c) {
+        int b = HollowbellConfig.V.farSightBlocks;
+        c.getSource().sendSuccess(() -> b > 0 ? Component.translatable("command.hollowbell.far_is", b)
+                : Component.translatable("command.hollowbell.far_off"), false);
+        return 1;
+    }
+
+    /** /hollowbell detail far <blocks>: set here, and passed on to the player's own game too */
+    private static int farSet(CommandContext<CommandSourceStack> c, int blocks) {
+        HollowbellConfig.V.farSightBlocks = blocks;
+        HollowbellConfig.save();
+        if (c.getSource().getPlayer() instanceof ServerPlayer p)
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new net.jj.hollowbell.net.DetailPayload(net.jj.hollowbell.net.DetailPayload.FAR, blocks));
+        c.getSource().sendSuccess(() -> blocks > 0 ? Component.translatable("command.hollowbell.far_set", blocks)
+                : Component.translatable("command.hollowbell.far_off"), true);
+        return 1;
+    }
+
     private static final String[] MOODS = {"calm", "hunting", "guardian"};
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
@@ -48,7 +67,10 @@ public final class HollowbellCommand {
                 // detail: anyone, cheats or not (it only changes how their own game draws him)
                 .then(Commands.literal("detail").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.ASK))
                         .then(Commands.literal("on").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.ON)))
-                        .then(Commands.literal("off").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.OFF))))
+                        .then(Commands.literal("off").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.OFF)))
+                        .then(Commands.literal("far").executes(HollowbellCommand::farSay)
+                                .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 4096)).requires(OP)
+                                        .executes(c -> farSet(c, IntegerArgumentType.getInteger(c, "blocks"))))))
                 .then(Commands.literal("summon").requires(OP).executes(c -> summon(c, HollowbellEntity.HUNTER, 1f))
                         .then(Commands.argument("mood", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
                                 .executes(c -> summon(c, mood(c), 1f))

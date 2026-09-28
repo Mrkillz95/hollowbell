@@ -54,7 +54,11 @@ public class HollowbellClient implements ClientModInitializer {
         });
         HudRenderCallback.EVENT.register((g, t) -> BeingHim.hud(g));
         // the glass goes on after every other creature, so whatever he has caught shows through it
-        WorldRenderEvents.AFTER_ENTITIES.register(ctx -> BellRenderer.drawGlass());
+        // far-off stand-ins first, then all the glass (theirs too), back to front
+        WorldRenderEvents.AFTER_ENTITIES.register(ctx -> { FarSightClient.render(ctx); BellRenderer.drawGlass(); });
+        ClientPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.FarSightPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> FarSightClient.receive(p)));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(FarSightClient::tick);
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> c.execute(FarSightClient::clear));
         WorldRenderEvents.START.register(ctx -> BellRenderer.forgetFrame());
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
             @Override public ResourceLocation getFabricId() { return ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "model_reload"); }
@@ -65,6 +69,12 @@ public class HollowbellClient implements ClientModInitializer {
         // (It used to be a command of the client's own, but then the client took every /hollowbell command for its
         // own and never sent the rest to the server.)
         ClientPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.DetailPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> {
+            if (p.what() == net.jj.hollowbell.net.DetailPayload.FAR) {
+                // how far off he can be seen: kept in this game's own settings too (on a server the server's decides who is sent)
+                net.jj.hollowbell.HollowbellConfig.V.farSightBlocks = Math.max(0, Math.min(4096, p.arg()));
+                net.jj.hollowbell.HollowbellConfig.save();
+                return;
+            }
             if (p.what() == net.jj.hollowbell.net.DetailPayload.ON) net.jj.hollowbell.Detail.set(true);
             else if (p.what() == net.jj.hollowbell.net.DetailPayload.OFF) net.jj.hollowbell.Detail.set(false);
             String key = p.what() == net.jj.hollowbell.net.DetailPayload.ON ? "command.hollowbell.detail_on"

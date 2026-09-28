@@ -8,16 +8,18 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * /hollowbell detail: the setting lives on the player's own computer, so the server only passes the word on.
- * ASK says which it is, ON and OFF switch it.
+ * ASK says which it is, ON and OFF switch it, FAR sets how far off he can be seen (arg, in blocks).
  */
-public record DetailPayload(int what) implements CustomPacketPayload {
-    public static final int ASK = 0, ON = 1, OFF = 2;
+public record DetailPayload(int what, int arg) implements CustomPacketPayload {
+    public static final int ASK = 0, ON = 1, OFF = 2, FAR = 3;
+
+    public DetailPayload(int what) { this(what, 0); }
 
     public static final CustomPacketPayload.Type<DetailPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "detail"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, DetailPayload> CODEC = StreamCodec.of(
-            (buf, p) -> buf.writeVarInt(p.what()), buf -> new DetailPayload(buf.readVarInt()));
+            (buf, p) -> { buf.writeVarInt(p.what()); buf.writeVarInt(p.arg()); }, buf -> new DetailPayload(buf.readVarInt(), buf.readVarInt()));
 
     @Override public CustomPacketPayload.Type<DetailPayload> type() { return TYPE; }
 }
