@@ -235,7 +235,7 @@ public class CodexScreen extends Screen {
         addRenderableWidget(line(0, 2, grief ? "break_stop" : "break_start", new CodexPayload(CodexPayload.BREAK_BLOCKS, grief ? 0 : 1)));
         addRenderableWidget(line(1, 2, harvest ? "harvest_stop" : "harvest_start", new CodexPayload(CodexPayload.HARVEST, harvest ? 0 : 1)));
         // keep him to a circle round where you stand: how many blocks, then the two buttons
-        int y = top() + 3 * (H + GAP) + 4;
+        int y = top() + 3 * (H + GAP);
         boxR = new EditBox(this.font, left(), y, 56, H, Component.literal("R"));
         boxR.setHint(Component.literal("200"));
         boxR.setValue(lastR);

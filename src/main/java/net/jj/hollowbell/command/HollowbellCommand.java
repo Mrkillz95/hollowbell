@@ -160,6 +160,7 @@ public final class HollowbellCommand {
                 .then(Commands.literal("remove").requires(OP).executes(c -> {
                     int out = Away.get(c.getSource().getServer()).count();
                     Away.get(c.getSource().getServer()).forgetAll();
+                    WorldOne.get(c.getSource().getServer()).gone(c.getSource().getServer().overworld());
                     if (allOf(c.getSource()).isEmpty() && out > 0) { c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove"), true); return out; }
                     return all(c, h -> h.discard(), "remove");
                 }))

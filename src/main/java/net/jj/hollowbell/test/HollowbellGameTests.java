@@ -1804,6 +1804,20 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "natural_removed")
+    public void removingHimStartsTheCountToTheNext(GameTestHelper h) {
+        clearAll(h);
+        var w = net.jj.hollowbell.world.WorldOne.get(h.getLevel().getServer());
+        w.clearForTests();
+        BlockPos o = h.absolutePos(new BlockPos(1, 2, 1));
+        w.noteSpot(o.getX() + 4000, o.getZ(), true, -1);
+        run(h, Vec3.atCenterOf(o), "hollowbell remove");
+        h.assertTrue(!w.aliveNow(), "removed, the world still thinks he is out there");
+        h.assertTrue(w.daysLeft(h.getLevel()) == HollowbellConfig.V.worldRespawnDays, "the next one is due in " + w.daysLeft(h.getLevel()) + " days");
+        w.clearForTests();
+        h.succeed();
+    }
+
     // ------------------------------------------------------------------ the cap
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 120, batch = "cap_fresh")

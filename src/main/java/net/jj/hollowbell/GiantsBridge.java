@@ -111,6 +111,7 @@ public final class GiantsBridge {
                 Away.get(server).forgetAll();
                 for (ServerLevel l : server.getAllLevels())
                     for (HollowbellEntity h : new ArrayList<>(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved()))) { h.discard(); n++; }
+                WorldOne.get(server).gone(server.overworld());
                 out.add(WHO + (n == 0 ? "none to remove." : "removed " + n + "."));
             }
             case "status" -> {
