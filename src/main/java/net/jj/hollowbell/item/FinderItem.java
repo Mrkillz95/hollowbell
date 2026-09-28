@@ -94,6 +94,11 @@ public class FinderItem extends Item {
                 dist, way(dx, dz), (int) Math.floor(x), (int) Math.floor(z));
     }
 
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext ctx, java.util.List<Component> tip, net.minecraft.world.item.TooltipFlag flag) {
+        tip.add(Component.translatable("item.hollowbell.hollowbell_finder.tip").withStyle(net.minecraft.ChatFormatting.GRAY));
+    }
+
     // ------------------------------------------------------------------ a glint while he is near
 
     @Override

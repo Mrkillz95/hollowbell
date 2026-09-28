@@ -212,6 +212,14 @@ public class WorldOne extends SavedData {
         HollowbellMod.LOG.info("The Hollowbell has fallen; the next comes down near {}, {}", x, z);
     }
 
+    /** every one of him was taken away without dying (/hollowbell remove): the count to the next one starts */
+    public void gone(ServerLevel level) {
+        if (!alive) return;
+        alive = false;
+        dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
+        setDirty();
+    }
+
     // ------------------------------------------------------------------ keeping one out there, and only one
 
     /** any Hollowbell in any level besides this one, still standing */
@@ -325,12 +333,9 @@ public class WorldOne extends SavedData {
             HollowbellMod.LOG.info("A Hollowbell drifts near {}, {}", x, z);
         }
         if (alive) {
-            // taken out from under us (/hollowbell remove, or the cap): the world quietly starts the count again
-            if (anyOther(server, null) == null && Away.get(server).count() == 0) {
-                alive = false;
-                dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
-                setDirty();
-            }
+            // gone from under us without dying: only believed when the ground where he was noted is loaded and
+            // empty (a chunk nobody is near just means he is asleep in it, saved with the land)
+            if (level.hasChunk(x >> 4, z >> 4) && anyOther(server, null) == null && Away.get(server).count() == 0) gone(level);
             return;
         }
         // somebody put one down themselves: that is the one, and the world stops counting down to another
