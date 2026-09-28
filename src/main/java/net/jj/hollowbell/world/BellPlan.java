@@ -181,7 +181,7 @@ public final class BellPlan {
 
     /** the den sits at the height the world's generator gives its centre */
     public int denY() {
-        if (denY == Integer.MIN_VALUE) denY = Math.max(sea + 2, ground.height(cx, cz));
+        if (denY == Integer.MIN_VALUE) denY = ground.height(cx, cz);
         return denY;
     }
 
