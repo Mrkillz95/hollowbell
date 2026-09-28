@@ -184,17 +184,18 @@ public final class HomeGround {
                 int depth = Math.abs(dx) == 2 || Math.abs(dz) == 2 ? 1 : 2;
                 for (int k = 0; k < depth; k++) {
                     BlockState s = level.getBlockState(p.set(wx + dx, t - k, wz + dz));
-                    if (!s.getFluidState().isEmpty()) break;
+                    if (!s.getFluidState().isEmpty() || !(natural(s) || isPalette(s))) break;   // never into somebody's floor
                     level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
                 }
             }
             int floor = level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz) - 1;
-            level.setBlock(p.set(wx, floor, wz), Blocks.VERDANT_FROGLIGHT.defaultBlockState(), FLAGS);
+            BlockState under = level.getBlockState(p.set(wx, floor, wz));
+            if (natural(under) || isPalette(under)) level.setBlock(p, Blocks.VERDANT_FROGLIGHT.defaultBlockState(), FLAGS);
         } else if (Math.floorMod(h, 200) == 1) {
             // a shard of old glass, one to three tall, sometimes lit
             int n = 1 + (int) Math.floorMod(h >> 8, 3);
             for (int k = 0; k < n; k++) {
-                if (top + 1 + k >= level.getMaxBuildHeight()) break;
+                if (top + 1 + k >= level.getMaxBuildHeight() || !level.getBlockState(p.set(wx, top + 1 + k, wz)).isAir()) break;
                 boolean lit = k == n - 1 && n > 1 && (h & 64) != 0;
                 level.setBlock(p.set(wx, top + 1 + k, wz),
                         (lit ? Blocks.VERDANT_FROGLIGHT : Blocks.LIME_STAINED_GLASS).defaultBlockState(), FLAGS);
@@ -225,7 +226,7 @@ public final class HomeGround {
 
     /** a chunk has come in: if it is his and not yet turned, it waits its turn */
     public static void chunkLoaded(ServerLevel level, LevelChunk chunk) {
-        if (level.dimension() != Level.OVERWORLD) return;
+        if (level.dimension() != Level.OVERWORLD || WorldOne.IN_TESTS) return;   // the tests paint by hand
         WorldOne w = WorldOne.get(level.getServer());
         maybeQueue(w, chunk.getPos());
     }
