@@ -383,16 +383,44 @@ public final class GroundLab {
         return (r << 16) | (g << 8) | bl;
     }
 
+    static int[] find(BellPlan p, String kind) {
+        for (int r = 180; r < 600; r += 16)
+            for (int a = 0; a < 360; a += 7) {
+                int cx = (int) (Math.cos(Math.toRadians(a)) * r) >> 4, cz = (int) (Math.sin(Math.toRadians(a)) * r) >> 4;
+                Chunk c = solve(p, cx, cz);
+                boolean anyWet = false;
+                for (boolean w : c.wet) anyWet |= w;
+                if (anyWet) continue;
+                for (int i = 0; i < 256; i++) {
+                    int n = 0, tall = 0;
+                    for (int k = 0; k < c.o.an[i]; k++) {
+                        Mat m = c.o.am[i][k];
+                        int hgt = c.o.ay[i][k] - c.o.top[i];
+                        boolean hit = switch (kind) {
+                            case "arch" -> m == Mat.BONE && hgt > 4;
+                            case "shard" -> m == Mat.LIME_GLASS && hgt > 6;
+                            case "pool" -> m == Mat.WATER;
+                            case "spire" -> m == Mat.DIORITE && hgt > 10;
+                            default -> m == Mat.LIME_GLASS && hgt == 2;
+                        };
+                        if (hit) n++;
+                    }
+                    if (n > 0) return new int[]{(cx << 4) + (i & 15), (cz << 4) + (i >> 4)};
+                }
+            }
+        return null;
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("java.awt.headless", "true");
         out.mkdirs();
         String what = args.length > 0 ? String.join(" ", args) : "all";
         BellPlan p = plan();
         long t0 = System.currentTimeMillis();
-        if (what.equals("all") || what.contains("map")) map();
-        if (what.contains("all") || what.contains("den")) iso(p, 0, 0, 140, 5, "den_iso.png", "His den: the great glass bell, half sunk, broken open on one side (140 x 140 blocks)",
+        if (what.equals("all") || what.equals("map")) map();
+        if (what.equals("all") || what.equals("den")) iso(p, 0, 0, 140, 5, "den_iso.png", "His den: the great glass bell, half sunk, broken open on one side (140 x 140 blocks)",
                 facing(Math.cos(p.breakAngle()), Math.sin(p.breakAngle())));
-        if (what.contains("all") || what.contains("sample")) {
+        if (what.equals("all") || what.equals("sample")) {
             Random r = new Random(SEED);
             int n = 0;
             while (n < 3) {
@@ -404,7 +432,23 @@ public final class GroundLab {
                 iso(p, x, z, 96, 6, "sample_iso_" + n + ".png", "Middle of the Hollows near " + x + ", " + z + " (96 x 96 blocks)");
             }
         }
-        if (what.startsWith("dome")) iso(p, 0, 0, 64, 10, "dome_close.png", "The bell, close", facing(Math.cos(p.breakAngle()), Math.sin(p.breakAngle())));
+        if (what.equals("all") || what.startsWith("dome"))
+            iso(p, 0, 0, 64, 10, "den_close.png", "The bell up close: broken open on one side, lights hanging inside, a still pool under it",
+                    facing(Math.cos(p.breakAngle()), Math.sin(p.breakAngle())));
+        if (what.equals("all") || what.startsWith("closeup")) {
+            int[] at = find(p, "pool");
+            if (at != null) iso(p, at[0], at[1], 56, 9, "closeup_hollows.png", "Close up: hollows with a still pool, a spore garden, spires and reefs (56 x 56 blocks)");
+        }
+        if (what.startsWith("find")) {
+            // a close look at one of each kind: find it by what it leaves above the ground
+            String[] kinds = {"arch", "shard", "pool", "spire", "reef"};
+            for (String k : kinds) {
+                int[] at = find(p, k);
+                if (at == null) { System.out.println("no " + k); continue; }
+                iso(p, at[0], at[1], 56, 9, "find_" + k + ".png", k + " near " + at[0] + ", " + at[1]);
+                iso(p, at[0], at[1], 40, 12, "find_" + k + "_turned.png", k + " near " + at[0] + ", " + at[1], 1);
+            }
+        }
         if (what.startsWith("crop")) {
             String[] a = what.split(" ");
             crop(p, Integer.parseInt(a[1]), Integer.parseInt(a[2]), Integer.parseInt(a[3]), a[4]);

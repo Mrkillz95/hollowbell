@@ -162,8 +162,8 @@ public final class BellPlan {
         if (dn < 0.8) return true;
         if (dn >= 1) return false;
         double p = 1 - smooth(0.8, 1.0, dn);
-        double n = 0.88 * fbm(12, x / 24.0, z / 24.0, 2) + 0.12 * h(x, z, 13);
-        return p > n * 1.1 - 0.12;
+        double n = 0.95 * fbm(12, x / 46.0, z / 46.0, 3) + 0.05 * h(x, z, 13);
+        return p > (n - 0.5) * 1.6 + 0.5;
     }
 
     /** a chunk that may hold any of his ground at all */
@@ -260,6 +260,8 @@ public final class BellPlan {
         double off = hills(x, z) + b.v;
         off = Math.max(-MAX_DOWN, Math.min(MAX_UP, off));
         off *= 1 - smooth(0.70, 0.93, dn);
+        // low land by the water (banks, beaches) is hardly shaped, so the hills never stand as walls over a river
+        off *= smooth(sea + 1, sea + 9, y0);
         double t = y0 + off;
         double d = dist(x, z);
         if (d < DEN_AREA) {
@@ -310,8 +312,8 @@ public final class BellPlan {
     /** the top block of an ordinary column: broad patches, never salt and pepper */
     private Mat surface(int x, int z, int y, int zone, BowlHit b) {
         if (zone == FRINGE) {
-            double n = fbm(51, x / 14.0, z / 14.0, 2);
-            return n < 0.5 ? Mat.KEEP : n < 0.66 ? Mat.CALCITE : n < 0.74 ? Mat.DIORITE : n < 0.8 ? Mat.MOSS : Mat.KEEP;
+            double n = fbm(51, x / 30.0, z / 30.0, 2);
+            return n < 0.47 ? Mat.KEEP : n < 0.64 ? Mat.CALCITE : n < 0.72 ? Mat.DIORITE : Mat.GRASS;
         }
         if (b.in != null && b.t < 1) {
             if (b.t < 0.13 && !b.in.pool && !b.in.garden) return Mat.VERDANT;          // the old glow at the bottom
@@ -518,8 +520,8 @@ public final class BellPlan {
         f.px = s[0] + 0.5; f.pz = s[1] + 0.5;
         double a = h(ci, cj, 313) * Math.PI * 2;
         f.ux = Math.cos(a); f.uz = Math.sin(a);
-        f.len = 12 + 12 * h(ci, cj, 314);
-        f.ha = f.len * (0.34 + 0.2 * h(ci, cj, 315)) + 2;
+        f.len = 14 + 14 * h(ci, cj, 314);
+        f.ha = f.len * (0.42 + 0.18 * h(ci, cj, 315)) + 2;
         if (h(ci, cj, 316) < 0.4) {
             f.gapA = (int) (f.len * (0.3 + 0.35 * h(ci, cj, 317)));
             f.gapB = f.gapA + 2 + (int) (2 * h(ci, cj, 318));
@@ -688,7 +690,7 @@ public final class BellPlan {
                 if (k == 1 && o.topMat[i] == Mat.GRASS && y <= y0[i]) m = Mat.KEEP;
                 o.layer[i][k] = m;
             }
-            if (o.topMat[i] == Mat.KEEP && top > y0[i]) o.layer[i][0] = Mat.MOSS;   // raised fringe: something real on top
+            if (o.topMat[i] == Mat.KEEP && top > y0[i]) o.layer[i][0] = Mat.GRASS;  // raised fringe: grass on top, as it was
         }
     }
 
