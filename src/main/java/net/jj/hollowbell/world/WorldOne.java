@@ -51,6 +51,9 @@ public class WorldOne extends SavedData {
     public static final int GROUND_VERSION = 2;
     /** chunks the first Hollows turned, waiting to be turned again the new way (unless people have lived there) */
     private final it.unimi.dsi.fastutil.longs.LongOpenHashSet oldPainted = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
+    /** old chunks kept as they were because people had spent time in them, and ones /hollowbell ground renew let go */
+    private final it.unimi.dsi.fastutil.longs.LongOpenHashSet oldLived = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
+    private final it.unimi.dsi.fastutil.longs.LongOpenHashSet renew = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
 
     public boolean homeClaimed() { return homeClaimed; }
     public int homeX() { return homeX; }
@@ -63,6 +66,31 @@ public class WorldOne extends SavedData {
     /** was this chunk turned by the first Hollows? It is let go of either way. */
     public boolean forgetOldPaint(long chunkPos) {
         if (!oldPainted.remove(chunkPos)) return false;
+        setDirty();
+        return true;
+    }
+
+    /** an old chunk people had spent time in was kept as it was */
+    public void keptOld(long chunkPos) { if (oldLived.add(chunkPos)) setDirty(); }
+    public int paintedCount() { return painted.size(); }
+    public int oldWaiting() { return oldPainted.size(); }
+    public int oldKept() { return oldLived.size(); }
+
+    /**
+     * /hollowbell ground renew: the old chunks kept because people had been there are turned the new way after all,
+     * as they next load (anything built in them is still left alone, column by column). Returns how many.
+     */
+    public int renewOld() {
+        int n = oldLived.size();
+        for (long k : oldLived) { painted.remove(k); renew.add(k); }
+        oldLived.clear();
+        setDirty();
+        return n;
+    }
+
+    /** is this chunk one /hollowbell ground renew let go? It is taken off the list either way. */
+    public boolean takeRenew(long chunkPos) {
+        if (!renew.remove(chunkPos)) return false;
         setDirty();
         return true;
     }
@@ -118,7 +146,11 @@ public class WorldOne extends SavedData {
     }
 
     /** for the tests: the ground let go again, so nothing keeps painting near the arenas */
-    public void dropHome() { homeClaimed = false; painted.clear(); oldPainted.clear(); groundVersion = GROUND_VERSION; setDirty(); }
+    public void dropHome() {
+        homeClaimed = false; painted.clear(); oldPainted.clear(); oldLived.clear(); renew.clear();
+        groundVersion = GROUND_VERSION;
+        setDirty();
+    }
 
     /** for the tests: a world that has picked nothing yet, no ground, no ward */
     public void clearForTests() {
@@ -199,6 +231,8 @@ public class WorldOne extends SavedData {
         w.homeSeed = tag.getLong("HomeSeed");
         for (long k : tag.getLongArray("Painted")) w.painted.add(k);
         for (long k : tag.getLongArray("PaintedV1")) w.oldPainted.add(k);
+        for (long k : tag.getLongArray("OldLived")) w.oldLived.add(k);
+        for (long k : tag.getLongArray("Renew")) w.renew.add(k);
         w.groundVersion = tag.contains("GroundVersion") ? tag.getInt("GroundVersion") : 1;
         w.upgradeGround();
         if (tag.contains("WardUntil")) {
@@ -225,6 +259,8 @@ public class WorldOne extends SavedData {
         tag.putLongArray("Painted", painted.toLongArray());
         tag.putInt("GroundVersion", groundVersion);
         if (!oldPainted.isEmpty()) tag.putLongArray("PaintedV1", oldPainted.toLongArray());
+        if (!oldLived.isEmpty()) tag.putLongArray("OldLived", oldLived.toLongArray());
+        if (!renew.isEmpty()) tag.putLongArray("Renew", renew.toLongArray());
         if (wardUntil > 0 || wardRestUntil > 0) {
             tag.putInt("WardX", wardX); tag.putInt("WardY", wardY); tag.putInt("WardZ", wardZ); tag.putString("WardDim", wardDim);
             tag.putLong("WardUntil", wardUntil); tag.putLong("WardRest", wardRestUntil);

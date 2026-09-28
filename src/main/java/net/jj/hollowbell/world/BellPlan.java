@@ -261,7 +261,8 @@ public final class BellPlan {
         off = Math.max(-MAX_DOWN, Math.min(MAX_UP, off));
         off *= 1 - smooth(0.70, 0.93, dn);
         // low land by the water (banks, beaches) is hardly shaped, so the hills never stand as walls over a river
-        off *= smooth(sea + 1, sea + 9, y0);
+        // (land lying far under the sea line with no sea on it, like a flat world, is shaped as usual)
+        if (y0 >= sea - 4) off *= smooth(sea + 1, sea + 9, y0);
         double t = y0 + off;
         double d = dist(x, z);
         if (d < DEN_AREA) {

@@ -130,11 +130,16 @@ public final class HomeGround {
         if (!w.homeClaimed() || w.paintedAlready(key)) return;
         w.notePainted(key);
         boolean wasOld = w.forgetOldPaint(key);          // turned by the first, smaller Hollows: turned again over it
-        if (lived(chunk) || built(chunk)) return;
+        boolean renewed = w.takeRenew(key);              // an old one people had been in, let go by /hollowbell ground renew
+        if (built(chunk)) return;
+        if (lived(chunk) && !renewed) {
+            if (wasOld) w.keptOld(key);
+            return;
+        }
         BellPlan p = plan(level, w);
         if (!p.near(chunk.getPos().x, chunk.getPos().z)) return;
         long t0 = System.nanoTime();
-        Survey sv = survey(level, p, chunk, true, wasOld ? w.homeSeed() : null);
+        Survey sv = survey(level, p, chunk, true, wasOld || renewed ? w.homeSeed() : null);
         if (!sv.any) return;
         BellPlan.Out o = new BellPlan.Out();
         p.chunk(chunk.getPos().x, chunk.getPos().z, sv.y0, sv.ok, sv.wet, sv.lowest, o);

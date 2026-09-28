@@ -2774,6 +2774,17 @@ public class HollowbellGameTests implements FabricGameTest {
                     "the chunk people lived in was changed at " + x + ", " + z);
             k++;
         }
+        // /hollowbell ground renew: the one people lived in is turned the new way after all
+        h.assertTrue(w.oldKept() == 1, "the lived-in old chunk isn't noted as kept: " + w.oldKept());
+        h.assertTrue(w.renewOld() == 1 && w.oldKept() == 0, "renew didn't let the kept chunk go");
+        h.assertTrue(!w.paintedAlready(lived.getPos().toLong()), "the renewed chunk isn't waiting to be turned");
+        net.jj.hollowbell.world.HomeGround.paint(l, w, lived);
+        int renewed = 0;
+        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
+            int x = lived.getPos().getMinBlockX() + dx, z = lived.getPos().getMinBlockZ() + dz;
+            if (!l.getBlockState(new BlockPos(x, top(h, x, z), z)).is(net.minecraft.world.level.block.Blocks.SMOOTH_STONE)) renewed++;
+        }
+        h.assertTrue(renewed >= 180, "only " + renewed + " columns of the renewed chunk were turned");
         w.clearForTests();
         force(h, c.getX(), c.getZ(), 1, false);
         h.succeed();
