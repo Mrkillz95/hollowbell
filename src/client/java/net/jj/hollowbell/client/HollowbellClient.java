@@ -33,6 +33,7 @@ public class HollowbellClient implements ClientModInitializer {
     public void onInitializeClient() {
         EntityRendererRegistry.register(ModEntities.HOLLOWBELL, BellRenderer::new);
         EntityRendererRegistry.register(ModEntities.BELLING, BellingRenderer::new);
+        net.jj.hollowbell.client.render.BellArmorRenderer.register();    // bell glass armor drawn see-through
         EntityRendererRegistry.register(ModEntities.SEAT, NoopRenderer::new);
         EntityRendererRegistry.register(ModEntities.SHOT, ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<>(ctx, 2.2f, false));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CROWN, RenderType.cutout());

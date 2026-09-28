@@ -89,29 +89,7 @@ const items = {
     '..oOOOOOOOOOOoB.',
     '...BBBBBBBBBBBB.',
     '................'],
-  bell_glass_helmet: [
-    '................', '................', '................',
-    '....OOOOOOOO....', '...OLLLLLLLLO...', '...OLlLLLLLLO...', '...OLLLLLLLLO...', '...OLL....LLO...',
-    '...OL......LO...', '...OO......OO...', '................', '................', '................', '................', '................', '................'],
-  bell_glass_chestplate: [
-    '................', '..OOO......OOO..', '..OLLO....OLLO..', '..OLLLOOOOLLLO..', '..OLLLLLLLLLLO..', '...OLlLLLLLLO...', '....OLLLLLLO....',
-    '....OLLLLLLO....', '....OLLLLLLO....', '....OLLLLLLO....', '....OLLLLLLO....', '....OLLLLLLO....', '....OOOOOOOO....', '................', '................', '................'],
-  bell_glass_leggings: [
-    '................', '................', '....OOOOOOOO....', '....OLLLLLLO....', '....OLlLLLLO....', '....OLLOOLLO....', '....OLLOOLLO....',
-    '....OLLOOLLO....', '....OLLOOLLO....', '....OLLOOLLO....', '....OLLOOLLO....', '....OOOOOOOO....', '................', '................', '................', '................'],
-  bell_glass_boots: [
-    '................', '................', '................', '................', '................', '................', '................',
-    '...OOO....OOO...', '...OLO....OLO...', '...OLO....OLO...', '...OLO....OLO...', '..OOLO....OLOO..', '..OLLO....OLLO..', '..OOOO....OOOO..', '................', '................'],
+  // the bell glass armor icons and worn layers are drawn by tools/armor_textures.py
 };
 for (const [n, rows] of Object.entries(items)) png(path.join(ROOT, 'item', n + '.png'), 16, 16, art(rows, P));
-// armor layers: a glassy green, darker copper at the edges of each 4x4 block
-for (const layer of [1, 2]) {
-  const px = [];
-  for (let y = 0; y < 32; y++) for (let x = 0; x < 64; x++) {
-    const edge = x % 4 === 0 || y % 4 === 0;
-    const spot = ((x * 7 + y * 13) % 11) === 0;
-    px[y * 64 + x] = edge ? [82, 162, 132, 255] : spot ? [229, 225, 207, 255] : layer === 1 ? [112, 185, 25, 200] : [90, 170, 40, 200];
-  }
-  png(path.join(ROOT, 'models', 'armor', `bell_glass_layer_${layer}.png`), 64, 32, px);
-}
 console.log('textures written');
