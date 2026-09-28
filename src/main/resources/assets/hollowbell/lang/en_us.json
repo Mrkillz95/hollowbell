@@ -301,5 +301,6 @@
   "message.hollowbell.codex_roam": "He can drift where he likes again.",
   "codex.hollowbell.keep_here": "Keep to here",
   "codex.hollowbell.keep_here_tip": "He stays within this many blocks of where you stand. Type the blocks in the box first.",
-  "codex.hollowbell.let_roam": "Let him roam"
+  "codex.hollowbell.let_roam": "Let him roam",
+  "message.hollowbell.ward_broken": "The crown is taken up and goes quiet. He can come back."
 }

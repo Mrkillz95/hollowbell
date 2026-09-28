@@ -1,0 +1,23 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "equipment",
+ "pattern": [
+  "GAG",
+  "GCG"
+ ],
+ "key": {
+  "G": {
+   "item": "minecraft:glass"
+  },
+  "C": {
+   "item": "minecraft:compass"
+  },
+  "A": {
+   "item": "minecraft:amethyst_shard"
+  }
+ },
+ "result": {
+  "id": "hollowbell:hollowbell_finder",
+  "count": 1
+ }
+}

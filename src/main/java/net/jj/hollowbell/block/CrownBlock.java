@@ -19,6 +19,14 @@ public class CrownBlock extends Block {
     @Override
     protected VoxelShape getShape(BlockState st, BlockGetter g, BlockPos p, CollisionContext c) { return SHAPE; }
 
+    /** taken up or broken while it holds him off: the ward stops there and then */
+    @Override
+    protected void onRemove(BlockState st, Level l, BlockPos p, BlockState now, boolean moved) {
+        if (!now.is(st.getBlock()) && l instanceof net.minecraft.server.level.ServerLevel sl)
+            net.jj.hollowbell.world.WorldOne.get(sl.getServer()).crownTaken(sl, p);
+        super.onRemove(st, l, p, now, moved);
+    }
+
     @Override
     public void animateTick(BlockState st, Level l, BlockPos p, RandomSource r) {
         if (r.nextInt(3) == 0)
