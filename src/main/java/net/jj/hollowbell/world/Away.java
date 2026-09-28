@@ -258,7 +258,11 @@ public final class Away extends SavedData {
         int bx = Mth.floor(s.x), bz = Mth.floor(s.z);
         l.getChunk(bx >> 4, bz >> 4);
         h.load(r.body);
-        if (l.getEntity(h.getUUID()) != null) h.setUUID(UUID.randomUUID());   // never two of the same
+        if (l.getEntity(h.getUUID()) != null) {                             // never two of the same
+            UUID was = h.getUUID();
+            h.setUUID(UUID.randomUUID());
+            WorldOne.get(l.getServer()).renamed(was, h.getUUID());
+        }
         int ground = l.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
         double y = Mth.clamp(ground + r.lift, l.getMinBuildHeight() + 1, l.getMaxBuildHeight() - 1);
         h.moveTo(s.x, y, s.z, h.getYRot(), 0f);

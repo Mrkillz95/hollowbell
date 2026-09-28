@@ -113,21 +113,30 @@ public final class HollowbellConfig {
             if (Files.exists(file())) {
                 Values v = gson.fromJson(Files.readString(file()), Values.class);
                 if (v != null) {
-                    // 1.1: he hits creatures much harder (1.0 barely killed them)
-                    if (v.configVersion < 2) v.mobDamage = Math.max(v.mobDamage, 2.5f);
-                    // 1.3: pods take longer to grow back, so they can't be farmed
-                    if (v.configVersion < 3 && v.podRegrowSeconds == 90) v.podRegrowSeconds = 150;
-                    // 1.3.4: all the bosses take a bit more from each other, so their fights don't drag on
-                    if (v.configVersion < 4 && Math.abs(v.giantArmor - 0.55f) < 1e-4f) v.giantArmor = 0.7f;
-                    // 1.4: the world holds one of him by default (0 still means "no limit" if somebody sets it back)
-                    if (v.configVersion < 5 && v.maxHollowbells == 0) v.maxHollowbells = 1;
+                    migrate(v);
                     V = v;
                 }
             }
             V.configVersion = VERSION;
             Files.writeString(file(), gson.toJson(V));
         } catch (Exception e) {
-            HollowbellMod.LOG.warn("Could not read {}, using defaults: {}", file(), e.toString());
+            // a file that won't read is never written over: it's kept as it was, beside it as .bad
+            HollowbellMod.LOG.warn("Could not read {}, using defaults (your file is kept as hollowbell.json.bad): {}", file(), e.toString());
+            try { Files.copy(file(), file().resolveSibling("hollowbell.json.bad"), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
+            catch (Exception ignored) { }
         }
+    }
+
+    /** brings settings saved by an older version up to date; only values still at an old default are changed */
+    public static void migrate(Values v) {
+        // 1.1: he hits creatures much harder (1.0 barely killed them)
+        if (v.configVersion < 2) v.mobDamage = Math.max(v.mobDamage, 2.5f);
+        // 1.3: pods take longer to grow back, so they can't be farmed
+        if (v.configVersion < 3 && v.podRegrowSeconds == 90) v.podRegrowSeconds = 150;
+        // 1.3.4: all the bosses take a bit more from each other, so their fights don't drag on
+        if (v.configVersion < 4 && Math.abs(v.giantArmor - 0.55f) < 1e-4f) v.giantArmor = 0.7f;
+        // 1.4: the world holds one of him by default (0 still means "no limit" if somebody sets it back).
+        // Nobody already out there is removed for it: the limit only acts when a new one is made, or on /hollowbell limit.
+        if (v.configVersion < 5 && v.maxHollowbells == 0) v.maxHollowbells = 1;
     }
 }

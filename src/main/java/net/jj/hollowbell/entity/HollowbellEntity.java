@@ -780,7 +780,7 @@ public class HollowbellEntity extends Monster {
             } else if (bound() && !still && Math.hypot(getX() - boundX, getZ() - boundZ) > boundR) {
                 want = keptIn(position());          // drifted out somehow: he walks back in
             }
-            if (wardOut != null) want = wardOut;    // out of the circle first, whatever else he wanted
+            if (wardOut != null && !still) want = wardOut;    // out of the circle first (unless held still, dying, or mid-move)
         }
         if (cruise < 0) cruise = 6 * s + 1;
 
@@ -1608,10 +1608,15 @@ public class HollowbellEntity extends Monster {
     @Override
     public void die(DamageSource src) {
         if (!level().isClientSide && !dead && level() instanceof ServerLevel sl) {
-            // the next one is set going whether this was the world's own or one somebody put down themselves,
-            // as long as he was the only one standing: otherwise killing an egg one would quietly end them for good
-            boolean last = worldOne || (HollowbellConfig.V.oneInTheWorld && net.jj.hollowbell.world.WorldOne.anyOther(sl.getServer(), this) == null);
-            if (last) net.jj.hollowbell.world.WorldOne.get(sl.getServer()).died(sl, this);
+            // the world's own one dying sets the next one going; another one only if the world has none and
+            // isn't already counting down to one
+            var w = net.jj.hollowbell.world.WorldOne.get(sl.getServer());
+            if (worldOne && (w.isTheOne(getUUID()) || w.oneId() == null)) {
+                w.died(sl, this);
+                worldOne = false;          // saved mid-fold he is nobody's any more, so a reload can't bring him back
+            } else if (!worldOne && HollowbellConfig.V.oneInTheWorld && !w.aliveNow() && w.dueIn(sl) < 0) {
+                w.died(sl, this);          // no world one and nothing counting down: the count starts from here
+            }
         }
         if (!level().isClientSide) {
             HollowbellMod.LOG.info("Hollowbell died at {} ({})", position(), src.getMsgId());
@@ -1739,6 +1744,7 @@ public class HollowbellEntity extends Monster {
 
     // ------------------------------------------------------------------ the one the world keeps
     public void markWorldOne() { worldOne = true; }
+    public void clearWorldOne() { worldOne = false; }
     public boolean isWorldOne() { return worldOne; }
     /** freshly made (summon, egg, the world's own), not read back from a save: only these count at the cap */
     public boolean freshSpawn() { return !loadedFromSave; }
@@ -1907,9 +1913,12 @@ public class HollowbellEntity extends Monster {
         // one from an older save, or from a spawn egg's tag, is where it's meant to be (an egg's comes down)
         settled = tag.getBoolean("Settled") || (!tag.contains("HollowbellEgg") && tag.contains("BellHpMax"));
         // a saved body carries his own health tag; a fresh one (an egg, a summon) never does
-        loadedFromSave = tag.contains("BellHpMax") || tag.getBoolean("Settled");
+        // (a spawn egg merges a fresh save into its own tag, so health tags alone don't tell: BornAt is only written
+        // once he has lived a tick, and older saves without it never carry the egg's tag)
+        loadedFromSave = tag.contains("BornAt") || (tag.contains("BellHpMax") && !tag.contains("HollowbellEgg"));
         hunted = tag.hasUUID("Hunted") ? tag.getUUID("Hunted") : null;
-        bornAt = tag.contains("BornAt") ? tag.getLong("BornAt") : -1;
+        // one from before ages were kept counts as the oldest there is
+        bornAt = tag.contains("BornAt") ? tag.getLong("BornAt") : loadedFromSave ? 0 : -1;
         worldOne = tag.getBoolean("WorldOne");
         if (tag.contains("BoundR")) { boundX = tag.getDouble("BoundX"); boundZ = tag.getDouble("BoundZ"); boundR = tag.getInt("BoundR"); }
         else boundR = -1;

@@ -93,10 +93,15 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Away::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.WorldOne::serverTick);
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);
-        ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> { if (entity instanceof HollowbellEntity h) h.clearBars(); });
+        ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
+            if (!(entity instanceof HollowbellEntity h)) return;
+            h.clearBars();
+            // the world's own one going to sleep with his chunk: note where, for the finder
+            if (h.isWorldOne()) net.jj.hollowbell.world.WorldOne.get(world.getServer()).seen(h);
+        });
         // the cap: only for freshly made ones. A saved one loading with its chunk is nobody arriving.
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-            if (entity instanceof HollowbellEntity h && h.freshSpawn()) net.jj.hollowbell.world.WorldOne.keepToTheLimit(h, world);
+            if (entity instanceof HollowbellEntity h) net.jj.hollowbell.world.WorldOne.joined(h, world);
         });
         // his ground: chunks near the Bell Hollows are turned as they come in, a couple a tick
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents.CHUNK_LOAD.register(net.jj.hollowbell.world.HomeGround::chunkLoaded);
