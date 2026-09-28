@@ -105,6 +105,8 @@ public final class HollowbellCommand {
                             double x = FloatArgumentType.getFloat(c, "x"), z = FloatArgumentType.getFloat(c, "z");
                             h.setGoal(new Vec3(x, h.groundAt(x, z), z));
                         }, "goto")))))
+                .then(Commands.literal("ground").requires(OP).executes(HollowbellCommand::groundSay)
+                        .then(Commands.literal("renew").executes(HollowbellCommand::groundRenew)))
                 .then(Commands.literal("stay").requires(OP).then(Commands.argument("on", BoolArgumentType.bool())
                         .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "on")), "stay"))))
                 .then(Commands.literal("height").requires(OP).then(Commands.argument("blocks", FloatArgumentType.floatArg(0f, 400f))
@@ -356,6 +358,34 @@ public final class HollowbellCommand {
         } else msg = "The world keeps one of him. It's still picking his spot.";
         final String out = msg;
         c.getSource().sendSuccess(() -> Component.literal(out), false);
+        return 1;
+    }
+
+    /** /hollowbell ground: where his ground is, how big, and how far along it is */
+    private static int groundSay(CommandContext<CommandSourceStack> c) {
+        WorldOne w = WorldOne.get(c.getSource().getServer());
+        String msg;
+        if (!w.homeClaimed()) msg = "He has no ground of his own yet. It's made where the world's own one comes down.";
+        else {
+            msg = "His ground, the Bell Hollows, lies at " + w.homeX() + ", " + w.homeZ() + " and reaches about " + w.homeRadius()
+                    + " blocks out. " + w.paintedCount() + " chunks of it are done; the rest turns as the land loads.";
+            if (w.oldWaiting() > 0) msg += " " + w.oldWaiting() + " chunks of the old, smaller ground are still to be turned the new way.";
+            if (w.oldKept() > 0) msg += " " + w.oldKept() + " chunks of the old ground were kept as they were because people had spent time there."
+                    + " /hollowbell ground renew turns those too (anything built is still left alone).";
+        }
+        final String out = msg;
+        c.getSource().sendSuccess(() -> Component.literal(out), false);
+        return 1;
+    }
+
+    /** /hollowbell ground renew: the old chunks kept because people had been there get turned the new way after all */
+    private static int groundRenew(CommandContext<CommandSourceStack> c) {
+        WorldOne w = WorldOne.get(c.getSource().getServer());
+        int n = w.renewOld();
+        if (n > 0) net.jj.hollowbell.world.HomeGround.claimed(c.getSource().getServer().overworld(), w);
+        c.getSource().sendSuccess(() -> Component.literal(n == 0
+                ? "There's nothing of the old ground left to turn."
+                : n + " chunks of the old ground will be turned the new way as they load. Anything built in them is still left alone."), true);
         return 1;
     }
 

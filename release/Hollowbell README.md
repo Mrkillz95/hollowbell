@@ -19,7 +19,7 @@ He's made from your build block for block. Every block wears its real texture, a
 - **His den is in the middle.** A huge glass bell, 50 blocks across, half sunk in the ground and broken open on one side. Calcite ribs run down it and his crown sits on top. Inside, lights hang on chains over moss and a still pool. A lit path leads in through the break, past the glass it lost, and a ring of tall spires stands round it.
 - The middle part is the palest, with the most shards and spires. Further out there are more meadows, gardens and pools.
 - New setting `homeRadius` (900, from 200 to 2000): how far his ground reaches. Raising it grows a ground that's already there. Lowering it never shrinks one.
-- **If you already have the Bell Hollows from 1.4.0,** they keep their middle and grow to the new size. Chunks the old ground turned are turned again the new way when they next load, but only if you haven't spent time in them. Places you've been using stay exactly as they are.
+- **If you already have the Bell Hollows from 1.4.0,** they keep their middle and grow to the new size. Chunks the old ground turned are turned again the new way when they next load, but only if you haven't spent time in them. Places you've been using stay exactly as they are. If you'd like those turned too, `/hollowbell ground renew` does it (anything built in them is still left alone, column by column). `/hollowbell ground` says where his ground is, how big, and how much of it is done.
 - Everything built is still left alone, like before: villages, chunks people have spent time in, and any column with planks, a path, a chest or a crop near the top. Only wild trees come off. Water is only ever put where it has a floor and walls, so nothing floods.
 - When he dies, the next one comes down far enough away that his new ground never lies over the old one.
 - **You can see him coming from far off.** Before, at full size you could only see him from about 440 blocks away, because the game only sends creatures that close. If he had stepped out of the world, he only came back when you were about 520 blocks from him. A smaller one showed up even later (about 230 blocks at a third of his size). Now he shows on the horizon from up to 1,024 blocks away, in the world or stepped out of it. Far off he's drawn simply, hanging calm, and past your render distance he sits pale in the fog. When you get close, the real one takes over in the same spot.
@@ -321,6 +321,8 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell reload` | reads the settings file again |
 | `/hollowbell detail on/off` | on (the default): he's drawn simpler far away so the game runs faster. Off: always full detail. On its own it says which. This one works without cheats and only changes your own game. |
 | `/hollowbell detail far <blocks>` | how far off you can see him coming (1024 to start, 0 = off, up to 4096). On its own it says how far. Changing it needs cheats on. |
+| `/hollowbell ground` | where his ground, the Bell Hollows, is, how far it reaches and how much of it is done |
+| `/hollowbell ground renew` | chunks of the old, smaller Hollows you'd spent time in get turned the new way too, as they load. Anything built is still left alone. |
 
 ### /giants (all of JJ's bosses at once)
 
