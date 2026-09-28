@@ -1,8 +1,30 @@
-# Hollowbell (Java mod) — version 1.4.0
+# Hollowbell (Java mod) — version 1.5.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
+
+## What's new in 1.5.0
+
+- **His ground is much bigger and far more detailed.** The Bell Hollows reach about 900 blocks out now (it was 320). The edge has bays and headlands, and the outer part fades into the land around it in soft patches, so there's no hard line.
+- **The land changes shape, not just colour.** Soft rolling hills, scooped with round hollows. Some are small, some are 24 blocks across and 7 deep, and they come in fields, with open mint meadows between. The sides of the hollows show bands of calcite, diorite, end stone and bone.
+- **Lots to find on it:**
+  - fallen shards of an old glass bell: curved walls of glass and calcite, up to 14 tall, some of them leaning
+  - tendril reefs: low winding walls of calcite and lime glass with glowing froglight in them
+  - spore gardens in the hollows: moss, small dripleaf and glow lichen
+  - still pools in the bottoms of hollows, with a light glowing under the water
+  - tall calcite spires, some with a glowing eye near the top
+  - fallen bone ribs arching out of the ground
+  - drifting lights: end rods on thin calcite posts
+- **His den is in the middle.** A huge glass bell, 50 blocks across, half sunk in the ground and broken open on one side. Calcite ribs run down it and his crown sits on top. Inside, lights hang on chains over moss and a still pool. A lit path leads in through the break, past the glass it lost, and a ring of tall spires stands round it.
+- The middle part is the palest, with the most shards and spires. Further out there are more meadows, gardens and pools.
+- New setting `homeRadius` (900, from 200 to 2000): how far his ground reaches. Raising it grows a ground that's already there. Lowering it never shrinks one.
+- **If you already have the Bell Hollows from 1.4.0,** they keep their middle and grow to the new size. Chunks the old ground turned are turned again the new way when they next load, but only if you haven't spent time in them. Places you've been using stay exactly as they are.
+- Everything built is still left alone, like before: villages, chunks people have spent time in, and any column with planks, a path, a chest or a crop near the top. Only wild trees come off. Water is only ever put where it has a floor and walls, so nothing floods.
+- When he dies, the next one comes down far enough away that his new ground never lies over the old one.
+- **You can see him coming from far off.** Before, at full size you could only see him from about 440 blocks away, because the game only sends creatures that close. If he had stepped out of the world, he only came back when you were about 520 blocks from him. A smaller one showed up even later (about 230 blocks at a third of his size). Now he shows on the horizon from up to 1,024 blocks away, in the world or stepped out of it. Far off he's drawn simply, hanging calm, and past your render distance he sits pale in the fog. When you get close, the real one takes over in the same spot.
+  - `/hollowbell detail far <blocks>` changes how far (0 turns it off, up to 4096). `/hollowbell detail far` on its own says how far it is. Changing it needs cheats on.
+  - New setting `farSightBlocks` (1024).
 
 ## What's new in 1.4.0
 
@@ -110,7 +132,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.4.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.5.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
@@ -298,6 +320,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell area <x> <z> <radius>` | keeps the nearest one within that many blocks (32 or more) of that spot. `/hollowbell area off` frees him, `/hollowbell area` says which |
 | `/hollowbell reload` | reads the settings file again |
 | `/hollowbell detail on/off` | on (the default): he's drawn simpler far away so the game runs faster. Off: always full detail. On its own it says which. This one works without cheats and only changes your own game. |
+| `/hollowbell detail far <blocks>` | how far off you can see him coming (1024 to start, 0 = off, up to 4096). On its own it says how far. Changing it needs cheats on. |
 
 ### /giants (all of JJ's bosses at once)
 
@@ -335,6 +358,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 - `giantArmor` (0.7): how much of a blow from another boss he takes
 - `fightGiants` (on): whether he picks fights with the other bosses
 - `maxHollowbells` (1): how many the world holds at once (0 = no limit). Past that, the oldest one goes.
+- `homeRadius` (900): how far his own ground, the Bell Hollows, reaches (200 to 2000). Raising it grows a ground already there; lowering it never shrinks one.
 - `oneInTheWorld` (on): whether the world keeps one of him coming down on his own. `worldScale` (1.0) is how big that one is, `worldRespawnDays` (10) how many days after he dies the next one comes, and `respawnBlocks` (7000) about how far from where he fell
 - `wardBlocks` (700), `wardSeconds` (1200) and `wardRestSeconds` (1200): how far his woken crown holds him off, for how long, and how long it sits dark afterwards
 - `bookCosts`, `windSeconds`, `freeHits`, `grudgeRate`, `bookRange`: how the book works, the same as the Mountain's
@@ -344,6 +368,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 - `ambientSounds`: his hum and drifting sound (off keeps the rest)
 - `chunkLoading`: keeps the ground under him loaded and him moving while a player is near him
 - `simpleFarAway` / `simpleFarAwayAt`: far away he's drawn with bigger blocks so he runs faster (`/hollowbell detail` changes the first one)
+- `farSightBlocks` (1024): how far off you can see him coming, in the world or stepped out of it (0 = off, up to 4096)
 
 ## Tips
 
