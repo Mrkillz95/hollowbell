@@ -3639,9 +3639,10 @@ public class HollowbellGameTests implements FabricGameTest {
             face(p, Vec3.atCenterOf(w.above()));
             hook[0] = net.jj.hollowbell.item.StingerItem.throwIt(p, new ItemStack(ModItems.STINGER), 1f, false);
         });
-        h.runAfterDelay(12, () -> {
-            h.assertTrue(hook[0].isAlive() && hook[0].state() == net.jj.hollowbell.entity.StingerHook.REEL_ME,
-                    "the stinger didn't stick in the wall: state " + hook[0].state() + ", alive " + hook[0].isAlive());
+        // a tick after it sticks in the wall, the pull is on (when it sticks depends on the throw's own ticks)
+        int[] seen = {0};
+        for (int t = 3; t < 40; t++) h.runAfterDelay(t, () -> {
+            if (hook[0] == null || !hook[0].isAlive() || hook[0].state() != net.jj.hollowbell.entity.StingerHook.REEL_ME || ++seen[0] != 2) return;
             h.assertTrue(p.getDeltaMovement().x > 0.3, "you're not pulled to the wall: " + p.getDeltaMovement());
             h.assertTrue(p.fallDistance == 0f, "being reeled counts as falling");
             hook[0].discard();
@@ -3650,6 +3651,7 @@ public class HollowbellGameTests implements FabricGameTest {
             letGo(h, at);
             h.succeed();
         });
+        h.runAfterDelay(42, () -> h.fail("the stinger never stuck in the wall (alive " + (hook[0] != null && hook[0].isAlive()) + ")"));
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "stinger_him")
