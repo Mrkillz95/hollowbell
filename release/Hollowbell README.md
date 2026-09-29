@@ -1,10 +1,20 @@
-# Hollowbell (Java mod) — version 1.7.1
+# Hollowbell (Java mod) — version 1.8.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.7.1
+## What's new in 1.8.0
+
+- **Orders last through a restart.** Come to me, go there, send him to a spot, stay, an area he's kept to, a `/hollowbell goto` or `/giants goto` trip, and trips he's on while out of the world all carry on after the server stops and starts. If you told him to come to you and then left the game, he goes to where he last saw you and waits there. When you're back he carries on to you. After 20 minutes of waiting he gives up.
+- **The egg rain is big and easy to see.** He takes two seconds to wind up: he tips his mouth toward you, his glow builds, the egg clumps rattle and glow, and a glassy shiver rises, then a toll. The clumps that fall are the real clumps off his strands, at his size (at least three blocks across, so you can see them from far off), glowing and trailing sparks. A ring shows on the ground where each one will land. It starts wide and green and closes in, turning red, as the egg comes down. Each lands with a heavy splat you can feel. Most of them then shake and crack, and a Belling bursts out.
+- **Giants meet.** When he drifts near another of JJ's giants, he either fights it or keeps away from it (see "When giants meet"). You get a chat message when a fight starts and when one of them backs down.
+- **Music.** He has his own fight music: tolling bells, a choir, glass and a hollow echo. It plays while a fight with him is on near you, and the normal music stops. His ground has its own calmer music, a soft background sound, a far-off bell now and then, and little glass chimes. Only one giant's fight music plays at a time, if you have more of JJ's mods.
+- **Six new advancements** for his gear, his loot and watching giants fight (see "Advancements").
+- New commands: `/hollowbell meetings on/off`, `/giants meetings on/off` and `/giants meet`. New settings: `meetings`, `meetRange`, `yieldAt`, `meetCooldown`, `fightMusic`.
+- Fixed: an egg that fell into water sank through it and never burst.
+
+## What was new in 1.7.1
 
 - Fixed the Armour power key (R) not working when other giants' mods are in too. They all use R, and now it works for whichever set you're wearing.
 
@@ -182,7 +192,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.7.1.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.8.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
@@ -221,6 +231,28 @@ The world's own one comes down in the middle of the **Bell Hollows**, his own bi
 - **At night** the crown, the glowing spots and the froglight in his strands glow, and the glow pulses with him.
 - **Touching a strand stings:** poison and slowness.
 
+### When giants meet
+
+When he drifts near another of JJ's giants (160 blocks at full size), he fights it or keeps away:
+
+| The other giant | What he does |
+|---|---|
+| Pitchgut | keeps away |
+| Furrowmaw | keeps away |
+| The Cerberus | fights |
+| The Lantern Willow | keeps away |
+
+- Only when he's free: awake, not under an order, not after anybody, not ridden and not told to stay.
+- A fight ends when one of them drops under a quarter of its health. That one backs down: it runs off for a minute and leaves every giant alone for two minutes. The winner tolls loud and goes back to drifting.
+- Keeping away, he drifts off until they're well apart. He still hits back if it attacks him.
+- The same two don't meet again for 10 minutes.
+- Everyone within 256 blocks gets a chat message when a fight starts and when it ends.
+
+### His music
+
+- His fight music plays while a fight with him is on near you (he's after a player, or fighting another giant). It fades in, and fades out a few seconds after the fight ends. The normal music stops while it plays. Your Music slider sets how loud it is. Turn it off with `fightMusic` in the settings.
+- In the Bell Hollows you hear its own music now and then, air moving through glass, a bell tolling far off, and small glass chimes.
+
 ## His moves
 
 There are three kinds. **Light** moves are quick and he uses them a lot. **Medium** moves have a short warning and hit hard: most normal mobs die from one. **Heavy** moves are rare and huge: they hit tens of blocks round him at full size, kill everything normal in the way and badly hurt a player in netherite. Before a heavy move you hear a loud warning sound, a red message comes up and his glow flares, so you have 1.5 to 4.5 seconds to get away. After one he's worn out for 5 seconds: slow, drooping and not attacking.
@@ -249,7 +281,7 @@ Bigger ones hit harder and wider, smaller ones less.
 | Shed | Egg clumps break off and hatch into **Bellings**, small jellies that drift after you and sting. |
 | Spore cloud | Egg clumps burst into clouds of poison that drift after you. |
 | Pod burst | Every pod swells and sprays poison goo straight down. |
-| Egg rain | Egg clumps drop off and burst where they land. Some hatch into Bellings. |
+| Egg rain | He tips toward you and glows for two seconds, then big egg clumps drop off. A ring on the ground shows where each will land. They splat hard, and most hatch into Bellings. |
 
 ### Heavy
 
@@ -303,6 +335,19 @@ All of it goes into his Loot Cache on a pedestal where he fell. The beam over it
 ### His crown
 
 Set his crown down, stand within 16 blocks of it and do `/hollowbell ward on`. For 20 minutes he won't come within 700 blocks of it, won't go after anything inside that circle, and the book can't send him in there (a trip stops at the edge). Then the crown sits dark for 20 minutes. Take the crown up and it stops. `/hollowbell ward blocks 0` turns it off.
+
+### Advancements
+
+| Advancement | How to get it |
+|---|---|
+| Rung Out | Kill a Hollowbell |
+| Under Glass | Get pulled up inside his dome |
+| Glass All Over | Wear the whole bell glass set |
+| Ring Your Own Bell | Use the bell glass Armour power |
+| Harpooned | Throw the Stinger on its strand |
+| In His Own Glass | Kill a Hollowbell while wearing the whole bell glass set |
+| What He Left | Open the loot cache he leaves where he fell |
+| Clash of Giants | Be close by (128 blocks) when two giants start a fight |
 
 ## The book
 
@@ -373,6 +418,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell spare` | your safe list. `/hollowbell spare add <who>`, `spare remove <who>`, `spare add kind <type>`, `spare remove kind <type>` change it |
 | `/hollowbell carry` | he comes to you and a strand carries you up his side and over his dome onto his crown (if you're already up there, it carries you back down) |
 | `/hollowbell giants on/off` | whether he picks fights with the other bosses. On its own it says which. |
+| `/hollowbell meetings on/off` | whether he fights or keeps away from the giants he meets. On its own it says which. |
 | `/hollowbell volume [off/0-2]` | how loud he is (1 is normal). On its own it says how loud. |
 | `/hollowbell natural [on/off]` | whether the world keeps one of him coming down on his own. On its own it says where he is or where the next one comes down, and how many days are left |
 | `/hollowbell limit [n]` | how many of him the world holds at once (0 = no limit). Summoning past it makes the oldest fade away. On its own it says the limit and how many there are |
@@ -411,6 +457,8 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 | `/giants natural [on/off]` | whether each world keeps one of each boss coming on its own |
 | `/giants limit <0-20>` | how many of each the world holds at once (0 means no limit) |
 | `/giants fight [on/off]` | whether they fight each other |
+| `/giants meetings [on/off]` | whether they fight or keep away when they meet |
+| `/giants meet` | the two giants nearest you start a fight now, whoever they are |
 | `/giants away [on/off]` | whether they step out of the world when nobody is near |
 | `/giants volume <0-2>` | how loud they are (1 is normal) |
 | `/giants shake [on/off]` | whether they shake your screen |
@@ -440,6 +488,8 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 - `shedCount`: how many egg clumps he sheds at a time (0 = never)
 - `giantArmor` (0.7): how much of a blow from another boss he takes
 - `fightGiants` (on): whether he picks fights with the other bosses
+- `meetings` (on): whether he fights or keeps away from the giants he meets. `meetRange` (160): how far off he notices one, times his size (kept between 48 and 320). `yieldAt` (0.25): the share of health where a giant backs down (0 = they fight to the death). `meetCooldown` (10): minutes before the same two meet again
+- `fightMusic` (on): his fight music (your own game's setting)
 - `maxInWorld` (1): how many the world holds at once (0 = no limit). Past that, the oldest one goes.
 - `homeRadius` (900): how far his own ground, the Bell Hollows, reaches (200 to 2000). Raising it grows a ground already there; lowering it never shrinks one.
 - `oneInTheWorld` (on): whether the world keeps one of him coming down on his own. `worldScale` (1.0) is how big that one is, `worldRespawnDays` (10) how many days after he dies the next one comes, and `respawnBlocks` (7000) about how far from where he fell

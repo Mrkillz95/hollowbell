@@ -179,6 +179,53 @@ public final class GiantsCommand {
         return lines.size();
     }
 
+    /** the main body of each giant, by entity type id; the mod id before the colon picks its bridge */
+    public static final String[] MAIN_TYPES = {
+        "fire_ice_cerberus:cerberus",
+        "furrowmaw:furrowmaw",
+        "hollowbell:hollowbell",
+        "lanternwillow:lanternwillow",
+        "mountain_breathes:mountain"};
+
+    /** which bridge (index into BRIDGES) owns this entity as a giant's main body, or -1 */
+    public static int bridgeOf(net.minecraft.world.entity.Entity e) {
+        String id = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
+        return java.util.Arrays.asList(MAIN_TYPES).indexOf(id);
+    }
+
+    /**
+     * /giants meet: the two giants nearest you start a meeting fight now, whatever the table says. Each one's own
+     * mod is asked with action "meet" and arg "otherUUID selfUUID" (the first word is the other one; the second
+     * says which of that mod's giants it is).
+     */
+    private static int meet(CommandContext<CommandSourceStack> c) {
+        CommandSourceStack src = c.getSource();
+        net.minecraft.server.level.ServerLevel level = src.getLevel();
+        net.minecraft.world.phys.Vec3 at = src.getPosition();
+        List<net.minecraft.world.entity.Entity> found = new ArrayList<>();
+        for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
+            if (e != null && e.isAlive() && !e.isRemoved() && bridgeOf(e) >= 0 && find(BRIDGES[bridgeOf(e)]) != null) {
+                found.add(e);
+            }
+        }
+        if (found.size() < 2) {
+            src.sendFailure(Component.literal("There need to be two giants in this world for that."));
+            return 0;
+        }
+        found.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(at)));
+        net.minecraft.world.entity.Entity a = found.get(0), b = found.get(1);
+        List<String> lines = new ArrayList<>();
+        lines.addAll(ask(src.getServer(), "meet", b.getUUID() + " " + a.getUUID(), BRIDGES[bridgeOf(a)]));
+        lines.addAll(ask(src.getServer(), "meet", a.getUUID() + " " + b.getUUID(), BRIDGES[bridgeOf(b)]));
+        if (lines.isEmpty()) {
+            lines = List.of("Neither of them answered.");
+        }
+        for (String s : lines) {
+            src.sendSuccess(() -> Component.literal(s), true);
+        }
+        return lines.size();
+    }
+
     /** like run, but a key only some mods have is just their lines (a bare look changes nothing) */
     private static int runKeep(CommandContext<CommandSourceStack> c, String action, String arg) {
         List<String> lines = ask(c.getSource().getServer(), action, arg);
@@ -221,6 +268,8 @@ public final class GiantsCommand {
                 .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
                     .executes(c -> run(c, "bossbar", String.valueOf(IntegerArgumentType.getInteger(c, "blocks"))))))
             .then(toggle("griefing"))
+            .then(toggle("meetings"))
+            .then(Commands.literal("meet").requires(s -> s.hasPermission(2)).executes(GiantsCommand::meet))
             .then(Commands.literal("where").executes(c -> run(c, "where", "")))
             .then(Commands.literal("goto").requires(s -> s.hasPermission(2))
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg())

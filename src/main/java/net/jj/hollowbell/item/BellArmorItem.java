@@ -91,6 +91,7 @@ public class BellArmorItem extends ArmorItem {
     /** one pass of the set's gifts (the tests call this straight) */
     public static void abilities(ServerPlayer p) {
         if (p.isSpectator() || !fullSet(p)) return;
+        net.jj.hollowbell.HollowbellMod.award(p, "bell_glass_set");
         if (p.hasEffect(MobEffects.POISON)) p.removeEffect(MobEffects.POISON);
         // his toll's ringing in your head (nausea) doesn't get through the glass either
         if (p.hasEffect(MobEffects.CONFUSION)) p.removeEffect(MobEffects.CONFUSION);

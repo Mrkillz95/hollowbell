@@ -33,7 +33,10 @@ public class BellingRenderer extends EntityRenderer<Belling> {
         BellRig rig = BellRig.get();
         float t = e.tickCount + partial;
         float p = Mth.sin(t * 0.25f) * 0.5f + 0.5f;
-        float sxz = SIZE * (1f - 0.12f * p), sy = SIZE * (1f + 0.08f * p);
+        // just hatched, it grows out of the egg to its full size with a little overshoot
+        float g = e.grown(partial);
+        float grow = g >= 1f ? 1f : 0.2f + 0.8f * g + 0.25f * Mth.sin(g * (float) Math.PI);
+        float sxz = SIZE * grow * (1f - 0.12f * p), sy = SIZE * grow * (1f + 0.08f * p);
         Matrix4f base = new Matrix4f(ps.last().pose()).rotateY(t * 0.01f).scale(sxz, sy, sxz);
         Matrix4f view = new Matrix4f(RenderSystem.getModelViewMatrix());
         Matrix4f mv = new Matrix4f();

@@ -1,0 +1,22 @@
+{
+ "display": {
+  "icon": {
+   "id": "hollowbell:hollowbell_crown"
+  },
+  "title": {
+   "translate": "advancements.hollowbell.watch_giants.title"
+  },
+  "description": {
+   "translate": "advancements.hollowbell.watch_giants.description"
+  },
+  "frame": "goal",
+  "show_toast": true,
+  "announce_to_chat": true
+ },
+ "parent": "hollowbell:inside",
+ "criteria": {
+  "watch_giants": {
+   "trigger": "minecraft:impossible"
+  }
+ }
+}

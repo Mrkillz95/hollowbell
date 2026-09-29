@@ -1,0 +1,22 @@
+{
+ "display": {
+  "icon": {
+   "id": "hollowbell:loot_cache"
+  },
+  "title": {
+   "translate": "advancements.hollowbell.loot_cache.title"
+  },
+  "description": {
+   "translate": "advancements.hollowbell.loot_cache.description"
+  },
+  "frame": "task",
+  "show_toast": true,
+  "announce_to_chat": true
+ },
+ "parent": "hollowbell:slay",
+ "criteria": {
+  "loot_cache": {
+   "trigger": "minecraft:impossible"
+  }
+ }
+}

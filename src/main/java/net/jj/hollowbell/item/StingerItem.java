@@ -70,6 +70,7 @@ public class StingerItem extends SwordItem {
         level.addFreshEntity(h);
         level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 1f, 1.2f);
         p.getCooldowns().addCooldown(stack.getItem(), COOLDOWN);
+        if (p instanceof net.minecraft.server.level.ServerPlayer sp) net.jj.hollowbell.HollowbellMod.award(sp, "stinger_throw");
         if (!p.getAbilities().instabuild) stack.hurtAndBreak(1, p, p.getMainHandItem() == stack ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
         return h;
     }

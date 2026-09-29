@@ -47,6 +47,8 @@ public final class Away extends SavedData {
         /** a movement order: once there he holds still */
         public boolean hold;
         long aimedAt;
+        /** real time (ms) the one he's coming to went missing; 0 = they're about */
+        public long followLostAt;
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -62,6 +64,7 @@ public final class Away extends SavedData {
             t.putInt("Variant", variant);
             if (follow != null) t.putUUID("Follow", follow);
             t.putBoolean("Hold", hold);
+            if (followLostAt != 0) t.putLong("FollowLostAt", followLostAt);
             return t;
         }
 
@@ -79,6 +82,7 @@ public final class Away extends SavedData {
             r.variant = t.getInt("Variant");
             r.follow = t.hasUUID("Follow") ? t.getUUID("Follow") : null;
             r.hold = t.getBoolean("Hold");
+            r.followLostAt = t.getLong("FollowLostAt");
             return r;
         }
 
@@ -105,8 +109,17 @@ public final class Away extends SavedData {
             Vec3 at = spot(now);
             if (Math.hypot(toX - at.x, toZ - at.z) > 0.5) return;
             fromX = at.x; fromZ = at.z; going = false;
+            body.remove("GoalX"); body.remove("GoalY"); body.remove("GoalZ");
+            // coming to somebody who has left the game: he waits here, still on the order, until they're back
+            if (hold && follow != null && followLostAt != 0) return;
             // an order got him there: he holds still until he's told something else
             if (hold) { stay = true; hold = false; follow = null; body.putBoolean("HoldThere", false); body.remove("ComeTo"); }
+        }
+
+        /** he gave up waiting for somebody who went: back to his own business */
+        void giveUpWaiting() {
+            follow = null; hold = false; followLostAt = 0;
+            body.putBoolean("HoldThere", false); body.remove("ComeTo"); body.remove("ComeLostAt");
         }
     }
 
@@ -205,6 +218,8 @@ public final class Away extends SavedData {
         if (r == null || !send(l, id, to)) return false;
         r.follow = follow;
         r.hold = true;
+        r.followLostAt = 0;
+        r.body.remove("ComeLostAt");
         r.body.putBoolean("HoldThere", true);
         if (follow != null) r.body.putUUID("ComeTo", follow); else r.body.remove("ComeTo");
         r.body.putBoolean("Asleep", false);
@@ -266,10 +281,19 @@ public final class Away extends SavedData {
             if (l == null) continue;
             long now = l.getGameTime();
             // coming to somebody: aimed at where they are now, every ten seconds
-            if (r.follow != null && r.hold && now - r.aimedAt >= 200) {
+            // (gone from the game: he goes on to where he last saw them and waits; 20 real minutes, then he gives up)
+            if (r.follow != null && r.hold && (now - r.aimedAt >= 200 || r.followLostAt != 0)) {
                 ServerPlayer who = server.getPlayerList().getPlayer(r.follow);
-                if (who != null && who.level() == l) { boolean h = r.hold; UUID f = r.follow; send(l, r.id, who.position()); r.hold = h; r.follow = f; }
-                else r.aimedAt = now;
+                if (who != null && who.level() == l) {
+                    boolean h = r.hold; UUID f = r.follow;
+                    r.followLostAt = 0; r.body.remove("ComeLostAt");
+                    send(l, r.id, who.position()); r.hold = h; r.follow = f;
+                } else {
+                    r.aimedAt = now;
+                    long t = System.currentTimeMillis();
+                    if (r.followLostAt == 0) { r.followLostAt = t; setDirty(); }
+                    else if (t - r.followLostAt > HollowbellEntity.comeGiveUpMs) { r.giveUpWaiting(); setDirty(); }
+                }
             }
             r.settle(now);
             Vec3 s = r.spot(now);
@@ -305,6 +329,7 @@ public final class Away extends SavedData {
         Vec3 s = r.spot(l.getGameTime());
         int bx = Mth.floor(s.x), bz = Mth.floor(s.z);
         l.getChunk(bx >> 4, bz >> 4);
+        if (r.followLostAt != 0) r.body.putLong("ComeLostAt", r.followLostAt);
         h.load(r.body);
         if (l.getEntity(h.getUUID()) != null) {                             // never two of the same
             UUID was = h.getUUID();
@@ -322,7 +347,7 @@ public final class Away extends SavedData {
 
     // ------------------------------------------------------------------ saving
 
-    private static Away load(CompoundTag tag, HolderLookup.Provider p) {
+    public static Away load(CompoundTag tag, HolderLookup.Provider p) {
         Away a = new Away();
         ListTag l = tag.getList("Away", Tag.TAG_COMPOUND);
         for (int i = 0; i < l.size(); i++) {
@@ -334,6 +359,8 @@ public final class Away extends SavedData {
             CompoundTag c = pk.getCompound(i);
             a.parked.put(c.getUUID("Id"), new Parked(c.getString("Dim"), c.getDouble("X"), c.getDouble("Z"), c.getDouble("Speed")));
         }
+        // orders on their way to one in land nobody has loaded: carried on after a restart
+        FarOrders.loadFetches(tag.getList("Fetches", Tag.TAG_COMPOUND));
         return a;
     }
 
@@ -350,6 +377,7 @@ public final class Away extends SavedData {
             pk.add(c);
         }
         tag.put("Parked", pk);
+        tag.put("Fetches", FarOrders.saveFetches());
         return tag;
     }
 }

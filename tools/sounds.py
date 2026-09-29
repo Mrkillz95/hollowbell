@@ -52,6 +52,9 @@ EVENTS = {
     'pod_pop': ("A pod pops", v('block/frogspawn/break', 0.5, 1.0, n=4, attenuation=48) + v('block/honeyblock/break', 0.55, 1.0, n=5, attenuation=48)),
     'egg_burst': ("An egg clump bursts", v('block/frogspawn/hatch', 0.6, 1.0, n=5, attenuation=40)),
     'goo': ("Goo splatters", v('mob/slime/attack', 0.5, 1.0, n=2, attenuation=40)),
+    'egg_wind': ("Hollowbell's egg clumps rattle", own('egg_wind', 1.0, 1.0, 128)),
+    'egg_splat': ("An egg clump splats", own('egg_splat', 1.0, 1.0, 80) + own('egg_splat', 0.85, 1.0, 80)),
+    'egg_hatch': ("A Belling hatches", own('egg_hatch', 1.0, 1.0, 48) + own('egg_hatch', 1.12, 1.0, 48)),
     'spores': ("Spores burst", v('block/sculk/spread', 0.6, 1.0, n=5, attenuation=48)),
     # Bellings
     'belling': ("Belling chirps", v('mob/allay/idle_without_item', 1.35, 0.6, n=4, attenuation=16)),
@@ -73,6 +76,12 @@ EVENTS = {
     'churn': ("Water churns", v('block/bubble_column/whirlpool_ambient', 0.5, 1.0, n=5, attenuation=96)),
     'swoop': ("Hollowbell dives", v('mob/phantom/swoop', 0.45, 1.0, n=4, attenuation=128)),
     'click': ("Stingers rattle", v('mob/warden/tendril_clicks_', 0.7, 1.0, n=6, attenuation=32)),
+    # his music and his ground's sounds (made by tools/sounds/make_music.py)
+    'music.fight': ("Hollowbell's fight music plays", own('music/fight', 1.0, 1.0, stream=True)),
+    'music.ground': ("Music plays", own('music/ground', 1.0, 1.0, stream=True)),
+    'ambient.ground': ("Air moves through glass", own('ambient/ground', 1.0, 0.6, stream=True)),
+    'ambient.mood': ("A bell tolls far away", own('ambient/mood', 1.0, 0.9, stream=True)),
+    'ambient.additions': ("Glass chimes", own('ambient/chime1', 1.0, 0.5) + own('ambient/chime2', 1.0, 0.5) + own('ambient/chime3', 1.0, 0.5)),
     # the warning before each heavy move
     'warn_drop': ("Hollowbell gathers himself", v('mob/warden/sonic_charge', 0.5, 1.0, n=4, attenuation=160)),
     'warn_whirlpool': ("A whirlpool stirs", v('block/bubble_column/whirlpool_ambient', 0.35, 1.0, n=5, attenuation=160)),

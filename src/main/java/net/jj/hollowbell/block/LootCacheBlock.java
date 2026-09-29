@@ -46,7 +46,10 @@ public class LootCacheBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState st, Level l, BlockPos pos, Player p, BlockHitResult hit) {
         if (l.isClientSide) return InteractionResult.SUCCESS;
-        if (l.getBlockEntity(pos) instanceof LootCacheBlockEntity be) p.openMenu(be);
+        if (l.getBlockEntity(pos) instanceof LootCacheBlockEntity be) {
+            p.openMenu(be);
+            if (p instanceof net.minecraft.server.level.ServerPlayer sp) net.jj.hollowbell.HollowbellMod.award(sp, "loot_cache");
+        }
         return InteractionResult.CONSUME;
     }
 
