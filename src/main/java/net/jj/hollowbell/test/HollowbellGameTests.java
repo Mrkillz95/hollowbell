@@ -3548,4 +3548,53 @@ public class HollowbellGameTests implements FabricGameTest {
             h.succeed();
         });
     }
+
+    // ------------------------------------------------------------------ quitting the world
+
+    private static final net.minecraft.server.level.TicketType<Integer> QUIT_TEST =
+            net.minecraft.server.level.TicketType.create("hollowbell_quit_test", Integer::compare);
+
+    /**
+     * The hang on "Saving worlds": a chunk let go and then taken back before its unload job ran, while land next to
+     * it is still being made. Quitting runs the unload queue until it's empty; the old job must end, not go round
+     * forever.
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "quit_unload")
+    public void quittingNeverHangsOnAChunkTakenBackBeforeItWasUnloaded(GameTestHelper h) {
+        var lv = h.getLevel();
+        var cs = lv.getChunkSource();
+        var cm = (net.jj.hollowbell.mixin.ChunkMapAccess) cs.chunkMap;
+        var upd = (net.jj.hollowbell.mixin.ChunkCacheAccess) cs;
+        var cp = new net.minecraft.world.level.ChunkPos(h.absolutePos(BlockPos.ZERO).offset(20000 + 330 * 400, 0, 15000));
+        long key = cp.toLong();
+        cs.addRegionTicket(QUIT_TEST, cp, 0, 1);
+        lv.getChunk(cp.x, cp.z);
+        h.runAfterDelay(10, () -> {
+            var holder = cm.hollowbell$holder(key);
+            h.assertTrue(holder != null, "the test chunk didn't load");
+            // let it go: the game queues the job that saves and drops it, and (no time left this tick) doesn't run it yet
+            cs.removeRegionTicket(QUIT_TEST, cp, 0, 1);
+            upd.hollowbell$update();
+            for (int i = 0; i < 20 && cm.hollowbell$holder(key) != null; i++) cm.hollowbell$tick(() -> false);
+            h.assertTrue(cm.hollowbell$holder(key) == null, "the test chunk was never queued to be dropped");
+            // taken back before the job ran, and land next to it is being made (it's held for that)
+            cs.addRegionTicket(QUIT_TEST, cp, 0, 1);
+            upd.hollowbell$update();
+            h.assertTrue(cm.hollowbell$holder(key) == holder, "the test chunk wasn't taken back");
+            holder.increaseGenerationRefCount();
+            // a moment later the chunk is fully back, and the old job wakes up to find it "not ready"
+            h.runAfterDelay(10, () -> {
+                // quitting: the queue is run with all the time in the world (cut off here so a failure can't hang the test)
+                int[] n = {0};
+                try {
+                    cm.hollowbell$tick(() -> ++n[0] < 200_000);
+                } finally {
+                    holder.decreaseGenerationRefCount();
+                    cs.removeRegionTicket(QUIT_TEST, cp, 0, 1);
+                }
+                h.assertTrue(n[0] < 200_000, "quitting would hang: the old unload job went round " + n[0] + " times");
+                h.succeed();
+            });
+        });
+    }
 }
