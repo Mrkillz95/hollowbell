@@ -1,0 +1,22 @@
+{
+ "display": {
+  "icon": {
+   "id": "hollowbell:bell_glass_chestplate"
+  },
+  "title": {
+   "translate": "advancements.hollowbell.bell_glass_set.title"
+  },
+  "description": {
+   "translate": "advancements.hollowbell.bell_glass_set.description"
+  },
+  "frame": "task",
+  "show_toast": true,
+  "announce_to_chat": true
+ },
+ "parent": "hollowbell:slay",
+ "criteria": {
+  "bell_glass_set": {
+   "trigger": "minecraft:impossible"
+  }
+ }
+}

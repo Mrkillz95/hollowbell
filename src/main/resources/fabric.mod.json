@@ -17,7 +17,8 @@
       "net.jj.hollowbell.client.HollowbellClient"
     ],
     "fabric-gametest": [
-      "net.jj.hollowbell.test.HollowbellGameTests"
+      "net.jj.hollowbell.test.HollowbellGameTests",
+      "net.jj.hollowbell.test.MoreGameTests"
     ]
   },
   "depends": {

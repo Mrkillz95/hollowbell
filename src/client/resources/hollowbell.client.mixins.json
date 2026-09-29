@@ -9,7 +9,8 @@
     "DriveZoomMixin",
     "FrozenBodyMixin",
     "PickMixin",
-    "VisibleMixin"
+    "VisibleMixin",
+    "QuietMusicMixin"
   ],
   "injectors": {
     "defaultRequire": 1

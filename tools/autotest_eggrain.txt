@@ -1,0 +1,61 @@
+# 1.8.0: the egg rain, at key ticks, from about 80 blocks off (side on) and from up high looking down at the markers
+world flat
+gui off
+render 20
+sim 20
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon hunting 0.3
+waitmodel
+wait 300
+cmd hollowbell mood calm
+cmd hollowbell stay true
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] positioned ~ ~ ~-36 positioned over world_surface run summon zombie ~ ~ ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+view 260 30 -90 0 0 -90
+wait 20
+fixed
+cmd execute as @e[type=zombie,limit=1] run hollowbell do egg_rain
+wait 10
+shot egg_1_far_010_windup
+wait 16
+shot egg_1_far_026_tipping
+wait 12
+shot egg_1_far_038_glow
+wait 8
+shot egg_1_far_046_first_eggs
+wait 10
+shot egg_1_far_056_falling
+wait 12
+shot egg_1_far_068_landing
+wait 14
+shot egg_1_far_082_splats
+wait 16
+shot egg_1_far_098_hatching
+wait 22
+shot egg_1_far_120_bellings
+wait 100
+cmd kill @e[type=hollowbell:belling]
+cmd hollowbell set cooldowns clear
+view 30 230 -330 0 -30 -110
+wait 20
+fixed
+cmd execute as @e[type=zombie,limit=1] run hollowbell do egg_rain
+wait 30
+shot egg_2_high_030_windup
+wait 16
+shot egg_2_high_046_first_eggs
+wait 10
+shot egg_2_high_056_markers
+wait 12
+shot egg_2_high_068_markers_tight
+wait 14
+shot egg_2_high_082_splats
+wait 16
+shot egg_2_high_098_hatching
+wait 22
+shot egg_2_high_120_bellings
+wait 20
+quit

@@ -22,7 +22,7 @@ public final class GiantsBridge {
     private static final String WHO = "Hollowbell: ";
 
     /**
-     * action: natural|limit|fight|away|volume|shake|bossbar|griefing|where|list|kill|remove|status|goto ("x z")|tp (player UUID)|paint ("radius full|biome playerUUID").
+     * action: natural|limit|fight|meetings|meet (the other giant's UUID)|away|volume|shake|bossbar|griefing|where|list|kill|remove|status|goto ("x z")|tp (player UUID)|paint ("radius full|biome playerUUID").
      * arg: the value as text, or "". Returns lines to show the caller (prefixed with the boss's name, plain
      * words); empty list = nothing; null = unknown action.
      */
@@ -48,6 +48,32 @@ public final class GiantsBridge {
                 Boolean on = onOff(a);
                 if (on != null) { V.fightGiants = on; HollowbellConfig.save(); }
                 out.add(WHO + (V.fightGiants ? "he fights the other bosses." : "he leaves the other bosses alone."));
+            }
+            case "meetings" -> {
+                Boolean on = onOff(a);
+                if (on != null) { V.meetings = on; HollowbellConfig.save(); }
+                out.add(WHO + (V.meetings ? "he fights or keeps away from the giants he meets." : "he takes no notice of the giants he meets."));
+            }
+            case "meet" -> {
+                // arg: "otherUUID [selfUUID]": that Hollowbell (else the one nearest the other giant) fights it now
+                String[] ids = arg == null ? new String[0] : arg.trim().split("\\s+");
+                java.util.UUID other, mine = null;
+                try { other = java.util.UUID.fromString(ids[0]); if (ids.length > 1) mine = java.util.UUID.fromString(ids[1]); }
+                catch (Exception e) { out.add(WHO + "meet needs the other giant's id."); return out; }
+                for (ServerLevel l : server.getAllLevels()) {
+                    net.minecraft.world.entity.Entity o = l.getEntity(other);
+                    if (o == null) continue;
+                    net.minecraft.world.entity.LivingEntity og = net.jj.hollowbell.entity.Giants.ownerOf(o);
+                    if (og == null) continue;
+                    HollowbellEntity best = null; double bd = Double.MAX_VALUE;
+                    for (HollowbellEntity h : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying() && e != og)) {
+                        if (mine != null && !mine.equals(h.getUUID())) continue;
+                        double d = h.distanceToSqr(og);
+                        if (d < bd) { bd = d; best = h; }
+                    }
+                    if (best != null && best.startMeeting(og)) { out.add(WHO + "he goes for it."); return out; }
+                }
+                return out;
             }
             case "away" -> {
                 Boolean on = onOff(a);

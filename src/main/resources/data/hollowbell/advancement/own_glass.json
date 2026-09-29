@@ -1,0 +1,25 @@
+{
+ "display": {
+  "icon": {
+   "id": "hollowbell:bell_glass_helmet"
+  },
+  "title": {
+   "translate": "advancements.hollowbell.own_glass.title"
+  },
+  "description": {
+   "translate": "advancements.hollowbell.own_glass.description"
+  },
+  "frame": "challenge",
+  "show_toast": true,
+  "announce_to_chat": true
+ },
+ "parent": "hollowbell:bell_glass_set",
+ "criteria": {
+  "own_glass": {
+   "trigger": "minecraft:impossible"
+  }
+ },
+ "rewards": {
+  "experience": 250
+ }
+}

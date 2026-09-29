@@ -1,0 +1,22 @@
+{
+ "display": {
+  "icon": {
+   "id": "hollowbell:stinger"
+  },
+  "title": {
+   "translate": "advancements.hollowbell.stinger_throw.title"
+  },
+  "description": {
+   "translate": "advancements.hollowbell.stinger_throw.description"
+  },
+  "frame": "task",
+  "show_toast": true,
+  "announce_to_chat": true
+ },
+ "parent": "hollowbell:slay",
+ "criteria": {
+  "stinger_throw": {
+   "trigger": "minecraft:impossible"
+  }
+ }
+}

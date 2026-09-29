@@ -16,10 +16,21 @@
       "probability": 0.002
     },
     "mood_sound": {
-      "sound": "minecraft:ambient.cave",
+      "sound": "hollowbell:ambient.mood",
       "tick_delay": 6000,
       "block_search_extent": 8,
       "offset": 2.0
+    },
+    "ambient_sound": "hollowbell:ambient.ground",
+    "additions_sound": {
+      "sound": "hollowbell:ambient.additions",
+      "tick_chance": 0.0035
+    },
+    "music": {
+      "sound": "hollowbell:music.ground",
+      "min_delay": 1200,
+      "max_delay": 6000,
+      "replace_current_music": false
     }
   },
   "carvers": {

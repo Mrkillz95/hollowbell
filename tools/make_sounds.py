@@ -75,7 +75,7 @@ def reverb(x, seconds=1.2, wet=0.35, damp=0.4):
     return out
 
 
-def normalise(x, peak=0.9):
+def normalise(x, peak=0.8):
     m = np.max(np.abs(x))
     return x * (peak / m) if m > 0 else x
 

@@ -84,7 +84,7 @@ public class HollowbellEntity extends Monster {
     private static final EntityDataAccessor<Vector3f> DATA_VEL = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.VECTOR3);
     /** how asleep he is, 0 awake to 1 fast asleep (eased on the server, so the client draws the same) */
     private static final EntityDataAccessor<Float> DATA_SLEEP = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
-    private static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4;
+    private static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4, F_FIGHT = 8;
 
     public final BellRig rig = BellRig.get();
     /** the pose the server works with (and the client, for aiming and hits) */
@@ -192,6 +192,7 @@ public class HollowbellEntity extends Monster {
         this.xpReward = 500;
         this.noCulling = true;
         addTag(Giants.TAG);
+        addTag(Meetings.KIND + Meetings.ME);
         for (int i = 0; i < podHp.length; i++) podHp[i] = 1f;
     }
 
@@ -277,7 +278,7 @@ public class HollowbellEntity extends Monster {
                     if (fairGame(p) && horiz(p.position()) < r && Math.abs(p.getY() - getY()) < r + 60 * bellScale()) { wakeUp(); break; }
             }
         } else {
-            boolean busy = getTarget() != null || rider != null || goal != null || fetching != null || (moveNow() != Moves.NONE && moveNow() != Moves.HARVEST)
+            boolean busy = getTarget() != null || rider != null || goal != null || comeTo != null || fetching != null || (moveNow() != Moves.NONE && moveNow() != Moves.HARVEST)
                     || hunted != null || angerTicks > 0 || now - hurtAt < 600 || moves.holdsStill();
             // a hunter only sleeps at night; calm and guardian whenever they're left alone
             boolean may = !isHunter() || level().isNight();
@@ -331,6 +332,8 @@ public class HollowbellEntity extends Monster {
     public void setStay(boolean on) { stay = on; setFlag(F_STAY, on); if (on) { goal = null; vel = Vec3.ZERO; } }
     private void setFlag(int f, boolean on) { int v = entityData.get(DATA_FLAGS); entityData.set(DATA_FLAGS, on ? v | f : v & ~f); }
     public boolean ridden() { return (entityData.get(DATA_FLAGS) & F_RIDDEN) != 0; }
+    /** a fight is on: he's after a player, or in a fight with another giant (the client's fight music goes by this) */
+    public boolean fighting() { return (entityData.get(DATA_FLAGS) & F_FIGHT) != 0; }
     /** worn out after a heavy move: slower, and no moves for a few seconds */
     public boolean tired() { return (entityData.get(DATA_FLAGS) & F_TIRED) != 0; }
     void setTired(boolean on) { setFlag(F_TIRED, on); }
@@ -717,10 +720,9 @@ public class HollowbellEntity extends Monster {
         partsTick(now);
         riderTick();
         if (!frozen) sleepTick();
+        if (!frozen) meetTick(now);
         if (!asleep && !frozen) pickTarget();
-        // coming to somebody: where they are now, every ten seconds
-        if (comeTo != null && goal != null && tickCount % 200 == 0 && level().getPlayerByUUID(comeTo) instanceof Player cp && cp.isAlive())
-            goal = keptIn(cp.position());
+        if (comeTo != null && !frozen) comeTick();
         if (!frozen) moves.tick();
         if (frozen) { vel = Vec3.ZERO; entityData.set(DATA_VEL, new Vector3f()); } else fly(now);
         animTick();
@@ -729,6 +731,11 @@ public class HollowbellEntity extends Monster {
         stingTick();
         arrowsTick();
         barsTick();
+        if (tickCount % 10 == 0) {
+            LivingEntity t = getTarget();
+            boolean fight = t instanceof Player p ? !p.isCreative() && !p.isSpectator() : meetFoe != null && t != null;
+            if (fight != fighting()) setFlag(F_FIGHT, fight);
+        }
         if (partsDirty && tickCount - partsSentAt >= 4) { partsDirty = false; partsSentAt = tickCount; syncParts(); }
         if (tickCount % 20 == 0) fighters.entrySet().removeIf(e -> now - e.getValue() > 6000);
     }
@@ -791,7 +798,7 @@ public class HollowbellEntity extends Monster {
 
     public void setGoal(@Nullable Vec3 g) {
         goal = g == null ? null : keptIn(g);
-        comeTo = null; holdThere = false;
+        comeTo = null; holdThere = false; comeLostAt = 0;
         if (g != null) { setStay(false); wakeUp(); }
     }
 
@@ -806,6 +813,33 @@ public class HollowbellEntity extends Monster {
         comeTo = follow == null ? null : follow.getUUID();
         holdThere = true;
     }
+
+    /** when (real time, ms) the one he's coming to went missing (logged off, or in another world); 0 = they're here */
+    private long comeLostAt;
+    /** how long he waits for somebody who has gone before he gives up on them (20 real minutes; the tests shorten it) */
+    public static long comeGiveUpMs = 20 * 60 * 1000L;
+
+    /**
+     * Coming to somebody. Every ten seconds he aims at where they are now. If they've left the game (or gone to
+     * another world) he goes on to the last place he saw them and waits there; when they're back he carries on to
+     * them. After 20 real minutes of waiting he gives up and goes back to his own business.
+     */
+    private void comeTick() {
+        if (tickCount % 20 != 0 || !(level() instanceof ServerLevel sl)) return;
+        ServerPlayer cp = sl.getServer().getPlayerList().getPlayer(comeTo);
+        if (cp != null && cp.level() == level() && cp.isAlive()) {
+            boolean waited = comeLostAt != 0 || goal == null;
+            comeLostAt = 0;
+            if (waited || tickCount % 200 == 0) { goal = keptIn(cp.position()); if (waited) { setStay(false); wakeUp(); } }
+            return;
+        }
+        long t = System.currentTimeMillis();
+        if (comeLostAt == 0) comeLostAt = t;
+        else if (t - comeLostAt > comeGiveUpMs) { comeTo = null; holdThere = false; comeLostAt = 0; }
+    }
+
+    /** waiting where he last saw the one he was coming to, for them to come back */
+    public boolean waitingForSomebody() { return comeTo != null && comeLostAt != 0; }
 
     public @Nullable UUID comingTo() { return comeTo; }
     public boolean holdsThere() { return holdThere; }
@@ -850,7 +884,7 @@ public class HollowbellEntity extends Monster {
         boolean down = resting() || dying || asleep;
         LivingEntity t = getTarget();
         Vec3 want = null;
-        boolean still = stay || moves.holdsStill() || dying || asleep;
+        boolean still = stay || moves.holdsStill() || dying || asleep || (goal == null && waitingForSomebody());
         // a woken crown's circle: a goal in there is dropped, and standing in there he makes for the way out
         Vec3 wardOut = rider == null ? wardEscape() : null;
         if (wardOut == null && goal != null && warded(goal.x, goal.z)) goal = null;
@@ -867,11 +901,19 @@ public class HollowbellEntity extends Monster {
                 want = goal;
                 if (horiz(goal) < 6 + 10 * s) {
                     goal = null; want = null;
-                    if (holdThere) { holdThere = false; comeTo = null; setStay(true); }
+                    // (coming to somebody who has gone: he waits here for them, still on the order)
+                    if (holdThere && !waitingForSomebody()) { holdThere = false; comeTo = null; setStay(true); }
                 }
             } else if (t != null) {
                 // hunting: he hangs right over you, so the strands can reach
                 if (horiz(t.position()) > 12 * s + 2) want = t.position();
+            } else if (keepAwayFrom() != null) {
+                // backing down, or keeping out of another giant's way: straight away from it
+                Vec3 o = keepAwayFrom();
+                Vec3 d = new Vec3(getX() - o.x, 0, getZ() - o.z);
+                if (d.lengthSqr() < 1e-4) d = new Vec3(1, 0, 0);
+                want = position().add(d.normalize().scale(60 * s + 30));
+                wanderTo = null;
             } else {
                 if (--wanderIn <= 0 || (home != null && horiz(home) > wanderRange() * 1.3)) {
                     wanderIn = 300 + random.nextInt(500);
@@ -1114,6 +1156,8 @@ public class HollowbellEntity extends Monster {
                 && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand) && e != rider && !moves.caught(e)
                 // (another giant only if he's allowed to fight them: "/hollowbell giants off")
                 && (HollowbellConfig.V.fightGiants || !Giants.isGiant(e))
+                // (a giant that has backed down is left alone, and backing down he leaves every giant alone)
+                && !(Giants.isGiant(e) && (Meetings.yielding(e) || yielding()))
                 // anything standing where a woken crown holds him off is out of his reach
                 && !warded(e.getX(), e.getZ());
     }
@@ -1125,7 +1169,8 @@ public class HollowbellEntity extends Monster {
 
     private void pickTarget() {
         LivingEntity t = getTarget();
-        if (t != null && (!fairGame(t) || horiz(t.position()) > senseRange() * 1.6 || pastHisCircle(t.position()) || (isGuardian() && home != null
+        boolean foe = t != null && meetFoe != null && meetFoe.equals(t.getUUID());
+        if (t != null && (!fairGame(t) || horiz(t.position()) > (foe ? Meetings.range(bellScale()) * 2 + senseRange() : senseRange() * 1.6) || pastHisCircle(t.position()) || (isGuardian() && home != null
                 && t.position().distanceTo(home) > guardRange() * 1.3 && angerTicks <= 0))) { setTarget(null); t = null; }
         if (hunted != null && level() instanceof ServerLevel sl) {
             Entity h = sl.getEntity(hunted);
@@ -1150,7 +1195,8 @@ public class HollowbellEntity extends Monster {
         Vec3 c = isGuardian() && home != null ? home : position();
         LivingEntity mob = null; double md = Double.MAX_VALUE;
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(mr, 60 * bellScale() + 30, mr),
-                e -> e instanceof net.minecraft.world.entity.monster.Enemy && !(e instanceof Player) && fairGame(e) && !pastHisCircle(e.position()))) {
+                // (another giant is met by the meeting rules, not picked like any monster: see meetTick)
+                e -> e instanceof net.minecraft.world.entity.monster.Enemy && !(e instanceof Player) && !Giants.isGiant(e) && fairGame(e) && !pastHisCircle(e.position()))) {
             double d = horiz(e.position());
             if (d < md) { md = d; mob = e; }
         }
@@ -1332,7 +1378,15 @@ public class HollowbellEntity extends Monster {
             } else if (!moves.caught(p)) { setTarget(p); angerTicks = 1200; }
         } else if (att instanceof LivingEntity le && !spares(le)) {
             setLastHurtByMob(le);
-            if (getTarget() == null) { setTarget(le); angerTicks = Math.max(angerTicks, 600); }
+            boolean giant = Giants.isGiant(le);
+            if (getTarget() == null && !(giant && (yielding() || Meetings.yielding(le)))) { setTarget(le); angerTicks = Math.max(angerTicks, 600); }
+        }
+        // brought low by another giant: he backs down (see meetTick)
+        Entity by = Giants.behind(src);
+        if (by != null && by != this && Giants.isGiant(by) && !yielding() && HollowbellConfig.V.meetings && HollowbellConfig.V.yieldAt > 0f
+                && hp > 0f && hp < healthMax() * HollowbellConfig.V.yieldAt) {
+            LivingEntity o = Giants.ownerOf(by);
+            backDown(o != null ? o : by);
         }
         if (hp <= 0f) { setHealth(0f); die(src); }
         return true;
@@ -1522,7 +1576,7 @@ public class HollowbellEntity extends Monster {
         stopFetch();
         dropRider();
         moves.letGoOfEverything(false);
-        Vec3 dest = stay ? null : goal != null ? goal : wanderTo;
+        Vec3 dest = stay ? null : goal != null ? goal : waitingForSomebody() ? null : wanderTo;
         if (dest != null) dest = keptIn(dest);      // bound, the sum keeps to his circle too
         double lift = Math.max(0, getY() - groundAt(getX(), getZ()));
         CompoundTag body = new CompoundTag();
@@ -1752,6 +1806,9 @@ public class HollowbellEntity extends Monster {
         }
         if (!level().isClientSide) {
             HollowbellMod.LOG.info("Hollowbell died at {} ({})", position(), src.getMsgId());
+            // killed by somebody wearing his own glass
+            Entity killer = src.getEntity() instanceof ServerPlayer ? src.getEntity() : getKillCredit();
+            if (killer instanceof ServerPlayer sp && net.jj.hollowbell.item.BellArmorItem.fullSet(sp)) HollowbellMod.award(sp, "own_glass");
             // his chunk keeps going until his death is over, even if everybody walks off: never left half dead
             if (level() instanceof ServerLevel sl)
                 sl.getChunkSource().addRegionTicket(DYING_TICKET, new net.minecraft.world.level.ChunkPos(blockPosition()), 2, getId());
@@ -1985,6 +2042,145 @@ public class HollowbellEntity extends Monster {
         sound(position(), ModSounds.HURT, 4.5f, 0.45f);
     }
 
+    // ------------------------------------------------------------------ meeting the other giants
+
+    /** the giant he is having a meeting fight with (see Meetings), or null */
+    private @Nullable UUID meetFoe;
+    /** the giant he is keeping out of the way of, and where it was last */
+    private @Nullable UUID meetAvoid;
+    private @Nullable Vec3 avoidAt;
+    /** backed down: until when (game time); and running from where, until when */
+    private long yieldUntil, fleeUntil, yieldFor, fleeFor;
+    private @Nullable Vec3 fleeFrom;
+    /** the giants he has met lately (by their id): not again until this game time */
+    private final java.util.Map<UUID, Long> metLately = new java.util.HashMap<>();
+    /** the tests: how often he looks round for other giants (ticks) */
+    public static int meetEvery = 40;
+
+    public boolean yielding() { return getTags().contains(Meetings.YIELD); }
+    public @Nullable UUID meetFoe() { return meetFoe; }
+    public @Nullable UUID avoiding() { return meetAvoid; }
+    /** ticks before he can meet this one again (0 = he can) */
+    public long meetCooldownLeft(UUID other) { Long t = metLately.get(other); return t == null ? 0 : Math.max(0, t - level().getGameTime()); }
+
+    private @Nullable Vec3 keepAwayFrom() {
+        long now = level().getGameTime();
+        if (fleeFrom != null && now < fleeUntil) return fleeFrom;
+        return meetAvoid != null ? avoidAt : null;
+    }
+
+    /** free to meet another giant: awake, under no order or trip, after nobody, not ridden or staying, not backing down */
+    public boolean freeToMeet() {
+        return HollowbellConfig.V.meetings && !asleep && !frozen && !stay && goal == null && comeTo == null && fetching == null
+                && hunted == null && getTarget() == null && rider == null && !yielding() && !bound() && !isDeadOrDying() && meetFoe == null
+                && level().getGameTime() >= fleeUntil;
+    }
+
+    /** the giant this body or part belongs to, as a creature */
+    private static @Nullable LivingEntity giantOf(Entity e) { return Giants.ownerOf(e); }
+
+    private void meetTick(long now) {
+        if (!(level() instanceof ServerLevel sl)) return;
+        if (yieldUntil > 0 && now >= yieldUntil) { removeTag(Meetings.YIELD); yieldUntil = 0; }
+        if (!metLately.isEmpty() && tickCount % 200 == 0) metLately.values().removeIf(t -> t < now);
+        // a meeting fight going on
+        if (meetFoe != null) {
+            Entity f = sl.getEntity(meetFoe);
+            LivingEntity foe = f == null ? null : giantOf(f);
+            if (foe == null || !foe.isAlive() || foe.isRemoved()) {
+                // gone (dead, or out of reach): if it died, he won
+                boolean won = foe != null && foe.isDeadOrDying();
+                meetFoe = null;
+                if (getTarget() == foe) setTarget(null);
+                if (won) victory();
+            } else if (Meetings.yielding(foe)) {
+                meetFoe = null;                                   // it backed down: he won
+                if (getTarget() == foe) setTarget(null);
+                angerTicks = 0;
+                victory();
+            } else if (!yielding() && HollowbellConfig.V.yieldAt > 0f && healthNow() < healthMax() * HollowbellConfig.V.yieldAt) {
+                backDown(foe);
+            } else if (getTarget() != foe && fairGame(foe)) { setTarget(foe); angerTicks = Math.max(angerTicks, 600); }
+        }
+        // keeping out of another giant's way, until they're well apart
+        if (meetAvoid != null) {
+            Entity o = sl.getEntity(meetAvoid);
+            if (o == null || !o.isAlive() || horiz(o.position()) > Meetings.range(bellScale()) * 1.5) { meetAvoid = null; avoidAt = null; }
+            else avoidAt = o.position();
+        }
+        if (meetEvery <= 0 || tickCount % meetEvery != 0 || !freeToMeet() || meetAvoid != null) return;
+        double r = Meetings.range(bellScale());
+        LivingEntity best = null; double bd = Double.MAX_VALUE;
+        for (Entity e : sl.getEntities((Entity) null, new AABB(getX() - r, getY() - r, getZ() - r, getX() + r, getY() + r, getZ() + r),
+                x -> x != this && x.isAlive() && Giants.isGiant(x) && !(x instanceof Belling))) {
+            LivingEntity g = giantOf(e);
+            if (g == null || g == this || Meetings.yielding(g) || meetCooldownLeft(g.getUUID()) > 0) continue;
+            double d = horiz(g.position());
+            if (d > r || d >= bd) continue;
+            bd = d; best = g;
+        }
+        if (best == null) return;
+        Meetings.Way way = Meetings.way(Meetings.ME, Meetings.kindOf(best));
+        if (way == Meetings.Way.FIGHT && HollowbellConfig.V.fightGiants) startMeeting(best);
+        else if (way == Meetings.Way.AVOID) {
+            meetAvoid = best.getUUID();
+            avoidAt = best.position();
+            metLately.put(best.getUUID(), now + HollowbellConfig.V.meetCooldown * 1200L);
+        }
+    }
+
+    /** a meeting fight with this giant starts now (the table said so, or an operator's /giants meet) */
+    public boolean startMeeting(LivingEntity other) {
+        if (!(level() instanceof ServerLevel sl) || other == this || isDeadOrDying()) return false;
+        long now = level().getGameTime();
+        wakeUp();
+        meetFoe = other.getUUID();
+        meetAvoid = null; avoidAt = null;
+        metLately.put(other.getUUID(), now + HollowbellConfig.V.meetCooldown * 1200L);
+        setStay(false);
+        setTarget(other);
+        angerTicks = Math.max(angerTicks, 1200);
+        String them = Meetings.kindOf(other);
+        // the one with the smaller id tells everyone near (the other mod does the same, so it's said once)
+        boolean tell = getUUID().compareTo(other.getUUID()) < 0 || them == null;
+        for (ServerPlayer p : sl.players()) {
+            double dMe = p.distanceToSqr(this), dThem = p.distanceToSqr(other);
+            if (tell && (dMe < 256 * 256 || dThem < 256 * 256))
+                p.sendSystemMessage(Component.translatable("message.hollowbell.giants_fight", Meetings.name(Meetings.ME, true), Meetings.name(them, false)));
+            // (the advancement for seeing it)
+            if (dMe < 128 * 128 || dThem < 128 * 128) HollowbellMod.award(p, "watch_giants");
+        }
+        HollowbellMod.LOG.info("A Hollowbell meets {} and they fight", Meetings.name(them, false));
+        return true;
+    }
+
+    /** he's had enough of this giant: he backs down, leaves every giant alone for two minutes and gets away from it */
+    public void backDown(Entity from) {
+        if (yielding() || !(level() instanceof ServerLevel sl)) return;
+        long now = level().getGameTime();
+        addTag(Meetings.YIELD);
+        yieldUntil = now + 2400;
+        fleeFrom = from.position();
+        fleeUntil = now + 1200;
+        meetFoe = null;
+        clearHitList();
+        stopFetch();
+        moves.stopNow();
+        metLately.put(from.getUUID(), now + HollowbellConfig.V.meetCooldown * 1200L);
+        String them = Meetings.kindOf(from);
+        for (ServerPlayer p : sl.players())
+            if (p.distanceToSqr(this) < 256 * 256 || p.distanceToSqr(from) < 256 * 256)
+                p.sendSystemMessage(Component.translatable("message.hollowbell.giant_yields", Meetings.name(Meetings.ME, true), Meetings.name(them, true)));
+        HollowbellMod.LOG.info("A Hollowbell backs down from {}", Meetings.name(them, false));
+    }
+
+    /** he won: a big toll and a flare of his glow, then back to his own business */
+    private void victory() {
+        pulse(1.6f);
+        sound(position().add(0, (rig.rimY + 20) * bellScale(), 0), ModSounds.TOLL_BIG, 4f, 1.1f);
+        particles(net.minecraft.core.particles.ParticleTypes.END_ROD, position().add(0, (rig.rimY + 40) * bellScale(), 0), 120, 50 * bellScale() + 3, 0.2);
+    }
+
     // ------------------------------------------------------------------ saving
 
     @Override
@@ -1995,7 +2191,10 @@ public class HollowbellEntity extends Monster {
         tag.putBoolean("Frozen", frozen);
         tag.putFloat("SpeedMul", speedMul);
         if (comeTo != null) tag.putUUID("ComeTo", comeTo);
+        if (comeLostAt != 0) tag.putLong("ComeLostAt", comeLostAt);
         tag.putBoolean("HoldThere", holdThere);
+        // where he's going (an order, a /goto trip), so a restart doesn't lose it
+        if (goal != null) { tag.putDouble("GoalX", goal.x); tag.putDouble("GoalY", goal.y); tag.putDouble("GoalZ", goal.z); }
         tag.putFloat("SleepK", sleepiness());
         tag.putInt("BellVariant", variant());
         tag.putFloat("BellHp", healthNow());
@@ -2027,6 +2226,10 @@ public class HollowbellEntity extends Monster {
         if (hunted != null) tag.putUUID("Hunted", hunted);
         if (bornAt >= 0) tag.putLong("BornAt", bornAt);
         if (worldOne) tag.putBoolean("WorldOne", true);
+        if (meetFoe != null) tag.putUUID("MeetFoe", meetFoe);
+        long gt = level().getGameTime();
+        if (yieldUntil > gt) tag.putLong("YieldFor", yieldUntil - gt);
+        if (fleeFrom != null && fleeUntil > gt) { tag.putLong("FleeFor", fleeUntil - gt); tag.putDouble("FleeX", fleeFrom.x); tag.putDouble("FleeZ", fleeFrom.z); }
         if (bound()) { tag.putDouble("BoundX", boundX); tag.putDouble("BoundZ", boundZ); tag.putInt("BoundR", boundR); }
         mood.save(tag);
     }
@@ -2039,6 +2242,7 @@ public class HollowbellEntity extends Monster {
         frozen = tag.getBoolean("Frozen");
         speedMul = tag.contains("SpeedMul") ? Mth.clamp(tag.getFloat("SpeedMul"), 0.1f, 5f) : 1f;
         comeTo = tag.hasUUID("ComeTo") ? tag.getUUID("ComeTo") : null;
+        comeLostAt = tag.getLong("ComeLostAt");
         holdThere = tag.getBoolean("HoldThere");
         if (tag.contains("SleepK")) entityData.set(DATA_SLEEP, Mth.clamp(tag.getFloat("SleepK"), 0f, 1f));
         if (tag.contains("BellVariant")) entityData.set(DATA_VARIANT, Mth.clamp(tag.getInt("BellVariant"), 0, 2));
@@ -2079,6 +2283,7 @@ public class HollowbellEntity extends Monster {
         pendingWaits = true;
         if (tag.contains("HomeX")) home = new Vec3(tag.getDouble("HomeX"), tag.getDouble("HomeY"), tag.getDouble("HomeZ"));
         setStay(tag.getBoolean("Stay"));
+        goal = tag.contains("GoalX") ? new Vec3(tag.getDouble("GoalX"), tag.getDouble("GoalY"), tag.getDouble("GoalZ")) : null;
         // one from an older save, or from a spawn egg's tag, is where it's meant to be (an egg's comes down)
         settled = tag.getBoolean("Settled") || (!tag.contains("HollowbellEgg") && tag.contains("BellHpMax"));
         // a saved body carries his own health tag; a fresh one (an egg, a summon) never does
@@ -2089,6 +2294,12 @@ public class HollowbellEntity extends Monster {
         // one from before ages were kept counts as the oldest there is
         bornAt = tag.contains("BornAt") ? tag.getLong("BornAt") : loadedFromSave ? 0 : -1;
         worldOne = tag.getBoolean("WorldOne");
+        meetFoe = tag.hasUUID("MeetFoe") ? tag.getUUID("MeetFoe") : null;
+        yieldFor = tag.getLong("YieldFor");
+        fleeFor = tag.getLong("FleeFor");
+        fleeFrom = tag.contains("FleeX") ? new Vec3(tag.getDouble("FleeX"), 0, tag.getDouble("FleeZ")) : null;
+        // an old save from before the meetings: he's a giant of this kind too
+        addTag(Meetings.KIND + Meetings.ME);
         if (tag.contains("BoundR")) { boundX = tag.getDouble("BoundX"); boundZ = tag.getDouble("BoundZ"); boundR = tag.getInt("BoundR"); }
         else boundR = -1;
         mood.load(tag);
@@ -2106,6 +2317,9 @@ public class HollowbellEntity extends Monster {
             long now = level().getGameTime();
             for (int i = 0; i < podRegrowAt.length; i++) podRegrowAt[i] += now;
             sunkUntil += now;
+            yieldUntil = yieldFor > 0 ? now + yieldFor : 0;
+            fleeUntil = fleeFor > 0 ? now + fleeFor : 0;
+            if (yieldUntil == 0) removeTag(Meetings.YIELD);
         }
     }
 

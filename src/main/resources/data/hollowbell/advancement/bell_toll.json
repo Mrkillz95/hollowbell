@@ -1,0 +1,22 @@
+{
+ "display": {
+  "icon": {
+   "id": "hollowbell:bell_glass_boots"
+  },
+  "title": {
+   "translate": "advancements.hollowbell.bell_toll.title"
+  },
+  "description": {
+   "translate": "advancements.hollowbell.bell_toll.description"
+  },
+  "frame": "task",
+  "show_toast": true,
+  "announce_to_chat": true
+ },
+ "parent": "hollowbell:bell_glass_set",
+ "criteria": {
+  "bell_toll": {
+   "trigger": "minecraft:impossible"
+  }
+ }
+}

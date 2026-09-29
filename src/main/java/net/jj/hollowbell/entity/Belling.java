@@ -43,6 +43,14 @@ public class Belling extends Monster {
 
     public void setOwner(HollowbellEntity h) { owner = h.getUUID(); }
 
+    /** just out of its egg: drawn growing to full size over its first half second (see BellingRenderer) */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_BORN =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(Belling.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+    @Override protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder b) { super.defineSynchedData(b); b.define(DATA_BORN, 0); }
+    public void justHatched() { entityData.set(DATA_BORN, 1); }
+    /** 0 just hatched to 1 full grown */
+    public float grown(float partial) { return entityData.get(DATA_BORN) == 0 ? 1f : Mth.clamp((tickCount + partial) / 12f, 0f, 1f); }
+
     private @Nullable HollowbellEntity owner() {
         if (owner == null || !(level() instanceof ServerLevel sl)) return null;
         return sl.getEntity(owner) instanceof HollowbellEntity h ? h : null;

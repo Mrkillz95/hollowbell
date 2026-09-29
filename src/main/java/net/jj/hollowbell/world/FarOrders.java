@@ -106,6 +106,7 @@ public final class FarOrders {
                 if (p == null) return null;
                 fetches.add(new Fetch(t.id(), l.dimension().location().toString(), p.x(), p.z(), to, follow == null ? null : follow.getUUID(),
                         l.getGameTime() + 20 * 20, windCost));
+                a.setDirty();
                 ChunkPos cp = new ChunkPos(Mth.floor(p.x()) >> 4, Mth.floor(p.z()) >> 4);
                 l.getChunkSource().addRegionTicket(FETCH, cp, 2, cp);
                 return coming(dist, p.speed() > 0 ? p.speed() : 0.2, follow != null);
@@ -145,6 +146,12 @@ public final class FarOrders {
     /** every tick: the ones being fetched, once their chunk has brought them in, step out of the world and go */
     public static void tick(MinecraftServer server) {
         if (fetches.isEmpty()) return;
+        int had = fetches.size();
+        try { tickFetches(server); }
+        finally { if (fetches.size() != had) Away.get(server).setDirty(); }
+    }
+
+    private static void tickFetches(MinecraftServer server) {
         for (Iterator<Fetch> it = fetches.iterator(); it.hasNext(); ) {
             Fetch f = it.next();
             ServerLevel l = null;
@@ -192,6 +199,38 @@ public final class FarOrders {
 
     public static void forget() { fetches.clear(); }
 
+    /** the fetches under way, for the save (see Away): a restart carries them on */
+    static net.minecraft.nbt.ListTag saveFetches() {
+        net.minecraft.nbt.ListTag out = new net.minecraft.nbt.ListTag();
+        for (Fetch f : fetches) {
+            net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
+            t.putUUID("Id", f.id()); t.putString("Dim", f.dim());
+            t.putDouble("X", f.x()); t.putDouble("Z", f.z());
+            t.putDouble("ToX", f.to().x); t.putDouble("ToY", f.to().y); t.putDouble("ToZ", f.to().z);
+            if (f.follow() != null) t.putUUID("Follow", f.follow());
+            t.putLong("Until", f.until()); t.putFloat("Cost", f.cost()); t.putBoolean("Kill", f.kill());
+            out.add(t);
+        }
+        return out;
+    }
+
+    static void loadFetches(net.minecraft.nbt.ListTag l) {
+        fetches.clear();
+        for (int i = 0; i < l.size(); i++) {
+            net.minecraft.nbt.CompoundTag t = l.getCompound(i);
+            fetches.add(new Fetch(t.getUUID("Id"), t.getString("Dim"), t.getDouble("X"), t.getDouble("Z"),
+                    new Vec3(t.getDouble("ToX"), t.getDouble("ToY"), t.getDouble("ToZ")), t.hasUUID("Follow") ? t.getUUID("Follow") : null,
+                    t.getLong("Until"), t.getFloat("Cost"), t.getBoolean("Kill")));
+        }
+    }
+
+    /** for the tests: the first fetch under way (its id and where it's going), or null */
+    public static @Nullable Object[] firstFetch() {
+        if (fetches.isEmpty()) return null;
+        Fetch f = fetches.get(0);
+        return new Object[]{f.id(), f.to(), f.follow()};
+    }
+
     // ------------------------------------------------------------------ killing every one of him, wherever he is
 
     private static final TicketType<Integer> DYING = TicketType.create("hollowbell_dying", Integer::compare, HollowbellEntity.DEATH_LENGTH + 60);
@@ -221,6 +260,7 @@ public final class FarOrders {
                 n++;
             }
         }
+        a.setDirty();
         return n;
     }
 

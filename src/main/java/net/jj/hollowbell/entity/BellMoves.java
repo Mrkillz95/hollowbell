@@ -301,6 +301,7 @@ public final class BellMoves {
             case Moves.SUN_LANCES -> { for (int i = 0; i < 5; i++) lance[i] = null; }
             default -> {}
         }
+        if (which == Moves.EGG_RAIN) { lastEggs.clear(); eggSpot = forcedSpot; }
         move = which; t = 0; arg = a; landed = false;
         lastMove = which;
         h.setMove(which, a, aim);
@@ -320,7 +321,9 @@ public final class BellMoves {
             case Moves.SWEEP -> h.sound(h.position().add(0, 30 * s, 0), ModSounds.STRAND, 3f, 0.5f);
             case Moves.WRAP -> h.sound(h.armTipWorld(a), SoundEvents.COPPER_PLACE, 2.5f, 0.5f);
             case Moves.PULSE -> h.sound(mid, ModSounds.WARN_DROP, 2f, 1.2f);
-            case Moves.SHED, Moves.SPORES, Moves.EGG_RAIN -> h.sound(h.position().add(0, 60 * s, 0), ModSounds.CLICK, 3f, 0.6f);
+            case Moves.SHED, Moves.SPORES -> h.sound(h.position().add(0, 60 * s, 0), ModSounds.CLICK, 3f, 0.6f);
+            // the egg rain's tell: a rising glassy shiver while he tips and his glow builds (see eggRain)
+            case Moves.EGG_RAIN -> { h.sound(mid, ModSounds.EGG_WIND, 4f, 1f); h.sound(h.position().add(0, 60 * s, 0), ModSounds.CLICK, 3f, 0.6f); }
             case Moves.VOLLEY -> h.sound(h.position().add(0, 20 * s, 0), ModSounds.CLICK, 2.5f, 1f);
             case Moves.LASH -> h.sound(h.strandTipWorld(a), ModSounds.STRAND, 2f, 0.9f);
             case Moves.FLASH -> h.sound(mid, ModSounds.FLASH, 2.5f, 0.6f);
@@ -660,7 +663,7 @@ public final class BellMoves {
             }
             case Moves.SPORES -> { if (t == Moves.SPORES_AT) spores(); }
             case Moves.POD_BURST -> podBurst();
-            case Moves.EGG_RAIN -> { if (t >= Moves.EGG_AT && t <= Moves.EGG_AT + 24 && (t - Moves.EGG_AT) % 4 == 0) dropEgg(); }
+            case Moves.EGG_RAIN -> eggRain();
             case Moves.WHIRLPOOL -> whirlpool();
             case Moves.SKY_DIVE -> skyDive();
             case Moves.DEEP_TOLL -> deepToll();
@@ -841,7 +844,29 @@ public final class BellMoves {
         }
     }
 
-    /** egg rain: an egg clump comes off and drops toward what he's after, bursting where it lands */
+    /**
+     * Egg rain. The wind-up (to EGG_AT): he tips his mouth toward you, his glow builds and the clumps rattle, with a
+     * rising shiver of glass and a toll just before. Then he flings his strands and the clumps come off one after
+     * another, each with a ring on the ground where it will land.
+     */
+    private void eggRain() {
+        float s = s();
+        if (t < Moves.EGG_AT && t % 5 == 0 && level() instanceof ServerLevel sl) {
+            // the clumps glow as it builds, seen from well off
+            int n = 0;
+            for (int i = 0; i < rig.eggs.length && n < 10; i++) {
+                if (h.state.eggGone[i]) continue;
+                n++;
+                Vec3 c = h.eggWorld(i);
+                for (ServerPlayer p : sl.players())
+                    if (p.distanceToSqr(c) < 160 * 160) sl.sendParticles(p, ParticleTypes.GLOW, true, c.x, c.y, c.z, 2 + t / 10, 2 * s + 0.4, 2 * s + 0.4, 2 * s + 0.4, 0.02);
+            }
+        }
+        if (t == Moves.EGG_AT - 8) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.TOLL, 3f, 1.35f);
+        if (t >= Moves.EGG_AT && t <= Moves.EGG_AT + 24 && (t - Moves.EGG_AT) % 4 == 0) dropEgg();
+    }
+
+    /** egg rain: an egg clump comes off and drops toward what he's after, splatting where it lands */
     private void dropEgg() {
         float s = s();
         List<Integer> left = new ArrayList<>();
@@ -850,17 +875,30 @@ public final class BellMoves {
         int i = left.get(h.getRandom().nextInt(left.size()));
         Vec3 from = h.eggWorld(i);
         h.eggGone(i);
-        Vec3 to = target != null && target.isAlive() ? target.position() : h.position();
+        Vec3 to = target != null && target.isAlive() ? target.position() : forcedSpot != null ? forcedSpot : eggSpot != null ? eggSpot : h.position();
         double spread = 6 * s + 2;
         to = to.add((h.getRandom().nextDouble() - 0.5) * 2 * spread, 0, (h.getRandom().nextDouble() - 0.5) * 2 * spread);
-        double dy = Math.max(1, from.y - to.y);
-        double fall = Math.sqrt(2 * dy / 0.05);
-        Shot sh = new Shot(level(), h, Shot.EGG, 14f, 2.5f + 3f * s);
+        double gy = h.groundAt(to.x, to.z);
+        // the way it really falls (a step, then the air slows it, then it drops faster): how many ticks to the
+        // ground, and how far across it gets for each block a tick it starts with, so it lands on its marker
+        double y = from.y, vy = 0, across = 0, k = 1;
+        int n = 0;
+        while (y > gy && n < 400) { y += vy; across += k; k *= 0.99; vy = vy * 0.99 - 0.05; n++; }
+        across = Math.max(1, across);
+        float r = 2.5f + 3f * s;
+        Shot sh = new Shot(level(), h, Shot.EGG, 14f, r);
         sh.setPos(from.x, from.y, from.z);
-        sh.setDeltaMovement((to.x - from.x) / fall, 0, (to.z - from.z) / fall);
+        sh.setDeltaMovement((to.x - from.x) / across, 0, (to.z - from.z) / across);
+        sh.setEgg(i, s, new Vec3(to.x, gy, to.z));
         level().addFreshEntity(sh);
         h.sound(from, ModSounds.EGG_BURST, 2f, 1.1f);
+        lastEggs.add(sh);
     }
+
+    /** where the eggs go when there's nobody to aim at (set with the move) */
+    private @Nullable Vec3 eggSpot;
+    /** for the tests: the eggs of the last egg rain */
+    public final List<Shot> lastEggs = new ArrayList<>();
 
     /** the whirlpool: he spins, and his strands drag everything in a wide ring in toward the middle under him */
     private void whirlpool() {

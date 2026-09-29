@@ -26,6 +26,16 @@ public final class HollowbellConfig {
         public float giantArmor = 0.7f;
         /** He picks fights with JJ's other bosses ("/hollowbell giants on"). Off = he leaves them alone. */
         public boolean fightGiants = true;
+        /** When he wanders near another of JJ's giants he fights it or keeps away from it (the same table in all five mods). */
+        public boolean meetings = true;
+        /** How far off he notices another giant, in blocks at full size (times his size, kept between 48 and 320). */
+        public int meetRange = 160;
+        /** A giant fight ends when one drops under this share of its health: it backs down. 0 = to the death. */
+        public float yieldAt = 0.25f;
+        /** Minutes before the same two giants can meet again. */
+        public int meetCooldown = 10;
+        /** (This computer.) His fight music plays when a fight with him is on near you. */
+        public boolean fightMusic = true;
         /** Lets him pull trees up, flatten plants with his strands and crack the ground with his arm (also needs the mobGriefing gamerule). */
         public boolean griefing = true;
         /** He pulls cows, villagers and trees up into his dome. */
@@ -163,5 +173,8 @@ public final class HollowbellConfig {
         v.farSightBlocks = Math.max(0, Math.min(4096, v.farSightBlocks));
         v.soundVolume = Math.max(0f, Math.min(2f, v.soundVolume));
         v.maxInWorld = Math.max(0, Math.min(20, v.maxInWorld));
+        v.meetRange = Math.max(16, Math.min(1000, v.meetRange));
+        v.yieldAt = Math.max(0f, Math.min(0.9f, v.yieldAt));
+        v.meetCooldown = Math.max(0, Math.min(1440, v.meetCooldown));
     }
 }

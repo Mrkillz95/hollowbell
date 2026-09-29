@@ -36,7 +36,8 @@ public class HollowbellClient implements ClientModInitializer {
         net.jj.hollowbell.client.render.BellArmorRenderer.register();    // bell glass armor drawn see-through
         EntityRendererRegistry.register(ModEntities.SEAT, NoopRenderer::new);
         EntityRendererRegistry.register(ModEntities.STINGER_HOOK, net.jj.hollowbell.client.render.StingerHookRenderer::new);
-        EntityRendererRegistry.register(ModEntities.SHOT, ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<>(ctx, 2.2f, false));
+        EntityRendererRegistry.register(ModEntities.SHOT, net.jj.hollowbell.client.render.ShotRenderer::new);
+        net.jj.hollowbell.entity.Shot.eggFx = net.jj.hollowbell.client.render.ShotRenderer::fx;
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CROWN, RenderType.cutout());
         BlockRenderLayerMap.INSTANCE.putBlocks(RenderType.translucent(), ModBlocks.TENDRIL_GLASS, ModBlocks.BELL_SHARD);
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LOOT_CACHE, RenderType.cutout());
@@ -50,9 +51,9 @@ public class HollowbellClient implements ClientModInitializer {
             var pl = ctx.client().player;
             if (pl != null) Shake.crash(Math.sqrt(pl.distanceToSqr(p.x(), p.y(), p.z())), p.power());
         }));
-        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); });
+        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); FightMusic.clear(); });
         ArmourPowerKey.init();
-        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); ArmourPowerKey.tick(c); });
+        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); ArmourPowerKey.tick(c); FightMusic.tick(c); });
         // he's ticked even when the game would skip him for having his middle too far off (see tickIfSkipped)
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(level -> {
             for (var e : level.entitiesForRendering()) if (e instanceof net.jj.hollowbell.entity.HollowbellEntity h) h.tickIfSkipped();

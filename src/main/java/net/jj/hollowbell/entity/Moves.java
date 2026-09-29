@@ -54,7 +54,7 @@ public final class Moves {
             case FLASH -> 40;
             case SPORES -> 64;
             case POD_BURST -> 54;
-            case EGG_RAIN -> 72;
+            case EGG_RAIN -> 100;
             case WHIRLPOOL -> 170;
             case SKY_DIVE -> DIVE_CLIMB + DIVE_TURN + DIVE_FALL + DIVE_BACK;
             case DEEP_TOLL -> 150;
@@ -83,7 +83,11 @@ public final class Moves {
     public static final int LASH_AT = 18;
     /** the glow flash */
     public static final int FLASH_AT = 18;
-    public static final int SPORES_AT = 22, POD_AT = 18, EGG_AT = 20;
+    public static final int SPORES_AT = 22, POD_AT = 18;
+    /** the egg rain: a two-second wind-up (he tips toward you, glowing), then the clumps come off */
+    public static final int EGG_AT = 40;
+    /** how far he tips toward you for it (radians; the sign turns his mouth toward you) */
+    public static float EGG_TIP = -0.32f;
     /** the whirlpool: wind up, spinning, the crush at the end */
     public static final int WHIRL_UP = 40, WHIRL_CRUSH = 140;
     /** the sky dive: up, turning over, the fall (ends early when he lands), and turning back */
@@ -202,14 +206,19 @@ public final class Moves {
                 in.lowerAdd = 2f * hump(t, 0, POD_AT - 2, POD_AT - 2, POD_AT) - 4f * hump(t, POD_AT, POD_AT + 4, POD_AT + 6, POD_AT + 30);
             }
             case EGG_RAIN -> {
-                // he rises and gathers (squeeze, strands drawn in), then flings the strands out and the clumps
-                // rattle loose over a long shake; the strands swing back through and hang
-                in.eggShake = hump(t, 0, EGG_AT, EGG_AT + 24, len);
-                in.lowerAdd = -5f * hump(t, 0, EGG_AT - 4, EGG_AT + 20, len);
-                in.squeezeAdd = 0.3f * hump(t, 0, EGG_AT - 4, EGG_AT - 4, EGG_AT) - 0.25f * hump(t, EGG_AT, EGG_AT + 3, EGG_AT + 8, EGG_AT + 24);
+                // the wind-up: he rises and tips his mouth toward you, the glow builds and the clumps rattle harder and
+                // harder, the bell gathers (squeeze, strands drawn in); then he flings the strands out and the clumps
+                // come loose over a long shake; the strands swing back through and hang, and he rights himself
+                in.eggShake = hump(t, 4, EGG_AT, EGG_AT + 24, len - 20);
+                in.lowerAdd = -6f * hump(t, 0, EGG_AT - 4, EGG_AT + 20, len);
+                in.glow = 1.4f * hump(t, 0, EGG_AT, EGG_AT + 4, EGG_AT + 30);
+                in.squeezeAdd = 0.35f * hump(t, 6, EGG_AT - 4, EGG_AT - 4, EGG_AT) - 0.3f * hump(t, EGG_AT, EGG_AT + 3, EGG_AT + 8, EGG_AT + 24);
                 float fling = hump(t, EGG_AT - 2, EGG_AT + 3, EGG_AT + 20, EGG_AT + 36);
                 st.flick = fling * (0.75f + 0.25f * (float) Math.cos((t - EGG_AT) * 0.7f));
-                st.spread = 0.6f * fling - 0.15f * hump(t, 0, EGG_AT - 4, EGG_AT - 4, EGG_AT);
+                st.spread = 0.6f * fling - 0.2f * hump(t, 6, EGG_AT - 4, EGG_AT - 4, EGG_AT);
+                float tip = EGG_TIP * hump(t, 0, EGG_AT - 6, EGG_AT + 26, len - 6);
+                float dx = tx, dz = tz, d = (float) Math.sqrt(dx * dx + dz * dz);
+                if (d > 1e-3f) { in.flipX = dz / d * tip; in.flipZ = -dx / d * tip; }
             }
             case WHIRLPOOL -> {
                 st.spread = hump(t, 0, WHIRL_UP, WHIRL_CRUSH - 20, WHIRL_CRUSH);

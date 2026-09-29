@@ -417,6 +417,51 @@
       }
     ]
   },
+  "egg_wind": {
+    "subtitle": "subtitles.hollowbell.egg_wind",
+    "sounds": [
+      {
+        "name": "hollowbell:egg_wind",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "egg_splat": {
+    "subtitle": "subtitles.hollowbell.egg_splat",
+    "sounds": [
+      {
+        "name": "hollowbell:egg_splat",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "attenuation_distance": 80
+      },
+      {
+        "name": "hollowbell:egg_splat",
+        "pitch": 0.85,
+        "volume": 1.0,
+        "attenuation_distance": 80
+      }
+    ]
+  },
+  "egg_hatch": {
+    "subtitle": "subtitles.hollowbell.egg_hatch",
+    "sounds": [
+      {
+        "name": "hollowbell:egg_hatch",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      },
+      {
+        "name": "hollowbell:egg_hatch",
+        "pitch": 1.12,
+        "volume": 1.0,
+        "attenuation_distance": 48
+      }
+    ]
+  },
   "spores": {
     "subtitle": "subtitles.hollowbell.spores",
     "sounds": [
@@ -828,6 +873,70 @@
         "pitch": 0.7,
         "volume": 1.0,
         "attenuation_distance": 32
+      }
+    ]
+  },
+  "music.fight": {
+    "subtitle": "subtitles.hollowbell.music.fight",
+    "sounds": [
+      {
+        "name": "hollowbell:music/fight",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "stream": true
+      }
+    ]
+  },
+  "music.ground": {
+    "subtitle": "subtitles.hollowbell.music.ground",
+    "sounds": [
+      {
+        "name": "hollowbell:music/ground",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "stream": true
+      }
+    ]
+  },
+  "ambient.ground": {
+    "subtitle": "subtitles.hollowbell.ambient.ground",
+    "sounds": [
+      {
+        "name": "hollowbell:ambient/ground",
+        "pitch": 1.0,
+        "volume": 0.6,
+        "stream": true
+      }
+    ]
+  },
+  "ambient.mood": {
+    "subtitle": "subtitles.hollowbell.ambient.mood",
+    "sounds": [
+      {
+        "name": "hollowbell:ambient/mood",
+        "pitch": 1.0,
+        "volume": 0.9,
+        "stream": true
+      }
+    ]
+  },
+  "ambient.additions": {
+    "subtitle": "subtitles.hollowbell.ambient.additions",
+    "sounds": [
+      {
+        "name": "hollowbell:ambient/chime1",
+        "pitch": 1.0,
+        "volume": 0.5
+      },
+      {
+        "name": "hollowbell:ambient/chime2",
+        "pitch": 1.0,
+        "volume": 0.5
+      },
+      {
+        "name": "hollowbell:ambient/chime3",
+        "pitch": 1.0,
+        "volume": 0.5
       }
     ]
   },

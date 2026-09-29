@@ -51,6 +51,7 @@ public final class BellPower {
         if (p.getCooldowns().isOnCooldown(ModItems.BELL_CHESTPLATE) || DOING.containsKey(p.getUUID())) return null;
         Kind k = p.onGround() || p.isInWater() ? Kind.TOLL : Kind.GLIDE;
         DOING.put(p.getUUID(), new Doing(k));
+        net.jj.hollowbell.HollowbellMod.award(p, "bell_toll");
         p.getCooldowns().addCooldown(ModItems.BELL_CHESTPLATE, k == Kind.TOLL ? TOLL_COOLDOWN : GLIDE_COOLDOWN);
         ServerLevel l = p.serverLevel();
         if (k == Kind.TOLL) l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.PULSE, SoundSource.PLAYERS, 1.2f, 1.4f);

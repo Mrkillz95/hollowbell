@@ -40,7 +40,7 @@ public class HollowbellGameTests implements FabricGameTest {
 
     // ------------------------------------------------------------------ helpers
 
-    private static HollowbellEntity spawnAway(GameTestHelper h, float scale, int variant, int slot) {
+    static HollowbellEntity spawnAway(GameTestHelper h, float scale, int variant, int slot) {
         BlockPos o = h.absolutePos(BlockPos.ZERO);
         int x = o.getX() + 20000 + slot * 400, z = o.getZ() + 5000;
         for (int cx = (x >> 4) - 3; cx <= (x >> 4) + 3; cx++) for (int cz = (z >> 4) - 3; cz <= (z >> 4) + 3; cz++) {
@@ -58,13 +58,13 @@ public class HollowbellGameTests implements FabricGameTest {
         return e;
     }
 
-    private static void release(GameTestHelper h, HollowbellEntity e) {
+    static void release(GameTestHelper h, HollowbellEntity e) {
         int x = e.getBlockX(), z = e.getBlockZ();
         e.discard();
         for (int cx = (x >> 4) - 4; cx <= (x >> 4) + 4; cx++) for (int cz = (z >> 4) - 4; cz <= (z >> 4) + 4; cz++) h.getLevel().setChunkForced(cx, cz, false);
     }
 
-    private static Pig pig(GameTestHelper h, Vec3 at) {
+    static Pig pig(GameTestHelper h, Vec3 at) {
         Pig p = EntityType.PIG.create(h.getLevel());
         p.moveTo(at.x, at.y, at.z, 0f, 0f);
         p.setNoAi(true);
@@ -74,7 +74,7 @@ public class HollowbellGameTests implements FabricGameTest {
     }
 
     @SuppressWarnings("deprecation")
-    private static ServerPlayer player(GameTestHelper h, Vec3 at) {
+    static ServerPlayer player(GameTestHelper h, Vec3 at) {
         CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), "hb-test"), false);
         ServerPlayer p = new ServerPlayer(h.getLevel().getServer(), h.getLevel(), cookie.gameProfile(), cookie.clientInformation()) {
             @Override public boolean isSpectator() { return false; }
@@ -93,10 +93,10 @@ public class HollowbellGameTests implements FabricGameTest {
         return p;
     }
 
-    private static void drop(ServerPlayer p) { p.getServer().getPlayerList().remove(p); }
+    static void drop(ServerPlayer p) { p.getServer().getPlayerList().remove(p); }
 
     /** the ground right under his middle */
-    private static Vec3 under(HollowbellEntity e) { return new Vec3(e.getX() + 0.3, e.groundAt(e.getX(), e.getZ()), e.getZ() + 0.3); }
+    static Vec3 under(HollowbellEntity e) { return new Vec3(e.getX() + 0.3, e.groundAt(e.getX(), e.getZ()), e.getZ() + 0.3); }
 
     // ------------------------------------------------------------------ the model and the rig
 
@@ -1124,7 +1124,7 @@ public class HollowbellGameTests implements FabricGameTest {
     // ------------------------------------------------------------------ the other giants (JJ's other bosses)
 
     /** a stand-in for another of JJ's bosses: anything tagged as a giant counts as one */
-    private static net.minecraft.world.entity.monster.Zombie fakeGiant(GameTestHelper h, Vec3 at) {
+    static net.minecraft.world.entity.monster.Zombie fakeGiant(GameTestHelper h, Vec3 at) {
         net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(h.getLevel());
         z.moveTo(at.x, at.y, at.z, 0f, 0f);
         z.setNoAi(true);
