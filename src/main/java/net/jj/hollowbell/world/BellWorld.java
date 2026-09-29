@@ -31,6 +31,8 @@ public final class BellWorld extends SavedData {
     private final Map<UUID, Set<UUID>> friends = new HashMap<>();
     private final Map<UUID, Set<String>> kinds = new HashMap<>();
     private final Map<UUID, String> names = new HashMap<>();
+    /** the ones on the lists that are single creatures, not players (a pet, a named mob, your horse) */
+    private final Set<UUID> mobs = new HashSet<>();
 
     private static final SavedData.Factory<BellWorld> FACTORY = new SavedData.Factory<>(BellWorld::new, BellWorld::load, null);
 
@@ -84,6 +86,21 @@ public final class BellWorld extends SavedData {
 
     public String nameOf(UUID who) { return names.getOrDefault(who, who.toString().substring(0, 8)); }
     public void rememberName(UUID who, String name) { if (!name.equals(names.get(who))) { names.put(who, name); setDirty(); } }
+    public void rememberMob(UUID who, String name) { rememberName(who, name); if (mobs.add(who)) setDirty(); }
+    public boolean isMob(UUID who) { return mobs.contains(who); }
+
+    /** "Cows", "Wolves", "Sheep": the name of a kind for "All ..." on the list */
+    public static String kindsName(String id) { return plural(kindName(id)); }
+
+    public static String plural(String n) {
+        String l = n.toLowerCase(Locale.ROOT);
+        if (l.endsWith("sheep") || l.endsWith("fish") || l.endsWith("cod") || l.endsWith("salmon")) return n;
+        if (l.endsWith("wolf")) return n.substring(0, n.length() - 1) + "ves";
+        if (l.endsWith("man") && !l.endsWith("human")) return n.substring(0, n.length() - 2) + "en";
+        if (l.endsWith("s") || l.endsWith("x") || l.endsWith("ch") || l.endsWith("sh")) return n + "es";
+        if (l.endsWith("y") && l.length() > 1 && "aeiou".indexOf(l.charAt(l.length() - 2)) < 0) return n.substring(0, n.length() - 1) + "ies";
+        return n + "s";
+    }
 
     /** the everyday name of a kind, for the book's page */
     public static String kindName(String id) {
@@ -115,7 +132,9 @@ public final class BellWorld extends SavedData {
         l = tag.getList("Names", Tag.TAG_COMPOUND);
         for (int i = 0; i < l.size(); i++) {
             CompoundTag c = l.getCompound(i);
-            w.names.put(NbtUtils.loadUUID(c.get("Id")), c.getString("Name"));
+            UUID id = NbtUtils.loadUUID(c.get("Id"));
+            w.names.put(id, c.getString("Name"));
+            if (c.getBoolean("Mob")) w.mobs.add(id);
         }
         return w;
     }
@@ -149,6 +168,7 @@ public final class BellWorld extends SavedData {
             CompoundTag c = new CompoundTag();
             c.put("Id", NbtUtils.createUUID(e.getKey()));
             c.putString("Name", e.getValue());
+            if (mobs.contains(e.getKey())) c.putBoolean("Mob", true);
             l.add(c);
         }
         tag.put("Names", l);

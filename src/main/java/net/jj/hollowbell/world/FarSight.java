@@ -57,7 +57,7 @@ public final class FarSight {
         for (HollowbellEntity h : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying())) {
             if (Mth.square(h.getX() - p.getX()) + Mth.square(h.getZ() - p.getZ()) > r2) continue;
             if (tracked(p, h)) continue;
-            out.add(new FarSightPayload.Far(h.getUUID(), h.getX(), h.getY(), h.getZ(), h.getYRot(), h.bellScale(), h.variant()));
+            out.add(new FarSightPayload.Far(h.getUUID(), h.getX(), h.getY(), h.getZ(), h.getYRot(), h.bellScale(), h.variant(), h.asleep()));
             if (out.size() >= 16) return out;
         }
         String dim = l.dimension().location().toString();
@@ -71,7 +71,7 @@ public final class FarSight {
                 ListTag rot = r.body.getList("Rotation", Tag.TAG_FLOAT);
                 if (!rot.isEmpty()) yaw = rot.getFloat(0);
             }
-            out.add(new FarSightPayload.Far(r.id, s.x, groundUnder(l, s.x, s.z) + r.lift, s.z, yaw, r.scale, r.variant));
+            out.add(new FarSightPayload.Far(r.id, s.x, groundUnder(l, s.x, s.z) + r.lift, s.z, yaw, r.scale, r.variant, r.body.getBoolean("Asleep")));
             if (out.size() >= 16) return out;
         }
         return out;

@@ -33,6 +33,12 @@ public class CodexItem extends Item {
         return false;
     }
 
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext ctx, java.util.List<Component> tip, net.minecraft.world.item.TooltipFlag flag) {
+        tip.add(Component.translatable("item.hollowbell.hollowbell_codex.tip1").withStyle(net.minecraft.ChatFormatting.GRAY));
+        tip.add(Component.translatable("item.hollowbell.hollowbell_codex.tip2").withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
+    }
+
     /** set by the client: opens the pages */
     public static Runnable openPages = () -> {};
 

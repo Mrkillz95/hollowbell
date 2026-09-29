@@ -106,7 +106,7 @@ public final class CodexOrders {
             case CodexPayload.RIDE -> 0.06f;
             case CodexPayload.CALM, CodexPayload.HUNTER, CodexPayload.GUARDIAN -> 0.04f;
             case CodexPayload.ATTACK_THAT, CodexPayload.BIND_HERE, CodexPayload.FREE_ROAM -> 0.03f;
-            case CodexPayload.COME, CodexPayload.GO_THERE, CodexPayload.GO_TO_XZ -> 0.02f;
+            case CodexPayload.COME, CodexPayload.GO_THERE, CodexPayload.GO_TO_XZ, CodexPayload.SLEEP -> 0.02f;
             default -> 0f;
         };
     }
@@ -178,7 +178,9 @@ public final class CodexOrders {
         float sour = m == null ? 0f : m.mood().sourOf(p.getUUID());
         int stage = m == null ? 0 : m.mood().stage(p.getUUID());
         int days = m == null ? 0 : m.mood().huntDaysLeft(p.getUUID());
-        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new MoodPayload(wind, sour, stage, days, 0));
+        int flags = (m != null ? MoodPayload.IN_REACH : 0) | (HollowbellConfig.V.griefing ? MoodPayload.GRIEF : 0)
+                | (HollowbellConfig.V.harvest ? MoodPayload.HARVEST : 0) | (m != null && m.asleep() ? MoodPayload.ASLEEP : 0);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new MoodPayload(wind, sour, stage, days, flags));
     }
 
     /** his wind has to cover it, and how he feels about you decides whether he does it now, later, or not at all */
@@ -228,6 +230,7 @@ public final class CodexOrders {
         HollowbellEntity m = his(p);
         switch (action) {
             case CodexPayload.SPARE_LOOK -> { spareLooked(p); return; }
+            case CodexPayload.SPARE_KIND -> { spareKindLooked(p); return; }
             case CodexPayload.SPARE_ME -> { spare(p, p); return; }
             case CodexPayload.SPARE_NEAR -> { spareNear(p); return; }
             case CodexPayload.SAFE_GET -> { sendSafeList(p); return; }
@@ -240,7 +243,14 @@ public final class CodexOrders {
         if (warded != null) { say(p, "ward_refused"); return; }
         if (!already && !gate(p, m, pay)) return;
         int mind = m.mood().stage(p.getUUID());
+        // any order but the one to sleep wakes him first
+        if (action != CodexPayload.SLEEP) m.wakeUp();
         switch (action) {
+            case CodexPayload.SLEEP -> {
+                if (m.asleep()) { m.wakeUp(); say(p, "codex_wake"); }
+                else { m.goToSleep(); say(p, "codex_sleep"); }
+                sendMood(p, m);
+            }
             case CodexPayload.ATTACK_MOVE -> {
                 int which = pay.arg();
                 if (which <= 0 || which >= Moves.NAMES.length) return;
@@ -372,17 +382,49 @@ public final class CodexOrders {
         say(p, "codex_away_sent", (int) Math.hypot(s.x - p.getX(), s.z - p.getZ()), (int) r.toX, (int) r.toZ, Math.max(1, r.minutesLeft(now)));
     }
 
-    /** whatever you are looking at goes on your list: a player by name, anything else by its kind */
+    /** whoever you are looking at goes on your list (or off it): a player, or this one creature (pets, named mobs, your horse) */
     private static void spareLooked(ServerPlayer p) {
         HitResult h = looking(p, 120);
-        if (!(h instanceof EntityHitResult eh)) { say(p, "codex_no_player"); return; }
-        Entity who = eh.getEntity();
+        if (!(h instanceof EntityHitResult eh) || !(eh.getEntity() instanceof LivingEntity who) || who instanceof HollowbellEntity) {
+            say(p, "codex_no_player"); return;
+        }
         if (who instanceof Player pl) { spare(p, pl); return; }
-        if (!(who instanceof LivingEntity)) { say(p, "codex_no_player"); return; }
+        spareOne(p, who, null);
+    }
+
+    /** one creature on (or off) your list, kept by who it is; on = null toggles */
+    public static boolean spareOne(ServerPlayer p, LivingEntity who, @Nullable Boolean on) {
         BellWorld w = BellWorld.get(p.server);
-        boolean on = w.toggleKind(p.getUUID(), who.getType());
-        say(p, on ? "codex_spared_kind" : "codex_unspared_kind", who.getType().getDescription());
+        w.rememberMob(who.getUUID(), who.getName().getString());
+        boolean now = on == null ? w.toggleFriend(p.getUUID(), who.getUUID()) : on;
+        if (on != null) { if (on) w.addFriend(p.getUUID(), who.getUUID()); else w.dropFriend(p.getUUID(), who.getUUID()); }
+        say(p, now ? "codex_spared_one" : "codex_unspared_one", who.getName());
         sendSafeList(p);
+        return now;
+    }
+
+    /** every creature of the kind you are looking at goes on your list (or off it) */
+    private static void spareKindLooked(ServerPlayer p) {
+        HitResult h = looking(p, 120);
+        if (!(h instanceof EntityHitResult eh) || !(eh.getEntity() instanceof LivingEntity who) || who instanceof Player || who instanceof HollowbellEntity) {
+            say(p, "codex_no_creature"); return;
+        }
+        spareKind(p, who.getType(), null);
+    }
+
+    /** a whole kind on (or off) your list; on = null toggles */
+    public static boolean spareKind(ServerPlayer p, net.minecraft.world.entity.EntityType<?> type, @Nullable Boolean on) {
+        BellWorld w = BellWorld.get(p.server);
+        boolean now;
+        if (on == null) now = w.toggleKind(p.getUUID(), type);
+        else {
+            now = on;
+            boolean has = w.kindOnList(p.getUUID(), type);
+            if (has != on) w.toggleKind(p.getUUID(), type);
+        }
+        say(p, now ? "codex_spared_kind" : "codex_unspared_kind", BellWorld.kindsName(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(type).toString()));
+        sendSafeList(p);
+        return now;
     }
 
     private static void spare(ServerPlayer p, Player who) {
@@ -417,7 +459,7 @@ public final class CodexOrders {
         } else if (id.startsWith("kind:")) {
             String kind = id.substring(5);
             w.dropKind(p.getUUID(), kind);
-            say(p, "codex_unspared_kind", BellWorld.kindName(kind));
+            say(p, "codex_unspared_kind", BellWorld.kindsName(kind));
         }
         sendSafeList(p);
     }
@@ -425,8 +467,14 @@ public final class CodexOrders {
     public static void sendSafeList(ServerPlayer p) {
         BellWorld w = BellWorld.get(p.server);
         java.util.List<String> names = new java.util.ArrayList<>(), ids = new java.util.ArrayList<>();
-        for (java.util.UUID u : w.listOf(p.getUUID())) { names.add(w.nameOf(u)); ids.add("who:" + u); }
-        for (String id : w.kindsOf(p.getUUID())) { names.add(BellWorld.kindName(id)); ids.add("kind:" + id); }
+        for (java.util.UUID u : w.listOf(p.getUUID())) {
+            names.add(w.isMob(u) ? Component.translatable("codex.hollowbell.list_one", w.nameOf(u)).getString() : w.nameOf(u));
+            ids.add("who:" + u);
+        }
+        for (String id : w.kindsOf(p.getUUID())) {
+            names.add(Component.translatable("codex.hollowbell.list_kind", BellWorld.kindsName(id)).getString());
+            ids.add("kind:" + id);
+        }
         HollowbellEntity m = his(p);
         boolean inForce = m != null && m.bookHolder() == p;
         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new SafeListPayload(names, ids, inForce, CodexItem.carriedBy(p)));
@@ -441,6 +489,8 @@ public final class CodexOrders {
 
     /** what the book says he is doing */
     public static String doing(HollowbellEntity m) {
+        if (m.asleep()) return "asleep";
+        if (m.sleepiness() > 0.05f) return "waking";
         if (m.carrying()) return "ridden";
         if (m.sunk()) return "sunk";
         if (m.tired()) return "tired";

@@ -74,7 +74,7 @@ public class WorldOne extends SavedData {
             HollowbellMod.LOG.info("The Bell Hollows at {}, {} are from an older version: the land already made stays as it is", homeX, homeZ);
         }
         if (homeRadius < configRadius()) { homeRadius = configRadius(); changed = true; }
-        if (changed) setDirty();
+        if (changed) { setDirty(); BellGen.publish(this); }
         return changed;
     }
 
@@ -490,7 +490,7 @@ public class WorldOne extends SavedData {
      */
     public static boolean limitNow(@Nullable HollowbellEntity joining, ServerLevel world) {
         if (joining != null && joining.isRemoved()) return false;
-        int max = Math.max(0, HollowbellConfig.V.maxHollowbells);
+        int max = Math.max(0, HollowbellConfig.V.maxInWorld);
         if (max <= 0) return false;                              // as many as you like
         MinecraftServer server = world.getServer();
         if (server == null) return false;
@@ -565,7 +565,7 @@ public class WorldOne extends SavedData {
         if (rec != null) { adoptAway(rec, away, level.getGameTime()); return; }
         if (dueAt < 0 || level.getGameTime() < dueAt) return;
         // and the spawner never pushes anybody out to make room
-        int max = HollowbellConfig.V.maxHollowbells;
+        int max = HollowbellConfig.V.maxInWorld;
         if (max > 0 && away.count() >= max) return;
         put(level);
     }

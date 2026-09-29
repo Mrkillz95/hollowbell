@@ -59,7 +59,7 @@ public final class Mood {
     public void tick() {
         int secs = Math.max(5, HollowbellConfig.V.windSeconds);
         float back = 1f / (secs * 20f);
-        boolean resting = m.resting();
+        boolean resting = m.resting() || m.asleep();
         if (resting) back *= 2.5f;
         else if (m.moveNow() != 0) back *= 0.35f;
         else if (m.staying() && m.getTarget() == null) back *= 1.5f;
