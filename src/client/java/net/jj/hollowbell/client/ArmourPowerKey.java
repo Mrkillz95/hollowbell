@@ -14,7 +14,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * The "Armour power" key (R to start with, changeable in Controls) and the little chestplate by the hotbar that
- * shows the wait. The server checks the set and the wait; this only asks.
+ * shows the wait. The key is read straight off the keyboard, and only asks when you're wearing the bell glass set
+ * (the other giants' sets use R too). The server checks the set and the wait; this only asks.
  */
 public final class ArmourPowerKey {
     private ArmourPowerKey() {}
@@ -26,12 +27,27 @@ public final class ArmourPowerKey {
                 "key.categories.hollowbell"));
     }
 
+    private static boolean wasDown;
+
+    /** the key's own state, read off the keyboard: a key shared by two mods only reaches one of them the normal way */
+    private static boolean down(Minecraft mc) {
+        InputConstants.Key k = KeyBindingHelper.getBoundKeyOf(KEY);
+        if (k == InputConstants.UNKNOWN) return false;
+        long w = mc.getWindow().getWindow();
+        return k.getType() == InputConstants.Type.MOUSE
+                ? GLFW.glfwGetMouseButton(w, k.getValue()) == GLFW.GLFW_PRESS
+                : InputConstants.isKeyDown(w, k.getValue());
+    }
+
     public static void tick(Minecraft mc) {
         while (KEY.consumeClick()) {
-            // being him, the keys are his moves
-            if (mc.player == null || BeingHim.inside() || mc.screen != null) continue;
-            ClientPlayNetworking.send(new ArmourPowerPayload());
+            // (read below instead, so a key shared with another giant's armour still works)
         }
+        boolean now = mc.screen == null && mc.player != null && down(mc);
+        // only when wearing this set: one set can be worn at a time, so only one mod acts on the key
+        if (now && !wasDown && mc.player != null && !mc.player.isPassenger() && !BeingHim.inside() && BellArmorItem.fullSet(mc.player))
+            ClientPlayNetworking.send(new ArmourPowerPayload());
+        wasDown = now;
         motes(mc);
     }
 

@@ -1,10 +1,14 @@
-# Hollowbell (Java mod) — version 1.7.0
+# Hollowbell (Java mod) — version 1.7.1
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.7.0
+## What's new in 1.7.1
+
+- Fixed the Armour power key (R) not working when other giants' mods are in too. They all use R, and now it works for whichever set you're wearing.
+
+## What was new in 1.7.0
 
 - **His loot waits for you where he fell.** When he dies, a small pale pedestal of his blocks is built on the ground there, 7 blocks across, with glowing posts at the corners. In the middle sits his **Loot Cache**, a chest that holds everything he dropped, so nothing falls in lava or despawns. A beam of light stands up out of it like a beacon's, so you can find it from far off. The beam goes out once the cache is empty. The pedestal stays as a trophy. Break the cache and what's in it drops.
 - **The Stinger is a harpoon now.** Hold right-click and let go to throw it on its strand. A small thing it hits (a mob, an animal, a player) is poisoned and pulled to you. A wall, the ground, something big or the Hollowbell himself, and you're the one pulled in. Sneak as you let go to always pull yourself. It never leaves your hand, and it waits 2.5 seconds between throws. A normal hit still poisons and slows.
@@ -178,7 +182,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.7.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.7.1.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
