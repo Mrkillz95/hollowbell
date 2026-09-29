@@ -125,6 +125,17 @@ public final class GiantsBridge {
                         if (net.jj.hollowbell.world.FarOrders.order(l, t, new Vec3(x, 0, z), null, 0f) != null) n++;
                 out.add(WHO + (n == 0 ? "none to send." : n + " on the way to " + Mth.floor(x) + ", " + Mth.floor(z) + "."));
             }
+            case "config" -> {
+                // "key" or "key value": only answers when this mod has that setting
+                String[] kv = arg == null ? new String[0] : arg.trim().split("\\s+", 2);
+                if (kv.length == 0 || kv[0].isEmpty()) { out.add(WHO + String.join(", ", net.jj.hollowbell.command.Settings.keys())); return out; }
+                if (!net.jj.hollowbell.command.Settings.has(kv[0])) return out;
+                if (kv.length > 1) {
+                    String bad = net.jj.hollowbell.command.Settings.set(kv[0], kv[1]);
+                    if (bad != null) { out.add(WHO + bad + "."); return out; }
+                }
+                out.add(WHO + kv[0] + " is " + net.jj.hollowbell.command.Settings.get(kv[0]) + ".");
+            }
             case "paint" -> {
                 // "radius mode playerUUID"
                 String[] w = arg == null ? new String[0] : arg.trim().split("\\s+");

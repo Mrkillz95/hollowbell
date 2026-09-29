@@ -340,6 +340,9 @@ public final class BellMoves {
     /** ends whatever move he's in the middle of, straight away (he eases back to rest by himself) */
     public void stopNow() { if (move != Moves.NONE) end(); }
 
+    /** for the operator's commands: every wait between moves let off */
+    public void clearCooldowns() { cooldown = 0; heavyReadyAt = 0; tired = 0; h.setTired(false); }
+
     private void end() {
         int was = move;
         if (move == Moves.GRAB || move == Moves.HARVEST) letGoOfGrab(false);

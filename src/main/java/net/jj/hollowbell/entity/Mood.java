@@ -42,6 +42,10 @@ public final class Mood {
 
     // ------------------------------------------------------------------ his wind
     public float wind() { return wind; }
+    /** for the operator's commands: his wind set outright */
+    public void setWind(float v) { wind = Mth.clamp(v, 0f, 1f); }
+    /** for the operator's commands: what he holds against this one, set outright (0 forgets it) */
+    public void setSour(UUID who, float v) { if (v <= 0f) sour.remove(who); else sour.put(who, Mth.clamp(v, 0f, 1f)); }
     public boolean costsAnything() { return HollowbellConfig.V.bookCosts; }
     public boolean hasWind(float cost) { return !costsAnything() || cost <= 0f || wind >= cost; }
 

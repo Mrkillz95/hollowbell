@@ -413,5 +413,10 @@
   "command.hollowbell.paint_full": "Painting the Bell Hollows %s blocks round you, land and biome (%s chunks). It can't be undone.",
   "command.hollowbell.paint_biome": "Painting the Bell Hollows biome %s blocks round you (%s chunks). It can't be undone.",
   "command.hollowbell.paint_progress": "Painted %s of %s chunks…",
-  "command.hollowbell.paint_done": "Done. %s chunks are the Bell Hollows now."
+  "command.hollowbell.paint_done": "Done. %s chunks are the Bell Hollows now.",
+  "command.hollowbell.config_all": "Settings: %s",
+  "command.hollowbell.config_none": "There's no setting called %s.",
+  "command.hollowbell.config_bad": "Not changed: %s.",
+  "command.hollowbell.done_set": "Done.",
+  "command.hollowbell.not_alive": "That isn't a creature."
 }

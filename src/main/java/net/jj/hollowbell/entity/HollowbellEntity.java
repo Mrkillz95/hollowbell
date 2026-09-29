@@ -231,6 +231,17 @@ public class HollowbellEntity extends Monster {
     private int quiet;
     private long hurtAt = -100000;
 
+    // ------------------------------------------------------------------ the operator's switches
+
+    /** held where he is: no drifting, no picking targets, no moves of his own (his body still breathes) */
+    private boolean frozen;
+    /** how fast he goes, times normal (0.1 to 5) */
+    private float speedMul = 1f;
+    public boolean frozen() { return frozen; }
+    public void setFrozen(boolean on) { frozen = on; if (on) { vel = Vec3.ZERO; goal = null; setTarget(null); moves.stopNow(); } }
+    public float speedMul() { return speedMul; }
+    public void setSpeedMul(float k) { speedMul = Mth.clamp(k, 0.1f, 5f); }
+
     /** asleep, or still waking up */
     public boolean asleep() { return asleep; }
     /** 0 awake to 1 fast asleep, as he is drawn */
@@ -705,13 +716,13 @@ public class HollowbellEntity extends Monster {
 
         partsTick(now);
         riderTick();
-        sleepTick();
-        if (!asleep) pickTarget();
+        if (!frozen) sleepTick();
+        if (!asleep && !frozen) pickTarget();
         // coming to somebody: where they are now, every ten seconds
         if (comeTo != null && goal != null && tickCount % 200 == 0 && level().getPlayerByUUID(comeTo) instanceof Player cp && cp.isAlive())
             goal = keptIn(cp.position());
-        moves.tick();
-        fly(now);
+        if (!frozen) moves.tick();
+        if (frozen) { vel = Vec3.ZERO; entityData.set(DATA_VEL, new Vector3f()); } else fly(now);
         animTick();
         ensurePose();
         moves.afterPose();
@@ -819,7 +830,7 @@ public class HollowbellEntity extends Monster {
     /** his top speed across, blocks per tick */
     public double maxSpeed() {
         float s = bellScale();
-        double v = 0.10 + 0.16 * Math.sqrt(s);
+        double v = (0.10 + 0.16 * Math.sqrt(s)) * speedMul;
         if (rider != null) v *= 1.5;
         if (angry()) v *= 1.15;
         if (tired()) v *= 0.4;
@@ -1471,7 +1482,7 @@ public class HollowbellEntity extends Monster {
     public double travelSpeed() {
         if (sunk()) return 0.01;
         float s = bellScale();
-        return (0.10 + 0.16 * Math.sqrt(s)) * (angry() ? 1.15 : 1.0) * 0.8;
+        return (0.10 + 0.16 * Math.sqrt(s)) * (angry() ? 1.15 : 1.0) * 0.8 * speedMul;
     }
 
     /** ticks with nobody anywhere near him */
@@ -1959,6 +1970,8 @@ public class HollowbellEntity extends Monster {
         super.addAdditionalSaveData(tag);
         tag.putFloat("BellScale", bellScale());
         tag.putBoolean("Asleep", asleep);
+        tag.putBoolean("Frozen", frozen);
+        tag.putFloat("SpeedMul", speedMul);
         if (comeTo != null) tag.putUUID("ComeTo", comeTo);
         tag.putBoolean("HoldThere", holdThere);
         tag.putFloat("SleepK", sleepiness());
@@ -2001,6 +2014,8 @@ public class HollowbellEntity extends Monster {
         super.readAdditionalSaveData(tag);
         if (tag.contains("BellScale")) entityData.set(DATA_SCALE, Mth.clamp(tag.getFloat("BellScale"), MIN_SCALE, MAX_SCALE));
         asleep = tag.getBoolean("Asleep");
+        frozen = tag.getBoolean("Frozen");
+        speedMul = tag.contains("SpeedMul") ? Mth.clamp(tag.getFloat("SpeedMul"), 0.1f, 5f) : 1f;
         comeTo = tag.hasUUID("ComeTo") ? tag.getUUID("ComeTo") : null;
         holdThere = tag.getBoolean("HoldThere");
         if (tag.contains("SleepK")) entityData.set(DATA_SLEEP, Mth.clamp(tag.getFloat("SleepK"), 0f, 1f));
