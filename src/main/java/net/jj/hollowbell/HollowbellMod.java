@@ -108,7 +108,8 @@ public class HollowbellMod implements ModInitializer {
             // put away with his chunk (not out of the world as a sum, not dead): noted, so an order can still reach him
             var why = h.getRemovalReason();
             var away = net.jj.hollowbell.world.Away.get(world.getServer());
-            if (!h.steppedOut() && !h.isDeadOrDying() && (why == Entity.RemovalReason.UNLOADED_TO_CHUNK || why == Entity.RemovalReason.UNLOADED_WITH_PLAYER))
+            // (the game stops tracking him before it puts him away, with no reason given yet)
+            if (!h.steppedOut() && !h.isDeadOrDying() && (why == null || why == Entity.RemovalReason.UNLOADED_TO_CHUNK || why == Entity.RemovalReason.UNLOADED_WITH_PLAYER))
                 away.noteParked(h);
             else away.unpark(h.getUUID());
         });

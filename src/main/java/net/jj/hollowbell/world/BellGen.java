@@ -178,7 +178,7 @@ public final class BellGen {
      * inside the outline of his ground (the middle of the 4x4 column decides). The caves below stay as they are.
      */
     public static boolean wants(Snap s, Holder<Biome> in, int qx, int qy, int qz) {
-        if (QuartPos.toBlock(qy) < 0) return false;
+        if (!s.claimed || s.outline == null || QuartPos.toBlock(qy) < 0) return false;
         int bx = QuartPos.toBlock(qx) + 2, bz = QuartPos.toBlock(qz) + 2;
         if (!s.inBox(bx, bz)) return false;
         if (otherGiant(in)) return false;
