@@ -137,6 +137,14 @@ public final class AutoTest {
             }
             if (s.equals("book")) { mc.setScreen(new net.jj.hollowbell.client.CodexScreen()); continue; }
             if (s.equals("close")) { mc.setScreen(null); continue; }
+            // f3 on|off: the debug screen (it shows the biome)
+            if (s.startsWith("f3 ")) { if (mc.getDebugOverlay().showDebugScreen() != s.endsWith("on")) mc.getDebugOverlay().toggleOverlay(); continue; }
+            // ground dx dz up lookdx lookdz: stand over his ground, measured from its middle, looking at another spot of it
+            if (s.startsWith("ground ")) { groundView(mc, s.substring(7).trim().split("\\s+")); continue; }
+            // cmdlog ...: a command, and everything it answers written to the log
+            if (s.startsWith("cmdlog ")) { cmdLog(mc, s.substring(7).trim()); continue; }
+            // groundcheck: the biome where you stand, and what the land round you is made of, to the log
+            if (s.equals("groundcheck")) { groundCheck(mc); continue; }
             if (s.equals("quit")) { HollowbellMod.LOG.info("autotest done"); mc.stop(); return; }
         }
     }
@@ -205,6 +213,84 @@ public final class AutoTest {
             player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);
             player.setNoGravity(true);
             player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        });
+    }
+
+    private static void groundView(Minecraft mc, String[] a) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null) return;
+        double dx = Double.parseDouble(a[0]), dz = Double.parseDouble(a[1]), up = Double.parseDouble(a[2]);
+        double lx = a.length > 3 ? Double.parseDouble(a[3]) : 0, lz = a.length > 4 ? Double.parseDouble(a[4]) : 0;
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var player = srv.getPlayerList().getPlayers().get(0);
+            var w = net.jj.hollowbell.world.WorldOne.get(srv);
+            var l = srv.overworld();
+            double x = w.homeX() + dx, z = w.homeZ() + dz, tx = w.homeX() + lx, tz = w.homeZ() + lz;
+            l.getChunk(net.minecraft.util.Mth.floor(x) >> 4, net.minecraft.util.Mth.floor(z) >> 4);
+            l.getChunk(net.minecraft.util.Mth.floor(tx) >> 4, net.minecraft.util.Mth.floor(tz) >> 4);
+            int gy = l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, net.minecraft.util.Mth.floor(x), net.minecraft.util.Mth.floor(z));
+            int ty = l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, net.minecraft.util.Mth.floor(tx), net.minecraft.util.Mth.floor(tz));
+            double y = gy + up;
+            double ddx = tx - x, ddz = tz - z, ddy = ty - y, len = Math.max(1e-3, Math.sqrt(ddx * ddx + ddz * ddz));
+            float yaw = (float) Math.toDegrees(Math.atan2(-ddx, ddz)), pitch = (float) -Math.toDegrees(Math.atan2(ddy, len));
+            player.teleportTo(l, x, y, z, yaw, pitch);
+            player.setNoGravity(true);
+            player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            HollowbellMod.LOG.info("autotest ground: at {} {} {} looking at {} {} {} (the ground's middle is {} {}, radius {})",
+                    (int) x, (int) y, (int) z, (int) tx, ty, (int) tz, w.homeX(), w.homeZ(), w.homeRadius());
+        });
+    }
+
+    private static void cmdLog(Minecraft mc, String cmd) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null) return;
+        String c = cmd.startsWith("/") ? cmd.substring(1) : cmd;
+        srv.execute(() -> {
+            var player = srv.getPlayerList().getPlayers().isEmpty() ? null : srv.getPlayerList().getPlayers().get(0);
+            net.minecraft.commands.CommandSource logger = new net.minecraft.commands.CommandSource() {
+                @Override public void sendSystemMessage(net.minecraft.network.chat.Component m) {
+                    HollowbellMod.LOG.info("autotest said: {}", m.getString());
+                    if (player != null) player.sendSystemMessage(m);
+                }
+                @Override public boolean acceptsSuccess() { return true; }
+                @Override public boolean acceptsFailure() { return true; }
+                @Override public boolean shouldInformAdmins() { return false; }
+            };
+            var src = player != null
+                    ? new net.minecraft.commands.CommandSourceStack(logger, player.position(), player.getRotationVector(), player.serverLevel(), 4,
+                            player.getName().getString(), player.getDisplayName(), srv, player)
+                    : srv.createCommandSourceStack();
+            HollowbellMod.LOG.info("autotest cmdlog: /{}", c);
+            srv.getCommands().performPrefixedCommand(src, c);
+        });
+    }
+
+    private static void groundCheck(Minecraft mc) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null) return;
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var p = srv.getPlayerList().getPlayers().get(0);
+            var l = p.serverLevel();
+            var at = p.blockPosition();
+            var biome = l.getBiome(at).unwrapKey().map(k -> k.location().toString()).orElse("?");
+            int ores = 0, ours = 0, cols = 0;
+            java.util.Map<String, Integer> tops = new java.util.TreeMap<>();
+            for (int x = at.getX() - 24; x <= at.getX() + 24; x++) for (int z = at.getZ() - 24; z <= at.getZ() + 24; z++) {
+                int top = l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+                var b = l.getBlockState(new net.minecraft.core.BlockPos(x, top, z));
+                tops.merge(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(b.getBlock()).getPath(), 1, Integer::sum);
+                if (net.jj.hollowbell.world.HomeGround.isOurs(b)) ours++;
+                cols++;
+                for (int y = 0; y < top - 4; y++) {
+                    var s = l.getBlockState(new net.minecraft.core.BlockPos(x, y, z));
+                    if (s.is(net.minecraft.tags.BlockTags.COAL_ORES) || s.is(net.minecraft.tags.BlockTags.IRON_ORES) || s.is(net.minecraft.tags.BlockTags.COPPER_ORES)
+                            || s.is(net.minecraft.tags.BlockTags.GOLD_ORES) || s.is(net.minecraft.tags.BlockTags.REDSTONE_ORES) || s.is(net.minecraft.tags.BlockTags.LAPIS_ORES)
+                            || s.is(net.minecraft.tags.BlockTags.DIAMOND_ORES)) ores++;
+                }
+            }
+            HollowbellMod.LOG.info("autotest groundcheck at {}: biome {}, {} of {} tops are his, {} ore blocks from y 0 up; tops {}", at, biome, ours, cols, ores, tops);
         });
     }
 

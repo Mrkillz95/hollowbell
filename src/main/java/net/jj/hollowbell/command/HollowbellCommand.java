@@ -117,8 +117,8 @@ public final class HollowbellCommand {
                 .then(Commands.literal("stay").requires(OP).executes(c -> near(c, h -> h.setStay(!h.staying()), "stay"))
                         .then(Commands.literal("on").executes(c -> near(c, h -> h.setStay(true), "stay")))
                         .then(Commands.literal("off").executes(c -> near(c, h -> h.setStay(false), "stay")))
-                        .then(Commands.argument("on", BoolArgumentType.bool())
-                                .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "on")), "stay"))))
+                        .then(Commands.argument("value", BoolArgumentType.bool())
+                                .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "value")), "stay"))))
                 // sleep: he drifts down and sleeps, or wakes up (a toggle)
                 .then(Commands.literal("sleep").requires(OP).executes(HollowbellCommand::sleepToggle))
                 // the safe list of whoever runs it: players, single creatures, or whole kinds
@@ -243,8 +243,8 @@ public final class HollowbellCommand {
                 .executes(c -> say(c, key, get.getAsBoolean() ? "on" : "off"))
                 .then(Commands.literal("on").executes(c -> set(c, () -> put.accept(true), key, "on")))
                 .then(Commands.literal("off").executes(c -> set(c, () -> put.accept(false), key, "off")))
-                .then(Commands.argument("on", BoolArgumentType.bool())
-                        .executes(c -> { boolean v = BoolArgumentType.getBool(c, "on"); return set(c, () -> put.accept(v), key, v ? "on" : "off"); }));
+                .then(Commands.argument("value", BoolArgumentType.bool())
+                        .executes(c -> { boolean v = BoolArgumentType.getBool(c, "value"); return set(c, () -> put.accept(v), key, v ? "on" : "off"); }));
     }
 
     private static int say(CommandContext<CommandSourceStack> c, String key, Object v) {
