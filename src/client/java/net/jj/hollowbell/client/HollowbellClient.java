@@ -35,9 +35,12 @@ public class HollowbellClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.BELLING, BellingRenderer::new);
         net.jj.hollowbell.client.render.BellArmorRenderer.register();    // bell glass armor drawn see-through
         EntityRendererRegistry.register(ModEntities.SEAT, NoopRenderer::new);
+        EntityRendererRegistry.register(ModEntities.STINGER_HOOK, net.jj.hollowbell.client.render.StingerHookRenderer::new);
         EntityRendererRegistry.register(ModEntities.SHOT, ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<>(ctx, 2.2f, false));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CROWN, RenderType.cutout());
         BlockRenderLayerMap.INSTANCE.putBlocks(RenderType.translucent(), ModBlocks.TENDRIL_GLASS, ModBlocks.BELL_SHARD);
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LOOT_CACHE, RenderType.cutout());
+        net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(ModBlocks.LOOT_CACHE_ENTITY, net.jj.hollowbell.client.render.LootCacheRenderer::new);
         CodexItem.openPages = () -> { var mc = Minecraft.getInstance(); if (mc.screen == null) mc.setScreen(new CodexScreen()); };
 
         ClientPlayNetworking.registerGlobalReceiver(SafeListPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> CodexScreen.safeList(p)));
@@ -48,12 +51,13 @@ public class HollowbellClient implements ClientModInitializer {
             if (pl != null) Shake.crash(Math.sqrt(pl.distanceToSqr(p.x(), p.y(), p.z())), p.power());
         }));
         ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); });
-        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); });
+        ArmourPowerKey.init();
+        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); ArmourPowerKey.tick(c); });
         // he's ticked even when the game would skip him for having his middle too far off (see tickIfSkipped)
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(level -> {
             for (var e : level.entitiesForRendering()) if (e instanceof net.jj.hollowbell.entity.HollowbellEntity h) h.tickIfSkipped();
         });
-        HudRenderCallback.EVENT.register((g, t) -> BeingHim.hud(g));
+        HudRenderCallback.EVENT.register((g, t) -> { BeingHim.hud(g); ArmourPowerKey.hud(g); });
         // the glass goes on after every other creature, so whatever he has caught shows through it
         // far-off stand-ins first, then all the glass (theirs too), back to front
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> { FarSightClient.render(ctx); BellRenderer.drawGlass(); });

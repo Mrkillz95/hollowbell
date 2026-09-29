@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {"side": "hollowbell:block/loot_cache_side", "top": "hollowbell:block/loot_cache_top", "particle": "hollowbell:block/loot_cache_side"},
+  "elements": [
+    {"from": [1, 0, 1], "to": [15, 14, 15],
+     "faces": {
+       "down": {"texture": "#top"}, "up": {"texture": "#top"},
+       "north": {"texture": "#side"}, "south": {"texture": "#side"}, "west": {"texture": "#side"}, "east": {"texture": "#side"}
+     }}
+  ]
+}

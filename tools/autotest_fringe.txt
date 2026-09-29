@@ -1,28 +1,23 @@
-# where the Bell Hollows meet the land round them, and nothing left of him after /hollowbell kill
+# where the Bell Hollows meet the land round them: from outside and above, and from along the edge
 world normal
 gui off
-render 8
+render 12
 cmd time set 6000
 cmd gamerule doDaylightCycle false
 cmd hollowbell natural off
 wait 40
-edge 10 40 30
-wait 1000
+edge 10 70 80 10
+wait 1200
 shot generated_fringe
-edge 200 40 30
-wait 1000
+edge 10 20 30 0 90
+wait 600
+shot generated_fringe_side
+edge 200 70 80 10
+wait 1200
 shot generated_fringe_2
-ground 300 160 3 330 160
-wait 300
-cmd hollowbell summon calm 0.3
-wait 200
-view 0 140 -260 0 90 0
-wait 40
-shot kill_before
-fixed
-cmd hollowbell kill
-wait 400
-shot kill_after
-cmdlog hollowbell list
+edge 200 20 30 0 -90
+wait 600
+shot generated_fringe_2_side
+cmdlog hollowbell ground
 cmd hollowbell natural on
 quit

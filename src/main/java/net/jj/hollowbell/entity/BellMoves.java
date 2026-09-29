@@ -240,13 +240,21 @@ public final class BellMoves {
         return start(which, at);
     }
 
+    /** a move aimed at a spot rather than at somebody (an operator's /hollowbell do <move> <x y z>) */
+    public boolean forceAt(int which, Vec3 spot) {
+        forcedSpot = spot;
+        try { return force(which, null); }
+        finally { forcedSpot = null; }
+    }
+    private @Nullable Vec3 forcedSpot;
+
     private boolean start(int which, @Nullable LivingEntity at) {
         if (h.sunk() && (which == Moves.DROP || which == Moves.GRAB || which == Moves.HARVEST || which == Moves.SKY_DIVE)) return false;
         target = at;
         struckThisMove.clear();
         hitAt.clear();
         slapped.clear();
-        Vector3f aim = at != null ? h.toModel(at.position()) : new Vector3f(0, 0, 40);
+        Vector3f aim = at != null ? h.toModel(at.position()) : forcedSpot != null ? h.toModel(forcedSpot) : new Vector3f(0, 0, 40);
         int a = -1;
         float s = s();
         switch (which) {
@@ -284,7 +292,7 @@ public final class BellMoves {
             case Moves.SHED -> { if (h.eggsLeft() == 0 || HollowbellConfig.V.shedCount <= 0) return false; }
             case Moves.EGG_RAIN -> { if (h.eggsLeft() == 0) return false; }
             case Moves.POD_BURST -> { if (h.podsLeft() == 0) return false; }
-            case Moves.SWEEP -> { if (at == null) aim = new Vector3f(1, 0, 0); }
+            case Moves.SWEEP -> { if (at == null && forcedSpot == null) aim = new Vector3f(1, 0, 0); }
             case Moves.SKY_DIVE -> {
                 double top = Math.max(h.getY(), at != null ? at.getY() : h.getY()) + 70 * s + 30;
                 diveTop = Math.min(top, h.level().getMaxBuildHeight() - (rig.crownY + 20) * s);

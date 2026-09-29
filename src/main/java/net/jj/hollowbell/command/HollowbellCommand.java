@@ -78,7 +78,11 @@ public final class HollowbellCommand {
                                         .executes(c -> summon(c, mood(c), FloatArgumentType.getFloat(c, "size"))))))
                 .then(Commands.literal("do").requires(OP).then(Commands.argument("move", StringArgumentType.word())
                         .suggests((c, b) -> SharedSuggestionProvider.suggest(Arrays.copyOfRange(Moves.NAMES, 1, Moves.NAMES.length), b))
-                        .executes(HollowbellCommand::doMove)))
+                        .executes(c -> doMove(c, null, null))
+                        .then(Commands.literal("at").then(Commands.argument("pos", net.minecraft.commands.arguments.coordinates.Vec3Argument.vec3())
+                                .executes(c -> doMove(c, null, net.minecraft.commands.arguments.coordinates.Vec3Argument.getVec3(c, "pos")))))
+                        .then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.entity())
+                                .executes(c -> doMove(c, net.minecraft.commands.arguments.EntityArgument.getEntity(c, "target"), null)))))
                 .then(Commands.literal("list").requires(OP).executes(HollowbellCommand::list))
                 .then(Commands.literal("where").executes(HollowbellCommand::where))
                 .then(Commands.literal("away").requires(OP).executes(c -> awaySay(c))
@@ -442,14 +446,18 @@ public final class HollowbellCommand {
         return 1;
     }
 
-    private static int doMove(CommandContext<CommandSourceStack> c) {
+    /** do <move> [target | at x y z]: at whoever runs it (or his own target) unless told otherwise */
+    private static int doMove(CommandContext<CommandSourceStack> c, @org.jetbrains.annotations.Nullable net.minecraft.world.entity.Entity who,
+                              @org.jetbrains.annotations.Nullable net.minecraft.world.phys.Vec3 spot) {
         String name = StringArgumentType.getString(c, "move");
         int which = Moves.byName(name);
         if (which < 0) { c.getSource().sendFailure(Component.translatable("command.hollowbell.bad_move", name)); return 0; }
         HollowbellEntity h = nearest(c.getSource());
         if (h == null) return none(c);
-        LivingEntity at = c.getSource().getEntity() instanceof LivingEntity le ? le : h.getTarget();
-        if (!h.forceMove(which, at)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot", name)); return 0; }
+        if (who != null && !(who instanceof LivingEntity)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.not_alive")); return 0; }
+        LivingEntity at = who instanceof LivingEntity w ? w : c.getSource().getEntity() instanceof LivingEntity le ? le : h.getTarget();
+        boolean ok = spot != null ? h.forceMoveAt(which, spot) : h.forceMove(which, at);
+        if (!ok) { c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot", name)); return 0; }
         c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.doing", name), false);
         return 1;
     }

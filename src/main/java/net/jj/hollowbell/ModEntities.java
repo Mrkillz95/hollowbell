@@ -19,6 +19,9 @@ public final class ModEntities {
                     .clientTrackingRange(24).updateInterval(1));
     public static final EntityType<Shot> SHOT = register("shot",
             EntityType.Builder.<Shot>of(Shot::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(8).updateInterval(1));
+    public static final EntityType<net.jj.hollowbell.entity.StingerHook> STINGER_HOOK = register("stinger_hook",
+            EntityType.Builder.<net.jj.hollowbell.entity.StingerHook>of(net.jj.hollowbell.entity.StingerHook::new, MobCategory.MISC)
+                    .sized(0.4f, 0.4f).noSave().noSummon().clientTrackingRange(10).updateInterval(1));
     public static final EntityType<Belling> BELLING = register("belling",
             EntityType.Builder.of(Belling::new, MobCategory.MONSTER).sized(1.2f, 1.6f).fireImmune()
                     .clientTrackingRange(10).updateInterval(2));
