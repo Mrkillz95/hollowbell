@@ -5,7 +5,10 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ChunkMapAccess",
+    "DecorationMixin",
     "LogOffMixin",
+    "NoiseBiomeMixin",
+    "PossibleBiomesMixin",
     "TrackedEntityAccess",
     "TrackingMixin"
   ],

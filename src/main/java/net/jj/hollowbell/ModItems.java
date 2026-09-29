@@ -38,6 +38,11 @@ public final class ModItems {
             new Item.Properties().rarity(Rarity.EPIC).fireResistant().attributes(SwordItem.createAttributes(Tiers.NETHERITE, 4, -2.2f))));
     public static final Item CODEX = reg("hollowbell_codex", new CodexItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
     public static final Item CROWN = reg("hollowbell_crown", new BlockItem(ModBlocks.CROWN, new Item.Properties().rarity(Rarity.EPIC)));
+    /** the blocks of his ground */
+    public static final Item BELL_CALCITE = reg("bell_calcite", new BlockItem(ModBlocks.BELL_CALCITE, new Item.Properties()));
+    public static final Item TENDRIL_GLASS = reg("tendril_glass", new BlockItem(ModBlocks.TENDRIL_GLASS, new Item.Properties()));
+    public static final Item BELL_SHARD = reg("bell_shard", new BlockItem(ModBlocks.BELL_SHARD, new Item.Properties()));
+    public static final Item SPORE_MOSS = reg("spore_moss", new BlockItem(ModBlocks.SPORE_MOSS, new Item.Properties()));
     /** "Finder of the Hollowbell": says how far he is and which way, or when the next one comes down */
     public static final Item FINDER = reg("hollowbell_finder", new FinderItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 

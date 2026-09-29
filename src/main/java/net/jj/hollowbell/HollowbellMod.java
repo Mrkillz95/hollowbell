@@ -82,6 +82,9 @@ public class HollowbellMod implements ModInitializer {
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.INGREDIENTS).register(e -> { e.accept(ModItems.POD); e.accept(ModItems.BELL_GLASS); });
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(e -> { e.accept(ModItems.CODEX); e.accept(ModItems.FINDER); });
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e -> e.accept(ModItems.CROWN));
+        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.NATURAL_BLOCKS).register(e -> {
+            e.accept(ModItems.BELL_CALCITE); e.accept(ModItems.TENDRIL_GLASS); e.accept(ModItems.BELL_SHARD); e.accept(ModItems.SPORE_MOSS);
+        });
 
         net.jj.hollowbell.item.BellArmorItem.init();
 
@@ -105,9 +108,11 @@ public class HollowbellMod implements ModInitializer {
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
             if (entity instanceof HollowbellEntity h) net.jj.hollowbell.world.WorldOne.joined(h, world);
         });
-        // his ground: chunks near the Bell Hollows are turned as they come in, a couple a tick
-        net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents.CHUNK_LOAD.register(net.jj.hollowbell.world.HomeGround::chunkLoaded);
-        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.HomeGround.forgetQueue(); });
+        // his ground: chosen as the overworld is made, before any of its land, so the world makes that land as his
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents.LOAD.register((server, world) -> {
+            if (world.dimension() == net.minecraft.world.level.Level.OVERWORLD) net.jj.hollowbell.world.WorldOne.worldLoaded(world);
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.BellGen.forget(); });
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 CodexOrders.forgetPlayer(handler.getPlayer().getUUID()));
 

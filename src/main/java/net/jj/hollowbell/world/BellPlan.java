@@ -29,13 +29,15 @@ public final class BellPlan {
         VERDANT(0xDDF0CF, 1), PEARL(0xF3E6E8, 1), OCHRE(0xF7EDB8, 1),
         LIME_GLASS(0x86CE2A, 2), WHITE_GLASS(0xECF2EE, 2), GRAY_GLASS(0x9DA3A0, 2), GREEN_GLASS(0x6B8A3A, 2),
         MOSS_CARPET(0x62792F, 3), GLOW_LICHEN(0x7C9A86, 3), DRIPLEAF_LOW(0x5E8A3A, 3), DRIPLEAF_HIGH(0x74A84A, 3),
-        END_ROD(0xF6F0EA, 3), CHAIN(0x3F4550, 3), WATER(0x74CDBB, 4);
+        END_ROD(0xF6F0EA, 3), CHAIN(0x3F4550, 3), WATER(0x74CDBB, 4),
+        // his own blocks (see ModBlocks): pale veined calcite, glowing tendril glass, fallen bell glass, spore moss
+        BELL_CALCITE(0xE4EBDF, 1), TENDRIL_GLASS(0x9CE0A0, 2), BELL_SHARD(0xB9DCC4, 2), SPORE_MOSS(0x7FA257, 3);
 
         public final int rgb;
         /** 1 solid, 2 glass, 3 small or thin (plants, rods, chains), 4 water */
         public final int kind;
         Mat(int rgb, int kind) { this.rgb = rgb; this.kind = kind; }
-        public boolean glows() { return this == VERDANT || this == PEARL || this == OCHRE || this == END_ROD; }
+        public boolean glows() { return this == VERDANT || this == PEARL || this == OCHRE || this == END_ROD || this == TENDRIL_GLASS || this == SPORE_MOSS; }
     }
 
     public static final int OUT = 0, FRINGE = 1, MIDDLE = 2, CORE = 3;
@@ -325,7 +327,7 @@ public final class BellPlan {
         double p1 = fbm(52, x / 40.0, z / 40.0, 3), p2 = fbm(53, x / 13.0, z / 13.0, 2);
         if (zone == CORE) {
             if (Math.abs(fbm(55, x / 60.0, z / 60.0, 2) - 0.5) < 0.007 && fbm(58, x / 90.0, z / 90.0, 1) > 0.5) return Mat.VERDANT;
-            if (fbm(54, x / 5.0, z / 5.0, 1) > 0.78 && p1 > 0.45) return Mat.LIME_GLASS;          // old glass, lit under
+            if (fbm(54, x / 5.0, z / 5.0, 1) > 0.78 && p1 > 0.45) return Mat.TENDRIL_GLASS;       // old glass, lit under
             if (p1 > 0.64) return Mat.BONE;
             if (p1 < 0.33) return p2 > 0.55 ? Mat.GRASS : Mat.MOSS;
             return p2 > 0.62 ? Mat.END_STONE : p2 < 0.36 ? Mat.DIORITE : Mat.CALCITE;
@@ -362,9 +364,10 @@ public final class BellPlan {
             for (int k = 0; k <= hs; k++) {
                 if (Math.abs(q - (ra + tilt * k)) >= 0.62) continue;
                 Mat m;
-                if (k <= 2 || rib || (rim && k == hs)) m = Mat.CALCITE;
+                if (k <= 2) m = Mat.CALCITE;
+                else if (rib || (rim && k == hs)) m = Mat.BELL_CALCITE;
                 else if (k == hs - 1 && p.h(x, z, glassSalt + 1) < 0.3) m = Mat.WHITE_GLASS;
-                else m = (k + glassSalt) % 7 == 0 ? Mat.GRAY_GLASS : Mat.LIME_GLASS;
+                else m = (k + glassSalt) % 7 == 0 ? Mat.GRAY_GLASS : (k + glassSalt) % 3 == 0 ? Mat.LIME_GLASS : Mat.BELL_SHARD;
                 o.put(i, base + k, m);
             }
         }
@@ -708,7 +711,7 @@ public final class BellPlan {
         int y = o.top[i];
         o.topMat[i] = Mat.CALCITE;
         for (int k = 1; k <= hgt; k++) {
-            Mat m = k == 1 ? Mat.CALCITE : Mat.LIME_GLASS;
+            Mat m = k == 1 ? Mat.CALCITE : Mat.TENDRIL_GLASS;
             if (k == hgt && node) m = Mat.VERDANT;
             o.put(i, y + k, m);
         }
@@ -721,7 +724,7 @@ public final class BellPlan {
         double r = h(x, z, 41);
         if (r < 0.07) { o.put(i, y + 1, Mat.DRIPLEAF_LOW); o.put(i, y + 2, Mat.DRIPLEAF_HIGH); }
         else if (r < 0.13) o.put(i, y + 1, Mat.GLOW_LICHEN);
-        else if (perlin(42, x / 4.0, z / 4.0) > 0.6) o.put(i, y + 1, Mat.MOSS_CARPET);
+        else if (perlin(42, x / 4.0, z / 4.0) > 0.6) o.put(i, y + 1, perlin(43, x / 9.0, z / 9.0) > 0.45 ? Mat.SPORE_MOSS : Mat.MOSS_CARPET);
     }
 
     /** the pools: a bowl's own, and one in the den under the bell */
@@ -830,7 +833,7 @@ public final class BellPlan {
         // ---- the bell's mouth, a thick rim just out of the ground
         if (d >= DOME_R - 0.6 && d < DOME_R + 1.4) {
             boolean door = Math.abs(wrap(th - breakAngle)) < 0.36;
-            if (!door) for (int y = top + 1; y <= dy + 1; y++) o.put(i, y, d < DOME_R + 0.4 ? Mat.CALCITE : Mat.BONE);
+            if (!door) for (int y = top + 1; y <= dy + 1; y++) o.put(i, y, d < DOME_R + 0.4 ? Mat.BELL_CALCITE : Mat.BONE);
         }
         // ---- inside: moss and pale stone
         if (d < DOME_R - 1.5) {
@@ -868,7 +871,7 @@ public final class BellPlan {
                     int hh = 1 + (int) (h(x, z, 934) * 2.6);
                     boolean glass = h(ci, cj, 935) < 0.62;
                     for (int s = 1; s <= hh; s++)
-                        o.put(i, top + s, glass ? (s == hh && h(x, z, 936) < 0.3 ? Mat.WHITE_GLASS : Mat.LIME_GLASS) : Mat.CALCITE);
+                        o.put(i, top + s, glass ? (s == hh && h(x, z, 936) < 0.3 ? Mat.WHITE_GLASS : h(x, z, 937) < 0.6 ? Mat.BELL_SHARD : Mat.LIME_GLASS) : Mat.CALCITE);
                 }
             }
         }
@@ -888,10 +891,10 @@ public final class BellPlan {
             double seg = Math.PI / 4;
             double a = wrap(th - ribPhase);
             double m = Math.abs(a - Math.round(a / seg) * seg);
-            if (m * r < 0.85) return Mat.CALCITE;
+            if (m * r < 0.85) return Mat.BELL_CALCITE;
         }
         int b1 = dy + Math.round(DOME_H * 0.28f), b2 = dy + Math.round(DOME_H * 0.64f);
-        if (y == b1 || y == b2) return Mat.CALCITE;
+        if (y == b1 || y == b2) return Mat.BELL_CALCITE;
         if (y <= dy + 1) return Mat.BONE;
         double streak = perlin(970, th * 6.0, y / 5.0);
         if (streak > 0.7) return Mat.WHITE_GLASS;

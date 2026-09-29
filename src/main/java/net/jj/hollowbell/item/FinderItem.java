@@ -2,7 +2,6 @@ package net.jj.hollowbell.item;
 
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.ModEntities;
-import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.WorldOne;
@@ -18,6 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
 
 /**
  * A compass in a ring of glass with a bit of amethyst: it rings faintly towards him. Use it and it says how far he
@@ -39,59 +39,66 @@ public class FinderItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         if (lvl instanceof ServerLevel sl) {
             answer(sl, player);
-            float vol = 0.7f * HollowbellConfig.V.soundVolume;
-            if (vol > 0) lvl.playSound(null, player.blockPosition(), ModSounds.ECHO, SoundSource.PLAYERS, vol, 1.4f);
+            float vol = HollowbellConfig.V.soundVolume;
+            if (vol > 0) lvl.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.LODESTONE_COMPASS_LOCK, SoundSource.PLAYERS, vol, 1f);
             player.getCooldowns().addCooldown(this, 40);
         }
         return InteractionResultHolder.sidedSuccess(stack, lvl.isClientSide);
     }
 
-    /** what the finder says to this player (the tests call this straight) */
+    /** what the finder says to this player, in chat (the tests call this straight) */
     public static Component answer(ServerLevel sl, Player player) {
-        Component msg = tell(sl, player);
+        Component msg = tell(sl, player.position());
         player.displayClientMessage(msg, false);
         return msg;
     }
 
-    private static Component tell(ServerLevel sl, Player player) {
+    /** a distance the way the finder says it: to the nearest ten blocks */
+    public static int tens(double d) { return (int) (Math.round(d / 10.0) * 10); }
+
+    /**
+     * The one sentence all five finders use (the same words in the book's "Where is he?" and /hollowbell natural):
+     * where he is from here, or when and where the next one comes down.
+     */
+    public static Component tell(ServerLevel sl, Vec3 from) {
         // one that is right here and loaded beats any note of where he was
         HollowbellEntity near = null;
         double bd = Double.MAX_VALUE;
         for (HollowbellEntity h : sl.getEntities(ModEntities.HOLLOWBELL, h -> !h.isRemoved() && !h.isDeadOrDying())) {
-            double d = h.distanceToSqr(player);
+            double d = h.distanceToSqr(from);
             if (d < bd) { bd = d; near = h; }
         }
-        if (near != null) return spot(player, near.getX(), near.getZ(), false);
+        if (near != null) return found(sl, from, near.getX(), near.getZ());
         // one out of the world, drifting on his own in this dimension
-        Away.Rec r = Away.get(sl.getServer()).nearest(sl, player.position());
+        Away.Rec r = Away.get(sl.getServer()).nearest(sl, from);
         if (r != null) {
             Vec3 s = r.spot(sl.getGameTime());
-            return spot(player, s.x, s.z, true);
+            return found(sl, from, s.x, s.z);
         }
         // the world's notes are about the overworld: from the nether or the end they would mean nothing
-        boolean over = sl.dimension() == Level.OVERWORLD;
+        if (sl.dimension() != Level.OVERWORLD) return Component.translatable("message.hollowbell.finder_wrong_world");
         WorldOne w = WorldOne.get(sl.getServer());
-        if (!over) return Component.translatable("message.hollowbell.finder_wrong_world");
         BlockPos at = w.where();
-        if (at != null && w.aliveNow()) return spot(player, at.getX() + 0.5, at.getZ() + 0.5, true);
+        if (at != null && w.aliveNow()) return found(sl, from, at.getX() + 0.5, at.getZ() + 0.5);
         int days = w.daysLeft(sl);
         if (at != null && HollowbellConfig.V.oneInTheWorld && days >= 0) {
-            // where the next one comes down (his new ground is claimed there when he does)
-            double hx = at.getX() + 0.5 - player.getX(), hz = at.getZ() + 0.5 - player.getZ();
-            String far = Math.sqrt(hx * hx + hz * hz) > 2000 ? "far to the " : "to the ";
-            return days > 0
-                    ? Component.translatable("message.hollowbell.finder_wait", days, far + way(hx, hz))
-                    : Component.translatable("message.hollowbell.finder_soon", far + way(hx, hz));
+            // where the next one comes down: the middle of his ground
+            double dx = at.getX() + 0.5 - from.x, dz = at.getZ() + 0.5 - from.z;
+            int n = tens(Math.sqrt(dx * dx + dz * dz));
+            if (days > 0) return Component.translatable(days == 1 ? "message.hollowbell.finder_dead_day" : "message.hollowbell.finder_dead", days, n, way(dx, dz));
+            return Component.translatable("message.hollowbell.finder_due", n, way(dx, dz));
         }
         return Component.translatable("message.hollowbell.finder_none");
     }
 
-    private static Component spot(Player p, double x, double z, boolean noted) {
-        double dx = x - p.getX(), dz = z - p.getZ();
-        int dist = (int) Math.sqrt(dx * dx + dz * dz);
-        if (dist < 150) return Component.translatable("message.hollowbell.finder_close", dist, way(dx, dz));
-        return Component.translatable(noted ? "message.hollowbell.finder_far" : "message.hollowbell.finder",
-                dist, way(dx, dz), (int) Math.floor(x), (int) Math.floor(z));
+    /** he is there: how far, which way, where, and whether that is in his ground */
+    public static Component found(ServerLevel sl, Vec3 from, double x, double z) {
+        double dx = x - from.x, dz = z - from.z;
+        double d = Math.sqrt(dx * dx + dz * dz);
+        if (d < 64) return Component.translatable("message.hollowbell.finder_close", tens(d), way(dx, dz));
+        boolean inGround = sl.dimension() == Level.OVERWORLD && net.jj.hollowbell.world.BellGen.inGround(Mth.floor(x), Mth.floor(z));
+        return Component.translatable(inGround ? "message.hollowbell.finder_ground" : "message.hollowbell.finder",
+                tens(d), way(dx, dz), Mth.floor(x), Mth.floor(z));
     }
 
     @Override
