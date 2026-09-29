@@ -5,7 +5,10 @@ $repo = $PSScriptRoot
 $mc = Join-Path $env:APPDATA '.minecraft'
 $targets = @((Join-Path $mc 'mods'), (Join-Path $mc 'mountain-server\mods'))
 
-git -C $repo pull --ff-only | Out-Host
+# Releases live on this branch, not main.
+git -C $repo fetch origin claude/amazing-faraday-iutdpo | Out-Host
+git -C $repo checkout claude/amazing-faraday-iutdpo | Out-Host
+git -C $repo pull --ff-only origin claude/amazing-faraday-iutdpo | Out-Host
 
 $jar = Get-ChildItem (Join-Path $repo 'release') -Filter 'hollowbell-*.jar' -ErrorAction SilentlyContinue |
     Sort-Object { [version]($_.BaseName -replace '^hollowbell-', '') } | Select-Object -Last 1
