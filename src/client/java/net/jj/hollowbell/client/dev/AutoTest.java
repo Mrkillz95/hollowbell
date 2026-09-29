@@ -141,6 +141,8 @@ public final class AutoTest {
             if (s.startsWith("f3 ")) { if (mc.getDebugOverlay().showDebugScreen() != s.endsWith("on")) mc.getDebugOverlay().toggleOverlay(); continue; }
             // ground dx dz up lookdx lookdz: stand over his ground, measured from its middle, looking at another spot of it
             if (s.startsWith("ground ")) { groundView(mc, s.substring(7).trim().split("\\s+")); continue; }
+            // edge angle out up: just outside the edge of his ground at that angle (degrees), looking back in across it
+            if (s.startsWith("edge ")) { edgeView(mc, s.substring(5).trim().split("\\s+")); continue; }
             // cmdlog ...: a command, and everything it answers written to the log
             if (s.startsWith("cmdlog ")) { cmdLog(mc, s.substring(7).trim()); continue; }
             // groundcheck: the biome where you stand, and what the land round you is made of, to the log
@@ -239,6 +241,23 @@ public final class AutoTest {
             player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             HollowbellMod.LOG.info("autotest ground: at {} {} {} looking at {} {} {} (the ground's middle is {} {}, radius {})",
                     (int) x, (int) y, (int) z, (int) tx, ty, (int) tz, w.homeX(), w.homeZ(), w.homeRadius());
+        });
+    }
+
+    private static void edgeView(Minecraft mc, String[] a) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null) return;
+        double ang = Math.toRadians(Double.parseDouble(a[0])), out = Double.parseDouble(a[1]);
+        String up = a[2];
+        srv.execute(() -> {
+            var snap = net.jj.hollowbell.world.BellGen.SNAP;
+            if (snap == null || !snap.claimed) return;
+            double c = Math.cos(ang), sn = Math.sin(ang);
+            double edge = 0;
+            for (double d = 0; d < snap.radius; d += 4) if (snap.outline.dn((int) (snap.cx + c * d), (int) (snap.cz + sn * d)) < 1) edge = d;
+            double cam = edge + out, look = edge - 90;
+            HollowbellMod.LOG.info("autotest edge: at {} degrees the ground reaches {} blocks", a[0], (int) edge);
+            mc.execute(() -> groundView(mc, new String[]{String.valueOf(c * cam), String.valueOf(sn * cam), up, String.valueOf(c * look), String.valueOf(sn * look)}));
         });
     }
 

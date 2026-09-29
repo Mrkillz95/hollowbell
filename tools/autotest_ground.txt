@@ -1,42 +1,47 @@
-# the Bell Hollows as a new normal world makes them: den, middle, fringe, F3, /locate
+# the Bell Hollows as a new normal world makes them: den, middle, fringe, F3, /locate, and him asleep
 world normal
 gui off
-render 12
+render 8
 cmd time set 6000
 cmd gamerule doDaylightCycle false
 cmd hollowbell natural off
-cmd kill @e[type=hollowbell:hollowbell]
+wait 100
+wait 600
+cmd hollowbell away now
 wait 40
+cmd hollowbell remove
+wait 20
+cmdlog hollowbell list
 cmdlog hollowbell ground
-ground 70 40 26 0 0
-wait 400
+ground 95 60 30 0 0
+wait 900
 groundcheck
 shot generated_den
-ground 0 -8 3 0 30
-wait 200
-shot generated_den_inside
-ground 380 120 20 470 220
+ground 0 -12 4 0 30
 wait 400
+shot generated_den_inside
+ground 360 140 24 470 240
+wait 900
 groundcheck
 shot generated_middle
-ground 250 -300 45 400 -450
-wait 400
+ground 250 -300 40 380 -430
+wait 900
 shot generated_middle_2
-ground 700 0 26 1000 0
-wait 400
+edge 10 30 25
+wait 900
 groundcheck
 shot generated_fringe
-ground -700 300 30 -950 420
-wait 400
+edge 150 30 30
+wait 900
 shot generated_fringe_2
 ground 1500 0 3 0 0
-wait 200
+wait 300
 gui on
 cmdlog locate biome hollowbell:bell_hollows
 wait 100
 shot generated_locate
-ground 420 40 2 430 40
-wait 200
+ground 300 160 3 330 160
+wait 400
 f3 on
 wait 40
 shot generated_f3
@@ -47,14 +52,15 @@ wait 100
 cmd hollowbell sleep
 wait 300
 view 40 60 -140 0 40 0
-wait 60
+wait 80
 shot sleep_side
 view 90 120 -90 0 30 0
-wait 40
+wait 60
 shot sleep_high
 cmd hollowbell sleep
 wait 40
 shot sleep_waking
 wait 60
 shot sleep_awake
+cmd hollowbell natural on
 quit
