@@ -1,0 +1,63 @@
+# 1.7.0: the four redone moves, at key ticks
+world flat
+gui off
+render 20
+sim 20
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon hunting 1
+waitmodel
+wait 300
+cmd hollowbell mood calm
+cmd hollowbell stay true
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon zombie ~30 ~ ~10 {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+view 0 90 -270 0 80 0
+wait 20
+cmd execute as @e[type=zombie,limit=1] run hollowbell do pod_burst
+wait 12
+shot redo_1_pod_burst_012
+wait 7
+shot redo_1_pod_burst_019
+wait 5
+shot redo_1_pod_burst_024
+wait 16
+shot redo_1_pod_burst_040
+wait 74
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do egg_rain
+wait 14
+shot redo_2_egg_rain_014
+wait 10
+shot redo_2_egg_rain_024
+wait 10
+shot redo_2_egg_rain_034
+wait 21
+shot redo_2_egg_rain_055
+wait 77
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do stinger_storm
+wait 24
+shot redo_3_stinger_storm_024
+wait 16
+shot redo_3_stinger_storm_040
+wait 20
+shot redo_3_stinger_storm_060
+wait 60
+shot redo_3_stinger_storm_120
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sun_lances
+wait 30
+shot redo_4_sun_lances_030
+wait 15
+shot redo_4_sun_lances_045
+wait 45
+shot redo_4_sun_lances_090
+wait 50
+shot redo_4_sun_lances_140
+wait 70
+cmd hollowbell set cooldowns clear
+quit
