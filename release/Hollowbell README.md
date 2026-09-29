@@ -14,6 +14,7 @@ He's made from your build block for block. Every block wears its real texture, a
   - in the air, a **glide**: you drift the way you're looking and come down slowly. 7 seconds before the next one.
   - A small chestplate icon right of the hotbar shows when it's ready. The wait also shows on the chestplate.
 - **The set's gifts are stronger.** Poison and his toll's dizziness can't touch you, a fast fall still turns slow, and when you're hurt below a third of your health, the glass rings on its own: what's close is thrown back and you get two hearts of cover (once every 30 seconds).
+- **Four moves show what they do now.** Every move was checked in pictures. Pod burst, egg rain, stinger storm and sun lances hardly moved his body before. Now each one winds up first (he tightens and draws in), then goes (the bell kicks open, the strands whip out), then settles back.
 - **Commands to control everything** (cheats on):
   - `/hollowbell config <setting> [value]` looks at or changes any setting (Tab lists them). `/hollowbell config` lists them all. `/giants config <setting> [value]` does it for every boss that has that setting.
   - `/hollowbell set freeze|speed|invulnerable|glow|name|target|wind|grudge|home|cooldowns` for the nearest one.

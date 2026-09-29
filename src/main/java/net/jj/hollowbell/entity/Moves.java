@@ -209,7 +209,7 @@ public final class Moves {
                 in.squeezeAdd = 0.3f * hump(t, 0, EGG_AT - 4, EGG_AT - 4, EGG_AT) - 0.25f * hump(t, EGG_AT, EGG_AT + 3, EGG_AT + 8, EGG_AT + 24);
                 float fling = hump(t, EGG_AT - 2, EGG_AT + 3, EGG_AT + 20, EGG_AT + 36);
                 st.flick = fling * (0.75f + 0.25f * (float) Math.cos((t - EGG_AT) * 0.7f));
-                st.spread = 0.4f * fling - 0.15f * hump(t, 0, EGG_AT - 4, EGG_AT - 4, EGG_AT);
+                st.spread = 0.6f * fling - 0.15f * hump(t, 0, EGG_AT - 4, EGG_AT - 4, EGG_AT);
             }
             case WHIRLPOOL -> {
                 st.spread = hump(t, 0, WHIRL_UP, WHIRL_CRUSH - 20, WHIRL_CRUSH);
