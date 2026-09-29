@@ -601,21 +601,6 @@ public class WorldOne extends SavedData {
         return src.getGenerator().getBaseHeight(gx, gz, Heightmap.Types.WORLD_SURFACE_WG, level, src.randomState());
     }
 
-    private void hop(ServerLevel level, double near, double far) {
-        double a = level.random.nextDouble() * Math.PI * 2;
-        double d = near + level.random.nextDouble() * far;
-        x += (int) (Math.cos(a) * d);
-        z += (int) (Math.sin(a) * d);
-    }
-
-    /** somewhere with ground above the sea, without building the world to find out */
-    private void findLand(ServerLevel level) {
-        for (int tries = 0; tries < 24; tries++) {
-            if (groundGuess(level, x, z) > level.getSeaLevel() + 1) return;
-            hop(level, 400, 1600);
-        }
-    }
-
     /** dry, and not woodland that would swallow him: no ocean, river, jungle, dark forest or taiga */
     private boolean openGround(ServerLevel level, int gx, int gz) {
         int gy = groundGuess(level, gx, gz);
@@ -636,11 +621,44 @@ public class WorldOne extends SavedData {
         return hi - lo < 14;
     }
 
-    /** land above the sea, then a few extra hops for open ground, a few more for flat; then whatever there is */
+    /** how much of the land round a spot (out to 550 blocks) stands above the sea, 0 to 1, from the generator alone */
+    private double landShare(ServerLevel level, int gx, int gz) {
+        int land = 0, all = 0;
+        int sea = level.getSeaLevel();
+        if (groundGuess(level, gx, gz) > sea + 2) land += 2;
+        all += 2;
+        for (int ring = 1; ring <= 2; ring++) {
+            double r = ring == 1 ? 250 : 550;
+            for (int k = 0; k < 8; k++) {
+                double a = k * Math.PI / 4 + ring * 0.3;
+                if (groundGuess(level, gx + (int) (Math.cos(a) * r), gz + (int) (Math.sin(a) * r)) > sea + 2) land++;
+                all++;
+            }
+        }
+        return land / (double) all;
+    }
+
+    /**
+     * A good middle for his ground near the chosen spot: land all round it (not a sea or a river), open, flattish.
+     * Up to 48 spots round it are weighed, each further out, and the best is taken; nothing is loaded to look.
+     */
     private void findSpot(ServerLevel level) {
-        findLand(level);
-        for (int tries = 0; tries < 8 && !openGround(level, x, z); tries++) hop(level, 400, 1600);
-        for (int tries = 0; tries < 6 && !flatEnough(level, x, z); tries++) hop(level, 160, 480);
+        int ox = x, oz = z, bx = x, bz = z;
+        double best = -1;
+        for (int tries = 0; tries < 48; tries++) {
+            int cx = ox, cz = oz;
+            if (tries > 0) {
+                double a = level.random.nextDouble() * Math.PI * 2, d = 300 + tries * 120 * level.random.nextDouble();
+                cx = ox + (int) (Math.cos(a) * d); cz = oz + (int) (Math.sin(a) * d);
+            }
+            double land = landShare(level, cx, cz);
+            if (land < best - 0.2) continue;
+            boolean open = openGround(level, cx, cz);
+            double score = land + (open ? 0.25 : 0) + (open && flatEnough(level, cx, cz) ? 0.1 : 0);
+            if (score > best) { best = score; bx = cx; bz = cz; }
+            if (land >= 0.94 && open) break;
+        }
+        x = bx; z = bz;
         avoidWard();
     }
 
