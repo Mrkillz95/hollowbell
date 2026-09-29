@@ -237,7 +237,12 @@ public final class CodexOrders {
             case CodexPayload.WHERE -> { if (m != null) where(p, m); else awayOrder(p, pay); return; }
             default -> {}
         }
-        if (m == null) { awayOrder(p, pay); return; }
+        if (m == null) {
+            // a movement order reaches him anywhere: out of the world, far off, or in land nobody has loaded
+            if (action == CodexPayload.COME || action == CodexPayload.GO_THERE || action == CodexPayload.GO_TO_XZ) farOrder(p, pay);
+            else awayOrder(p, pay);
+            return;
+        }
         // a woken crown's circle: the book cannot send him in there
         Vec3 warded = wardedDest(p, pay);
         if (warded != null) { say(p, "ward_refused"); return; }
@@ -276,18 +281,17 @@ public final class CodexOrders {
             }
             case CodexPayload.GO_TO_XZ -> {
                 Vec3 at = new Vec3(pay.x(), m.groundAt(pay.x(), pay.z()), pay.z());
-                m.setGoal(at);
-                say(p, "codex_goto", (int) pay.x(), (int) pay.z());
+                m.orderTo(at, null);
+                say(p, "codex_goto", net.minecraft.util.Mth.floor(pay.x()), net.minecraft.util.Mth.floor(pay.z()));
             }
             case CodexPayload.FORGIVE -> { m.forgiveAll(); say(p, "codex_forgive"); }
             case CodexPayload.LET_GO -> { m.moves().letGoOfEverything(false); say(p, "codex_let_go"); }
-            case CodexPayload.COME -> { m.clearHitList(); m.callTo(p); say(p, "codex_come", (int) Math.sqrt(m.distanceToSqr(p))); }
+            case CodexPayload.COME -> { m.clearHitList(); m.orderTo(p.position(), p); say(p, "codex_come", (int) Math.sqrt(m.distanceToSqr(p))); }
             case CodexPayload.GO_THERE -> {
                 HitResult h = looking(p, 320);
-                if (h == null) { say(p, "codex_nowhere"); return; }
-                Vec3 at = h.getLocation();
-                m.setGoal(at);
-                say(p, "codex_goto", (int) at.x, (int) at.z);
+                Vec3 at = h != null ? h.getLocation() : net.jj.hollowbell.world.FarOrders.farLook(p);
+                m.orderTo(at, null);
+                say(p, "codex_goto", net.minecraft.util.Mth.floor(at.x), net.minecraft.util.Mth.floor(at.z));
             }
             case CodexPayload.ATTACK_THAT -> {
                 HitResult h = looking(p, 320);
@@ -318,6 +322,27 @@ public final class CodexOrders {
             case CodexPayload.FREE_ROAM -> { m.unbind(); say(p, "codex_roam"); }
             default -> {}
         }
+    }
+
+    /** a movement order to one out of reach of the book: at any distance, the same as near */
+    private static void farOrder(ServerPlayer p, CodexPayload pay) {
+        ServerLevel sl = p.serverLevel();
+        var t = net.jj.hollowbell.world.FarOrders.nearest(sl, p.position());
+        if (t == null) { say(p, "codex_none"); return; }
+        if (wardedDest(p, pay) != null) { say(p, "ward_refused"); return; }
+        Vec3 to;
+        Player follow = null;
+        switch (pay.action()) {
+            case CodexPayload.COME -> { to = p.position(); follow = p; }
+            case CodexPayload.GO_TO_XZ -> to = new Vec3(pay.x(), p.getY(), pay.z());
+            default -> {
+                HitResult h = looking(p, 320);
+                to = h != null ? h.getLocation() : net.jj.hollowbell.world.FarOrders.farLook(p);
+            }
+        }
+        Component said = net.jj.hollowbell.world.FarOrders.order(sl, t, to, follow, windCost(pay.action(), pay.arg()));
+        if (said == null) { say(p, "codex_none"); return; }
+        p.displayClientMessage(said, true);
     }
 
     /** where this order would send him, if that spot is inside a woken crown's circle; null when it is fine */

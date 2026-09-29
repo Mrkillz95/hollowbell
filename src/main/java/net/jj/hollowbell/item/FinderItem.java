@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.Mth;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A compass in a ring of glass with a bit of amethyst: it rings faintly towards him. Use it and it says how far he
@@ -48,9 +49,22 @@ public class FinderItem extends Item {
 
     /** what the finder says to this player, in chat (the tests call this straight) */
     public static Component answer(ServerLevel sl, Player player) {
-        Component msg = tell(sl, player.position());
+        Component msg = comingTo(sl, player);
+        if (msg == null) msg = tell(sl, player.position());
         player.displayClientMessage(msg, false);
         return msg;
+    }
+
+    /** he's on his way to this player (the book's "Come to me"): the finder says so, and how far */
+    private static @Nullable Component comingTo(ServerLevel sl, Player player) {
+        for (HollowbellEntity h : sl.getEntities(ModEntities.HOLLOWBELL, h -> player.getUUID().equals(h.comingTo())))
+            return net.jj.hollowbell.world.FarOrders.coming(Math.hypot(h.getX() - player.getX(), h.getZ() - player.getZ()), h.travelSpeed(), true);
+        for (Away.Rec r : Away.get(sl.getServer()).all()) {
+            if (!player.getUUID().equals(r.follow) || !r.dim.equals(sl.dimension().location().toString())) continue;
+            Vec3 s = r.spot(sl.getGameTime());
+            return net.jj.hollowbell.world.FarOrders.coming(Math.hypot(s.x - player.getX(), s.z - player.getZ()), r.speed, true);
+        }
+        return null;
     }
 
     /** a distance the way the finder says it: to the nearest ten blocks */

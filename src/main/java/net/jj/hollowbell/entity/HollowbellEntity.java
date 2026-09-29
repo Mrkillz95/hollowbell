@@ -707,6 +707,9 @@ public class HollowbellEntity extends Monster {
         riderTick();
         sleepTick();
         if (!asleep) pickTarget();
+        // coming to somebody: where they are now, every ten seconds
+        if (comeTo != null && goal != null && tickCount % 200 == 0 && level().getPlayerByUUID(comeTo) instanceof Player cp && cp.isAlive())
+            goal = keptIn(cp.position());
         moves.tick();
         fly(now);
         animTick();
@@ -775,7 +778,26 @@ public class HollowbellEntity extends Monster {
 
     // ------------------------------------------------------------------ where he goes
 
-    public void setGoal(@Nullable Vec3 g) { goal = g == null ? null : keptIn(g); if (g != null) { setStay(false); wakeUp(); } }
+    public void setGoal(@Nullable Vec3 g) {
+        goal = g == null ? null : keptIn(g);
+        comeTo = null; holdThere = false;
+        if (g != null) { setStay(false); wakeUp(); }
+    }
+
+    /** who he is coming to (their spot is looked up again every ten seconds while he comes), or null */
+    private @Nullable UUID comeTo;
+    /** a movement order: when he gets there he holds still until he's given something else */
+    private boolean holdThere;
+
+    /** a movement order from the book or a command: go there (or come to this player), then hold still there */
+    public void orderTo(Vec3 g, @Nullable Player follow) {
+        setGoal(g);
+        comeTo = follow == null ? null : follow.getUUID();
+        holdThere = true;
+    }
+
+    public @Nullable UUID comingTo() { return comeTo; }
+    public boolean holdsThere() { return holdThere; }
 
     /** /hollowbell height: how high over the ground he drifts (his strand ends that far up), until he picks again */
     public void setCruise(double blocks) {
@@ -832,7 +854,10 @@ public class HollowbellEntity extends Monster {
             if (f != null) want = moves.fetchSpot(f);
             else if (goal != null) {
                 want = goal;
-                if (horiz(goal) < 6 + 10 * s) { goal = null; want = null; }
+                if (horiz(goal) < 6 + 10 * s) {
+                    goal = null; want = null;
+                    if (holdThere) { holdThere = false; comeTo = null; setStay(true); }
+                }
             } else if (t != null) {
                 // hunting: he hangs right over you, so the strands can reach
                 if (horiz(t.position()) > 12 * s + 2) want = t.position();
@@ -1922,6 +1947,8 @@ public class HollowbellEntity extends Monster {
         super.addAdditionalSaveData(tag);
         tag.putFloat("BellScale", bellScale());
         tag.putBoolean("Asleep", asleep);
+        if (comeTo != null) tag.putUUID("ComeTo", comeTo);
+        tag.putBoolean("HoldThere", holdThere);
         tag.putFloat("SleepK", sleepiness());
         tag.putInt("BellVariant", variant());
         tag.putFloat("BellHp", healthNow());
@@ -1962,6 +1989,8 @@ public class HollowbellEntity extends Monster {
         super.readAdditionalSaveData(tag);
         if (tag.contains("BellScale")) entityData.set(DATA_SCALE, Mth.clamp(tag.getFloat("BellScale"), MIN_SCALE, MAX_SCALE));
         asleep = tag.getBoolean("Asleep");
+        comeTo = tag.hasUUID("ComeTo") ? tag.getUUID("ComeTo") : null;
+        holdThere = tag.getBoolean("HoldThere");
         if (tag.contains("SleepK")) entityData.set(DATA_SLEEP, Mth.clamp(tag.getFloat("SleepK"), 0f, 1f));
         if (tag.contains("BellVariant")) entityData.set(DATA_VARIANT, Mth.clamp(tag.getInt("BellVariant"), 0, 2));
         // a spawn egg's own tag: 0 calm, 1 hunting, 2 guardian, 3 small

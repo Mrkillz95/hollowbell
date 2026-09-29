@@ -104,10 +104,14 @@ public final class HollowbellCommand {
                 .then(Commands.literal("popped").requires(OP).then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
                         .executes(c -> near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "n")), "popped"))))
                 .then(Commands.literal("goto").requires(OP).then(Commands.argument("x", FloatArgumentType.floatArg()).then(Commands.argument("z", FloatArgumentType.floatArg())
-                        .executes(c -> near(c, h -> {
-                            double x = FloatArgumentType.getFloat(c, "x"), z = FloatArgumentType.getFloat(c, "z");
-                            h.setGoal(new Vec3(x, h.groundAt(x, z), z));
-                        }, "goto")))))
+                        .executes(c -> farGo(c, new Vec3(FloatArgumentType.getFloat(c, "x"), 0, FloatArgumentType.getFloat(c, "z")), null)))))
+                // come: the book's "Come to me", at any distance (to you, or to the player named)
+                .then(Commands.literal("come").requires(OP).executes(c -> farGo(c, null, c.getSource().getPlayerOrException()))
+                        .then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player())
+                                .executes(c -> farGo(c, null, net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player")))))
+                // tp: take me to him (never in the book)
+                .then(Commands.literal("tp").requires(OP).executes(c -> tp(c, 0))
+                        .then(Commands.argument("which", IntegerArgumentType.integer(1, 999)).executes(c -> tp(c, IntegerArgumentType.getInteger(c, "which")))))
                 .then(Commands.literal("ground").requires(OP).executes(HollowbellCommand::groundSay)
                         .then(Commands.literal("new").executes(HollowbellCommand::groundNew)))
                 .then(Commands.literal("stay").requires(OP).executes(c -> near(c, h -> h.setStay(!h.staying()), "stay"))
@@ -316,6 +320,25 @@ public final class HollowbellCommand {
         return 1;
     }
 
+    /** /hollowbell goto and come: the nearest one, wherever he is (in the world, out of it, or in unloaded land) */
+    private static int farGo(CommandContext<CommandSourceStack> c, @Nullable Vec3 to, @Nullable ServerPlayer follow) {
+        ServerLevel l = follow != null ? follow.serverLevel() : c.getSource().getLevel();
+        Vec3 from = follow != null ? follow.position() : c.getSource().getPosition();
+        var t = net.jj.hollowbell.world.FarOrders.nearest(l, from);
+        if (t == null) return none(c);
+        Component said = net.jj.hollowbell.world.FarOrders.order(l, t, to != null ? to : follow.position(), follow, 0f);
+        if (said == null) return none(c);
+        c.getSource().sendSuccess(() -> said, false);
+        return 1;
+    }
+
+    private static int tp(CommandContext<CommandSourceStack> c, int which) throws CommandSyntaxException {
+        ServerPlayer p = c.getSource().getPlayerOrException();
+        Component said = net.jj.hollowbell.world.TakeMe.tp(p, which);
+        c.getSource().sendSuccess(() -> said, false);
+        return 1;
+    }
+
     private static int mood(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         String m = StringArgumentType.getString(c, "mood");
         for (int i = 0; i < MOODS.length; i++) if (MOODS[i].equals(m)) return i;
@@ -360,23 +383,27 @@ public final class HollowbellCommand {
         List<HollowbellEntity> all = allOf(c.getSource());
         List<Away.Rec> out = Away.get(c.getSource().getServer()).all();
         if (all.isEmpty() && out.isEmpty()) return none(c);
+        int[] k = {0};
         for (HollowbellEntity h : all) {
-            c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.list_line", (int) h.getX(), (int) h.getY(), (int) h.getZ(),
+            int num = ++k[0];
+            c.getSource().sendSuccess(() -> Component.literal(num + ". ").append(Component.translatable("command.hollowbell.list_line", (int) h.getX(), (int) h.getY(), (int) h.getZ(),
                     String.format("%.2f", h.bellScale()), Component.translatable("mode.hollowbell." + h.variant()),
-                    (int) h.healthNow(), (int) h.healthMax(), h.podsLeft(), h.rig.pods.length), false);
+                    (int) h.healthNow(), (int) h.healthMax(), h.podsLeft(), h.rig.pods.length)), false);
         }
         long now = c.getSource().getLevel().getGameTime();
-        for (Away.Rec r : out) awayLine(c, r, now);
+        for (Away.Rec r : out) awayLine(c, r, now, ++k[0]);
         return all.size() + out.size();
     }
 
-    private static void awayLine(CommandContext<CommandSourceStack> c, Away.Rec r, long now) {
+    private static void awayLine(CommandContext<CommandSourceStack> c, Away.Rec r, long now) { awayLine(c, r, now, 0); }
+
+    private static void awayLine(CommandContext<CommandSourceStack> c, Away.Rec r, long now, int num) {
         Vec3 s = r.spot(now);
         Component line = r.going
                 ? Component.translatable("command.hollowbell.away_going", (int) s.x, (int) s.z, r.dim, (int) r.toX, (int) r.toZ, Math.max(1, r.minutesLeft(now)),
                         String.format("%.2f", r.scale), (int) r.hp, (int) r.hpMax)
                 : Component.translatable("command.hollowbell.away_still", (int) s.x, (int) s.z, r.dim, String.format("%.2f", r.scale), (int) r.hp, (int) r.hpMax);
-        c.getSource().sendSuccess(() -> line, false);
+        c.getSource().sendSuccess(() -> num > 0 ? Component.literal(num + ". ").append(line) : line, false);
     }
 
     /** where every one of them is: in the world, or out of it and where the sum says */

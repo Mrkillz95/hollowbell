@@ -42,6 +42,11 @@ public final class Away extends SavedData {
         public boolean going, stay;
         public float scale, hp, hpMax;
         public int variant;
+        /** coming to this player: the trip is aimed at them again every ten seconds */
+        public @Nullable UUID follow;
+        /** a movement order: once there he holds still */
+        public boolean hold;
+        long aimedAt;
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -55,6 +60,8 @@ public final class Away extends SavedData {
             t.putBoolean("Going", going); t.putBoolean("Stay", stay);
             t.putFloat("Scale", scale); t.putFloat("Hp", hp); t.putFloat("HpMax", hpMax);
             t.putInt("Variant", variant);
+            if (follow != null) t.putUUID("Follow", follow);
+            t.putBoolean("Hold", hold);
             return t;
         }
 
@@ -70,6 +77,8 @@ public final class Away extends SavedData {
             r.going = t.getBoolean("Going"); r.stay = t.getBoolean("Stay");
             r.scale = t.getFloat("Scale"); r.hp = t.getFloat("Hp"); r.hpMax = t.getFloat("HpMax");
             r.variant = t.getInt("Variant");
+            r.follow = t.hasUUID("Follow") ? t.getUUID("Follow") : null;
+            r.hold = t.getBoolean("Hold");
             return r;
         }
 
@@ -96,6 +105,8 @@ public final class Away extends SavedData {
             Vec3 at = spot(now);
             if (Math.hypot(toX - at.x, toZ - at.z) > 0.5) return;
             fromX = at.x; fromZ = at.z; going = false;
+            // an order got him there: he holds still until he's told something else
+            if (hold) { stay = true; hold = false; follow = null; body.putBoolean("HoldThere", false); body.remove("ComeTo"); }
         }
     }
 
@@ -126,8 +137,8 @@ public final class Away extends SavedData {
     public List<Rec> all() { return new ArrayList<>(recs.values()); }
     public int count() { return recs.size(); }
     public @Nullable Rec get(UUID id) { return recs.get(id); }
-    public void forget(UUID id) { if (recs.remove(id) != null) setDirty(); }
-    public void forgetAll() { if (!recs.isEmpty()) { recs.clear(); setDirty(); } }
+    public void forget(UUID id) { if (recs.remove(id) != null) setDirty(); unpark(id); }
+    public void forgetAll() { if (!recs.isEmpty() || !parked.isEmpty()) { recs.clear(); parked.clear(); setDirty(); } }
 
     /** the nearest one out there in this dimension, from this spot */
     public @Nullable Rec nearest(ServerLevel l, Vec3 from) {
@@ -155,6 +166,8 @@ public final class Away extends SavedData {
         r.lift = Math.max(0, lift);
         r.stay = h.staying();
         r.scale = h.bellScale(); r.hp = h.healthNow(); r.hpMax = h.healthMax(); r.variant = h.variant();
+        r.follow = h.comingTo(); r.hold = h.holdsThere(); r.aimedAt = r.start;
+        parked.remove(r.id);
         if (dest != null && Math.hypot(dest.x - h.getX(), dest.z - h.getZ()) > 8) { r.going = true; r.toX = dest.x; r.toZ = dest.z; }
         recs.put(r.id, r);
         setDirty();
@@ -175,13 +188,42 @@ public final class Away extends SavedData {
         }
         long now = l.getGameTime();
         Vec3 at = r.spot(now);
+        // a woken crown's circle: the trip stops at its edge rather than go through it
+        to = WorldOne.get(l.getServer()).wardStop(l, at, to);
         r.fromX = at.x; r.fromZ = at.z; r.start = now;
         r.toX = to.x; r.toZ = to.z;
         r.going = Math.hypot(to.x - at.x, to.z - at.z) > 8;
         r.stay = false;
+        r.aimedAt = now;
         setDirty();
         return true;
     }
+
+    /** a movement order out of the world: the trip, who he is coming to, and that he holds still once there */
+    public boolean order(ServerLevel l, UUID id, Vec3 to, @Nullable UUID follow) {
+        Rec r = recs.get(id);
+        if (r == null || !send(l, id, to)) return false;
+        r.follow = follow;
+        r.hold = true;
+        r.body.putBoolean("HoldThere", true);
+        if (follow != null) r.body.putUUID("ComeTo", follow); else r.body.remove("ComeTo");
+        r.body.putBoolean("Asleep", false);
+        setDirty();
+        return true;
+    }
+
+    // ------------------------------------------------------------------ where the ones in unloaded land are
+
+    /** one of him left in the world when his chunk was put away: where, so an order can reach him */
+    public record Parked(String dim, double x, double z, double speed) {}
+    private final Map<UUID, Parked> parked = new LinkedHashMap<>();
+
+    public void noteParked(HollowbellEntity h) {
+        parked.put(h.getUUID(), new Parked(h.level().dimension().location().toString(), h.getX(), h.getZ(), h.travelSpeed()));
+        setDirty();
+    }
+    public void unpark(UUID id) { if (parked.remove(id) != null) setDirty(); }
+    public Map<UUID, Parked> parked() { return java.util.Collections.unmodifiableMap(parked); }
 
     /** stop where you are: the sum stops and he's left out there (or, again, let him go on his way) */
     public boolean stay(ServerLevel l, UUID id, boolean on) {
@@ -223,6 +265,12 @@ public final class Away extends SavedData {
             ServerLevel l = level(server, r.dim);
             if (l == null) continue;
             long now = l.getGameTime();
+            // coming to somebody: aimed at where they are now, every ten seconds
+            if (r.follow != null && r.hold && now - r.aimedAt >= 200) {
+                ServerPlayer who = server.getPlayerList().getPlayer(r.follow);
+                if (who != null && who.level() == l) { boolean h = r.hold; UUID f = r.follow; send(l, r.id, who.position()); r.hold = h; r.follow = f; }
+                else r.aimedAt = now;
+            }
             r.settle(now);
             Vec3 s = r.spot(now);
             double back = backRange(server, r.scale);
@@ -281,6 +329,11 @@ public final class Away extends SavedData {
             Rec r = Rec.load(l.getCompound(i));
             a.recs.put(r.id, r);
         }
+        ListTag pk = tag.getList("Parked", Tag.TAG_COMPOUND);
+        for (int i = 0; i < pk.size(); i++) {
+            CompoundTag c = pk.getCompound(i);
+            a.parked.put(c.getUUID("Id"), new Parked(c.getString("Dim"), c.getDouble("X"), c.getDouble("Z"), c.getDouble("Speed")));
+        }
         return a;
     }
 
@@ -289,6 +342,14 @@ public final class Away extends SavedData {
         ListTag l = new ListTag();
         for (Rec r : recs.values()) l.add(r.save());
         tag.put("Away", l);
+        ListTag pk = new ListTag();
+        for (var e : parked.entrySet()) {
+            CompoundTag c = new CompoundTag();
+            c.putUUID("Id", e.getKey()); c.putString("Dim", e.getValue().dim());
+            c.putDouble("X", e.getValue().x()); c.putDouble("Z", e.getValue().z()); c.putDouble("Speed", e.getValue().speed());
+            pk.add(c);
+        }
+        tag.put("Parked", pk);
         return tag;
     }
 }

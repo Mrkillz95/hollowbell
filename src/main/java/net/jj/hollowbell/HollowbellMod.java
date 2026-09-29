@@ -25,6 +25,7 @@ import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.CreativeModeTabs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,22 +98,32 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Away::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.WorldOne::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarSight::serverTick);
+        ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarOrders::tick);
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
             if (!(entity instanceof HollowbellEntity h)) return;
             h.clearBars();
             // the world's own one going to sleep with his chunk: note where, for the finder
             if (h.isWorldOne()) net.jj.hollowbell.world.WorldOne.get(world.getServer()).seen(h);
+            // put away with his chunk (not out of the world as a sum, not dead): noted, so an order can still reach him
+            var why = h.getRemovalReason();
+            var away = net.jj.hollowbell.world.Away.get(world.getServer());
+            if (!h.steppedOut() && !h.isDeadOrDying() && (why == Entity.RemovalReason.UNLOADED_TO_CHUNK || why == Entity.RemovalReason.UNLOADED_WITH_PLAYER))
+                away.noteParked(h);
+            else away.unpark(h.getUUID());
         });
         // the cap: only for freshly made ones. A saved one loading with its chunk is nobody arriving.
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-            if (entity instanceof HollowbellEntity h) net.jj.hollowbell.world.WorldOne.joined(h, world);
+            if (entity instanceof HollowbellEntity h) {
+                net.jj.hollowbell.world.Away.get(world.getServer()).unpark(h.getUUID());
+                net.jj.hollowbell.world.WorldOne.joined(h, world);
+            }
         });
         // his ground: chosen as the overworld is made, before any of its land, so the world makes that land as his
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents.LOAD.register((server, world) -> {
             if (world.dimension() == net.minecraft.world.level.Level.OVERWORLD) net.jj.hollowbell.world.WorldOne.worldLoaded(world);
         });
-        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.BellGen.forget(); });
+        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.BellGen.forget(); net.jj.hollowbell.world.FarOrders.forget(); });
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 CodexOrders.forgetPlayer(handler.getPlayer().getUUID()));
 
