@@ -38,11 +38,11 @@ public final class GiantsBridge {
             }
             case "limit" -> {
                 if (!a.isEmpty()) {
-                    try { V.maxHollowbells = Mth.clamp(Integer.parseInt(a), 0, 20); HollowbellConfig.save(); }
+                    try { V.maxInWorld = Mth.clamp(Integer.parseInt(a), 0, 20); HollowbellConfig.save(); }
                     catch (NumberFormatException e) { out.add(WHO + "the limit has to be a number from 0 to 20."); return out; }
-                    if (V.maxHollowbells > 0) WorldOne.limitNow(null, server.overworld());
+                    if (V.maxInWorld > 0) WorldOne.limitNow(null, server.overworld());
                 }
-                out.add(WHO + (V.maxHollowbells <= 0 ? "no limit." : "at most " + V.maxHollowbells + "."));
+                out.add(WHO + (V.maxInWorld <= 0 ? "no limit." : "at most " + V.maxInWorld + "."));
             }
             case "fight" -> {
                 Boolean on = onOff(a);
@@ -122,7 +122,7 @@ public final class GiantsBridge {
             case "status" -> {
                 int standing = Away.get(server).count();
                 for (ServerLevel l : server.getAllLevels()) standing += l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()).size();
-                out.add(WHO + standing + " standing, " + (V.maxHollowbells <= 0 ? "no limit" : "at most " + V.maxHollowbells)
+                out.add(WHO + standing + " standing, " + (V.maxInWorld <= 0 ? "no limit" : "at most " + V.maxInWorld)
                         + ", " + (V.oneInTheWorld ? "rises on his own" : "only when summoned")
                         + ", " + (V.fightGiants ? "fights the others" : "leaves the others alone")
                         + ", volume " + V.soundVolume + ".");

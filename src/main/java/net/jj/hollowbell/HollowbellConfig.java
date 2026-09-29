@@ -45,7 +45,9 @@ public final class HollowbellConfig {
         /** Keeps the chunk at his middle moving and the ground under him loaded while a player can see him, so he never freezes in the air. */
         public boolean chunkLoading = true;
         /** How many of him the world holds at once. Summon another past this and the oldest one goes. 0 = no limit. */
-        public int maxHollowbells = 1;
+        public int maxInWorld = 1;
+        /** Before 1.6 "maxInWorld" was called this; an old file's number is moved over, then this is dropped. */
+        public Integer maxHollowbells = null;
         /** The world keeps one of him out there, rising on his own ("/hollowbell natural on|off"). */
         public boolean oneInTheWorld = true;
         /** How big the world's own one is. */
@@ -90,7 +92,7 @@ public final class HollowbellConfig {
         public float grudgeRate = 1.0f;
         /** How far the book reaches him, in blocks. */
         public int bookRange = 600;
-        /** How far away (in blocks) his boss bars still show. 0 = worked out from his size (550 at full size). */
+        /** How far away (in blocks) his boss bars still show. 0 = worked out from his size (420 at full size). */
         public int bossBarRange = 0;
         /** With nobody near him he steps out of the world and keeps going as a sum, and comes back when somebody gets near. */
         public boolean offscreenTravel = true;
@@ -101,35 +103,45 @@ public final class HollowbellConfig {
     public static Values V = new Values();
 
     /** which version of the settings this build writes; save() and load() both stamp it */
-    private static final int VERSION = 6;
+    private static final int VERSION = 7;
+    /** the file on disk couldn't be read: it's kept as it is, and nothing is written over it until /hollowbell reload reads it cleanly */
+    private static boolean locked;
 
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json"); }
 
     public static void save() {
-        V.configVersion = VERSION;
+        // an unreadable file is never written over (the settings still change for this session)
+        if (locked) { HollowbellMod.LOG.warn("Not writing {}: it couldn't be read, so it is left as it is until it reads cleanly", file()); return; }
+        V.configVersion = Math.max(V.configVersion, VERSION);
         try { Files.writeString(file(), new GsonBuilder().setPrettyPrinting().create().toJson(V)); }
         catch (Exception e) { HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString()); }
     }
 
-    public static void load() {
+    /** reads the file (at start, and on /hollowbell reload); true when it read cleanly (or there was none yet) */
+    public static boolean load() {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         try {
             if (Files.exists(file())) {
                 Values v = gson.fromJson(Files.readString(file()), Values.class);
-                if (v != null) {
-                    migrate(v);
-                    V = v;
-                }
-            }
-            V.configVersion = VERSION;
-            Files.writeString(file(), gson.toJson(V));
+                if (v == null) throw new IllegalStateException("the file is empty");
+                migrate(v);
+                V = v;
+            } else V = new Values();
+            locked = false;
+            save();
+            return true;
         } catch (Exception e) {
-            // a file that won't read is never written over: it's kept as it was, beside it as .bad
-            HollowbellMod.LOG.warn("Could not read {}, using defaults (your file is kept as hollowbell.json.bad): {}", file(), e.toString());
+            // a file that won't read is never written over: it's kept as it was, and a copy goes beside it as .bad
+            HollowbellMod.LOG.warn("Could not read {}, using defaults (your file is kept, and copied to hollowbell.json.bad): {}", file(), e.toString());
             try { Files.copy(file(), file().resolveSibling("hollowbell.json.bad"), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
             catch (Exception ignored) { }
+            V = new Values();
+            locked = true;
+            return false;
         }
     }
+
+    public static boolean locked() { return locked; }
 
     /** brings settings saved by an older version up to date; only values still at an old default are changed */
     public static void migrate(Values v) {
@@ -141,11 +153,15 @@ public final class HollowbellConfig {
         if (v.configVersion < 4 && Math.abs(v.giantArmor - 0.55f) < 1e-4f) v.giantArmor = 0.7f;
         // 1.4: the world holds one of him by default (0 still means "no limit" if somebody sets it back).
         // Nobody already out there is removed for it: the limit only acts when a new one is made, or on /hollowbell limit.
-        if (v.configVersion < 5 && v.maxHollowbells == 0) v.maxHollowbells = 1;
+        if (v.configVersion < 5 && v.maxHollowbells != null && v.maxHollowbells == 0) v.maxHollowbells = 1;
+        // 1.6: the same name in all five mods
+        if (v.maxHollowbells != null) { v.maxInWorld = v.maxHollowbells; v.maxHollowbells = null; }
         // 1.5: his ground is much bigger, and he can be seen from much further off
         if (v.configVersion < 6 && (v.homeRadius == 0 || v.homeRadius == 320)) v.homeRadius = 900;
         if (v.configVersion < 6 && v.farSightBlocks == 0) v.farSightBlocks = 1024;
         v.homeRadius = Math.max(200, Math.min(2000, v.homeRadius));
         v.farSightBlocks = Math.max(0, Math.min(4096, v.farSightBlocks));
+        v.soundVolume = Math.max(0f, Math.min(2f, v.soundVolume));
+        v.maxInWorld = Math.max(0, Math.min(20, v.maxInWorld));
     }
 }

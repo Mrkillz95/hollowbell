@@ -413,6 +413,7 @@ public final class BellMoves {
 
     /** picks a move for what he's after: what's in reach, what's up high, how many there are, whether a heavy one is his */
     private void choose() {
+        if (h.asleep()) return;                 // asleep: nothing is started
         LivingEntity tg = h.getTarget();
         if (tg == null) {
             if (HollowbellConfig.V.harvest && --harvestIn <= 0) {

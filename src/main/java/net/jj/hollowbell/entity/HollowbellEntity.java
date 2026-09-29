@@ -82,6 +82,8 @@ public class HollowbellEntity extends Monster {
     private static final EntityDataAccessor<Integer> DATA_FLAGS = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.INT);
     /** how he is moving, blocks per tick: the client carries him on with it between updates */
     private static final EntityDataAccessor<Vector3f> DATA_VEL = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.VECTOR3);
+    /** how asleep he is, 0 awake to 1 fast asleep (eased on the server, so the client draws the same) */
+    private static final EntityDataAccessor<Float> DATA_SLEEP = SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
     private static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4;
 
     public final BellRig rig = BellRig.get();
@@ -218,6 +220,64 @@ public class HollowbellEntity extends Monster {
         b.define(DATA_PARTS, new CompoundTag());
         b.define(DATA_FLAGS, 0);
         b.define(DATA_VEL, new Vector3f());
+        b.define(DATA_SLEEP, 0f);
+    }
+
+    // ------------------------------------------------------------------ sleeping
+
+    /** how long he must be left alone before he drifts down and sleeps (the tests shorten it) */
+    public static int quietBeforeSleep = 2400;
+    private boolean asleep;
+    private int quiet;
+    private long hurtAt = -100000;
+
+    /** asleep, or still waking up */
+    public boolean asleep() { return asleep; }
+    /** 0 awake to 1 fast asleep, as he is drawn */
+    public float sleepiness() { return entityData.get(DATA_SLEEP); }
+    /** the far-off stand-in on the client is told straight out (the real one eases it on the server) */
+    public void setSleepiness(float k) { if (ghost) entityData.set(DATA_SLEEP, Mth.clamp(k, 0f, 1f)); }
+
+    /** he drifts down and sleeps (the book, the command, or being left alone a couple of minutes) */
+    public void goToSleep() {
+        if (asleep || isDeadOrDying()) return;
+        asleep = true;
+        quiet = 0;
+        goal = null; wanderTo = null; fetching = null;
+        setTarget(null);
+        moves.stopNow();
+    }
+
+    /** he wakes and gets up (about two seconds of it): a hit, an order, a rider, or a hunter smelling somebody */
+    public void wakeUp() {
+        if (!asleep) return;
+        asleep = false;
+        quiet = 0;
+        wanderIn = Math.max(wanderIn, 60);
+    }
+
+    private void sleepTick() {
+        long now = level().getGameTime();
+        if (asleep) {
+            if (rider != null) wakeUp();
+            else if (isHunter()) {
+                double r = 32 * bellScale() + 8;
+                for (Player p : level().players())
+                    if (fairGame(p) && horiz(p.position()) < r && Math.abs(p.getY() - getY()) < r + 60 * bellScale()) { wakeUp(); break; }
+            }
+        } else {
+            boolean busy = getTarget() != null || rider != null || goal != null || fetching != null || (moveNow() != Moves.NONE && moveNow() != Moves.HARVEST)
+                    || hunted != null || angerTicks > 0 || now - hurtAt < 600 || moves.holdsStill();
+            // a hunter only sleeps at night; calm and guardian whenever they're left alone
+            boolean may = !isHunter() || level().isNight();
+            quiet = busy || !may ? 0 : quiet + 1;
+            if (quiet >= quietBeforeSleep) goToSleep();
+        }
+        float k = entityData.get(DATA_SLEEP);
+        float want = asleep ? 1f : 0f;
+        // five seconds to settle, two to get up
+        float nk = asleep ? Math.min(want, k + 1f / 100f) : Math.max(want, k - 1f / 40f);
+        if (nk != k) entityData.set(DATA_SLEEP, nk);
     }
 
     // ------------------------------------------------------------------ size, mood, health
@@ -516,6 +576,7 @@ public class HollowbellEntity extends Monster {
         Vector3f hang = entityData.get(DATA_HANG);
         in.hangLower = hang.x; in.hangTiltX = hang.y; in.hangTiltZ = hang.z;
         in.sunk = entityData.get(DATA_SUNK) > 0.5f ? 1f : 0f;
+        in.sleep = entityData.get(DATA_SLEEP);
         in.dying = isDeadOrDying() ? deathTime : -1f;
         in.tired = tired();
         in.red = angry();
@@ -644,7 +705,8 @@ public class HollowbellEntity extends Monster {
 
         partsTick(now);
         riderTick();
-        pickTarget();
+        sleepTick();
+        if (!asleep) pickTarget();
         moves.tick();
         fly(now);
         animTick();
@@ -713,7 +775,7 @@ public class HollowbellEntity extends Monster {
 
     // ------------------------------------------------------------------ where he goes
 
-    public void setGoal(@Nullable Vec3 g) { goal = g == null ? null : keptIn(g); if (g != null) setStay(false); }
+    public void setGoal(@Nullable Vec3 g) { goal = g == null ? null : keptIn(g); if (g != null) { setStay(false); wakeUp(); } }
 
     /** /hollowbell height: how high over the ground he drifts (his strand ends that far up), until he picks again */
     public void setCruise(double blocks) {
@@ -752,10 +814,10 @@ public class HollowbellEntity extends Monster {
     private void fly(long now) {
         float s = bellScale();
         boolean dying = isDeadOrDying();
-        boolean down = resting() || dying;
+        boolean down = resting() || dying || asleep;
         LivingEntity t = getTarget();
         Vec3 want = null;
-        boolean still = stay || moves.holdsStill() || dying;
+        boolean still = stay || moves.holdsStill() || dying || asleep;
         // a woken crown's circle: a goal in there is dropped, and standing in there he makes for the way out
         Vec3 wardOut = rider == null ? wardEscape() : null;
         if (wardOut == null && goal != null && warded(goal.x, goal.z)) goal = null;
@@ -869,7 +931,7 @@ public class HollowbellEntity extends Monster {
         } else if (e < -climbAt || down) {
             // sinking, bell open: slow and steady
             // coming down to hit something (or to the ground in a drop), he lets himself fall faster
-            boolean hurry = (down && !dying) || moves.wantsHeight() != null || arriving > 0;
+            boolean hurry = (down && !dying && !asleep) || moves.wantsHeight() != null || arriving > 0;
             double sinkMax = (0.04 + 0.16 * Math.pow(s, 0.7)) * (hurry ? 2.6 : 1.0);
             double vt = -Math.min(sinkMax, Math.max(0, -e) * 0.035);
             vy += (vt - vy) * 0.045;
@@ -905,6 +967,8 @@ public class HollowbellEntity extends Monster {
         // the dive: driven down hard, bell first (it eases into the speed)
         if (steer != null) vel = vel.add(steer.subtract(vel).scale(0.12));
 
+        // asleep: a slow, weak breath of the bell now and then
+        if (asleep && now >= nextPulse) { pulse(0.35f); nextPulse = now + 150 + random.nextInt(40); }
         // level pulses, to carry him along (none while he climbs: those come above; none sinking)
         if (!down && Math.abs(e) <= climbAt && now >= nextPulse) {
             int period = angry() ? 46 : 70;
@@ -978,8 +1042,12 @@ public class HollowbellEntity extends Monster {
         }
         if (e instanceof HollowbellEntity || e instanceof Belling) return true;
         Player holder = bookHolder();
-        if (holder != null && level() instanceof ServerLevel sl && e instanceof LivingEntity le)
-            return BellWorld.get(sl.getServer()).kindOnList(holder.getUUID(), le.getType());
+        if (holder != null && level() instanceof ServerLevel sl && e instanceof LivingEntity le) {
+            // the book holder's own tamed animals, always; then this one creature, or its whole kind, on the list
+            if (le instanceof net.minecraft.world.entity.OwnableEntity o && holder.getUUID().equals(o.getOwnerUUID())) return true;
+            BellWorld w = BellWorld.get(sl.getServer());
+            return w.onList(holder.getUUID(), le.getUUID()) || w.kindOnList(holder.getUUID(), le.getType());
+        }
         return false;
     }
 
@@ -1054,7 +1122,7 @@ public class HollowbellEntity extends Monster {
     }
 
     /** the book: go and get these */
-    public void sendAfter(LivingEntity e) { hunted = e.getUUID(); setTarget(e); angerTicks = 1200; setStay(false); }
+    public void sendAfter(LivingEntity e) { wakeUp(); hunted = e.getUUID(); setTarget(e); angerTicks = 1200; setStay(false); }
     public void clearHitList() { hunted = null; setTarget(null); angerTicks = 0; }
     public void forgiveAll() { mood.settle(null); clearHitList(); }
 
@@ -1197,6 +1265,8 @@ public class HollowbellEntity extends Monster {
 
     private boolean takeDamage(DamageSource src, float dealt) {
         Entity att = src.getEntity();
+        hurtAt = level().getGameTime();
+        wakeUp();
         lastHitBig = dealt > healthMax() * 0.02f;
         if (DEBUG) HollowbellMod.LOG.info("Hollowbell hurt {} by {} ({})", dealt, src.getMsgId(), att);
         hp = Math.max(0f, healthNow() - dealt);
@@ -1331,6 +1401,7 @@ public class HollowbellEntity extends Monster {
             barHp = new BellBar(BellBar.idFor(getUUID(), "hp"), Component.translatable("bar.hollowbell.health"), BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.NOTCHED_10);
             barPods = new BellBar(BellBar.idFor(getUUID(), "pods"), Component.empty(), BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.PROGRESS);
         }
+        barHp.setName(getDisplayName());                  // a name tag shows on his bar
         barHp.setProgress(Mth.clamp(healthNow() / Math.max(1f, healthMax()), 0f, 1f));
         barHp.setColor(angry() ? BossEvent.BossBarColor.RED : BossEvent.BossBarColor.GREEN);
         barPods.setProgress(podsLeft() / (float) Math.max(1, rig.pods.length));
@@ -1359,7 +1430,7 @@ public class HollowbellEntity extends Monster {
     /** how far off his boss bars still show */
     public static double barRange(float scale) {
         int set = HollowbellConfig.V.bossBarRange;
-        return set > 0 ? set : 300 * scale + 250;
+        return set > 0 ? set : 220 * scale + 200;
     }
 
     // ------------------------------------------------------------------ out of the world and back
@@ -1616,8 +1687,8 @@ public class HollowbellEntity extends Monster {
     }
 
     /** a move pressed while riding: the book's clock applies */
-    public boolean forceMove(int which) { return !moves.settingDown() && moves.force(which, getTarget()); }
-    public boolean forceMove(int which, @Nullable LivingEntity at) { return !moves.settingDown() && moves.force(which, at != null ? at : getTarget()); }
+    public boolean forceMove(int which) { wakeUp(); return !moves.settingDown() && moves.force(which, getTarget()); }
+    public boolean forceMove(int which, @Nullable LivingEntity at) { wakeUp(); return !moves.settingDown() && moves.force(which, at != null ? at : getTarget()); }
 
     // ------------------------------------------------------------------ dying
 
@@ -1850,6 +1921,8 @@ public class HollowbellEntity extends Monster {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putFloat("BellScale", bellScale());
+        tag.putBoolean("Asleep", asleep);
+        tag.putFloat("SleepK", sleepiness());
         tag.putInt("BellVariant", variant());
         tag.putFloat("BellHp", healthNow());
         tag.putFloat("BellHpMax", healthMax());
@@ -1888,6 +1961,8 @@ public class HollowbellEntity extends Monster {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         if (tag.contains("BellScale")) entityData.set(DATA_SCALE, Mth.clamp(tag.getFloat("BellScale"), MIN_SCALE, MAX_SCALE));
+        asleep = tag.getBoolean("Asleep");
+        if (tag.contains("SleepK")) entityData.set(DATA_SLEEP, Mth.clamp(tag.getFloat("SleepK"), 0f, 1f));
         if (tag.contains("BellVariant")) entityData.set(DATA_VARIANT, Mth.clamp(tag.getInt("BellVariant"), 0, 2));
         // a spawn egg's own tag: 0 calm, 1 hunting, 2 guardian, 3 small
         if (tag.contains("HollowbellEgg")) {

@@ -66,6 +66,7 @@ public final class FarSightClient {
             g.listed = true;
             if (Math.abs(g.e.bellScale() - f.scale()) > 1e-3f) g.e.setBellScale(f.scale());
             if (g.e.variant() != f.variant()) g.e.setVariant(f.variant());
+            g.e.setSleepiness(f.asleep() ? 1f : 0f);
         }
         for (Map.Entry<UUID, Ghost> en : ghosts.entrySet()) if (!now.contains(en.getKey())) en.getValue().listed = false;
     }

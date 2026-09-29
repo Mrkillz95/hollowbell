@@ -35,7 +35,7 @@ public final class BellAnim {
     /** 0 to 1 while he's dead and sinking away into the ground */
     private float sinkingIn;
     private static final int LOWER = 0, TX = 1, TZ = 2, SQUEEZE = 3, RIPPLE = 4, DEATH = 5, DROOP = 6, GLOW = 7, SWELL = 8, SHAKE = 9,
-            SPIN = 10, DX = 11, DY = 12, DZ = 13, CLIMB = 14, SINK = 15, FOLD = 16, N = 17;
+            SPIN = 10, DX = 11, DY = 12, DZ = 13, CLIMB = 14, SINK = 15, FOLD = 16, SLEEP = 17, N = 18;
     private final float[] x = new float[N], v = new float[N], xl = new float[N];
     private float timeNow;
 
@@ -52,6 +52,8 @@ public final class BellAnim {
         public float hangLower, hangTiltX, hangTiltZ;
         /** sunk (lost his lift): 0 or 1 */
         public float sunk;
+        /** asleep (0 awake .. 1 fast asleep): the entity eases it in and out */
+        public float sleep;
         /** ticks since he died, or -1 */
         public float dying = -1f;
         public boolean tired, red;
@@ -116,7 +118,9 @@ public final class BellAnim {
 
         // folded down: the drop, sunk, dying. The rim is brought right down onto the ground wherever that is
         float deathK = in.dying < 0 ? 0f : Mth.clamp(in.dying / 140f, 0f, 1f);
-        float fold = Math.max(Math.max(in.drop, in.sunk), deathK);
+        spring(SLEEP, in.sleep, 0.05f, 1f, first);
+        // asleep, the bell settles part way down and everything hanging from it lies on the ground
+        float fold = Math.max(Math.max(Math.max(in.drop, in.sunk), deathK), 0.6f * x[SLEEP]);
         spring(FOLD, fold, 0.09f, 0.9f, first);
         // (the rest of the way down he flies himself)
         float ground = Float.isNaN(in.groundUnder) ? 0f : Mth.clamp(in.groundUnder, -40f, 20f);
@@ -136,9 +140,9 @@ public final class BellAnim {
         spring(TZ, tz, flipping ? 0.05f : 0.03f, 0.6f, first);
 
         // the bell: the pulse squeezes it, climbing keeps it narrow, sinking opens it wide like a parachute
-        float sq = in.pulse + 0.35f * x[CLIMB] - 1.0f * x[SINK] - 0.45f * (in.tired ? 1f : 0f) + in.squeezeAdd;
+        float sq = in.pulse + 0.35f * x[CLIMB] - 1.0f * x[SINK] - 0.45f * (in.tired ? 1f : 0f) + in.squeezeAdd - 0.3f * x[SLEEP];
         spring(SQUEEZE, sq * (1f - deathK), 0.35f, 0.75f, first);
-        spring(RIPPLE, 0.35f + 0.8f * Math.abs(in.pulse) + 0.5f * x[SINK], 0.1f, 1f, first);
+        spring(RIPPLE, (0.35f + 0.8f * Math.abs(in.pulse) + 0.5f * x[SINK]) * (1f - 0.6f * x[SLEEP]), 0.1f, 1f, first);
         spring(DEATH, deathK, 0.08f, 1f, first);
         spring(DROOP, in.tired ? 1f : 0f, 0.05f, 1f, first);
         spring(GLOW, in.glow, 0.22f, 1f, first);
@@ -151,7 +155,7 @@ public final class BellAnim {
         st.lower = x[LOWER]; st.tiltX = x[TX]; st.tiltZ = x[TZ]; st.squeeze = x[SQUEEZE]; st.ripple = x[RIPPLE];
         st.death = x[DEATH]; st.droop = x[DROOP]; st.glow = x[GLOW]; st.podSwell = x[SWELL]; st.eggShake = x[SHAKE]; st.spin = x[SPIN];
         st.driftX = x[DX]; st.driftY = x[DY]; st.driftZ = x[DZ]; st.climb = x[CLIMB]; st.sink = x[SINK]; st.fold = x[FOLD];
-        st.pulse = in.pulse; st.red = in.red;
+        st.pulse = in.pulse; st.red = in.red; st.sleep = x[SLEEP];
 
         chains(in, first);
         started = true;
@@ -420,9 +424,10 @@ public final class BellAnim {
         // an arm a move has hold of does only what the move asks (his swimming doesn't pull it about)
         float free = scripted(ch, st) ? 0f : 1f;
         // swimming: each pulse swings them out a little, the lower segments later and more
-        float out = free * st.armSwing * (0.05f + 0.03f * sg) * (st.pulse - 0.35f);
-        // a slow curl in and out while he idles
-        if (sg > 0) out -= free * 0.05f * (1f + (float) Math.sin(t * 0.03f + ph)) * (0.6f + 0.4f * sg / (float) m);
+        float awake = 1f - 0.8f * st.sleep;
+        float out = free * awake * st.armSwing * (0.05f + 0.03f * sg) * (st.pulse - 0.35f);
+        // a slow curl in and out while he idles (asleep, hardly at all)
+        if (sg > 0) out -= free * awake * 0.05f * (1f + (float) Math.sin(t * 0.03f + ph)) * (0.6f + 0.4f * sg / (float) m);
         // climbing: folded in under him; sinking: spread out and up
         float open = free * Math.max(st.sink, st.spread);
         if (sg == 0) out += -0.28f * st.climb * free + 0.45f * open;
@@ -468,7 +473,7 @@ public final class BellAnim {
         float t = st.time;
         float ph = S.k() * 2.39f;
         // sway, a little more at the bottom
-        float amp = 0.018f + 0.006f * sg;
+        float amp = (0.018f + 0.006f * sg) * (1f - 0.7f * st.sleep);
         local.rotateX(amp * (float) Math.sin(t * 0.045f + ph + sg * 0.7f)).rotateZ(amp * (float) Math.cos(t * 0.039f + ph * 1.3f + sg * 0.6f));
         Vector3f top = S.joints()[0];
         float ox = top.x, oz = top.z;
@@ -538,6 +543,7 @@ public final class BellAnim {
         out.podSwell = Mth.lerp(k, xl[SWELL], x[SWELL]);
         out.eggShake = Mth.lerp(k, xl[SHAKE], x[SHAKE]);
         out.spin = Mth.lerp(k, xl[SPIN], x[SPIN]);
+        out.sleep = Mth.lerp(k, xl[SLEEP], x[SLEEP]);
         out.driftX = st.driftX; out.driftY = st.driftY; out.driftZ = st.driftZ;
         out.climb = st.climb; out.sink = st.sink; out.fold = st.fold; out.pulse = st.pulse; out.red = st.red;
         for (int c = 0; c < st.chain.length; c++) {

@@ -1,7 +1,6 @@
 package net.jj.hollowbell.client;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.net.CodexOrders;
@@ -18,11 +17,12 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The Hollowbell Codex, open. Laid out like the Mountain's and Furrowmaw's: four pages (orders, moves, him, and
- * the safe list), with how far he is, his health, mood and what he's doing above them, and his wind and grudge bars.
+ * The Hollowbell Codex, open. The same frame as the other giants' books: the title and a close button, a status
+ * line, his health and pods, his wind and grudge, and four pages (orders, moves, him, and the safe list).
  */
 public class CodexScreen extends Screen {
     private static final int W = 164, H = 20, GAP = 4;
@@ -46,17 +46,20 @@ public class CodexScreen extends Screen {
     /** his wind and how much he holds against you, as last heard (for the riding screen too) */
     public static float wind() { return mWind; }
     public static float grudge() { return mSour; }
-    private static int mStage, mHuntDays;
+    private static int mStage, mHuntDays, mFlags;
 
     public static void mood(MoodPayload p) {
-        boolean moved = mStage != p.stage();
-        mWind = p.wind(); mSour = p.sour(); mStage = p.stage(); mHuntDays = p.huntDays();
+        boolean moved = mStage != p.stage() || mFlags != p.flags();
+        mWind = p.wind(); mSour = p.sour(); mStage = p.stage(); mHuntDays = p.huntDays(); mFlags = p.flags();
         if (moved && Minecraft.getInstance().screen instanceof CodexScreen c) c.rebuild();
     }
 
+    /** the server's own switches, as it last said (never this game's settings file: on a server they differ) */
+    private static boolean flag(int f) { return (mFlags & f) != 0; }
+
     public static void forgetEverything() {
         java.util.Arrays.fill(used, Long.MIN_VALUE / 4);
-        mWind = 1f; mSour = 0f; mStage = 0; mHuntDays = 0;
+        mWind = 1f; mSour = 0f; mStage = 0; mHuntDays = 0; mFlags = 0;
         safeNames = java.util.List.of(); safeIds = java.util.List.of(); safeFrom = 0;
     }
 
@@ -64,10 +67,10 @@ public class CodexScreen extends Screen {
     static { java.util.Arrays.fill(used, Long.MIN_VALUE / 4); }
 
     private @Nullable EditBox boxX, boxZ, boxR;
-    private boolean asked;
     private final java.util.List<Button> moveLines = new java.util.ArrayList<>();
     private final java.util.List<Integer> moveIds = new java.util.ArrayList<>();
     private static String lastX = "", lastZ = "", lastR = "200";
+    private int sendLabel = -1, areaLabel = -1;
 
     public CodexScreen() { super(Component.translatable("item.hollowbell.hollowbell_codex")); }
 
@@ -94,33 +97,45 @@ public class CodexScreen extends Screen {
         int a = p.action();
         if (a == CodexPayload.ATTACK_MOVE) { used[p.arg()] = now(); used[0] = now(); }
         mWind = Math.max(0f, mWind - CodexOrders.windCost(a, p.arg()));
+        // the orders that need you to look at something close the book; everything else leaves it open
         boolean leaves = a == CodexPayload.RIDE || a == CodexPayload.GO_THERE || a == CodexPayload.ATTACK_THAT || a == CodexPayload.WHERE
-                || a == CodexPayload.SPARE_LOOK || a == CodexPayload.ATTACK_MOVE;
+                || a == CodexPayload.SPARE_LOOK || a == CodexPayload.SPARE_KIND;
         if (leaves) onClose(); else rebuild();
     }
 
     private void rebuild() {
-        if (boxX != null) lastX = boxX.getValue();
-        if (boxZ != null) lastZ = boxZ.getValue();
-        if (boxR != null) lastR = boxR.getValue();
         clearWidgets();
         init();
     }
 
     private int left() { return this.width / 2 - W - GAP / 2; }
-    private int top() { return Math.max(70, this.height / 2 - 86); }
+    private int top() { return Math.max(92, this.height / 2 - 80); }
+    /** how far apart the rows are: a little tighter on a short screen, so the last row still fits */
+    private int pitch() { return Mth.clamp((this.height - top() - 22) / 7, 21, 24); }
 
     private Button at(int col, int row, Component label, Button.OnPress press) {
-        return Button.builder(label, press).bounds(left() + col * (W + GAP), top() + row * (H + GAP), W, H).build();
+        return Button.builder(label, press).bounds(left() + col * (W + GAP), top() + row * pitch(), W, H).build();
     }
 
-    private Button line(int col, int row, String key, CodexPayload p) {
-        return at(col, row, Component.translatable("codex.hollowbell." + key), b -> send(p));
+    /** an order button, with what it does and what it costs him in its tooltip */
+    private Button line(int col, int row, String key, String tip, CodexPayload p) {
+        Button b = at(col, row, Component.translatable("codex.hollowbell." + key), x -> send(p));
+        b.setTooltip(Tooltip.create(orderTip(tip, p.action(), p.arg())));
+        return b;
+    }
+
+    private static Component orderTip(String key, int action, int arg) {
+        Component t = Component.translatable("codex.hollowbell.order_tip." + key);
+        float cost = CodexOrders.windCost(action, arg);
+        if (cost > 0f) t = t.copy().append(CommonComponents.NEW_LINE)
+                .append(Component.translatable("codex.hollowbell.costs", Math.round(cost * 100f)).withStyle(ChatFormatting.GRAY));
+        return t;
     }
 
     @Override
     protected void init() {
         HollowbellEntity m = him();
+        sendLabel = -1; areaLabel = -1;
         int tw = (W * 2 + GAP - 3 * 2) / 4;
         String[] tabs = {"tab_orders", "tab_moves", "tab_him", "tab_safe"};
         for (int i = 0; i < 4; i++) {
@@ -131,49 +146,64 @@ public class CodexScreen extends Screen {
         }
         if (page == 0) ordersPage(m);
         else if (page == 1) movesPage();
-        else if (page == 2) himPage();
+        else if (page == 2) himPage(m);
         else safePage();
-        addRenderableWidget(at(1, 6, Component.translatable("codex.hollowbell.close"), b -> onClose()));
-        if (!asked) { asked = true; ClientPlayNetworking.send(new CodexPayload(CodexPayload.SAFE_GET)); }
+        // close: a small ✕ at the top right (Escape works too)
+        Button close = Button.builder(Component.literal("✕"), b -> onClose()).bounds(left() + W * 2 + GAP - 20, top() - 90, 20, 20).build();
+        close.setTooltip(Tooltip.create(Component.translatable("codex.hollowbell.close")));
+        addRenderableWidget(close);
+    }
+
+    @Override
+    public void added() {
+        super.added();
+        // the safe list and the server's switches, fresh each time the book opens
+        ClientPlayNetworking.send(new CodexPayload(CodexPayload.SAFE_GET));
     }
 
     private void ordersPage(@Nullable HollowbellEntity m) {
-        addRenderableWidget(line(0, 0, "come", new CodexPayload(CodexPayload.COME)));
-        addRenderableWidget(line(1, 0, "go_there", new CodexPayload(CodexPayload.GO_THERE)));
-        addRenderableWidget(line(0, 1, "attack_that", new CodexPayload(CodexPayload.ATTACK_THAT)));
-        addRenderableWidget(line(1, 1, "call_off", new CodexPayload(CodexPayload.CALL_OFF)));
-        addRenderableWidget(line(0, 2, m != null && m.staying() ? "let_go_of_him" : "stay", new CodexPayload(CodexPayload.STAY)));
-        addRenderableWidget(line(1, 2, m != null && m.ridden() ? "get_off" : "ride", new CodexPayload(CodexPayload.RIDE)));
-        addRenderableWidget(line(0, 3, "drop_all", new CodexPayload(CodexPayload.LET_GO)));
-        addRenderableWidget(at(1, 3, Component.translatable("codex.hollowbell.where"), b -> send(new CodexPayload(CodexPayload.WHERE))));
-        int bw = (W * 2 + GAP - 96) / 2;
-        int y = top() + 4 * (H + GAP) + 4;
+        addRenderableWidget(line(0, 0, "come", "come", new CodexPayload(CodexPayload.COME)));
+        addRenderableWidget(line(1, 0, "go_there", "go_there", new CodexPayload(CodexPayload.GO_THERE)));
+        addRenderableWidget(line(0, 1, "attack_that", "attack_that", new CodexPayload(CodexPayload.ATTACK_THAT)));
+        addRenderableWidget(line(1, 1, "call_off", "call_off", new CodexPayload(CodexPayload.CALL_OFF)));
+        addRenderableWidget(line(0, 2, m != null && m.staying() ? "let_go_of_him" : "stay", "stay", new CodexPayload(CodexPayload.STAY)));
+        addRenderableWidget(line(1, 2, "drop_all", "drop_all", new CodexPayload(CodexPayload.LET_GO)));
+        addRenderableWidget(line(0, 3, m != null && m.ridden() ? "get_off" : "ride", "ride", new CodexPayload(CodexPayload.RIDE)));
+        addRenderableWidget(line(1, 3, "where", "where", new CodexPayload(CodexPayload.WHERE)));
+        // send him to a spot: type an X and a Z (or fill them with where you're standing)
+        int bw = 90;
+        int y = top() + 5 * pitch();
+        sendLabel = y - 11;
         boxX = new EditBox(this.font, left(), y, bw, H, Component.literal("X"));
         boxZ = new EditBox(this.font, left() + bw + GAP, y, bw, H, Component.literal("Z"));
         boxX.setHint(Component.literal("X")); boxZ.setHint(Component.literal("Z"));
         boxX.setValue(lastX); boxZ.setValue(lastZ);
         boxX.setFilter(CodexScreen::number); boxZ.setFilter(CodexScreen::number);
+        boxX.setResponder(v -> lastX = v); boxZ.setResponder(v -> lastZ = v);
         addRenderableWidget(boxX); addRenderableWidget(boxZ);
-        addRenderableWidget(Button.builder(Component.translatable("codex.hollowbell.send"), b -> sendToSpot())
-                .bounds(left() + 2 * (bw + GAP), y, 92 - GAP, H).build());
-        addRenderableWidget(at(0, 5, Component.translatable("codex.hollowbell.here"), b -> {
+        Button here = Button.builder(Component.translatable("codex.hollowbell.here"), b -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null) return;
-            String px = String.valueOf((int) mc.player.getX()), pz = String.valueOf((int) mc.player.getZ());
-            if (boxX != null) boxX.setValue(px);
-            if (boxZ != null) boxZ.setValue(pz);
-            lastX = px; lastZ = pz;
-        }));
+            lastX = String.valueOf(Mth.floor(mc.player.getX()));
+            lastZ = String.valueOf(Mth.floor(mc.player.getZ()));
+            if (boxX != null) boxX.setValue(lastX);
+            if (boxZ != null) boxZ.setValue(lastZ);
+        }).bounds(left() + 2 * (bw + GAP), y, 68, H).build();
+        here.setTooltip(Tooltip.create(Component.translatable("codex.hollowbell.order_tip.here")));
+        addRenderableWidget(here);
+        int sx = left() + 2 * (bw + GAP) + 72;
+        Button go = Button.builder(Component.translatable("codex.hollowbell.send"), b -> sendToSpot())
+                .bounds(sx, y, left() + W * 2 + GAP - sx, H).build();
+        go.setTooltip(Tooltip.create(orderTip("send", CodexPayload.GO_TO_XZ, 0)));
+        addRenderableWidget(go);
     }
 
     private static boolean number(String s) { return s.isEmpty() || s.equals("-") || s.matches("-?\\d{0,8}"); }
 
     private void sendToSpot() {
-        String xs = boxX == null ? lastX : boxX.getValue(), zs = boxZ == null ? lastZ : boxZ.getValue();
-        if (xs.isEmpty() || zs.isEmpty()) return;
+        if (lastX.isEmpty() || lastZ.isEmpty() || lastX.equals("-") || lastZ.equals("-")) return;
         try {
-            send(new CodexPayload(CodexPayload.GO_TO_XZ, 0, Double.parseDouble(xs) + 0.5, Double.parseDouble(zs) + 0.5));
-            onClose();
+            send(new CodexPayload(CodexPayload.GO_TO_XZ, 0, Double.parseDouble(lastX) + 0.5, Double.parseDouble(lastZ) + 0.5));
         } catch (NumberFormatException ignored) {}
     }
 
@@ -199,7 +229,6 @@ public class CodexScreen extends Screen {
             final int which = which0;
             Button b = at(idx % 2, 1 + idx / 2, Component.empty(), x -> send(new CodexPayload(CodexPayload.ATTACK_MOVE, which)));
             idx++;
-            int i = which;
             float cost = CodexOrders.windCost(CodexPayload.ATTACK_MOVE, which);
             Component tip = Component.translatable("codex.hollowbell.move_tip." + Moves.NAMES[which]).copy().append(CommonComponents.NEW_LINE)
                     .append(Component.translatable("codex.hollowbell.costs", Math.round(cost * 100f)).withStyle(ChatFormatting.GRAY));
@@ -207,54 +236,67 @@ public class CodexScreen extends Screen {
                 tip = tip.copy().append(CommonComponents.NEW_LINE).append(Component.translatable("codex.hollowbell.takes_it_badly").withStyle(ChatFormatting.RED));
             b.setTooltip(Tooltip.create(tip));
             addRenderableWidget(b);
-            moveLines.add(b); moveIds.add(i);
+            moveLines.add(b); moveIds.add(which);
         }
         tickMoveLines();
     }
 
+    /** a move line goes dark (and can't be pressed) when: he's out of reach, cooling down, busy, worn out, out of wind */
     private void tickMoveLines() {
+        HollowbellEntity m = him();
+        boolean have = m != null;
         for (int k = 0; k < moveLines.size(); k++) {
             int which = moveIds.get(k);
             long left = coolLeft(which);
             Component name = Component.translatable("move.hollowbell." + Moves.NAMES[which]);
             float cost = CodexOrders.windCost(CodexPayload.ATTACK_MOVE, which);
-            boolean winded = mWind + 1.0E-4f < cost;
+            Component dim = null;
+            if (!have) dim = name;
+            else if (left > 0) dim = Component.literal(name.getString() + "  " + (int) Math.ceil(left / 20.0) + "s");
+            else if (m.moveNow() != Moves.NONE) dim = name.copy().append(Component.translatable("codex.hollowbell.busy"));
+            else if (m.tired()) dim = name.copy().append(Component.translatable("codex.hollowbell.worn_out"));
+            else if (mWind + 1.0E-4f < cost) dim = name.copy().append(Component.translatable("codex.hollowbell.no_wind"));
             Button b = moveLines.get(k);
-            b.setMessage(left > 0 ? name.copy().append(Component.literal("  " + (int) Math.ceil(left / 20.0) + "s")).withStyle(ChatFormatting.DARK_GRAY)
-                    : winded ? name.copy().append(Component.translatable("codex.hollowbell.no_wind")).withStyle(ChatFormatting.DARK_GRAY) : name);
-            b.active = left <= 0 && !winded;
+            b.setMessage(dim == null ? name : dim.copy().withStyle(ChatFormatting.DARK_GRAY));
+            b.active = dim == null;
         }
     }
 
-    private void himPage() {
-        addRenderableWidget(line(0, 0, "calm", new CodexPayload(CodexPayload.CALM)));
-        addRenderableWidget(line(1, 0, "hunting", new CodexPayload(CodexPayload.HUNTER)));
-        addRenderableWidget(line(0, 1, "guardian", new CodexPayload(CodexPayload.GUARDIAN)));
-        addRenderableWidget(line(1, 1, "forgive", new CodexPayload(CodexPayload.FORGIVE)));
-        boolean grief = HollowbellConfig.V.griefing, harvest = HollowbellConfig.V.harvest;
-        addRenderableWidget(line(0, 2, grief ? "break_stop" : "break_start", new CodexPayload(CodexPayload.BREAK_BLOCKS, grief ? 0 : 1)));
-        addRenderableWidget(line(1, 2, harvest ? "harvest_stop" : "harvest_start", new CodexPayload(CodexPayload.HARVEST, harvest ? 0 : 1)));
-        // keep him to a circle round where you stand: how many blocks, then the two buttons
-        int y = top() + 3 * (H + GAP);
-        boxR = new EditBox(this.font, left(), y, 56, H, Component.literal("R"));
-        boxR.setHint(Component.literal("200"));
+    private void himPage(@Nullable HollowbellEntity m) {
+        addRenderableWidget(line(0, 0, "calm", "calm", new CodexPayload(CodexPayload.CALM)));
+        addRenderableWidget(line(1, 0, "hunting", "hunting", new CodexPayload(CodexPayload.HUNTER)));
+        addRenderableWidget(line(0, 1, "guardian", "guardian", new CodexPayload(CodexPayload.GUARDIAN)));
+        addRenderableWidget(line(1, 1, "forgive", "forgive", new CodexPayload(CodexPayload.FORGIVE)));
+        boolean grief = flag(MoodPayload.GRIEF), harvest = flag(MoodPayload.HARVEST);
+        addRenderableWidget(line(0, 2, grief ? "break_stop" : "break_start", "blocks", new CodexPayload(CodexPayload.BREAK_BLOCKS, grief ? 0 : 1)));
+        addRenderableWidget(line(1, 2, harvest ? "harvest_stop" : "harvest_start", "harvest", new CodexPayload(CodexPayload.HARVEST, harvest ? 0 : 1)));
+        boolean asleep = flag(MoodPayload.ASLEEP);
+        addRenderableWidget(line(0, 3, asleep ? "wake" : "sleep", asleep ? "wake" : "sleep", new CodexPayload(CodexPayload.SLEEP)));
+        // keep him to an area: how far, then round where you stand (or let him roam again)
+        int y = top() + 5 * pitch();
+        areaLabel = y - 11;
+        boxR = new EditBox(this.font, left(), y, 60, H, Component.literal("R"));
         boxR.setValue(lastR);
         boxR.setFilter(s -> s.isEmpty() || s.matches("\\d{0,6}"));
+        boxR.setResponder(v -> lastR = v);
+        boxR.setTooltip(Tooltip.create(Component.translatable("codex.hollowbell.order_tip.area_blocks")));
         addRenderableWidget(boxR);
         Button keep = Button.builder(Component.translatable("codex.hollowbell.keep_here"), b -> {
             int r = 200;
-            try { if (boxR != null && !boxR.getValue().isEmpty()) r = Integer.parseInt(boxR.getValue()); } catch (NumberFormatException ignored) {}
-            if (boxR != null) lastR = boxR.getValue();
+            try { if (!lastR.isEmpty()) r = Integer.parseInt(lastR); } catch (NumberFormatException ignored) {}
             send(new CodexPayload(CodexPayload.BIND_HERE, Math.max(32, Math.min(100000, r))));
-        }).bounds(left() + 56 + GAP, y, W - 56 - GAP, H).build();
-        keep.setTooltip(Tooltip.create(Component.translatable("codex.hollowbell.keep_here_tip")));
+        }).bounds(left() + 64, y, 132, H).build();
+        keep.setTooltip(Tooltip.create(orderTip("keep_here", CodexPayload.BIND_HERE, 200)));
         addRenderableWidget(keep);
-        addRenderableWidget(line(1, 3, "let_roam", new CodexPayload(CodexPayload.FREE_ROAM)));
+        Button roam = Button.builder(Component.translatable("codex.hollowbell.let_roam"), b -> send(new CodexPayload(CodexPayload.FREE_ROAM)))
+                .bounds(left() + 200, y, 132, H).build();
+        roam.setTooltip(Tooltip.create(orderTip("let_roam", CodexPayload.FREE_ROAM, 0)));
+        addRenderableWidget(roam);
     }
 
     private void safePage() {
-        addRenderableWidget(line(0, 0, "spare_look", new CodexPayload(CodexPayload.SPARE_LOOK)));
-        addRenderableWidget(line(1, 0, "spare_near", new CodexPayload(CodexPayload.SPARE_NEAR)));
+        addRenderableWidget(line(0, 0, "spare_look", "spare_look", new CodexPayload(CodexPayload.SPARE_LOOK)));
+        addRenderableWidget(line(1, 0, "spare_kind", "spare_kind", new CodexPayload(CodexPayload.SPARE_KIND)));
         int total = Math.min(safeNames.size(), safeIds.size());
         boolean paged = total > 8;
         int fit = paged ? 6 : 8;
@@ -272,7 +314,8 @@ public class CodexScreen extends Screen {
             addRenderableWidget(at(1, 4, Component.translatable("codex.hollowbell.list_on", Math.max(0, total - here - 6)),
                     b -> { safeFrom = here + 6 >= total ? 0 : here + 6; rebuild(); }));
         }
-        addRenderableWidget(line(0, 5, "spare_me", new CodexPayload(CodexPayload.SPARE_ME)));
+        addRenderableWidget(line(0, 5, "spare_me", "spare_me", new CodexPayload(CodexPayload.SPARE_ME)));
+        addRenderableWidget(line(1, 5, "spare_near", "spare_near", new CodexPayload(CodexPayload.SPARE_NEAR)));
     }
 
     @Override
@@ -280,7 +323,7 @@ public class CodexScreen extends Screen {
         if (page == 1) tickMoveLines();
         renderBackground(g, mx, my, partial);
         super.render(g, mx, my, partial);
-        g.drawCenteredString(this.font, this.title, this.width / 2, top() - 64, 0xFF9FE0C4);
+        g.drawCenteredString(this.font, this.title, this.width / 2, top() - 88, 0xFFE9C9BC);
         Minecraft mc = Minecraft.getInstance();
         HollowbellEntity m = him();
         Component where;
@@ -290,35 +333,40 @@ public class CodexScreen extends Screen {
             int hpPct = Math.round(100f * m.healthNow() / Math.max(1f, m.healthMax()));
             where = Component.translatable("codex.hollowbell.status", d, hpPct, Component.translatable("mode.hollowbell." + m.variant()),
                     Component.translatable("doing.hollowbell." + CodexOrders.doing(m))).withStyle(ChatFormatting.GRAY);
+            if (mStage > 0) where = where.copy().append(Component.literal("  "))
+                    .append(Component.translatable("mood.hollowbell." + mStage).withStyle(mStage >= 3 ? ChatFormatting.RED : ChatFormatting.GOLD));
         }
-        if (mStage > 0) where = where.copy().append(Component.literal("  "))
-                .append(Component.translatable("mood.hollowbell." + mStage).withStyle(mStage >= 3 ? ChatFormatting.RED : ChatFormatting.GOLD));
-        g.drawCenteredString(this.font, where, this.width / 2, top() - 52, 0xFFBBBBBB);
-        int by = top() - 40;
-        meter(g, left(), by, W, "wind", mWind, mWind > 0.5f ? 0xFF5FBF6A : mWind > 0.2f ? 0xFFD8A63A : 0xFFB0432A);
-        meter(g, left() + W + GAP, by, W, "grudge", mSour, mSour < 0.5f ? 0xFF8A4A3A : 0xFFD03018);
+        g.drawCenteredString(this.font, where, this.width / 2, top() - 76, 0xFFBBBBBB);
+        if (m != null) {
+            int by = top() - 62;
+            float hp = m.healthNow() / Math.max(1f, m.healthMax());
+            meter(g, left(), by, W, Component.translatable("codex.hollowbell.health"), hp, 0xFFB0432A);
+            meter(g, left() + W + GAP, by, W, Component.translatable("codex.hollowbell.pods"), m.podsLeft() / (float) Math.max(1, m.rig.pods.length), 0xFFD8A63A);
+            meter(g, left(), by + 12, W, Component.translatable("codex.hollowbell.wind"), mWind, mWind > 0.5f ? 0xFF5FBF6A : mWind > 0.2f ? 0xFFD8A63A : 0xFFB0432A);
+            meter(g, left() + W + GAP, by + 12, W, Component.translatable("codex.hollowbell.grudge"), mSour, mSour < 0.5f ? 0xFF8A4A3A : 0xFFD03018);
+        }
         if (mHuntDays > 0)
-            g.drawCenteredString(this.font, Component.translatable("codex.hollowbell.hunted", mHuntDays).withStyle(ChatFormatting.RED), this.width / 2, top() - 76, 0xFFFF5555);
-        if (m != null && page != 3) {
-            // his pods, small, under the pages
-            Component bars = Component.translatable(m.sunk() ? "codex.hollowbell.parts_sunk" : "codex.hollowbell.parts", m.podsLeft(), m.rig.pods.length);
-            g.drawString(this.font, bars, left() + 2, top() + 6 * (H + GAP) + 6, 0xFF9FE0C4, false);
-        }
+            g.drawCenteredString(this.font, Component.translatable("codex.hollowbell.hunted", mHuntDays).withStyle(ChatFormatting.RED), this.width / 2, top() - 36, 0xFFFF5555);
+        if (page == 0 && sendLabel >= 0)
+            g.drawString(this.font, Component.translatable("codex.hollowbell.send_label").withStyle(ChatFormatting.GRAY), left() + 2, sendLabel, 0xFFBBBBBB, false);
+        if (page == 2 && areaLabel >= 0)
+            g.drawString(this.font, Component.translatable("codex.hollowbell.area_label").withStyle(ChatFormatting.GRAY), left() + 2, areaLabel, 0xFFBBBBBB, false);
         if (page == 3) {
             Component note = !safeHasBook ? Component.translatable("codex.hollowbell.list_nobook").withStyle(ChatFormatting.RED)
                     : safeInForce ? Component.translatable("codex.hollowbell.list_in_force", safeNames.size()).withStyle(ChatFormatting.GREEN)
                     : Component.translatable("codex.hollowbell.list_off").withStyle(ChatFormatting.RED);
-            g.drawString(this.font, note, left() + 2, top() + 6 * (H + GAP) + 6, 0xFFBBBBBB, false);
+            int ny = top() + 6 * pitch() + 4;
+            g.drawString(this.font, note, left() + 2, ny, 0xFFBBBBBB, false);
+            g.drawString(this.font, Component.translatable("codex.hollowbell.list_pets").withStyle(ChatFormatting.DARK_GRAY), left() + 2, ny + 11, 0xFF777777, false);
         }
     }
 
-    private void meter(GuiGraphics g, int x, int y, int w, String key, float v, int colour) {
-        Component lab = Component.translatable("codex.hollowbell." + key);
+    private void meter(GuiGraphics g, int x, int y, int w, Component lab, float v, int colour) {
         g.drawString(this.font, lab, x, y, 0xFF999999, false);
         int lw = this.font.width(lab) + 4;
         int bx = x + lw, bw = Math.max(8, w - lw);
         g.fill(bx, y - 1, bx + bw, y + 9, 0xFF1A1A1A);
-        int fill = (int) ((bw - 2) * net.minecraft.util.Mth.clamp(v, 0f, 1f));
+        int fill = (int) ((bw - 2) * Mth.clamp(v, 0f, 1f));
         if (fill > 0) g.fill(bx + 1, y, bx + 1 + fill, y + 8, colour);
     }
 

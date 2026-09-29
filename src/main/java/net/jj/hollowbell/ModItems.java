@@ -27,9 +27,9 @@ import java.util.Map;
 
 public final class ModItems {
     public static final Item CALM_EGG = egg("calm_hollowbell_spawn_egg", 0, 0x52A284, 0xE5E1CF);
-    public static final Item HUNTING_EGG = egg("hunting_hollowbell_spawn_egg", 1, 0x52A284, 0x70B919);
-    public static final Item GUARDIAN_EGG = egg("guardian_hollowbell_spawn_egg", 2, 0x52A284, 0xF8C527);
-    public static final Item SMALL_EGG = egg("small_hollowbell_spawn_egg", 3, 0x6C996E, 0xE5E1CF);
+    public static final Item HUNTING_EGG = egg("hunting_hollowbell_spawn_egg", 1, 0x52A284, 0xE0662A);
+    public static final Item GUARDIAN_EGG = egg("guardian_hollowbell_spawn_egg", 2, 0x52A284, 0x2E8B3A);
+    public static final Item SMALL_EGG = egg("small_hollowbell_spawn_egg", 3, 0x8CC7AE, 0xE5E1CF);
     public static final Item BELLING_EGG = reg("belling_spawn_egg", new SpawnEggItem(ModEntities.BELLING, 0x3E4447, 0xE5941D, new Item.Properties()));
 
     public static final Item POD = reg("hollowbell_pod", new Item(new Item.Properties().rarity(Rarity.UNCOMMON)));
@@ -37,7 +37,16 @@ public final class ModItems {
     public static final Item STINGER = reg("stinger", new StingerItem(Tiers.NETHERITE,
             new Item.Properties().rarity(Rarity.EPIC).fireResistant().attributes(SwordItem.createAttributes(Tiers.NETHERITE, 4, -2.2f))));
     public static final Item CODEX = reg("hollowbell_codex", new CodexItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
-    public static final Item CROWN = reg("hollowbell_crown", new BlockItem(ModBlocks.CROWN, new Item.Properties().rarity(Rarity.EPIC)));
+    public static final Item CROWN = reg("hollowbell_crown", new BlockItem(ModBlocks.CROWN, new Item.Properties().rarity(Rarity.EPIC)) {
+        @Override
+        public void appendHoverText(net.minecraft.world.item.ItemStack stack, TooltipContext ctx, List<net.minecraft.network.chat.Component> tip, net.minecraft.world.item.TooltipFlag flag) {
+            tip.add(net.minecraft.network.chat.Component.translatable("item.hollowbell.hollowbell_crown.tip1").withStyle(net.minecraft.ChatFormatting.GRAY));
+            tip.add(net.minecraft.network.chat.Component.translatable("item.hollowbell.hollowbell_crown.tip2", HollowbellConfig.V.wardBlocks,
+                    Math.max(1, HollowbellConfig.V.wardSeconds / 60)).withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
+            tip.add(net.minecraft.network.chat.Component.translatable("item.hollowbell.hollowbell_crown.tip3",
+                    Math.max(0, HollowbellConfig.V.wardRestSeconds / 60)).withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        }
+    });
     /** the blocks of his ground */
     public static final Item BELL_CALCITE = reg("bell_calcite", new BlockItem(ModBlocks.BELL_CALCITE, new Item.Properties()));
     public static final Item TENDRIL_GLASS = reg("tendril_glass", new BlockItem(ModBlocks.TENDRIL_GLASS, new Item.Properties()));

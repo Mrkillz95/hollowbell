@@ -29,6 +29,8 @@ public final class BellState {
     public float droop;
     /** how bright the glowing parts are pushed (a flash, a wind-up), 0 normal */
     public float glow;
+    /** asleep: 0 awake, 1 fast asleep (hanging low, the bell slack, the glow dim, arms and strands laid down) */
+    public float sleep;
     /** the pods swelling (pod burst), the egg clumps shaking (spore cloud, egg rain) */
     public float podSwell, eggShake;
     /** below half health: the lime loops on his arms turn red */
