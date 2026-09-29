@@ -339,10 +339,7 @@ public final class CodexOrders {
         switch (pay.action()) {
             case CodexPayload.WHERE -> {
                 Vec3 s = r.spot(now);
-                double dx = s.x - p.getX(), dz = s.z - p.getZ();
-                int seg = (int) Math.round(Math.atan2(dx, dz) / (Math.PI / 4)) & 7;
-                String[] way = {"south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"};
-                say(p, "compass", (int) Math.sqrt(dx * dx + dz * dz), way[seg], (int) s.x, (int) s.z);
+                p.displayClientMessage(net.jj.hollowbell.item.FinderItem.found(sl, p.position(), s.x, s.z), false);
                 if (r.going) say2(p, "compass_away_going", (int) r.toX, (int) r.toZ, Math.max(1, r.minutesLeft(now)));
                 else say2(p, "compass_away_still");
                 return;
@@ -438,11 +435,7 @@ public final class CodexOrders {
 
     private static void where(ServerPlayer p, @Nullable HollowbellEntity m) {
         if (m == null) { say(p, "codex_none"); return; }
-        double dx = m.getX() - p.getX(), dz = m.getZ() - p.getZ();
-        int dist = (int) Math.sqrt(dx * dx + dz * dz);
-        int seg = (int) Math.round(Math.atan2(dx, dz) / (Math.PI / 4)) & 7;
-        String[] way = {"south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"};
-        say(p, "compass", dist, way[seg], (int) m.getX(), (int) m.getZ());
+        p.displayClientMessage(net.jj.hollowbell.item.FinderItem.found(p.serverLevel(), p.position(), m.getX(), m.getZ()), false);
         say2(p, "compass_doing", Component.translatable("doing.hollowbell." + doing(m)));
     }
 

@@ -22,7 +22,8 @@ import java.util.List;
 
 /**
  * There is one of him in the world, always. A brand-new world quietly picks a spot far away — open, flattish
- * land — and the ground there becomes his own: the Bell Hollows (see {@link HomeGround}). When he is killed the
+ * land the world hasn't made yet — and claims the ground there as his own before any of it is made: the Bell
+ * Hollows (see {@link BellGen}), made by the world's own generation. When he is killed the
  * world picks a new spot a long way from where he fell, claims new ground there, and another comes down out of
  * the sky a while later. This also keeps the woken crown's ward, and holds the world to its limit of him.
  */
@@ -41,78 +42,36 @@ public class WorldOne extends SavedData {
     private @Nullable java.util.UUID oneId;
 
     // ------------------------------------------------------------------ his ground (the Bell Hollows)
-    /** where his ground lies, how far it reaches, the seed that shapes its edge, and the chunks already made his */
+    /** where his ground lies, how far it reaches, and the seed that shapes it */
     private int homeX, homeZ, homeRadius;
     private long homeSeed;
     private boolean homeClaimed;
-    private final it.unimi.dsi.fastutil.longs.LongOpenHashSet painted = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
-    /** 1: the first, smaller Hollows (1.4); 2: the big one with hills, hollows, features and the den (1.5 on) */
+    /** 1: the first, smaller Hollows (1.4); 2: painted over loaded land (1.5); 3: made by the world's generation (1.6 on) */
     private int groundVersion = GROUND_VERSION;
-    public static final int GROUND_VERSION = 2;
-    /** chunks the first Hollows turned, waiting to be turned again the new way (unless people have lived there) */
-    private final it.unimi.dsi.fastutil.longs.LongOpenHashSet oldPainted = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
-    /** old chunks kept as they were because people had spent time in them, and ones /hollowbell ground renew let go */
-    private final it.unimi.dsi.fastutil.longs.LongOpenHashSet oldLived = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
-    private final it.unimi.dsi.fastutil.longs.LongOpenHashSet renew = new it.unimi.dsi.fastutil.longs.LongOpenHashSet();
+    public static final int GROUND_VERSION = 3;
 
     public boolean homeClaimed() { return homeClaimed; }
     public int homeX() { return homeX; }
     public int homeZ() { return homeZ; }
     public int homeRadius() { return homeRadius; }
     public long homeSeed() { return homeSeed; }
-    public boolean paintedAlready(long chunkPos) { return painted.contains(chunkPos); }
-    public void notePainted(long chunkPos) { if (painted.add(chunkPos)) setDirty(); }
     public int groundVersion() { return groundVersion; }
-    /** was this chunk turned by the first Hollows? It is let go of either way. */
-    public boolean forgetOldPaint(long chunkPos) {
-        if (!oldPainted.remove(chunkPos)) return false;
-        setDirty();
-        return true;
-    }
-
-    /** an old chunk people had spent time in was kept as it was */
-    public void keptOld(long chunkPos) { if (oldLived.add(chunkPos)) setDirty(); }
-    public int paintedCount() { return painted.size(); }
-    public int oldWaiting() { return oldPainted.size(); }
-    public int oldKept() { return oldLived.size(); }
-
-    /**
-     * /hollowbell ground renew: the old chunks kept because people had been there are turned the new way after all,
-     * as they next load (anything built in them is still left alone, column by column). Returns how many.
-     */
-    public int renewOld() {
-        int n = oldLived.size();
-        for (long k : oldLived) { painted.remove(k); renew.add(k); }
-        oldLived.clear();
-        setDirty();
-        return n;
-    }
-
-    /** is this chunk one /hollowbell ground renew let go? It is taken off the list either way. */
-    public boolean takeRenew(long chunkPos) {
-        if (!renew.remove(chunkPos)) return false;
-        setDirty();
-        return true;
-    }
 
     /** how far a new ground reaches, from the settings */
     public static int configRadius() { return Mth.clamp(HollowbellConfig.V.homeRadius, 200, 2000); }
 
     /**
-     * A ground from before 1.5 (small, flat, plain): it keeps its centre and seed, grows to the new size, and the
-     * chunks it had turned are turned again the new way as they load, unless people have lived in them. A newer
-     * ground only ever grows, when the setting has been raised. Returns whether anything changed.
+     * A ground from before 1.6 keeps its centre and seed and grows to the new size if it was smaller. The land the
+     * world had already made stays exactly as it is (painted bits and all); only land not made yet comes out as his
+     * ground from now on. /hollowbell ground new claims a whole fresh one. Returns whether anything changed.
      */
     public boolean upgradeGround() {
         if (!homeClaimed) return false;
         boolean changed = false;
         if (groundVersion < GROUND_VERSION) {
-            oldPainted.addAll(painted);
-            painted.clear();
             groundVersion = GROUND_VERSION;
             changed = true;
-            HollowbellMod.LOG.info("The Bell Hollows at {}, {} grow to the new, bigger ground; {} chunks will be turned again",
-                    homeX, homeZ, oldPainted.size());
+            HollowbellMod.LOG.info("The Bell Hollows at {}, {} are from an older version: the land already made stays as it is", homeX, homeZ);
         }
         if (homeRadius < configRadius()) { homeRadius = configRadius(); changed = true; }
         if (changed) setDirty();
@@ -124,32 +83,35 @@ public class WorldOne extends SavedData {
         claimHome(level, atX, atZ);
         homeSeed = seed;
         setDirty();
+        BellGen.publish(this);
     }
 
-    /** for the tests: a ground as the first Hollows left it */
-    public void claimOldHome(int atX, int atZ, long seed) {
+    /** for the tests: a ground as an older version left it */
+    public void claimOldHome(int atX, int atZ, long seed, int version) {
         homeX = atX; homeZ = atZ; homeRadius = 320; homeSeed = seed; homeClaimed = true;
-        groundVersion = 1;
+        groundVersion = version;
         setDirty();
+        BellGen.publish(this);
     }
 
-    /** the ground round this spot becomes his. An old ground stays as it is: the land remembers him. */
+    /** the ground round this spot becomes his: from now on the world makes the land there as his */
     public void claimHome(ServerLevel level, int atX, int atZ) {
         homeX = atX; homeZ = atZ;
         homeRadius = configRadius();
         homeSeed = level.random.nextLong();
         homeClaimed = true;
         groundVersion = GROUND_VERSION;
-        setDirty();                  // chunks turned for an older ground stay noted, so they are never turned twice
-        HomeGround.claimed(level, this);
+        setDirty();
+        BellGen.publish(this);
         HollowbellMod.LOG.info("The Bell Hollows lie at {}, {}", atX, atZ);
     }
 
-    /** for the tests: the ground let go again, so nothing keeps painting near the arenas */
+    /** for the tests: the ground let go again, so nothing more is made as his */
     public void dropHome() {
-        homeClaimed = false; painted.clear(); oldPainted.clear(); oldLived.clear(); renew.clear();
+        homeClaimed = false;
         groundVersion = GROUND_VERSION;
         setDirty();
+        BellGen.publish(this);
     }
 
     /** for the tests: a world that has picked nothing yet, no ground, no ward */
@@ -158,6 +120,107 @@ public class WorldOne extends SavedData {
         cooldown = 0;
         forgetWard();
         dropHome();
+    }
+
+    // ------------------------------------------------------------------ claiming ground the world hasn't made yet
+
+    /** how many of the region files a circle round this spot would lie in exist already (0: none of it is made) */
+    public static int madeRegions(ServerLevel level, int cx, int cz, int r) {
+        java.nio.file.Path dir = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("region");
+        int n = 0;
+        for (int rx = Math.floorDiv(cx - r, 512); rx <= Math.floorDiv(cx + r, 512); rx++)
+            for (int rz = Math.floorDiv(cz - r, 512); rz <= Math.floorDiv(cz + r, 512); rz++)
+                if (java.nio.file.Files.exists(dir.resolve("r." + rx + "." + rz + ".mca"))) n++;
+        return n;
+    }
+
+    /** is anybody near enough that the land there is (or is about to be) made? */
+    private static boolean playersNear(ServerLevel level, int cx, int cz, int r) {
+        double reach = r + level.getServer().getPlayerList().getViewDistance() * 16 + 64;
+        for (var p : level.players()) if (Math.hypot(p.getX() - cx, p.getZ() - cz) < reach) return true;
+        return false;
+    }
+
+    /**
+     * Moves the chosen spot (x, z) until the whole of a new ground round it is land the world hasn't made yet: no
+     * region file for it on disk and nobody near it. Up to twenty hops, further out from the world's spawn each
+     * time; if all of them are made somewhere, the least-made spot is taken.
+     */
+    private void intoUnmadeLand(ServerLevel level) {
+        int r = configRadius();
+        BlockPos spawn = level.getSharedSpawnPos();
+        int bestX = x, bestZ = z, best = Integer.MAX_VALUE;
+        for (int tries = 0; tries < 20; tries++) {
+            int made = madeRegions(level, x, z, r) + (playersNear(level, x, z, r) ? 100 : 0);
+            if (made == 0) return;
+            if (made < best) { best = made; bestX = x; bestZ = z; }
+            double dx = x - spawn.getX(), dz = z - spawn.getZ(), len = Math.max(1, Math.hypot(dx, dz));
+            double a = Math.atan2(dz, dx) + (level.random.nextDouble() - 0.5) * 0.8;
+            double step = r * 1.5 + 256;
+            x = Mth.floor(spawn.getX() + Math.cos(a) * (len + step));
+            z = Mth.floor(spawn.getZ() + Math.sin(a) * (len + step));
+            findSpot(level);
+        }
+        x = bestX; z = bestZ;
+        HollowbellMod.LOG.info("No wholly unmade land found for the Bell Hollows; taking {}, {}", x, z);
+    }
+
+    /**
+     * A fresh ground in land the world hasn't made yet, claimed right away so the world makes it as his as it goes.
+     * The spot (x, z) is where the next one comes down: the middle of it.
+     */
+    private void claimFresh(ServerLevel level) {
+        intoUnmadeLand(level);
+        claimHome(level, x, z);
+    }
+
+    /**
+     * /hollowbell ground new: a whole new ground in land not made yet, far enough from the old one never to meet
+     * it. If he isn't out in the world right now, the next one comes down there. Returns the new middle.
+     */
+    public BlockPos newGround(ServerLevel level) {
+        int keepX = x, keepZ = z;
+        BlockPos from = homeClaimed ? new BlockPos(homeX, 0, homeZ) : level.getSharedSpawnPos();
+        double a = level.random.nextDouble() * Math.PI * 2;
+        double d = clearOfGround() + 200;
+        x = Mth.floor(from.getX() + Math.cos(a) * d);
+        z = Mth.floor(from.getZ() + Math.sin(a) * d);
+        findSpot(level);
+        keepOffOldGround();
+        claimFresh(level);
+        BlockPos at = new BlockPos(homeX, 0, homeZ);
+        if (alive) { x = keepX; z = keepZ; }
+        else { placed = true; if (dueAt < 0) dueAt = level.getGameTime(); }
+        setDirty();
+        return at;
+    }
+
+    /**
+     * The overworld has just been made, before any of its land (ServerWorldEvents.LOAD). His ground is chosen now,
+     * if the world keeps one of him and has none yet, so the world makes that land as his from the very start.
+     */
+    public static void worldLoaded(ServerLevel over) {
+        BellGen.capture(over);
+        WorldOne w = get(over.getServer());
+        w.upgradeGround();
+        if (!IN_TESTS && HollowbellConfig.V.oneInTheWorld && !w.homeClaimed) {
+            if (!w.placed) w.pickFirstSpot(over);
+            w.claimFresh(over);
+            w.placed = true;
+            if (!w.alive && w.dueAt < 0) w.dueAt = over.getGameTime();
+            w.setDirty();
+        }
+        BellGen.publish(w);
+    }
+
+    /** a brand new world: he is somewhere out there already, a few thousand blocks from where people start */
+    private void pickFirstSpot(ServerLevel level) {
+        BlockPos spawn = level.getSharedSpawnPos();
+        double a = level.random.nextDouble() * Math.PI * 2;
+        double d = 3000 + level.random.nextDouble() * 12000;
+        x = Mth.floor(spawn.getX() + Math.cos(a) * d);
+        z = Mth.floor(spawn.getZ() + Math.sin(a) * d);
+        findSpot(level);
     }
 
     // ------------------------------------------------------------------ the crown holding him off
@@ -229,10 +292,6 @@ public class WorldOne extends SavedData {
         w.homeX = tag.getInt("HomeX"); w.homeZ = tag.getInt("HomeZ");
         w.homeRadius = tag.contains("HomeRadius") ? tag.getInt("HomeRadius") : 320;
         w.homeSeed = tag.getLong("HomeSeed");
-        for (long k : tag.getLongArray("Painted")) w.painted.add(k);
-        for (long k : tag.getLongArray("PaintedV1")) w.oldPainted.add(k);
-        for (long k : tag.getLongArray("OldLived")) w.oldLived.add(k);
-        for (long k : tag.getLongArray("Renew")) w.renew.add(k);
         w.groundVersion = tag.contains("GroundVersion") ? tag.getInt("GroundVersion") : 1;
         w.upgradeGround();
         if (tag.contains("WardUntil")) {
@@ -256,11 +315,7 @@ public class WorldOne extends SavedData {
         tag.putInt("HomeX", homeX); tag.putInt("HomeZ", homeZ);
         tag.putInt("HomeRadius", homeRadius);
         tag.putLong("HomeSeed", homeSeed);
-        tag.putLongArray("Painted", painted.toLongArray());
         tag.putInt("GroundVersion", groundVersion);
-        if (!oldPainted.isEmpty()) tag.putLongArray("PaintedV1", oldPainted.toLongArray());
-        if (!oldLived.isEmpty()) tag.putLongArray("OldLived", oldLived.toLongArray());
-        if (!renew.isEmpty()) tag.putLongArray("Renew", renew.toLongArray());
         if (wardUntil > 0 || wardRestUntil > 0) {
             tag.putInt("WardX", wardX); tag.putInt("WardY", wardY); tag.putInt("WardZ", wardZ); tag.putString("WardDim", wardDim);
             tag.putLong("WardUntil", wardUntil); tag.putLong("WardRest", wardRestUntil);
@@ -346,6 +401,8 @@ public class WorldOne extends SavedData {
         z = Mth.floor(fz + Math.sin(a) * d);
         findSpot(level);
         keepOffOldGround();
+        // his new ground is claimed now, in land not made yet, so it is ready when he comes down
+        if (!IN_TESTS) claimFresh(level);
         placed = true;
         dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
         setDirty();
@@ -490,13 +547,9 @@ public class WorldOne extends SavedData {
         if (level.players().isEmpty()) return;
         MinecraftServer server = level.getServer();
 
-        if (!placed) {                                    // a brand new world: he is somewhere out there already
-            BlockPos spawn = level.getSharedSpawnPos();
-            double a = level.random.nextDouble() * Math.PI * 2;
-            double d = 3000 + level.random.nextDouble() * 12000;
-            x = Mth.floor(spawn.getX() + Math.cos(a) * d);
-            z = Mth.floor(spawn.getZ() + Math.sin(a) * d);
-            findSpot(level);
+        if (!placed) {                                    // natural spawning just turned on: he is somewhere out there already
+            pickFirstSpot(level);
+            if (!homeClaimed) claimFresh(level);
             placed = true; alive = false; dueAt = level.getGameTime();
             setDirty();
             HollowbellMod.LOG.info("A Hollowbell drifts near {}, {}", x, z);
@@ -596,9 +649,8 @@ public class WorldOne extends SavedData {
     }
 
     /**
-     * Puts one down at the chosen spot; only now is the chunk under him made. The ground there becomes the Bell
-     * Hollows, his own chunk is turned right away, and the rest follows as anybody comes near. He comes down out
-     * of the sky.
+     * Puts one down at the chosen spot, the middle of his ground; only now is the chunk under him made (as his
+     * ground, the claim came first). He comes down out of the sky.
      */
     private void put(ServerLevel level) {
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
@@ -608,10 +660,10 @@ public class WorldOne extends SavedData {
         e.setVariant(HollowbellEntity.CALM);
         e.markWorldOne();
         oneId = e.getUUID();                              // named first, so his arrival never meets the cap
+        // his ground was claimed long before, so the land here is made as his as this chunk is made
+        if (!homeClaimed) claimFresh(level);
         level.getChunkSource().addRegionTicket(TICKET, new ChunkPos(new BlockPos(x, 64, z)), 3, e.getId());
-        var chunk = level.getChunk(x >> 4, z >> 4);
-        claimHome(level, x, z);
-        if (chunk instanceof net.minecraft.world.level.chunk.LevelChunk lc) HomeGround.paint(level, this, lc);
+        level.getChunk(x >> 4, z >> 4);
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         e.moveTo(x + 0.5, Math.max(y, level.getMinBuildHeight() + 1), z + 0.5, level.random.nextFloat() * 360f, 0f);
         e.setHome(e.position());
@@ -626,6 +678,5 @@ public class WorldOne extends SavedData {
         ServerLevel over = server.overworld();
         WorldOne w = get(server);
         w.tick(over);
-        HomeGround.drain(server);
     }
 }

@@ -398,10 +398,10 @@ public final class GroundLab {
                         int hgt = c.o.ay[i][k] - c.o.top[i];
                         boolean hit = switch (kind) {
                             case "arch" -> m == Mat.BONE && hgt > 4;
-                            case "shard" -> m == Mat.LIME_GLASS && hgt > 6;
+                            case "shard" -> (m == Mat.LIME_GLASS || m == Mat.BELL_SHARD) && hgt > 6;
                             case "pool" -> m == Mat.WATER;
                             case "spire" -> m == Mat.DIORITE && hgt > 10;
-                            default -> m == Mat.LIME_GLASS && hgt == 2;
+                            default -> m == Mat.TENDRIL_GLASS && hgt == 2;
                         };
                         if (hit) n++;
                     }

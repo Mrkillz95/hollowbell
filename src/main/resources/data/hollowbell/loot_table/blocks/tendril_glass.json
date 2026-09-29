@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [{"type": "minecraft:item", "name": "hollowbell:tendril_glass"}],
+      "conditions": [{"condition": "minecraft:survives_explosion"}]
+    }
+  ],
+  "random_sequence": "hollowbell:blocks/tendril_glass"
+}

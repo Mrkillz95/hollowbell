@@ -106,7 +106,7 @@ public final class HollowbellCommand {
                             h.setGoal(new Vec3(x, h.groundAt(x, z), z));
                         }, "goto")))))
                 .then(Commands.literal("ground").requires(OP).executes(HollowbellCommand::groundSay)
-                        .then(Commands.literal("renew").executes(HollowbellCommand::groundRenew)))
+                        .then(Commands.literal("new").executes(HollowbellCommand::groundNew)))
                 .then(Commands.literal("stay").requires(OP).then(Commands.argument("on", BoolArgumentType.bool())
                         .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "on")), "stay"))))
                 .then(Commands.literal("height").requires(OP).then(Commands.argument("blocks", FloatArgumentType.floatArg(0f, 400f))
@@ -342,50 +342,37 @@ public final class HollowbellCommand {
 
     // ------------------------------------------------------------------ the new world commands
 
-    /** /hollowbell natural: does the world keep one of him out there, and where things stand */
+    /** /hollowbell natural: does the world keep one of him out there, and where things stand (the finder's words) */
     private static int naturalSay(CommandContext<CommandSourceStack> c) {
         ServerLevel over = c.getSource().getServer().overworld();
-        WorldOne w = WorldOne.get(c.getSource().getServer());
-        String msg;
-        if (!HollowbellConfig.V.oneInTheWorld) msg = "He doesn't rise on his own. /hollowbell natural on and the world keeps one.";
-        else if (w.aliveNow() && w.where() != null)
-            msg = "The world keeps one of him. He's out there near " + w.where().getX() + ", " + w.where().getZ() + ".";
-        else if (w.where() != null) {
-            int days = w.daysLeft(over);
-            msg = days > 0 ? "The world keeps one of him. The next comes down in the Bell Hollows near " + w.where().getX() + ", " + w.where().getZ()
-                    + " in about " + days + (days == 1 ? " day." : " days.")
-                    : "The world keeps one of him. The next comes down in the Bell Hollows near " + w.where().getX() + ", " + w.where().getZ() + " any moment now.";
-        } else msg = "The world keeps one of him. It's still picking his spot.";
-        final String out = msg;
-        c.getSource().sendSuccess(() -> Component.literal(out), false);
+        Component msg = HollowbellConfig.V.oneInTheWorld
+                ? Component.literal("The world keeps one of him. ").append(net.jj.hollowbell.item.FinderItem.tell(over, c.getSource().getPosition()))
+                : Component.literal("He doesn't come down on his own. /hollowbell natural on and the world keeps one.");
+        c.getSource().sendSuccess(() -> msg, false);
         return 1;
     }
 
-    /** /hollowbell ground: where his ground is, how big, and how far along it is */
+    /** /hollowbell ground: where his ground is and how big */
     private static int groundSay(CommandContext<CommandSourceStack> c) {
         WorldOne w = WorldOne.get(c.getSource().getServer());
         String msg;
-        if (!w.homeClaimed()) msg = "He has no ground of his own yet. It's made where the world's own one comes down.";
-        else {
-            msg = "His ground, the Bell Hollows, lies at " + w.homeX() + ", " + w.homeZ() + " and reaches about " + w.homeRadius()
-                    + " blocks out. " + w.paintedCount() + " chunks of it are done; the rest turns as the land loads.";
-            if (w.oldWaiting() > 0) msg += " " + w.oldWaiting() + " chunks of the old, smaller ground are still to be turned the new way.";
-            if (w.oldKept() > 0) msg += " " + w.oldKept() + " chunks of the old ground were kept as they were because people had spent time there."
-                    + " /hollowbell ground renew turns those too (anything built is still left alone).";
-        }
+        if (!w.homeClaimed()) msg = "He has no ground of his own yet. It's picked where the world's own one will come down.";
+        else msg = "His ground, the Bell Hollows, lies at " + w.homeX() + ", " + w.homeZ() + " and reaches about " + w.homeRadius()
+                + " blocks out. The world makes it as his when that land is first made. Land made before stays as it was.";
         final String out = msg;
         c.getSource().sendSuccess(() -> Component.literal(out), false);
         return 1;
     }
 
-    /** /hollowbell ground renew: the old chunks kept because people had been there get turned the new way after all */
-    private static int groundRenew(CommandContext<CommandSourceStack> c) {
+    /** /hollowbell ground new: a fresh ground in land the world hasn't made yet (the old one stays as it is) */
+    private static int groundNew(CommandContext<CommandSourceStack> c) {
+        ServerLevel over = c.getSource().getServer().overworld();
         WorldOne w = WorldOne.get(c.getSource().getServer());
-        int n = w.renewOld();
-        if (n > 0) net.jj.hollowbell.world.HomeGround.claimed(c.getSource().getServer().overworld(), w);
-        c.getSource().sendSuccess(() -> Component.literal(n == 0
-                ? "There's nothing of the old ground left to turn."
-                : n + " chunks of the old ground will be turned the new way as they load. Anything built in them is still left alone."), true);
+        net.minecraft.core.BlockPos at = w.newGround(over);
+        boolean alive = w.aliveNow();
+        c.getSource().sendSuccess(() -> Component.literal("New Bell Hollows at " + at.getX() + ", " + at.getZ()
+                + ", in land not made yet. It comes out as you go there. The old ground stays as it is."
+                + (alive ? "" : " The next one comes down in the middle of it.")), true);
         return 1;
     }
 
