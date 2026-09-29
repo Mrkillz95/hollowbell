@@ -192,8 +192,25 @@ public final class Moves {
             }
             case FLASH -> { in.glow = 1.8f * hump(t, 0, FLASH_AT, FLASH_AT, len); in.squeezeAdd = 0.4f * hump(t, FLASH_AT - 4, FLASH_AT, FLASH_AT + 2, FLASH_AT + 10); }
             case SPORES -> { in.eggShake = hump(t, 0, SPORES_AT, SPORES_AT, SPORES_AT + 20); in.squeezeAdd = 0.3f * hump(t, SPORES_AT - 3, SPORES_AT, SPORES_AT + 2, SPORES_AT + 12); }
-            case POD_BURST -> { in.podSwell = hump(t, 0, POD_AT, POD_AT + 16, len); in.glow = 0.3f * in.podSwell; }
-            case EGG_RAIN -> in.eggShake = hump(t, 0, EGG_AT, EGG_AT + 24, len);
+            case POD_BURST -> {
+                // the pods swell while the bell tightens round them (the wind-up), then it all bursts: the bell
+                // kicks open, the strands jump out and he bobs up, and settles back
+                in.podSwell = hump(t, 0, POD_AT, POD_AT + 16, len);
+                in.glow = 0.3f * in.podSwell + 0.6f * hump(t, POD_AT - 2, POD_AT, POD_AT + 1, POD_AT + 10);
+                in.squeezeAdd = 0.35f * hump(t, 2, POD_AT - 2, POD_AT - 2, POD_AT) - 0.35f * hump(t, POD_AT - 1, POD_AT + 1, POD_AT + 3, POD_AT + 18);
+                st.spread = 0.45f * hump(t, POD_AT - 1, POD_AT + 2, POD_AT + 4, POD_AT + 26);
+                in.lowerAdd = 2f * hump(t, 0, POD_AT - 2, POD_AT - 2, POD_AT) - 4f * hump(t, POD_AT, POD_AT + 4, POD_AT + 6, POD_AT + 30);
+            }
+            case EGG_RAIN -> {
+                // he rises and gathers (squeeze, strands drawn in), then flings the strands out and the clumps
+                // rattle loose over a long shake; the strands swing back through and hang
+                in.eggShake = hump(t, 0, EGG_AT, EGG_AT + 24, len);
+                in.lowerAdd = -5f * hump(t, 0, EGG_AT - 4, EGG_AT + 20, len);
+                in.squeezeAdd = 0.3f * hump(t, 0, EGG_AT - 4, EGG_AT - 4, EGG_AT) - 0.25f * hump(t, EGG_AT, EGG_AT + 3, EGG_AT + 8, EGG_AT + 24);
+                float fling = hump(t, EGG_AT - 2, EGG_AT + 3, EGG_AT + 20, EGG_AT + 36);
+                st.flick = fling * (0.75f + 0.25f * (float) Math.cos((t - EGG_AT) * 0.7f));
+                st.spread = 0.4f * fling - 0.15f * hump(t, 0, EGG_AT - 4, EGG_AT - 4, EGG_AT);
+            }
             case WHIRLPOOL -> {
                 st.spread = hump(t, 0, WHIRL_UP, WHIRL_CRUSH - 20, WHIRL_CRUSH);
                 st.swirl = hump(t, 10, WHIRL_UP, WHIRL_CRUSH, len);
@@ -233,14 +250,26 @@ public final class Moves {
                 in.glow = 0.5f * hump(t, 0, STORM_UP, STORM_UP, STORM_UP + 20);
             }
             case STINGER_STORM -> {
-                st.flick = hump(t, 0, RAIN_FROM, RAIN_TO, len);
-                st.spread = 0.35f * st.flick;
+                // the wind-up: he sinks a little and tightens, the strands drawn in and rattling; then every strand
+                // whips up again and again while the stingers fly, the bell open; then they drop and swing to rest
+                float wind = hump(t, 0, RAIN_FROM - 4, RAIN_FROM - 4, RAIN_FROM + 2);
+                float storm = hump(t, RAIN_FROM - 3, RAIN_FROM + 3, RAIN_TO, RAIN_TO + 24);
+                in.eggShake = 0.8f * wind + 0.4f * storm;
+                in.lowerAdd = 3f * wind - 3f * storm;
+                in.squeezeAdd = 0.35f * wind - 0.3f * storm;
+                st.flick = storm * (0.7f + 0.3f * (float) Math.cos((t - RAIN_FROM) * 0.9f));
+                st.spread = 0.5f * storm - 0.2f * wind;
                 in.glow = 0.8f * hump(t, 0, RAIN_FROM, RAIN_TO, len);
             }
             case SUN_LANCES -> {
+                // gathering the light: he rises, the bell drawn tight and glowing brighter; when the lances come he
+                // throws the bell wide open and the strands out, and holds it, then eases shut
+                float gather = hump(t, 0, LANCE_FROM - 3, LANCE_FROM - 3, LANCE_FROM + 3);
+                float open = hump(t, LANCE_FROM - 2, LANCE_FROM + 4, LANCE_TO, len);
                 in.glow = 2f * hump(t, 0, LANCE_FROM, LANCE_TO, len);
-                st.spread = 0.5f * hump(t, 0, LANCE_FROM, LANCE_TO, len);
-                in.squeezeAdd = -0.4f * hump(t, 0, LANCE_FROM, LANCE_TO, len);
+                st.spread = 0.6f * open - 0.2f * gather;
+                in.squeezeAdd = 0.4f * gather - 0.5f * open;
+                in.lowerAdd = -6f * hump(t, 0, LANCE_FROM, LANCE_TO, len);
             }
             case UNDERTOW -> {
                 st.spread = hump(t, 0, UNDERTOW_PULL, UNDERTOW_PULL, UNDERTOW_SLAM - 10);
