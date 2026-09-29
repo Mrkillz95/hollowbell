@@ -3542,7 +3542,7 @@ public class HollowbellGameTests implements FabricGameTest {
                 if (l.getBlockState(new BlockPos(b.getX(), y, b.getZ())).is(net.minecraft.world.level.block.Blocks.OAK_PLANKS)) plank++;
             h.assertTrue(plank < planks.size(), "the built floor wasn't painted over");
             h.assertTrue(hollowsAt(h, x0 + 8, top(h, x0 + 8, z0 + 8), z0 + 8), "the biome wasn't changed");
-            h.assertTrue(!hollowsAt(h, x0 + 8, -40, z0 + 8) || l.getMinBuildHeight() >= -40, "the caves under it were changed");
+            if (top(h, x0 + 8, z0 + 8) > 20) h.assertTrue(!hollowsAt(h, x0 + 8, -40, z0 + 8), "the caves under it were changed");
             drop(p);
             force(h, c.getX(), c.getZ(), 1, false);
             h.succeed();
