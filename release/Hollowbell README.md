@@ -182,6 +182,10 @@ GCG
 
 Hunting ones go after hostile mobs as well when there's no player about.
 
+### His ground
+
+The world's own one comes down in the middle of the **Bell Hollows**, his own biome, about 900 blocks across. The world makes it as it makes that land: pale calcite and bone hills scooped with hollows, mint grass, fallen glass shards, tendril reefs, spore gardens, still pools, spires, fallen ribs and drifting lights, with his great glass bell in the middle. His own blocks are in it too: bell calcite, tendril glass, bell shard and spore moss. There's only one in a world. `/locate biome hollowbell:bell_hollows` finds it, and so does the finder.
+
 ## What he's like
 
 - **He swims.** He drifts low over the land with his strands hanging under him, and the strand ends drag along the ground and flatten plants. He goes up hills and down into valleys.
@@ -268,6 +272,10 @@ A very small Hollowbell has no room inside: he squeezes you and drops you instea
 | Hollowbell Pods | For the book, and a pod in a glass bottle makes a poison potion. |
 | Hollowbell Crown | A glowing trophy block to set down. Wake it with `/hollowbell ward on` and it holds him off. |
 | Oxidized copper, bone blocks, verdant froglight | From his body. |
+
+### His crown
+
+Set his crown down, stand within 16 blocks of it and do `/hollowbell ward on`. For 20 minutes he won't come within 700 blocks of it, won't go after anything inside that circle, and the book can't send him in there (a trip stops at the edge). Then the crown sits dark for 20 minutes. Take the crown up and it stops. `/hollowbell ward blocks 0` turns it off.
 
 ## The book
 
