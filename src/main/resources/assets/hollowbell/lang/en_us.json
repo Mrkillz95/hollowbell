@@ -402,5 +402,12 @@
   "item.hollowbell.stinger.tip": "What it hits is poisoned and slowed.",
   "item.hollowbell.hollowbell_crown.tip1": "Set it down, stand by it and use /hollowbell ward on to wake it.",
   "item.hollowbell.hollowbell_crown.tip2": "Holds him off %s blocks for %s minutes.",
-  "item.hollowbell.hollowbell_crown.tip3": "Then it sits dark for %s minutes."
+  "item.hollowbell.hollowbell_crown.tip3": "Then it sits dark for %s minutes.",
+  "message.hollowbell.coming": "The Hollowbell is coming. About %s blocks, %s minutes away.",
+  "message.hollowbell.going": "The Hollowbell is on his way there. About %s blocks, %s minutes away.",
+  "command.hollowbell.tp": "Took you to the Hollowbell, %s blocks from him.",
+  "command.hollowbell.tp_rise": "The Hollowbell hasn't come down yet. Took you to where he will, in the Bell Hollows.",
+  "command.hollowbell.tp_none": "There is no Hollowbell to take you to.",
+  "command.hollowbell.tp_bad": "There's no Hollowbell number %s. /hollowbell list shows them.",
+  "command.hollowbell.no_player": "Nobody called that is here."
 }

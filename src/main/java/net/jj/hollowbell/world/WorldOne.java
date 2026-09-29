@@ -15,6 +15,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -271,6 +272,27 @@ public class WorldOne extends SavedData {
         double dx = x - (wardX + 0.5), dz = z - (wardZ + 0.5);
         double r = wardRange();
         return dx * dx + dz * dz < r * r;
+    }
+
+    /**
+     * A trip out of the world from one spot to another: if it would cross a woken crown's circle, it stops at the
+     * edge where it would go in (a spot already inside is left for the ward's own push to deal with).
+     */
+    public Vec3 wardStop(net.minecraft.world.level.Level l, Vec3 from, Vec3 to) {
+        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl) || HollowbellConfig.V.wardBlocks <= 0) return to;
+        if (!sl.dimension().location().toString().equals(wardDim)) return to;
+        double cx = wardX + 0.5, cz = wardZ + 0.5, r = wardRange() + 16;
+        double fx = from.x - cx, fz = from.z - cz;
+        if (fx * fx + fz * fz < r * r) return to;
+        double dx = to.x - from.x, dz = to.z - from.z;
+        double a = dx * dx + dz * dz;
+        if (a < 1e-6) return to;
+        double b = 2 * (fx * dx + fz * dz), c = fx * fx + fz * fz - r * r;
+        double disc = b * b - 4 * a * c;
+        if (disc < 0) return to;
+        double t = (-b - Math.sqrt(disc)) / (2 * a);
+        if (t < 0 || t > 1) return to;
+        return new Vec3(from.x + dx * t, to.y, from.z + dz * t);
     }
 
     // ------------------------------------------------------------------ getting at it

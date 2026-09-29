@@ -22,7 +22,7 @@ public final class GiantsBridge {
     private static final String WHO = "Hollowbell: ";
 
     /**
-     * action: natural|limit|fight|away|volume|shake|bossbar|griefing|where|list|kill|remove|status.
+     * action: natural|limit|fight|away|volume|shake|bossbar|griefing|where|list|kill|remove|status|goto ("x z")|tp (player UUID).
      * arg: the value as text, or "". Returns lines to show the caller (prefixed with the boss's name, plain
      * words); empty list = nothing; null = unknown action.
      */
@@ -118,6 +118,23 @@ public final class GiantsBridge {
                         n++;
                     }
                 out.add(WHO + (n == 0 ? "none to remove." : "removed " + n + "."));
+            }
+            case "goto" -> {
+                String[] xz = a.split("\\s+");
+                double x, z;
+                try { x = Double.parseDouble(xz[0]); z = Double.parseDouble(xz[1]); }
+                catch (Exception e) { out.add(WHO + "goto needs an x and a z."); return out; }
+                int n = 0;
+                for (ServerLevel l : server.getAllLevels())
+                    for (var t : net.jj.hollowbell.world.FarOrders.all(l))
+                        if (net.jj.hollowbell.world.FarOrders.order(l, t, new Vec3(x, 0, z), null, 0f) != null) n++;
+                out.add(WHO + (n == 0 ? "none to send." : n + " on the way to " + Mth.floor(x) + ", " + Mth.floor(z) + "."));
+            }
+            case "tp" -> {
+                net.minecraft.server.level.ServerPlayer p = null;
+                try { p = server.getPlayerList().getPlayer(java.util.UUID.fromString(arg.trim())); } catch (Exception ignored) {}
+                if (p == null) { out.add(WHO + "nobody to take there."); return out; }
+                out.add(WHO + net.jj.hollowbell.world.TakeMe.tp(p, 0).getString());
             }
             case "status" -> {
                 int standing = Away.get(server).count();

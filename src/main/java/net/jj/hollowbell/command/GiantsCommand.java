@@ -1,7 +1,9 @@
 package net.jj.hollowbell.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -13,12 +15,14 @@ import java.util.List;
 import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 
 /**
  * /giants: one command for all of JJ's bosses at once. Every one of the five mods carries this class, but only
- * one registers it: the first of the five bridges (in this fixed, sorted order) that is actually loaded.
+ * one registers it: the first of the five bridges (in this fixed, sorted order) that is actually loaded. This
+ * mod's bridge sorts first, so with the Cerberus installed it is this class that answers.
  *
  * The command asks every loaded bridge in turn, by name. Each one is asked on its own, and whatever goes wrong
  * inside one (a missing method, an old version, a crash, a strange answer) only costs that one line: the rest
@@ -84,10 +88,21 @@ public final class GiantsCommand {
         return Modifier.isStatic(m.getModifiers()) ? m : null;
     }
 
+    /** the name /giants tp takes for each bridge, in the same order as BRIDGES */
+    public static final String[] TP_NAMES = {"cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut"};
+
     /** every loaded bridge's answer, in order */
     public static List<String> ask(MinecraftServer server, String action, String arg) {
+        return ask(server, action, arg, null);
+    }
+
+    /** the same, from just one bridge when only is set (one of BRIDGES) */
+    public static List<String> ask(MinecraftServer server, String action, String arg, String only) {
         List<String> out = new ArrayList<>();
         for (String b : BRIDGES) {
+            if (only != null && !only.equals(b)) {
+                continue;
+            }
             Class<?> c = find(b);
             if (c == null) {
                 continue;
@@ -135,6 +150,26 @@ public final class GiantsCommand {
         return lines.size();
     }
 
+    /** /giants tp <name>: takes you to that one giant, asking only its own mod */
+    private static int tp(CommandContext<CommandSourceStack> c) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        String which = StringArgumentType.getString(c, "which").toLowerCase(java.util.Locale.ROOT);
+        int i = java.util.Arrays.asList(TP_NAMES).indexOf(which);
+        if (i < 0) {
+            c.getSource().sendFailure(Component.literal("No giant called " + which + ". Try one of: " + String.join(", ", TP_NAMES) + "."));
+            return 0;
+        }
+        if (find(BRIDGES[i]) == null) {
+            c.getSource().sendFailure(Component.literal(nameOf(BRIDGES[i]) + " isn't installed."));
+            return 0;
+        }
+        String who = c.getSource().getPlayerOrException().getUUID().toString();
+        List<String> lines = ask(c.getSource().getServer(), "tp", who, BRIDGES[i]);
+        for (String s : lines) {
+            c.getSource().sendSuccess(() -> Component.literal(s), false);
+        }
+        return lines.size();
+    }
+
     private static LiteralArgumentBuilder<CommandSourceStack> toggle(String name) {
         return Commands.literal(name).requires(s -> s.hasPermission(2)).executes(c -> run(c, name, ""))
             .then(Commands.literal("on").executes(c -> run(c, name, "on")))
@@ -166,6 +201,14 @@ public final class GiantsCommand {
                     .executes(c -> run(c, "bossbar", String.valueOf(IntegerArgumentType.getInteger(c, "blocks"))))))
             .then(toggle("griefing"))
             .then(Commands.literal("where").executes(c -> run(c, "where", "")))
+            .then(Commands.literal("goto").requires(s -> s.hasPermission(2))
+                .then(Commands.argument("x", DoubleArgumentType.doubleArg())
+                    .then(Commands.argument("z", DoubleArgumentType.doubleArg())
+                        .executes(c -> run(c, "goto", DoubleArgumentType.getDouble(c, "x") + " " + DoubleArgumentType.getDouble(c, "z"))))))
+            .then(Commands.literal("tp").requires(s -> s.hasPermission(2))
+                .then(Commands.argument("which", StringArgumentType.word())
+                    .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
+                    .executes(GiantsCommand::tp)))
             .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(c -> run(c, "list", "")))
             .then(Commands.literal("kill").requires(s -> s.hasPermission(2)).executes(c -> run(c, "kill", "")))
             .then(Commands.literal("remove").requires(s -> s.hasPermission(2)).executes(c -> run(c, "remove", ""))));
