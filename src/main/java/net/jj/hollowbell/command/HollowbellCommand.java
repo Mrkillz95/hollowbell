@@ -109,6 +109,41 @@ public final class HollowbellCommand {
                 .then(Commands.literal("come").requires(OP).executes(c -> farGo(c, null, c.getSource().getPlayerOrException()))
                         .then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player())
                                 .executes(c -> farGo(c, null, net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player")))))
+                // config: any setting from the file, by name
+                .then(Commands.literal("config").requires(OP).executes(HollowbellCommand::configList)
+                        .then(Commands.argument("key", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(Settings.keys(), b))
+                                .executes(c -> configGet(c, StringArgumentType.getString(c, "key")))
+                                .then(Commands.argument("value", StringArgumentType.word())
+                                        .executes(c -> configSet(c, StringArgumentType.getString(c, "key"), StringArgumentType.getString(c, "value"))))))
+                // set: everything about the nearest one
+                .then(Commands.literal("set").requires(OP)
+                        .then(Commands.literal("freeze").then(Commands.argument("value", BoolArgumentType.bool()).executes(c -> near(c, h -> h.setFrozen(BoolArgumentType.getBool(c, "value")), "set")))
+                                .then(Commands.literal("on").executes(c -> near(c, h -> h.setFrozen(true), "set"))).then(Commands.literal("off").executes(c -> near(c, h -> h.setFrozen(false), "set"))))
+                        .then(Commands.literal("speed").then(Commands.argument("times", FloatArgumentType.floatArg(0.1f, 5f))
+                                .executes(c -> near(c, h -> h.setSpeedMul(FloatArgumentType.getFloat(c, "times")), "set"))))
+                        .then(Commands.literal("invulnerable").then(Commands.literal("on").executes(c -> near(c, h -> h.setInvulnerable(true), "set")))
+                                .then(Commands.literal("off").executes(c -> near(c, h -> h.setInvulnerable(false), "set"))))
+                        .then(Commands.literal("glow").then(Commands.literal("on").executes(c -> near(c, h -> h.setGlowingTag(true), "set")))
+                                .then(Commands.literal("off").executes(c -> near(c, h -> h.setGlowingTag(false), "set"))))
+                        .then(Commands.literal("name").then(Commands.argument("name", StringArgumentType.greedyString())
+                                .executes(c -> near(c, h -> h.setCustomName(Component.literal(StringArgumentType.getString(c, "name"))), "set"))))
+                        .then(Commands.literal("target").then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.entity())
+                                .executes(c -> { var t = net.minecraft.commands.arguments.EntityArgument.getEntity(c, "target");
+                                    if (!(t instanceof LivingEntity le)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.not_alive")); return 0; }
+                                    return near(c, h -> h.sendAfter(le), "set"); }))
+                                .then(Commands.literal("none").executes(c -> near(c, HollowbellEntity::clearHitList, "set"))))
+                        .then(Commands.literal("wind").then(Commands.argument("wind", FloatArgumentType.floatArg(0f, 1f))
+                                .executes(c -> near(c, h -> h.mood().setWind(FloatArgumentType.getFloat(c, "wind")), "set"))))
+                        .then(Commands.literal("grudge").then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player())
+                                .then(Commands.argument("grudge", FloatArgumentType.floatArg(0f, 1f)).executes(c -> {
+                                    var pl = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player");
+                                    return near(c, h -> h.mood().setSour(pl.getUUID(), FloatArgumentType.getFloat(c, "grudge")), "set"); }))))
+                        .then(Commands.literal("home").executes(c -> near(c, h -> h.setHome(c.getSource().getPosition()), "set")))
+                        .then(Commands.literal("cooldowns").then(Commands.literal("clear").executes(c -> near(c, h -> h.moves().clearCooldowns(), "set")))))
+                .then(Commands.literal("pods").requires(OP)
+                        .then(Commands.literal("mend").executes(c -> near(c, HollowbellEntity::mendPods, "set")))
+                        .then(Commands.literal("pop").then(Commands.argument("how many", IntegerArgumentType.integer(0, 64))
+                                .executes(c -> near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "how many")), "popped")))))
                 // paint: the land round you becomes the Bell Hollows (admins; the same as /giants paint hollowbell)
                 .then(Commands.literal("paint").requires(OP).executes(c -> paint(c, 64, true))
                         .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512)).executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
@@ -339,6 +374,29 @@ public final class HollowbellCommand {
         Component said = net.jj.hollowbell.world.FarOrders.order(l, t, to != null ? to : follow.position(), follow, 0f);
         if (said == null) return none(c);
         c.getSource().sendSuccess(() -> said, false);
+        return 1;
+    }
+
+    private static int configList(CommandContext<CommandSourceStack> c) {
+        StringBuilder b = new StringBuilder();
+        for (String k : Settings.keys()) { if (b.length() > 0) b.append(", "); b.append(k).append(" ").append(Settings.get(k)); }
+        String all = b.toString();
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.config_all", all), false);
+        return 1;
+    }
+
+    private static int configGet(CommandContext<CommandSourceStack> c, String key) {
+        String v = Settings.get(key);
+        if (v == null) { c.getSource().sendFailure(Component.translatable("command.hollowbell.config_none", key)); return 0; }
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.is", key, v), false);
+        return 1;
+    }
+
+    private static int configSet(CommandContext<CommandSourceStack> c, String key, String value) {
+        String bad = Settings.set(key, value);
+        if (bad != null) { c.getSource().sendFailure(Component.translatable("command.hollowbell.config_bad", bad)); return 0; }
+        String now = Settings.get(key);
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.set", key, now), true);
         return 1;
     }
 
