@@ -117,12 +117,35 @@ public final class HomeGround {
     public static void decorate(WorldGenLevel level, ChunkAccess chunk, BellGen.Snap s, List<BoundingBox> boxes) {
         if (!s.claimed || !s.touches(chunk.getPos())) return;
         BellPlan p = planFor(s);
+        if (!p.near(chunk.getPos().x, chunk.getPos().z)) return;
+        make(level, chunk, p, boxes, false, s, null);
+    }
+
+    /** which columns a paint may touch */
+    public interface Clip { boolean in(int x, int z); }
+
+    /**
+     * An admin's paint (/giants paint): this chunk made his ground by the given plan, everything in it included:
+     * structures, places people live and anything built. Only bedrock, water and blocks holding things (chests,
+     * furnaces...) are left; the ground is dressed round them.
+     */
+    public static void paint(WorldGenLevel level, ChunkAccess chunk, BellPlan p) {
+        make(level, chunk, p, List.of(), true, null, null);
+    }
+
+    /** an admin's paint, only inside the circle */
+    public static void paintInCircle(WorldGenLevel level, ChunkAccess chunk, BellPlan p, double cx, double cz, int r) {
+        double r2 = (double) r * r;
+        make(level, chunk, p, List.of(), true, null, (x, z) -> (x + 0.5 - cx) * (x + 0.5 - cx) + (z + 0.5 - cz) * (z + 0.5 - cz) <= r2);
+    }
+
+    private static void make(WorldGenLevel level, ChunkAccess chunk, BellPlan p, List<BoundingBox> boxes, boolean admin,
+                             @org.jetbrains.annotations.Nullable BellGen.Snap s, @org.jetbrains.annotations.Nullable Clip clip) {
         ChunkPos cp = chunk.getPos();
-        if (!p.near(cp.x, cp.z)) return;
         long t0 = System.nanoTime();
-        Survey sv = survey(level, chunk, p, boxes);
+        Survey sv = survey(level, chunk, p, boxes, admin, clip);
         if (!sv.any) return;
-        BellGen.ores(level, chunk, s);
+        if (s != null) BellGen.ores(level, chunk, s);
         BellPlan.Out o = new BellPlan.Out();
         p.chunk(cp.x, cp.z, sv.y0, sv.ok, sv.wet, sv.lowest, o);
         int x0 = cp.getMinBlockX(), z0 = cp.getMinBlockZ();
@@ -133,7 +156,7 @@ public final class HomeGround {
             int wx = x0 + (i & 15), wz = z0 + (i >> 4);
             if (sv.wet[i]) { paintBed(level, p, wx, wz, sv.y0[i], m); continue; }
             clearLoose(level, wx, sv.y0[i], wz, sv.surface[i], m);
-            shape(level, o, i, wx, wz, sv.y0[i], m, water);
+            shape(level, o, i, wx, wz, sv.y0[i], m, water, admin);
         }
         keepWaterIn(level, water, x0, z0);
         if (WorldOne.IN_TESTS && !(level instanceof net.minecraft.server.level.WorldGenRegion)) { lastOut = o; lastY0 = sv.y0; }
@@ -180,7 +203,7 @@ public final class HomeGround {
         boolean any;
     }
 
-    private static Survey survey(WorldGenLevel level, ChunkAccess chunk, BellPlan p, List<BoundingBox> boxes) {
+    private static Survey survey(WorldGenLevel level, ChunkAccess chunk, BellPlan p, List<BoundingBox> boxes, boolean admin, @org.jetbrains.annotations.Nullable Clip clip) {
         Survey sv = new Survey();
         ChunkPos cp = chunk.getPos();
         int x0 = cp.getMinBlockX(), z0 = cp.getMinBlockZ();
@@ -191,7 +214,7 @@ public final class HomeGround {
         for (int i = 0; i < 256; i++) {
             int lx = i & 15, lz = i >> 4;
             int wx = x0 + lx, wz = z0 + lz;
-            if (!p.painted(wx, wz)) continue;
+            if (!p.painted(wx, wz) || (clip != null && !clip.in(wx, wz))) continue;
             sv.any = true;
             int surf = chunk.getHeight(hm, lx, lz);        // the top block
             sv.surface[i] = surf;
@@ -201,7 +224,11 @@ public final class HomeGround {
             while (top > minY + 2) {
                 BlockState b = level.getBlockState(m.set(wx, top, wz));
                 if (b.isAir() || loose(b)) { top--; continue; }
-                if (treePart(b)) tree = true;
+                if (treePart(b)) {
+                    // painted by an admin, the tree goes; made by the world, a tree keeps its column
+                    if (admin) { level.setBlock(m, Blocks.AIR.defaultBlockState(), FLAGS); top--; continue; }
+                    tree = true;
+                }
                 break;
             }
             sv.y0[i] = top;
@@ -209,12 +236,12 @@ public final class HomeGround {
             if (tree || top <= minY + 2) continue;
             BlockState s = level.getBlockState(m.set(wx, top, wz));
             sv.wet[i] = !s.getFluidState().isEmpty();
-            sv.ok[i] = plainGround(level, wx, wz, top, m) && !inStructure(boxes, wx, wz, top);
-            if (!sv.ok[i] || sv.wet[i] || !natural(s)) continue;
+            sv.ok[i] = admin ? !s.hasBlockEntity() : plainGround(level, wx, wz, top, m) && !inStructure(boxes, wx, wz, top);
+            if (!sv.ok[i] || sv.wet[i] || !changeable(s, admin)) continue;
             // cut no deeper than the plain ground goes: the new top is itself plain ground, never air or a cave
             int low = top;
             for (int y = top - 1; y >= top - BellPlan.MAX_DOWN - 1 && y > minY + 1; y--) {
-                if (!natural(level.getBlockState(m.set(wx, y, wz)))) break;
+                if (!changeable(level.getBlockState(m.set(wx, y, wz)), admin)) break;
                 low = y;
             }
             sv.lowest[i] = low;
@@ -225,7 +252,7 @@ public final class HomeGround {
     /** for the tests: what this chunk would become, worked out without changing anything */
     public static BellPlan.Out preview(WorldGenLevel level, ChunkAccess chunk, BellGen.Snap s, int[] y0Out) {
         BellPlan p = planFor(s);
-        Survey sv = survey(level, chunk, p, List.of());
+        Survey sv = survey(level, chunk, p, List.of(), false, null);
         BellPlan.Out o = new BellPlan.Out();
         p.chunk(chunk.getPos().x, chunk.getPos().z, sv.y0, sv.ok, sv.wet, sv.lowest, o);
         if (y0Out != null) System.arraycopy(sv.y0, 0, y0Out, 0, 256);
@@ -264,10 +291,13 @@ public final class HomeGround {
     }
 
     /** one column: cut down or built up to its new height, its ground changed, and what stands on it set */
-    private static void shape(WorldGenLevel level, BellPlan.Out o, int i, int wx, int wz, int y0, BlockPos.MutableBlockPos m, List<BlockPos> water) {
+    private static void shape(WorldGenLevel level, BellPlan.Out o, int i, int wx, int wz, int y0, BlockPos.MutableBlockPos m, List<BlockPos> water, boolean admin) {
         int top = o.top[i];
         if (top < y0) {
-            for (int y = y0; y > top; y--) level.setBlock(m.set(wx, y, wz), Blocks.AIR.defaultBlockState(), FLAGS);
+            for (int y = y0; y > top; y--) {
+                if (admin && !changeable(level.getBlockState(m.set(wx, y, wz)), true)) continue;
+                level.setBlock(m.set(wx, y, wz), Blocks.AIR.defaultBlockState(), FLAGS);
+            }
         }
         for (int k = 0; k < o.layers[i]; k++) {
             int y = top - k;
@@ -280,7 +310,7 @@ public final class HomeGround {
                 continue;
             }
             if (mat == BellPlan.Mat.KEEP || !s.getFluidState().isEmpty()) continue;
-            if (!natural(s)) continue;
+            if (!changeable(s, admin)) continue;
             level.setBlock(m, state(mat), FLAGS);
         }
         for (int k = 0; k < o.an[i]; k++) {
@@ -332,6 +362,12 @@ public final class HomeGround {
     private static boolean treePart(BlockState s) {
         return s.is(BlockTags.LEAVES) || s.is(BlockTags.LOGS) || s.is(Blocks.MUSHROOM_STEM) || s.is(Blocks.RED_MUSHROOM_BLOCK)
                 || s.is(Blocks.BROWN_MUSHROOM_BLOCK) || s.is(Blocks.BEE_NEST);
+    }
+
+    /** what may be changed: the world's own ground blocks; for an admin's paint anything but bedrock and blocks holding things */
+    private static boolean changeable(BlockState s, boolean admin) {
+        if (!admin) return natural(s);
+        return !s.is(Blocks.BEDROCK) && !s.hasBlockEntity() && s.getFluidState().isEmpty() && !s.isAir();
     }
 
     /** the ground blocks the world made: only these are changed into his */

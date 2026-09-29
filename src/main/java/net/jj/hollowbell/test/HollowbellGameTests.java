@@ -3489,4 +3489,63 @@ public class HollowbellGameTests implements FabricGameTest {
         }
         h.succeed();
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "kill_all")
+    public void killLeavesNothingOfHimBehind(GameTestHelper h) {
+        clearAll(h);
+        var server = h.getLevel().getServer();
+        HollowbellEntity a = spawnAway(h, S, HollowbellEntity.CALM, 311);
+        HollowbellEntity b = spawnAway(h, S, HollowbellEntity.HUNTER, 312);
+        HollowbellEntity c = spawnAway(h, S, HollowbellEntity.CALM, 313);
+        h.runAfterDelay(20, () -> {
+            h.assertTrue(c.stepAside(), "one should step out of the world");
+            var lines = net.jj.hollowbell.command.GiantsCommand.ask(server, "kill", "", "net.jj.hollowbell.GiantsBridge");
+            h.assertTrue(lines.stream().anyMatch(x -> x.contains("killed 3")), "/giants kill: " + lines);
+            h.assertTrue(a.isDeadOrDying() && b.isDeadOrDying(), "the ones in the world aren't dying");
+            h.assertTrue(net.jj.hollowbell.world.Away.get(server).count() == 0, "the one out of the world is still out there");
+        });
+        h.runAfterDelay(20 + HollowbellEntity.DEATH_LENGTH + 40, () -> {
+            var left = h.getLevel().getEntities(ModEntities.HOLLOWBELL, x -> !x.isRemoved());
+            h.assertTrue(left.isEmpty(), left.size() + " of him still there after they died");
+            var seats = h.getLevel().getEntities(ModEntities.SEAT, x -> !x.isRemoved() && x.distanceToSqr(a) < 200 * 200);
+            h.assertTrue(seats.isEmpty(), "seats left behind");
+            release(h, a); release(h, b); release(h, c);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "paint")
+    public void paintTurnsEverythingInTheCircle(GameTestHelper h) {
+        var l = h.getLevel();
+        BlockPos c = groundSpot(h, 228);
+        var chunk = l.getChunkAt(c);
+        chunk.setInhabitedTime(50000);                        // people have lived here a long time
+        int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
+        // somebody's floor: planks right on the ground
+        java.util.List<BlockPos> planks = new java.util.ArrayList<>();
+        for (int dx = 4; dx < 8; dx++) for (int dz = 4; dz < 8; dz++) {
+            BlockPos t = new BlockPos(x0 + dx, top(h, x0 + dx, z0 + dz), z0 + dz);
+            l.setBlock(t, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState(), 2);
+            planks.add(t);
+        }
+        ServerPlayer p = player(h, Vec3.atCenterOf(new BlockPos(x0 + 8, top(h, x0 + 8, z0 + 8) + 2, z0 + 8)));
+        var lines = net.jj.hollowbell.command.GiantsCommand.ask(l.getServer(), "paint", "20 full " + p.getUUID(), "net.jj.hollowbell.GiantsBridge");
+        h.assertTrue(lines.stream().anyMatch(x -> x.startsWith("Hollowbell") && x.contains("painting")), "/giants paint: " + lines);
+        for (int t = 20; t < 380; t += 10) h.runAfterDelay(t, () -> {
+            if (net.jj.hollowbell.world.Painter.busy()) return;
+            int ours = 0;
+            for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++)
+                if (ours(l.getBlockState(new BlockPos(x0 + dx, top(h, x0 + dx, z0 + dz), z0 + dz)))) ours++;
+            h.assertTrue(ours > 150, "only " + ours + " columns of a lived-in chunk were painted");
+            int plank = 0;
+            for (BlockPos b : planks) for (int y = b.getY() - 10; y <= b.getY() + 20; y++)
+                if (l.getBlockState(new BlockPos(b.getX(), y, b.getZ())).is(net.minecraft.world.level.block.Blocks.OAK_PLANKS)) plank++;
+            h.assertTrue(plank < planks.size(), "the built floor wasn't painted over");
+            h.assertTrue(hollowsAt(h, x0 + 8, top(h, x0 + 8, z0 + 8), z0 + 8), "the biome wasn't changed");
+            h.assertTrue(!hollowsAt(h, x0 + 8, -40, z0 + 8) || l.getMinBuildHeight() >= -40, "the caves under it were changed");
+            drop(p);
+            force(h, c.getX(), c.getZ(), 1, false);
+            h.succeed();
+        });
+    }
 }

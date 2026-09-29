@@ -409,5 +409,9 @@
   "command.hollowbell.tp_rise": "The Hollowbell hasn't come down yet. Took you to where he will, in the Bell Hollows.",
   "command.hollowbell.tp_none": "There is no Hollowbell to take you to.",
   "command.hollowbell.tp_bad": "There's no Hollowbell number %s. /hollowbell list shows them.",
-  "command.hollowbell.no_player": "Nobody called that is here."
+  "command.hollowbell.no_player": "Nobody called that is here.",
+  "command.hollowbell.paint_full": "Painting the Bell Hollows %s blocks round you, land and biome (%s chunks). It can't be undone.",
+  "command.hollowbell.paint_biome": "Painting the Bell Hollows biome %s blocks round you (%s chunks). It can't be undone.",
+  "command.hollowbell.paint_progress": "Painted %s of %s chunks…",
+  "command.hollowbell.paint_done": "Done. %s chunks are the Bell Hollows now."
 }
