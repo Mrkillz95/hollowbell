@@ -101,9 +101,14 @@ public final class Painter {
         double r2 = (double) j.radius * j.radius;
         if (home != null) {
             var sampler = l.getChunkSource().randomState().sampler();
+            // from y 0 up (the caves below keep theirs), or from a little under the ground where it lies lower than that
+            int low = Integer.MAX_VALUE;
+            for (int dx = 0; dx < 16; dx += 5) for (int dz = 0; dz < 16; dz += 5)
+                low = Math.min(low, chunk.getHeight(Heightmap.Types.WORLD_SURFACE, dx, dz));
+            int floor = Math.min(0, low - 16);
             chunk.fillBiomesFromNoise((qx, qy, qz, s) -> {
                 double bx = QuartPos.toBlock(qx) + 2, bz = QuartPos.toBlock(qz) + 2;
-                boolean in = QuartPos.toBlock(qy) >= 0 && Mth.square(bx - j.cx) + Mth.square(bz - j.cz) <= r2;
+                boolean in = QuartPos.toBlock(qy) + 3 >= floor && Mth.square(bx - j.cx) + Mth.square(bz - j.cz) <= r2;
                 return in ? home : chunk.getNoiseBiome(qx, qy, qz);
             }, sampler);
             chunk.setUnsaved(true);

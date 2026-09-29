@@ -26,6 +26,8 @@ He's made from your build block for block. Every block wears its real texture, a
 - His health bar shows a name tag's name. Boss bars show within 420 blocks at full size (was 550).
 - Settings: `maxHollowbells` is now called `maxInWorld` (your number is kept). A settings file that can't be read is kept as it is and never written over until it reads cleanly.
 - Tooltips on the book, the Stinger and his crown. The hunting egg has orange spots, the guardian egg green ones.
+- **Fixed: `/giants kill` and `/hollowbell kill` left an invisible Hollowbell behind** with no health, still there, with bits of him hanging in the air. Now they really kill every one of him: in the world, out of it, or in land nobody has loaded. His death also always finishes now, even if everybody walks away while he's dying.
+- **`/giants paint hollowbell [radius] [full|biome]`** (cheats on, also `/hollowbell paint`): the land round you becomes the Bell Hollows. `full` (the default) shapes and dresses the land like his ground and sets the biome; `biome` only sets the biome. The radius is 16 to 512 blocks (64 if you leave it out). It paints over everything in the circle, villages and builds too; only bedrock, water and blocks holding things (like chests) stay. **It can't be undone**, so save a copy of your world first.
 
 ## What was new in 1.5.0
 
@@ -331,6 +333,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell shake [on/off]` | screen shake. On its own it says which. |
 | `/hollowbell sleep` | the nearest one goes to sleep, or wakes up |
 | `/hollowbell come [player]` | the nearest one comes to you (or to that player), wherever he is |
+| `/hollowbell paint [radius] [full/biome]` | the land round you becomes the Bell Hollows (the same as `/giants paint hollowbell`). Can't be undone. |
 | `/hollowbell tp [number]` | takes you to the nearest one (or that one from `/hollowbell list`) |
 | `/hollowbell spare` | your safe list. `/hollowbell spare add <who>`, `spare remove <who>`, `spare add kind <type>`, `spare remove kind <type>` change it |
 | `/hollowbell carry` | he comes to you and a strand carries you up his side and over his dome onto his crown (if you're already up there, it carries you back down) |
@@ -372,6 +375,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 | `/giants remove` | removes them all, no loot |
 | `/giants goto <x> <z>` | sends every one of them there, wherever they are |
 | `/giants tp <boss>` | takes you to that boss |
+| `/giants paint <boss> [radius] [full/biome]` | turns the land round you into that boss's ground. Can't be undone. |
 
 ## Settings
 
