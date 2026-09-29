@@ -109,6 +109,11 @@ public final class HollowbellCommand {
                 .then(Commands.literal("come").requires(OP).executes(c -> farGo(c, null, c.getSource().getPlayerOrException()))
                         .then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player())
                                 .executes(c -> farGo(c, null, net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player")))))
+                // paint: the land round you becomes the Bell Hollows (admins; the same as /giants paint hollowbell)
+                .then(Commands.literal("paint").requires(OP).executes(c -> paint(c, 64, true))
+                        .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512)).executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
+                                .then(Commands.literal("full").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true)))
+                                .then(Commands.literal("biome").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), false)))))
                 // tp: take me to him (never in the book)
                 .then(Commands.literal("tp").requires(OP).executes(c -> tp(c, 0))
                         .then(Commands.argument("which", IntegerArgumentType.integer(1, 999)).executes(c -> tp(c, IntegerArgumentType.getInteger(c, "which")))))
@@ -206,7 +211,12 @@ public final class HollowbellCommand {
                         .then(Commands.literal("off").executes(c -> set(c, () -> HollowbellConfig.V.soundVolume = 0f, "soundVolume", 0f)))
                         .then(Commands.argument("volume", FloatArgumentType.floatArg(0f, 2f))
                                 .executes(c -> set(c, () -> HollowbellConfig.V.soundVolume = FloatArgumentType.getFloat(c, "volume"), "soundVolume", FloatArgumentType.getFloat(c, "volume")))))
-                .then(Commands.literal("kill").requires(OP).executes(c -> all(c, h -> h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE), "kill")))
+                .then(Commands.literal("kill").requires(OP).executes(c -> {
+                    int n = net.jj.hollowbell.world.FarOrders.killAll(c.getSource().getServer());
+                    if (n == 0) return none(c);
+                    c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_kill"), true);
+                    return n;
+                }))
                 .then(Commands.literal("remove").requires(OP).executes(c -> {
                     var server = c.getSource().getServer();
                     WorldOne w = WorldOne.get(server);
@@ -330,6 +340,13 @@ public final class HollowbellCommand {
         if (said == null) return none(c);
         c.getSource().sendSuccess(() -> said, false);
         return 1;
+    }
+
+    private static int paint(CommandContext<CommandSourceStack> c, int radius, boolean full) throws CommandSyntaxException {
+        ServerPlayer p = c.getSource().getPlayerOrException();
+        int n = net.jj.hollowbell.world.Painter.start(p, radius, full);
+        c.getSource().sendSuccess(() -> Component.translatable(full ? "command.hollowbell.paint_full" : "command.hollowbell.paint_biome", radius, n), true);
+        return n;
     }
 
     private static int tp(CommandContext<CommandSourceStack> c, int which) throws CommandSyntaxException {

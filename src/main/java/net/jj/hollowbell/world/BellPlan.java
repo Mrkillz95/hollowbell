@@ -56,6 +56,8 @@ public final class BellPlan {
     private final Ground ground;
     private final double breakAngle, ribPhase;
     private int denY = Integer.MIN_VALUE;
+    /** false for ground painted by an admin's command: the same land and things on it, but no den in the middle */
+    public boolean withDen = true;
 
     public BellPlan(long seed, int cx, int cz, int radius, int sea, int minY, int maxY, Ground ground) {
         this.seed = seed; this.cx = cx; this.cz = cz; this.radius = radius;
@@ -211,7 +213,7 @@ public final class BellPlan {
     private Bowl makeBowl(int ci, int cj) {
         int px = ci * BOWL_CELL + 3 + (int) (h(ci, cj, 100) * (BOWL_CELL - 6));
         int pz = cj * BOWL_CELL + 3 + (int) (h(ci, cj, 101) * (BOWL_CELL - 6));
-        if (dist(px, pz) < DEN_AREA + 6) return null;
+        if (withDen && dist(px, pz) < DEN_AREA + 6) return null;
         double dn = dn(px, pz);
         int zone = zoneOf(dn);
         // the hollows come in fields: whole stretches pitted with them, open meadow between
@@ -267,7 +269,7 @@ public final class BellPlan {
         if (y0 >= sea - 4) off *= smooth(sea + 1, sea + 9, y0);
         double t = y0 + off;
         double d = dist(x, z);
-        if (d < DEN_AREA) {
+        if (withDen && d < DEN_AREA) {
             double w = d <= DEN_FLAT ? 1 : 1 - smooth(DEN_FLAT, DEN_AREA, d);
             t = t + (denFloor(d) - t) * w;
         }
@@ -443,7 +445,7 @@ public final class BellPlan {
         cells(x0, z0, SPIRE_CELL, 10, this::spires);
         cells(x0, z0, ARCH_CELL, 16, this::arch);
         cells(x0, z0, LIGHT_CELL, 4, this::lights);
-        denSpires();
+        if (withDen) denSpires();
         found.removeIf(f -> !f.touches(x0, z0));
         return found;
     }
@@ -460,7 +462,7 @@ public final class BellPlan {
     private int[] spotIn(int ci, int cj, int cell, int salt, double denKeep) {
         int px = ci * cell + 2 + (int) (h(ci, cj, salt) * (cell - 4));
         int pz = cj * cell + 2 + (int) (h(ci, cj, salt + 1) * (cell - 4));
-        if (dist(px, pz) < denKeep) return null;
+        if (withDen && dist(px, pz) < denKeep) return null;
         BowlHit b = new BowlHit();
         bowlsAt(px, pz, b);
         if (b.t < 1.1) return null;
@@ -657,8 +659,8 @@ public final class BellPlan {
             if (!o.paint[i] || wet[i]) continue;
             int x = x0 + (i & 15), z = z0 + (i >> 4);
             double d = dist(x, z);
-            if (d < DEN_AREA + 2) den(o, i, x, z, d);
-            if (!o.pool[i] && d > DEN_AREA + 3 && o.zone[i] >= MIDDLE) reef(o, i, x, z);
+            if (withDen && d < DEN_AREA + 2) den(o, i, x, z, d);
+            if (!o.pool[i] && (!withDen || d > DEN_AREA + 3) && o.zone[i] >= MIDDLE) reef(o, i, x, z);
         }
         for (Feature f : feats)
             for (int i = 0; i < 256; i++) {
@@ -671,7 +673,7 @@ public final class BellPlan {
             if (!o.paint[i] || wet[i] || o.pool[i]) continue;
             int x = x0 + (i & 15), z = z0 + (i >> 4);
             Bowl bw = inBowl[i];
-            boolean inDen = dist(x, z) < DOME_R - 2;
+            boolean inDen = withDen && dist(x, z) < DOME_R - 2;
             if ((bw != null && bw.garden && o.bowlT[i] < 0.8) || inDen) garden(o, i, x, z, inDen);
         }
         // ---- the layers of ground
@@ -737,7 +739,7 @@ public final class BellPlan {
             if (x != bw.px || z != bw.pz) continue;
             spots.add(new int[]{x, z, (int) (Math.min(4.5, bw.r * 0.45) * 10), 1});
         }
-        if ((cx >> 4) == (x0 >> 4) && (cz >> 4) == (z0 >> 4)) spots.add(new int[]{x0 + 8, z0 + 8, 45, 1});
+        if (withDen && (cx >> 4) == (x0 >> 4) && (cz >> 4) == (z0 >> 4)) spots.add(new int[]{x0 + 8, z0 + 8, 45, 1});
         for (int[] s : spots) {
             double rp = s[2] / 10.0;
             if (rp < 1.6) continue;

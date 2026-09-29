@@ -22,7 +22,7 @@ public final class GiantsBridge {
     private static final String WHO = "Hollowbell: ";
 
     /**
-     * action: natural|limit|fight|away|volume|shake|bossbar|griefing|where|list|kill|remove|status|goto ("x z")|tp (player UUID).
+     * action: natural|limit|fight|away|volume|shake|bossbar|griefing|where|list|kill|remove|status|goto ("x z")|tp (player UUID)|paint ("radius full|biome playerUUID").
      * arg: the value as text, or "". Returns lines to show the caller (prefixed with the boss's name, plain
      * words); empty list = nothing; null = unknown action.
      */
@@ -98,12 +98,7 @@ public final class GiantsBridge {
                 }
             }
             case "kill" -> {
-                int n = 0;
-                for (ServerLevel l : server.getAllLevels())
-                    for (HollowbellEntity h : new ArrayList<>(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()))) {
-                        h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE);
-                        n++;
-                    }
+                int n = net.jj.hollowbell.world.FarOrders.killAll(server);
                 out.add(WHO + (n == 0 ? "none to kill." : "killed " + n + "."));
             }
             case "remove" -> {
@@ -129,6 +124,23 @@ public final class GiantsBridge {
                     for (var t : net.jj.hollowbell.world.FarOrders.all(l))
                         if (net.jj.hollowbell.world.FarOrders.order(l, t, new Vec3(x, 0, z), null, 0f) != null) n++;
                 out.add(WHO + (n == 0 ? "none to send." : n + " on the way to " + Mth.floor(x) + ", " + Mth.floor(z) + "."));
+            }
+            case "paint" -> {
+                // "radius mode playerUUID"
+                String[] w = arg == null ? new String[0] : arg.trim().split("\\s+");
+                net.minecraft.server.level.ServerPlayer p = null;
+                int radius = 64;
+                boolean full = true;
+                for (String x : w) {
+                    if (x.equalsIgnoreCase("biome")) full = false;
+                    else if (x.equalsIgnoreCase("full")) full = true;
+                    else if (x.matches("\\d+")) radius = Integer.parseInt(x);
+                    else try { p = server.getPlayerList().getPlayer(java.util.UUID.fromString(x)); } catch (Exception ignored) {}
+                }
+                if (p == null) { out.add(WHO + "nobody to paint round."); return out; }
+                int n = net.jj.hollowbell.world.Painter.start(p, radius, full);
+                out.add(WHO + "painting the Bell Hollows " + Mth.clamp(radius, 16, 512) + " blocks round " + p.getGameProfile().getName()
+                        + (full ? " (land and biome)" : " (biome only)") + ", " + n + " chunks. It can't be undone.");
             }
             case "tp" -> {
                 net.minecraft.server.level.ServerPlayer p = null;

@@ -152,6 +152,16 @@ public final class GiantsCommand {
 
     /** /giants tp <name>: takes you to that one giant, asking only its own mod */
     private static int tp(CommandContext<CommandSourceStack> c) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        return one(c, "tp", c.getSource().getPlayerOrException().getUUID().toString());
+    }
+
+    /** /giants paint <name> [radius] [full|biome]: turns the land round you into that giant's ground (asks only its own mod) */
+    private static int paint(CommandContext<CommandSourceStack> c, int radius, String mode) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        return one(c, "paint", radius + " " + mode + " " + c.getSource().getPlayerOrException().getUUID());
+    }
+
+    /** one action, asked of just the named giant's mod */
+    private static int one(CommandContext<CommandSourceStack> c, String action, String arg) {
         String which = StringArgumentType.getString(c, "which").toLowerCase(java.util.Locale.ROOT);
         int i = java.util.Arrays.asList(TP_NAMES).indexOf(which);
         if (i < 0) {
@@ -162,8 +172,7 @@ public final class GiantsCommand {
             c.getSource().sendFailure(Component.literal(nameOf(BRIDGES[i]) + " isn't installed."));
             return 0;
         }
-        String who = c.getSource().getPlayerOrException().getUUID().toString();
-        List<String> lines = ask(c.getSource().getServer(), "tp", who, BRIDGES[i]);
+        List<String> lines = ask(c.getSource().getServer(), action, arg, BRIDGES[i]);
         for (String s : lines) {
             c.getSource().sendSuccess(() -> Component.literal(s), false);
         }
@@ -205,6 +214,14 @@ public final class GiantsCommand {
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg())
                     .then(Commands.argument("z", DoubleArgumentType.doubleArg())
                         .executes(c -> run(c, "goto", DoubleArgumentType.getDouble(c, "x") + " " + DoubleArgumentType.getDouble(c, "z"))))))
+            .then(Commands.literal("paint").requires(s -> s.hasPermission(2))
+                .then(Commands.argument("which", StringArgumentType.word())
+                    .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
+                    .executes(c -> paint(c, 64, "full"))
+                    .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512))
+                        .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full"))
+                        .then(Commands.literal("full").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full")))
+                        .then(Commands.literal("biome").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "biome"))))))
             .then(Commands.literal("tp").requires(s -> s.hasPermission(2))
                 .then(Commands.argument("which", StringArgumentType.word())
                     .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))

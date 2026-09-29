@@ -1212,7 +1212,14 @@ public class HollowbellEntity extends Monster {
     @Override
     public boolean hurt(DamageSource src, float amount) {
         if (level().isClientSide || isDeadOrDying()) return false;
-        if (src.is(DamageTypes.GENERIC_KILL)) { hp = 0; die(src); return true; }
+        if (src.is(DamageTypes.GENERIC_KILL)) {
+            // /kill, /hollowbell kill, /giants kill: really dead (the game's own health too, or his death never runs)
+            hp = 0;
+            entityData.set(DATA_HP, 0f);
+            setHealth(0f);
+            die(src);
+            return true;
+        }
         if (isInvulnerableTo(src) || isImmuneTo(src)) return false;
         Entity att = src.getEntity();
         if (att == this || att instanceof Belling || (att instanceof LivingEntity le && moves.caught(le) && !(le instanceof Player))) return false;
@@ -1732,6 +1739,9 @@ public class HollowbellEntity extends Monster {
         }
         if (!level().isClientSide) {
             HollowbellMod.LOG.info("Hollowbell died at {} ({})", position(), src.getMsgId());
+            // his chunk keeps going until his death is over, even if everybody walks off: never left half dead
+            if (level() instanceof ServerLevel sl)
+                sl.getChunkSource().addRegionTicket(DYING_TICKET, new net.minecraft.world.level.ChunkPos(blockPosition()), 2, getId());
             dropRider();
             stopFetch();
             moves.letGoOfEverything(true);
@@ -1744,6 +1754,8 @@ public class HollowbellEntity extends Monster {
     private @Nullable DamageSource deathLoot;
     private boolean lootDropped;
     public static final int DEATH_LENGTH = 320;
+    private static final net.minecraft.server.level.TicketType<Integer> DYING_TICKET =
+            net.minecraft.server.level.TicketType.create("hollowbell_death", Integer::compare, DEATH_LENGTH + 80);
 
     @Override protected void dropAllDeathLoot(ServerLevel level, DamageSource src) { deathLoot = src; }
 

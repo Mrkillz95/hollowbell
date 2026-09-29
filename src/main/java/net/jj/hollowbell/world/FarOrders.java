@@ -134,7 +134,9 @@ public final class FarOrders {
 
     // ------------------------------------------------------------------ fetching one from land nobody has loaded
 
-    private record Fetch(UUID id, String dim, double x, double z, Vec3 to, @Nullable UUID follow, long until, float cost) {}
+    private record Fetch(UUID id, String dim, double x, double z, Vec3 to, @Nullable UUID follow, long until, float cost, boolean kill) {
+        Fetch(UUID id, String dim, double x, double z, Vec3 to, @Nullable UUID follow, long until, float cost) { this(id, dim, x, z, to, follow, until, cost, false); }
+    }
     private static final List<Fetch> fetches = new ArrayList<>();
 
     /** for the tests: is anybody still being fetched out of an unloaded chunk? */
@@ -152,6 +154,12 @@ public final class FarOrders {
             Away a = Away.get(server);
             if (a.get(f.id()) != null) {                        // already out as a sum (something else did it)
                 a.order(l, f.id(), f.to(), f.follow());
+                it.remove();
+                continue;
+            }
+            if (f.kill() && l.getEntity(f.id()) instanceof HollowbellEntity h && !h.isRemoved()) {
+                kill(l, h);
+                a.unpark(f.id());
                 it.remove();
                 continue;
             }
@@ -183,6 +191,44 @@ public final class FarOrders {
     }
 
     public static void forget() { fetches.clear(); }
+
+    // ------------------------------------------------------------------ killing every one of him, wherever he is
+
+    private static final TicketType<Integer> DYING = TicketType.create("hollowbell_dying", Integer::compare, HollowbellEntity.DEATH_LENGTH + 60);
+
+    /**
+     * /hollowbell kill and /giants kill: every one in the world (kept moving until his death is over, so nobody is
+     * left half dead in a chunk that has stopped), every one out of the world (brought back and killed), and every
+     * one left in land nobody has loaded (fetched and killed). Returns how many.
+     */
+    public static int killAll(MinecraftServer server) {
+        int n = 0;
+        Away a = Away.get(server);
+        for (ServerLevel l : server.getAllLevels()) {
+            for (HollowbellEntity h : new ArrayList<>(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()))) { kill(l, h); n++; }
+            String dim = l.dimension().location().toString();
+            for (Away.Rec r : a.all()) {
+                if (!r.dim.equals(dim)) continue;
+                HollowbellEntity h = a.bringBack(l, r);
+                if (h != null) { kill(l, h); n++; }
+            }
+            for (var e : new ArrayList<>(a.parked().entrySet())) {
+                var p = e.getValue();
+                if (!p.dim().equals(dim) || l.getEntity(e.getKey()) != null) continue;
+                fetches.add(new Fetch(e.getKey(), dim, p.x(), p.z(), Vec3.ZERO, null, l.getGameTime() + 20 * 20, 0f, true));
+                ChunkPos cp = new ChunkPos(Mth.floor(p.x()) >> 4, Mth.floor(p.z()) >> 4);
+                l.getChunkSource().addRegionTicket(FETCH, cp, 2, cp);
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** dead, and his chunk kept going until he's gone (his death takes a while) */
+    public static void kill(ServerLevel l, HollowbellEntity h) {
+        l.getChunkSource().addRegionTicket(DYING, new ChunkPos(h.blockPosition()), 2, h.getId());
+        h.hurt(h.damageSources().genericKill(), Float.MAX_VALUE);
+    }
 
     /** where a look goes when it hits nothing loaded: 512 blocks along it, on the ground the generator makes there */
     public static Vec3 farLook(ServerPlayer p) {
