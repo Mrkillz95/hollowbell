@@ -287,7 +287,7 @@
   "command.hollowbell.away_now": "%s stepped out of the world.",
   "item.hollowbell.hollowbell_finder": "Finder of the Hollowbell",
   "item.hollowbell.hollowbell_finder.tip": "Right-click: which way to the Hollowbell, and how far.",
-  "item.hollowbell.bell_glass.tip": "Full set: poison can't touch you.",
+  "item.hollowbell.bell_glass.tip": "Full set: poison and his toll's dizziness can't touch you.",
   "item.hollowbell.bell_glass.tip2": "Full set: when you fall fast, you drift down slowly.",
   "biome.hollowbell.bell_hollows": "Bell Hollows",
   "message.hollowbell.finder": "The Hollowbell is %s blocks %s of you, at %s, %s.",
@@ -418,5 +418,14 @@
   "command.hollowbell.config_none": "There's no setting called %s.",
   "command.hollowbell.config_bad": "Not changed: %s.",
   "command.hollowbell.done_set": "Done.",
-  "command.hollowbell.not_alive": "That isn't a creature."
+  "command.hollowbell.not_alive": "That isn't a creature.",
+  "block.hollowbell.loot_cache": "Hollowbell Loot Cache",
+  "item.hollowbell.stinger.tip2": "Hold right-click and let go to throw it on its strand. Small things get pulled to you. Walls, big things and him pull you to them.",
+  "item.hollowbell.stinger.tip3": "Sneak as you throw to always pull yourself.",
+  "entity.hollowbell.stinger_hook": "Stinger",
+  "item.hollowbell.bell_glass.tip3": "Full set: hurt low, the glass rings and throws back what's close (every 30 s).",
+  "item.hollowbell.bell_glass.power": "Armour power (%s): on the ground, float up and slam down, stunning all round. In the air, glide.",
+  "key.hollowbell.armour_power": "Armour power",
+  "key.categories.hollowbell": "Hollowbell",
+  "message.hollowbell.power_no_set": "You need all four pieces of bell glass on."
 }

@@ -139,6 +139,31 @@ def spore_moss():
     return img
 
 
+def loot_cache_side():
+    img = bell_calcite()
+    d = ImageDraw.Draw(img)
+    # a bone band round the middle with a glowing seam, and dark corners like a chest
+    for x in range(16):
+        for y in (6, 7, 8, 9):
+            img.putpixel((x, y), (226, 220, 198, 255) if y in (6, 9) else (170, 236, 150, 255))
+    for (x, y) in ((0, 0), (15, 0), (0, 15), (15, 15)):
+        img.putpixel((x, y), (120, 130, 124, 255))
+    d.rectangle((6, 6, 9, 9), outline=(96, 150, 110, 255))
+    return img
+
+
+def loot_cache_top():
+    img = bell_calcite()
+    for y in range(16):
+        for x in range(16):
+            r = math.hypot(x - 7.5, y - 7.5)
+            if r < 4.2:
+                img.putpixel((x, y), mix((236, 255, 214), (150, 226, 150), r / 4.2) + (255,))
+            elif r < 5.2:
+                img.putpixel((x, y), (226, 220, 198, 255))
+    return img
+
+
 def cube(tex, size=96):
     """a little iso picture of the block, for the sheet"""
     t = tex.convert('RGBA')
@@ -161,7 +186,8 @@ def main():
     os.makedirs(TEX, exist_ok=True)
     os.makedirs(PICS, exist_ok=True)
     blocks = [('bell_calcite', bell_calcite()), ('tendril_glass', tendril_glass()),
-              ('bell_shard', bell_shard()), ('spore_moss', spore_moss())]
+              ('bell_shard', bell_shard()), ('spore_moss', spore_moss()),
+              ('loot_cache_side', loot_cache_side()), ('loot_cache_top', loot_cache_top())]
     for name, img in blocks:
         img.save(os.path.join(TEX, name + '.png'))
     # the sheet: each texture big, and a cube of it, on a pale backdrop with a darker strip so glass shows

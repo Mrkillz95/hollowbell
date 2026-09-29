@@ -49,6 +49,7 @@ public class HollowbellMod implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(SafeDropPayload.TYPE, SafeDropPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(DrivePayload.TYPE, DrivePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(HitPayload.TYPE, HitPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(net.jj.hollowbell.net.ArmourPowerPayload.TYPE, net.jj.hollowbell.net.ArmourPowerPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SafeListPayload.TYPE, SafeListPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(MoodPayload.TYPE, MoodPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.DetailPayload.TYPE, net.jj.hollowbell.net.DetailPayload.CODEC);
@@ -58,6 +59,8 @@ public class HollowbellMod implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(CodexPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> CodexOrders.handle(ctx.player(), pay)));
         ServerPlayNetworking.registerGlobalReceiver(SafeDropPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> CodexOrders.dropFromSafeList(ctx.player(), pay.id())));
+        ServerPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.ArmourPowerPayload.TYPE,
+                (pay, ctx) -> ctx.server().execute(() -> net.jj.hollowbell.item.BellPower.use(ctx.player())));
         ServerPlayNetworking.registerGlobalReceiver(HitPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> {
             ServerPlayer p = ctx.player();
             if (p.serverLevel().getEntity(pay.bellId()) instanceof HollowbellEntity h && !p.isSpectator()) h.hitBy(p, pay.bone());

@@ -27,6 +27,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
@@ -738,10 +739,30 @@ public class HollowbellGameTests implements FabricGameTest {
         });
         h.runAfterDelay(20 + HollowbellEntity.DEATH_LENGTH + 20, () -> {
             h.assertTrue(e.isRemoved(), "he should be gone after sinking");
-            var drops = h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(at[0], at[0]).inflate(40));
-            h.assertTrue(!drops.isEmpty(), "no loot dropped");
-            h.assertTrue(drops.stream().anyMatch(d -> d.getItem().is(ModItems.CROWN)), "no crown in the loot");
-            for (var d : drops) d.discard();
+            // his loot is in a cache on a pedestal where he fell, and the beam is on
+            var l = h.getLevel();
+            BlockPos cache = null;
+            BlockPos c = BlockPos.containing(at[0]);
+            for (BlockPos p : BlockPos.betweenClosed(c.offset(-2, -80, -2), c.offset(2, 80, 2)))
+                if (l.getBlockState(p).is(net.jj.hollowbell.ModBlocks.LOOT_CACHE)) { cache = p.immutable(); break; }
+            h.assertTrue(cache != null, "no loot cache where he fell");
+            h.assertTrue(l.getBlockState(cache).getValue(net.jj.hollowbell.block.LootCacheBlock.LIT), "the cache's beam should be on");
+            h.assertTrue(l.getBlockState(cache.offset(3, -1, 3)).is(net.minecraft.world.level.block.Blocks.BONE_BLOCK), "no pedestal post");
+            h.assertTrue(l.getBlockState(cache.below(2)).is(net.jj.hollowbell.ModBlocks.BELL_CALCITE), "no pedestal floor");
+            var be = (net.jj.hollowbell.block.LootCacheBlockEntity) l.getBlockEntity(cache);
+            boolean crown = false, stinger = false;
+            for (int i = 0; i < be.getContainerSize(); i++) {
+                crown |= be.getItem(i).is(ModItems.CROWN);
+                stinger |= be.getItem(i).is(ModItems.STINGER);
+            }
+            h.assertTrue(crown, "no crown in the cache");
+            h.assertTrue(stinger, "no stinger in the cache");
+            // emptied, the beam goes out; the pedestal stays
+            for (int i = 0; i < be.getContainerSize(); i++) be.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            be.setChanged();
+            h.assertTrue(!l.getBlockState(cache).getValue(net.jj.hollowbell.block.LootCacheBlock.LIT), "the beam should stop once it's empty");
+            h.assertTrue(l.getBlockState(cache.offset(3, -1, 3)).is(net.minecraft.world.level.block.Blocks.BONE_BLOCK), "the pedestal should stay");
+            for (var d : l.getEntitiesOfClass(ItemEntity.class, new AABB(at[0], at[0]).inflate(40))) d.discard();
             release(h, e);
             h.succeed();
         });
@@ -3545,6 +3566,322 @@ public class HollowbellGameTests implements FabricGameTest {
             if (top(h, x0 + 8, z0 + 8) > 20) h.assertTrue(!hollowsAt(h, x0 + 8, -40, z0 + 8), "the caves under it were changed");
             drop(p);
             force(h, c.getX(), c.getZ(), 1, false);
+            h.succeed();
+        });
+    }
+
+    // ------------------------------------------------------------------ 1.7.0: the stinger harpoon, the armour power
+
+    /** a spot on the flat ground of this test, dx/dz blocks from its corner, standing on the top block */
+    private static Vec3 onGround(GameTestHelper h, int dx, int dz) {
+        BlockPos o = h.absolutePos(new BlockPos(dx, 0, dz));
+        return new Vec3(o.getX() + 0.5, top(h, o.getX(), o.getZ()) + 1, o.getZ() + 0.5);
+    }
+
+    /** open ground far from every test's barrier walls (the harpoon would stick in those), chunks held loaded */
+    private static Vec3 openGround(GameTestHelper h, int slot) {
+        BlockPos o = h.absolutePos(BlockPos.ZERO);
+        int x = o.getX() + 20000 + slot * 400, z = o.getZ() + 9000;
+        for (int cx = (x >> 4) - 2; cx <= (x >> 4) + 2; cx++) for (int cz = (z >> 4) - 2; cz <= (z >> 4) + 2; cz++) {
+            h.getLevel().setChunkForced(cx, cz, true);
+            h.getLevel().getChunk(cx, cz);
+        }
+        return new Vec3(x + 0.5, top(h, x, z) + 1, z + 0.5);
+    }
+
+    private static void letGo(GameTestHelper h, Vec3 at) {
+        int x = (int) Math.floor(at.x), z = (int) Math.floor(at.z);
+        for (int cx = (x >> 4) - 2; cx <= (x >> 4) + 2; cx++) for (int cz = (z >> 4) - 2; cz <= (z >> 4) + 2; cz++) h.getLevel().setChunkForced(cx, cz, false);
+    }
+
+    private static void face(ServerPlayer p, Vec3 at) {
+        p.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, at);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 120, batch = "stinger_reel_them")
+    public void theStingerReelsASmallThingIn(GameTestHelper h) {
+        Vec3 at = openGround(h, 316);
+        ServerPlayer p = player(h, at);
+        var pig = EntityType.PIG.create(h.getLevel());
+        Vec3 pigAt = at.add(11, 0, 0);
+        pig.moveTo(pigAt.x, pigAt.y, pigAt.z, 0, 0);
+        h.getLevel().addFreshEntity(pig);
+        ItemStack st = new ItemStack(ModItems.STINGER);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, st);
+        h.runAfterDelay(2, () -> {
+            face(p, pig.position().add(0, pig.getBbHeight() * 0.5, 0));
+            var hook = net.jj.hollowbell.item.StingerItem.throwIt(p, st, 1f, false);
+            h.assertTrue(p.getCooldowns().isOnCooldown(ModItems.STINGER), "no wait after a throw");
+            h.assertTrue(hook.isAlive(), "the strand end didn't fly");
+        });
+        double[] best = {99};
+        for (int t = 4; t < 60; t++) h.runAfterDelay(t, () -> best[0] = Math.min(best[0], pig.position().distanceTo(p.position())));
+        h.runAfterDelay(62, () -> {
+            h.assertTrue(best[0] < 4.5, "the pig was never reeled in: closest " + best[0]);
+            h.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the stinger didn't hurt the pig");
+            pig.discard();
+            drop(p);
+            letGo(h, at);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 80, batch = "stinger_reel_me")
+    public void theStingerReelsYouToAWall(GameTestHelper h) {
+        Vec3 at = openGround(h, 317);
+        ServerPlayer p = player(h, at);
+        // a wall 9 blocks off
+        BlockPos w = BlockPos.containing(at.add(9, 0, 0));
+        for (int y = 0; y < 4; y++) for (int z = -2; z <= 2; z++)
+            h.getLevel().setBlockAndUpdate(w.offset(0, y, z), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+        net.jj.hollowbell.entity.StingerHook[] hook = new net.jj.hollowbell.entity.StingerHook[1];
+        h.runAfterDelay(2, () -> {
+            face(p, Vec3.atCenterOf(w.above()));
+            hook[0] = net.jj.hollowbell.item.StingerItem.throwIt(p, new ItemStack(ModItems.STINGER), 1f, false);
+        });
+        h.runAfterDelay(12, () -> {
+            h.assertTrue(hook[0].isAlive() && hook[0].state() == net.jj.hollowbell.entity.StingerHook.REEL_ME,
+                    "the stinger didn't stick in the wall: state " + hook[0].state() + ", alive " + hook[0].isAlive());
+            h.assertTrue(p.getDeltaMovement().x > 0.3, "you're not pulled to the wall: " + p.getDeltaMovement());
+            h.assertTrue(p.fallDistance == 0f, "being reeled counts as falling");
+            hook[0].discard();
+            for (int y = 0; y < 4; y++) for (int z = -2; z <= 2; z++) h.getLevel().setBlockAndUpdate(w.offset(0, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            drop(p);
+            letGo(h, at);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "stinger_him")
+    public void theStingerSticksInHimAndPullsYou(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.CALM, 314);
+        net.jj.hollowbell.entity.StingerHook[] hook = new net.jj.hollowbell.entity.StingerHook[1];
+        ServerPlayer[] pl = new ServerPlayer[1];
+        h.runAfterDelay(20, () -> {
+            // from outside him (at 0.2 he is about 40 across), level with one of his glowing spots
+            Vec3 spot = e.spotWorld(0);
+            Vec3 flat = new Vec3(spot.x - e.getX(), 0, spot.z - e.getZ());
+            flat = flat.lengthSqr() < 1 ? new Vec3(1, 0, 0) : flat.normalize();
+            Vec3 from = new Vec3(e.getX(), spot.y, e.getZ()).add(flat.scale(34));
+            pl[0] = player(h, from.subtract(0, 1.62, 0));
+            pl[0].setNoGravity(true);
+            face(pl[0], spot);
+            hook[0] = net.jj.hollowbell.item.StingerItem.throwIt(pl[0], new ItemStack(ModItems.STINGER), 1f, false);
+        });
+        int[] seen = {0};
+        for (int t = 22; t < 50; t++) h.runAfterDelay(t, () -> {
+            // a tick after it sticks, the pull is on
+            if (hook[0] != null && hook[0].isAlive() && hook[0].state() == net.jj.hollowbell.entity.StingerHook.REEL_ME && ++seen[0] == 2) {
+                Vec3 v = pl[0].getDeltaMovement();
+                Vec3 toHim = hook[0].position().subtract(pl[0].position());
+                h.assertTrue(v.dot(toHim.normalize()) > 0.3, "stuck in him but you're not pulled to him: " + v);
+                hook[0].discard();
+                drop(pl[0]);
+                release(h, e);
+                h.succeed();
+            }
+        });
+        h.runAfterDelay(52, () -> h.fail("the stinger never stuck in him (alive " + (hook[0] != null && hook[0].isAlive()) + ")"));
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 140, batch = "armour_toll")
+    public void theBellTollFloatsSlamsAndStuns(GameTestHelper h) {
+        net.jj.hollowbell.item.BellPower.clear();
+        Vec3 at = onGround(h, 1, 1);
+        ServerPlayer p = player(h, at);
+        var z = EntityType.ZOMBIE.create(h.getLevel());
+        z.moveTo(at.x + 3, at.y, at.z, 0, 0);
+        z.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(net.minecraft.world.item.Items.LEATHER_HELMET));
+        z.setNoAi(true);
+        h.getLevel().addFreshEntity(z);
+        // three pieces: no power
+        wearBellGlass(p);
+        p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, ItemStack.EMPTY);
+        p.setOnGround(true);
+        h.assertTrue(net.jj.hollowbell.item.BellPower.use(p) == null, "the power worked without the full set");
+        wearBellGlass(p);
+        float zHp = z.getHealth();
+        h.runAfterDelay(2, () -> {
+            p.setOnGround(true);
+            var k = net.jj.hollowbell.item.BellPower.use(p);
+            h.assertTrue(k == net.jj.hollowbell.item.BellPower.Kind.TOLL, "on the ground the key should toll, did " + k);
+            h.assertTrue(p.getCooldowns().isOnCooldown(ModItems.BELL_CHESTPLATE), "no wait shown on the chestplate");
+            h.assertTrue(net.jj.hollowbell.item.BellPower.use(p) == null, "a second toll right away");
+        });
+        h.runAfterDelay(6, () -> h.assertTrue(p.getDeltaMovement().y > 0.2, "not floating up: " + p.getDeltaMovement()));
+        h.runAfterDelay(3 + net.jj.hollowbell.item.BellPower.RISE + net.jj.hollowbell.item.BellPower.HANG + 3,
+                () -> h.assertTrue(p.getDeltaMovement().y < -1, "not slamming down: " + p.getDeltaMovement()));
+        h.runAfterDelay(3 + net.jj.hollowbell.item.BellPower.RISE + net.jj.hollowbell.item.BellPower.HANG + net.jj.hollowbell.item.BellPower.SLAM_MAX + 4, () -> {
+            h.assertTrue(!net.jj.hollowbell.item.BellPower.busy(p), "the toll never finished");
+            h.assertTrue(z.getHealth() < zHp, "the ring didn't hurt the zombie");
+            var slow = z.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+            h.assertTrue(slow != null && slow.getAmplifier() >= 3, "the zombie wasn't stunned");
+            z.discard();
+            drop(p);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 80, batch = "armour_glide")
+    public void inTheAirTheArmourGlides(GameTestHelper h) {
+        net.jj.hollowbell.item.BellPower.clear();
+        ServerPlayer p = player(h, onGround(h, 1, 1).add(0, 20, 0));
+        wearBellGlass(p);
+        p.setOnGround(false);
+        p.setYRot(-90);                       // facing +x
+        p.setXRot(0);
+        h.runAfterDelay(2, () -> {
+            p.setOnGround(false);
+            var k = net.jj.hollowbell.item.BellPower.use(p);
+            h.assertTrue(k == net.jj.hollowbell.item.BellPower.Kind.GLIDE, "in the air the key should glide, did " + k);
+        });
+        h.runAfterDelay(14, () -> {
+            p.setOnGround(false);
+            Vec3 v = p.getDeltaMovement();
+            h.assertTrue(v.x > 0.4 && v.y > -0.2 && v.y < 0.05, "not gliding along: " + v);
+            net.jj.hollowbell.item.BellPower.clear();
+            drop(p);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "armour_last_ring")
+    public void hurtLowTheGlassRingsOnce(GameTestHelper h) {
+        net.jj.hollowbell.item.BellArmorItem.forgetRings();
+        Vec3 at = onGround(h, 1, 1);
+        ServerPlayer p = player(h, at);
+        wearBellGlass(p);
+        var z = EntityType.ZOMBIE.create(h.getLevel());
+        z.moveTo(at.x + 2, at.y, at.z, 0, 0);
+        z.setNoAi(true);
+        h.getLevel().addFreshEntity(z);
+        p.setHealth(p.getMaxHealth());
+        h.assertTrue(!net.jj.hollowbell.item.BellArmorItem.lastRing(p), "rang at full health");
+        p.setHealth(4f);
+        h.assertTrue(net.jj.hollowbell.item.BellArmorItem.lastRing(p), "didn't ring when hurt low");
+        h.assertTrue(p.hasEffect(net.minecraft.world.effect.MobEffects.ABSORPTION), "no cover after the ring");
+        h.assertTrue(z.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN), "the ring didn't reach the zombie");
+        h.assertTrue(!net.jj.hollowbell.item.BellArmorItem.lastRing(p), "rang twice in a row");
+        // and his toll's dizziness is shaken off
+        p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.CONFUSION, 200));
+        net.jj.hollowbell.item.BellArmorItem.abilities(p);
+        h.assertTrue(!p.hasEffect(net.minecraft.world.effect.MobEffects.CONFUSION), "the set kept the dizziness");
+        z.discard();
+        drop(p);
+        h.succeed();
+    }
+
+    // ------------------------------------------------------------------ 1.7.0: operator commands
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "ops_set")
+    public void operatorsCanSetEverything(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 315);
+        h.runAfterDelay(20, () -> {
+            Vec3 at = e.position().add(0, 2, 0);
+            run(h, at, "hollowbell set freeze on");
+            h.assertTrue(e.frozen(), "set freeze on");
+            run(h, at, "hollowbell set freeze off");
+            h.assertTrue(!e.frozen(), "set freeze off");
+            run(h, at, "hollowbell set speed 2.5");
+            h.assertTrue(Math.abs(e.speedMul() - 2.5f) < 1e-3, "set speed: " + e.speedMul());
+            run(h, at, "hollowbell set speed 1");
+            run(h, at, "hollowbell set invulnerable on");
+            h.assertTrue(e.isInvulnerable(), "set invulnerable on");
+            run(h, at, "hollowbell set invulnerable off");
+            h.assertTrue(!e.isInvulnerable(), "set invulnerable off");
+            run(h, at, "hollowbell set glow on");
+            h.assertTrue(e.hasGlowingTag(), "set glow on");
+            run(h, at, "hollowbell set glow off");
+            run(h, at, "hollowbell set name Big Bell");
+            h.assertTrue(e.hasCustomName() && e.getCustomName().getString().equals("Big Bell"), "set name");
+            run(h, at, "hollowbell set wind 0.25");
+            h.assertTrue(Math.abs(e.mood().wind() - 0.25f) < 0.02f, "set wind: " + e.mood().wind());
+            run(h, at, "hollowbell set home");
+            h.assertTrue(e.home() != null && e.home().distanceTo(at) < 1.5, "set home: " + e.home());
+            run(h, at, "hollowbell sethealth 50");
+            h.assertTrue(Math.abs(e.healthNow() - 50f) < 1f, "sethealth: " + e.healthNow());
+            run(h, at, "hollowbell pods pop 2");
+            int left = e.podsLeft();
+            h.assertTrue(left == e.rig.pods.length - 2, "pods pop 2 left " + left);
+            run(h, at, "hollowbell pods mend");
+            h.assertTrue(e.podsLeft() == e.rig.pods.length, "pods mend left " + e.podsLeft());
+            run(h, at, "hollowbell size 0.15");
+            h.assertTrue(Math.abs(e.bellScale() - 0.15f) < 1e-3, "size: " + e.bellScale());
+            run(h, at, "hollowbell mood guardian");
+            h.assertTrue(e.isGuardian(), "mood guardian");
+            // a player to aim at: target and grudge
+            ServerPlayer p = player(h, at.add(6, 0, 0));
+            run(h, at, "hollowbell set target " + p.getGameProfile().getName());
+            h.assertTrue(e.getTarget() == p, "set target: " + e.getTarget());
+            run(h, at, "hollowbell set grudge " + p.getGameProfile().getName() + " 0.8");
+            h.assertTrue(e.mood().sourOf(p.getUUID()) > 0.7f, "set grudge: " + e.mood().sourOf(p.getUUID()));
+            run(h, at, "hollowbell set target none");
+            h.assertTrue(e.getTarget() == null, "set target none");
+            // a move at a spot, and at somebody
+            e.setMoveCooldown(0);
+            run(h, at, "hollowbell do sweep at " + (int) (e.getX() + 5) + " " + (int) e.getY() + " " + (int) e.getZ());
+            h.assertTrue(e.moves().move() == Moves.SWEEP, "do sweep at a spot: " + e.moves().move());
+            run(h, at, "hollowbell do pulse_wave " + p.getGameProfile().getName());
+            h.assertTrue(e.moves().move() == Moves.PULSE, "do pulse_wave at a player: " + e.moves().move());
+            run(h, at, "hollowbell set cooldowns clear");
+            drop(p);
+            e.setCustomName(null);
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ops_config")
+    public void operatorsCanSetAnySetting(GameTestHelper h) {
+        Vec3 at = onGround(h, 1, 1);
+        float was = HollowbellConfig.V.health;
+        boolean bar = HollowbellConfig.V.bossBar;
+        try {
+            var out = said(h, at, "hollowbell config health 1234");
+            h.assertTrue(Math.abs(HollowbellConfig.V.health - 1234f) < 0.01f, "config health didn't set: " + HollowbellConfig.V.health + " " + out);
+            said(h, at, "hollowbell config bossBar off");
+            h.assertTrue(!HollowbellConfig.V.bossBar, "config bossBar off didn't set");
+            // the /giants bridge: list, look, set, a bad value, a key this mod doesn't have
+            var server = h.getLevel().getServer();
+            var keys = net.jj.hollowbell.command.GiantsCommand.ask(server, "config", "", "net.jj.hollowbell.GiantsBridge");
+            h.assertTrue(keys.size() == 1 && keys.get(0).contains("health") && keys.get(0).contains("bossBar"), "config keys: " + keys);
+            var look = net.jj.hollowbell.command.GiantsCommand.ask(server, "config", "health", "net.jj.hollowbell.GiantsBridge");
+            h.assertTrue(look.size() == 1 && look.get(0).contains("health = 1234"), "config look: " + look);
+            var set = net.jj.hollowbell.command.GiantsCommand.ask(server, "config", "health 2000", "net.jj.hollowbell.GiantsBridge");
+            h.assertTrue(Math.abs(HollowbellConfig.V.health - 2000f) < 0.01f && set.get(0).contains("health = 2000"), "config set: " + set);
+            var bad = net.jj.hollowbell.command.GiantsCommand.ask(server, "config", "health lots", "net.jj.hollowbell.GiantsBridge");
+            h.assertTrue(bad.size() == 1 && bad.get(0).contains("can't be set"), "config bad value: " + bad);
+            var none = net.jj.hollowbell.command.GiantsCommand.ask(server, "config", "noSuchSetting 3", "net.jj.hollowbell.GiantsBridge");
+            h.assertTrue(none.isEmpty(), "a key this mod doesn't have should say nothing: " + none);
+        } finally {
+            HollowbellConfig.V.health = was;
+            HollowbellConfig.V.bossBar = bar;
+            HollowbellConfig.save();
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "loot_cache_open")
+    public void theLootShrineKeepsWhatDoesntFit(GameTestHelper h) {
+        Vec3 at = onGround(h, 3, 3);
+        java.util.List<ItemStack> loot = new java.util.ArrayList<>();
+        for (int i = 0; i < 30; i++) loot.add(new ItemStack(ModItems.STINGER));       // 30 won't stack into 27 slots
+        BlockPos c = net.jj.hollowbell.world.LootShrine.build(h.getLevel(), at.x, at.z, loot);
+        var be = (net.jj.hollowbell.block.LootCacheBlockEntity) h.getLevel().getBlockEntity(c);
+        h.assertTrue(be != null, "no cache");
+        int in = 0;
+        for (int i = 0; i < be.getContainerSize(); i++) in += be.getItem(i).getCount();
+        h.assertTrue(in == 27, "the cache holds " + in);
+        var spill = h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(c).inflate(3));
+        h.assertTrue(spill.stream().mapToInt(x -> x.getItem().getCount()).sum() == 3, "what didn't fit wasn't left on top: " + spill.size());
+        // breaking the cache drops what's in it
+        h.getLevel().destroyBlock(c, true);
+        h.runAfterDelay(2, () -> {
+            int all = h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(c).inflate(4)).stream().filter(x -> x.getItem().is(ModItems.STINGER)).mapToInt(x -> x.getItem().getCount()).sum();
+            h.assertTrue(all == 30, "breaking the cache lost things: " + all);
+            for (var x : h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(c).inflate(6))) x.discard();
+            for (BlockPos b : BlockPos.betweenClosed(c.offset(-3, -3, -3), c.offset(3, 3, 3)))
+                if (b.getY() >= c.getY() - 2) h.getLevel().setBlockAndUpdate(b, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
             h.succeed();
         });
     }

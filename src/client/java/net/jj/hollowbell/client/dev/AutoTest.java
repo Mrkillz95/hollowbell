@@ -255,9 +255,13 @@ public final class AutoTest {
             double c = Math.cos(ang), sn = Math.sin(ang);
             double edge = 0;
             for (double d = 0; d < snap.radius; d += 4) if (snap.outline.dn((int) (snap.cx + c * d), (int) (snap.cz + sn * d)) < 1) edge = d;
-            double cam = edge + out, look = edge - 90;
+            // edge <angle> <out> <up> [in] [side]: the camera <out> blocks past the edge (and <side> along it), looking
+            // at a spot <in> blocks inside it
+            double in = a.length > 3 ? Double.parseDouble(a[3]) : 90, side = a.length > 4 ? Double.parseDouble(a[4]) : 0;
+            double cam = edge + out, look = edge - in;
+            double camX = c * cam - sn * side, camZ = sn * cam + c * side;
             HollowbellMod.LOG.info("autotest edge: at {} degrees the ground reaches {} blocks", a[0], (int) edge);
-            mc.execute(() -> groundView(mc, new String[]{String.valueOf(c * cam), String.valueOf(sn * cam), up, String.valueOf(c * look), String.valueOf(sn * look)}));
+            mc.execute(() -> groundView(mc, new String[]{String.valueOf(camX), String.valueOf(camZ), up, String.valueOf(c * look), String.valueOf(sn * look)}));
         });
     }
 

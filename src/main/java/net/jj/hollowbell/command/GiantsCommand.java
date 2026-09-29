@@ -179,6 +179,18 @@ public final class GiantsCommand {
         return lines.size();
     }
 
+    /** like run, but a key only some mods have is just their lines (a bare look changes nothing) */
+    private static int runKeep(CommandContext<CommandSourceStack> c, String action, String arg) {
+        List<String> lines = ask(c.getSource().getServer(), action, arg);
+        if (lines.isEmpty()) {
+            lines = List.of("No boss has a setting called " + arg + ".");
+        }
+        for (String s : lines) {
+            c.getSource().sendSuccess(() -> Component.literal(s), false);
+        }
+        return lines.size();
+    }
+
     private static LiteralArgumentBuilder<CommandSourceStack> toggle(String name) {
         return Commands.literal(name).requires(s -> s.hasPermission(2)).executes(c -> run(c, name, ""))
             .then(Commands.literal("on").executes(c -> run(c, name, "on")))
@@ -214,6 +226,12 @@ public final class GiantsCommand {
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg())
                     .then(Commands.argument("z", DoubleArgumentType.doubleArg())
                         .executes(c -> run(c, "goto", DoubleArgumentType.getDouble(c, "x") + " " + DoubleArgumentType.getDouble(c, "z"))))))
+            .then(Commands.literal("config").requires(s -> s.hasPermission(2))
+                .executes(c -> run(c, "config", ""))
+                .then(Commands.argument("key", StringArgumentType.word())
+                    .executes(c -> runKeep(c, "config", StringArgumentType.getString(c, "key")))
+                    .then(Commands.argument("value", StringArgumentType.word())
+                        .executes(c -> run(c, "config", StringArgumentType.getString(c, "key") + " " + StringArgumentType.getString(c, "value"))))))
             .then(Commands.literal("paint").requires(s -> s.hasPermission(2))
                 .then(Commands.argument("which", StringArgumentType.word())
                     .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))

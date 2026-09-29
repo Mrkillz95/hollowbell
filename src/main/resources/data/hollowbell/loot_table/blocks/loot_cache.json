@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:block",
+  "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "hollowbell:loot_cache"}], "conditions": [{"condition": "minecraft:survives_explosion"}]}],
+  "random_sequence": "hollowbell:blocks/loot_cache"
+}

@@ -24,7 +24,8 @@ import net.minecraft.world.item.armortrim.ArmorTrim;
 /**
  * Bell glass is drawn the way his own glass is: see-through. Vanilla draws every armor solid (a cutout), which
  * would turn the pale glass into flat paint; here it goes through the translucent pass instead, with the glint
- * and any trim drawn over it just as vanilla does.
+ * and any trim drawn over it just as vanilla does. On top of the flat glass go the parts that stand out, alive
+ * (BellArmorBits).
  */
 public final class BellArmorRenderer implements ArmorRenderer {
     private static final ResourceLocation OUTER = ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "textures/models/armor/bell_glass_layer_1.png");
@@ -63,6 +64,8 @@ public final class BellArmorRenderer implements ArmorRenderer {
         // the glass, see-through, with the glint over it when enchanted
         var vc = ItemRenderer.getArmorFoilBuffer(buffers, RenderType.entityTranslucent(legs ? INNER : OUTER), stack.hasFoil());
         m.renderToBuffer(pose, vc, light, OverlayTexture.NO_OVERLAY);
+        // the parts that stand out: ribs, pods, strands, glowing spots (see BellArmorBits)
+        BellArmorBits.render(pose, buffers, entity, slot, light, m);
         // a smithing trim, if it has one, the same way vanilla puts it on
         ArmorTrim trim = stack.get(DataComponents.TRIM);
         if (trim != null) {

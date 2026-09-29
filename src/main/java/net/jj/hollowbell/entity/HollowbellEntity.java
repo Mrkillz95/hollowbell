@@ -1214,6 +1214,7 @@ public class HollowbellEntity extends Monster {
 
     /** the first block of him along a line in the world, up to maxDist blocks */
     public @Nullable BellRig.Hit raycast(Vec3 from, Vec3 dir, double maxDist) {
+        ensurePose();
         Vector3f o = toModel(from);
         Vec3 unit = dir.normalize();
         Vector3f d = dirToModel(unit);
@@ -1409,7 +1410,7 @@ public class HollowbellEntity extends Monster {
     /** arrows and other things thrown at him: the game can't find him for them, so he looks for them himself */
     private void arrowsTick() {
         List<net.minecraft.world.entity.projectile.Projectile> ps = level().getEntitiesOfClass(net.minecraft.world.entity.projectile.Projectile.class, bodyBox(),
-                p -> p.getDeltaMovement().lengthSqr() > 0.04 && !(p.getOwner() instanceof HollowbellEntity));
+                p -> p.getDeltaMovement().lengthSqr() > 0.04 && !(p.getOwner() instanceof HollowbellEntity) && !(p instanceof StingerHook));
         for (var p : ps) {
             if (p instanceof net.minecraft.world.entity.projectile.AbstractArrow a && a.isNoGravity() && a.getDeltaMovement().lengthSqr() < 0.05) continue;
             Vec3 v = p.getDeltaMovement();
@@ -1731,6 +1732,7 @@ public class HollowbellEntity extends Monster {
 
     /** a move pressed while riding: the book's clock applies */
     public boolean forceMove(int which) { wakeUp(); return !moves.settingDown() && moves.force(which, getTarget()); }
+    public boolean forceMoveAt(int which, Vec3 spot) { wakeUp(); return !moves.settingDown() && moves.forceAt(which, spot); }
     public boolean forceMove(int which, @Nullable LivingEntity at) { wakeUp(); return !moves.settingDown() && moves.force(which, at != null ? at : getTarget()); }
 
     // ------------------------------------------------------------------ dying
@@ -1793,8 +1795,19 @@ public class HollowbellEntity extends Monster {
             particles(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK,
                     net.minecraft.world.level.block.Blocks.OXIDIZED_COPPER.defaultBlockState()), position().add(0, 1, 0), 60, 70 * s, 0.2);
         if (deathTime >= DEATH_LENGTH && !isRemoved()) {
-            if (!lootDropped && level() instanceof ServerLevel sl)
-                super.dropAllDeathLoot(sl, deathLoot != null ? deathLoot : damageSources().generic());
+            if (!lootDropped && level() instanceof ServerLevel sl) {
+                // everything he drops goes into his loot cache, on a pedestal where he fell
+                caught = new ArrayList<>();
+                try { super.dropAllDeathLoot(sl, deathLoot != null ? deathLoot : damageSources().generic()); }
+                finally {
+                    List<ItemStack> loot = caught;
+                    caught = null;
+                    if (!loot.isEmpty()) {
+                        BlockPos at = net.jj.hollowbell.world.LootShrine.build(sl, getX(), getZ(), loot);
+                        HollowbellMod.LOG.info("His loot is in the cache at {}", at);
+                    }
+                }
+            }
             lootDropped = true;
             particles(net.minecraft.core.particles.ParticleTypes.POOF, position().add(0, 1, 0), 120, 60 * s, 0.05);
             level().broadcastEntityEvent(this, (byte) 60);
@@ -1803,6 +1816,15 @@ public class HollowbellEntity extends Monster {
     }
 
     public int deathLength() { return DEATH_LENGTH; }
+
+    /** while his loot is being made: what he drops is kept here instead of thrown on the ground */
+    private @Nullable List<ItemStack> caught;
+
+    @Override
+    public @Nullable net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ItemStack stack, float up) {
+        if (caught != null) { if (!stack.isEmpty()) caught.add(stack.copy()); return null; }
+        return super.spawnAtLocation(stack, up);
+    }
 
     @Override protected boolean shouldDropLoot() { return true; }
 

@@ -1,0 +1,228 @@
+# 1.7.0 animation audit: every move, shots at key ticks (pictures in build/autotest/screenshots)
+world flat
+gui off
+render 20
+sim 20
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon hunting 1
+waitmodel
+wait 300
+cmd hollowbell mood calm
+cmd hollowbell stay true
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon zombie ~30 ~ ~10 {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+view 0 90 -270 0 80 0
+wait 20
+shot audit_00_idle
+cmd execute as @e[type=zombie,limit=1] run hollowbell do grab
+wait 20
+shot audit_01_grab_20
+wait 40
+shot audit_01_grab_60
+wait 90
+shot audit_01_grab_150
+wait 80
+shot audit_01_grab_230
+wait 64
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do harvest
+wait 20
+shot audit_02_harvest_20
+wait 60
+shot audit_02_harvest_80
+wait 120
+shot audit_02_harvest_200
+wait 94
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do curtain
+wait 20
+shot audit_03_curtain_20
+wait 25
+shot audit_03_curtain_45
+wait 55
+shot audit_03_curtain_100
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sweep
+wait 15
+shot audit_04_sweep_15
+wait 20
+shot audit_04_sweep_35
+wait 20
+shot audit_04_sweep_55
+wait 65
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_slam
+wait 20
+shot audit_05_arm_slam_20
+wait 20
+shot audit_05_arm_slam_40
+wait 15
+shot audit_05_arm_slam_55
+wait 71
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_wrap
+wait 15
+shot audit_06_arm_wrap_15
+wait 25
+shot audit_06_arm_wrap_40
+wait 60
+shot audit_06_arm_wrap_100
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do pulse_wave
+wait 8
+shot audit_07_pulse_wave_8
+wait 6
+shot audit_07_pulse_wave_14
+wait 16
+shot audit_07_pulse_wave_30
+wait 64
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do shed
+wait 12
+shot audit_08_shed_12
+wait 12
+shot audit_08_shed_24
+wait 16
+shot audit_08_shed_40
+wait 56
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sting_volley
+wait 10
+shot audit_09_sting_volley_10
+wait 6
+shot audit_09_sting_volley_16
+wait 18
+shot audit_09_sting_volley_34
+wait 60
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do strand_lash
+wait 10
+shot audit_10_strand_lash_10
+wait 10
+shot audit_10_strand_lash_20
+wait 10
+shot audit_10_strand_lash_30
+wait 56
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do glow_flash
+wait 10
+shot audit_11_glow_flash_10
+wait 10
+shot audit_11_glow_flash_20
+wait 12
+shot audit_11_glow_flash_32
+wait 58
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do spore_cloud
+wait 15
+shot audit_12_spore_cloud_15
+wait 20
+shot audit_12_spore_cloud_35
+wait 20
+shot audit_12_spore_cloud_55
+wait 59
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do pod_burst
+wait 15
+shot audit_13_pod_burst_15
+wait 15
+shot audit_13_pod_burst_30
+wait 15
+shot audit_13_pod_burst_45
+wait 59
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do egg_rain
+wait 15
+shot audit_14_egg_rain_15
+wait 25
+shot audit_14_egg_rain_40
+wait 25
+shot audit_14_egg_rain_65
+wait 57
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do whirlpool
+wait 30
+shot audit_15_whirlpool_30
+wait 50
+shot audit_15_whirlpool_80
+wait 60
+shot audit_15_whirlpool_140
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do deep_toll
+wait 40
+shot audit_16_deep_toll_40
+wait 50
+shot audit_16_deep_toll_90
+wait 25
+shot audit_16_deep_toll_115
+wait 85
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_storm
+wait 30
+shot audit_17_arm_storm_30
+wait 45
+shot audit_17_arm_storm_75
+wait 45
+shot audit_17_arm_storm_120
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do stinger_storm
+wait 30
+shot audit_18_stinger_storm_30
+wait 30
+shot audit_18_stinger_storm_60
+wait 40
+shot audit_18_stinger_storm_100
+wait 90
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sun_lances
+wait 40
+shot audit_19_sun_lances_40
+wait 30
+shot audit_19_sun_lances_70
+wait 50
+shot audit_19_sun_lances_120
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do undertow
+wait 25
+shot audit_20_undertow_25
+wait 25
+shot audit_20_undertow_50
+wait 40
+shot audit_20_undertow_90
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do drop
+wait 20
+shot audit_21_drop_20
+wait 20
+shot audit_21_drop_40
+wait 20
+shot audit_21_drop_60
+wait 140
+shot audit_21_drop_200
+wait 100
+shot audit_21_drop_300
+wait 84
+cmd hollowbell set cooldowns clear
+view 0 170 -270 0 200 0
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sky_dive
+wait 60
+shot audit_22_sky_dive_up
+wait 30
+shot audit_22_sky_dive_turn
+wait 20
+shot audit_22_sky_dive_fall
+wait 40
+shot audit_22_sky_dive_land
+wait 15
+shot audit_22_sky_dive_wave
+wait 150
+quit

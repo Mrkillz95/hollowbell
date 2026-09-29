@@ -130,11 +130,8 @@ public final class GiantsBridge {
                 String[] kv = arg == null ? new String[0] : arg.trim().split("\\s+", 2);
                 if (kv.length == 0 || kv[0].isEmpty()) { out.add(WHO + String.join(", ", net.jj.hollowbell.command.Settings.keys())); return out; }
                 if (!net.jj.hollowbell.command.Settings.has(kv[0])) return out;
-                if (kv.length > 1) {
-                    String bad = net.jj.hollowbell.command.Settings.set(kv[0], kv[1]);
-                    if (bad != null) { out.add(WHO + bad + "."); return out; }
-                }
-                out.add(WHO + kv[0] + " is " + net.jj.hollowbell.command.Settings.get(kv[0]) + ".");
+                String bad = kv.length > 1 ? net.jj.hollowbell.command.Settings.set(kv[0], kv[1]) : null;
+                out.add(WHO + kv[0] + (bad != null ? " can't be set to " + kv[1] + "." : " = " + net.jj.hollowbell.command.Settings.get(kv[0])));
             }
             case "paint" -> {
                 // "radius mode playerUUID"

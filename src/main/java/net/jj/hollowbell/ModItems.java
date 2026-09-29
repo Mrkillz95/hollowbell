@@ -51,6 +51,7 @@ public final class ModItems {
     public static final Item BELL_CALCITE = reg("bell_calcite", new BlockItem(ModBlocks.BELL_CALCITE, new Item.Properties()));
     public static final Item TENDRIL_GLASS = reg("tendril_glass", new BlockItem(ModBlocks.TENDRIL_GLASS, new Item.Properties()));
     public static final Item BELL_SHARD = reg("bell_shard", new BlockItem(ModBlocks.BELL_SHARD, new Item.Properties()));
+    public static final Item LOOT_CACHE = reg("loot_cache", new BlockItem(ModBlocks.LOOT_CACHE, new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final Item SPORE_MOSS = reg("spore_moss", new BlockItem(ModBlocks.SPORE_MOSS, new Item.Properties()));
     /** "Finder of the Hollowbell": says how far he is and which way, or when the next one comes down */
     public static final Item FINDER = reg("hollowbell_finder", new FinderItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));

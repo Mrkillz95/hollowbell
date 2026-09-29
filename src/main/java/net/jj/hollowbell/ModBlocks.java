@@ -31,6 +31,13 @@ public final class ModBlocks {
     public static final Block SPORE_MOSS = reg("spore_moss",
             new CarpetBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.MOSS_CARPET).lightLevel(s -> 3)));
 
+    /** his loot cache, on the pedestal where he fell */
+    public static final Block LOOT_CACHE = reg("loot_cache", new net.jj.hollowbell.block.LootCacheBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.CALCITE)
+            .strength(2.5f, 1200f).noOcclusion().lightLevel(s -> s.getValue(net.jj.hollowbell.block.LootCacheBlock.LIT) ? 12 : 4)));
+    public static final net.minecraft.world.level.block.entity.BlockEntityType<net.jj.hollowbell.block.LootCacheBlockEntity> LOOT_CACHE_ENTITY =
+            Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "loot_cache"),
+                    net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(net.jj.hollowbell.block.LootCacheBlockEntity::new, LOOT_CACHE).build(null));
+
     /** every block that has an item of its own, in the order the creative tab shows them */
     public static final Block[] GROUND = {BELL_CALCITE, TENDRIL_GLASS, BELL_SHARD, SPORE_MOSS};
 
