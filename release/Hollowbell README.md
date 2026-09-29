@@ -1,10 +1,14 @@
-# Hollowbell (Java mod) — version 1.6.0
+# Hollowbell (Java mod) — version 1.6.1
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.6.0
+## What's new in 1.6.1
+
+- Fixed the game sometimes hanging on 'Saving worlds' when you quit.
+
+## What was new in 1.6.0
 
 - **His ground is made by the world now.** The Bell Hollows are picked before the land there exists, and the world makes that land as his ground when it first makes it. No more painting over land that's already there, so no cut trees, steps or odd edges. It's a real biome now: F3 shows `hollowbell:bell_hollows` and `/locate biome hollowbell:bell_hollows` finds it. The ores, caves and stone under it are normal.
   - A new world picks its ground far off, on land (not sea), in land nobody has been to yet.
@@ -157,7 +161,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.6.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.6.1.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him

@@ -4,13 +4,15 @@
   "package": "net.jj.hollowbell.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ChunkCacheAccess",
     "ChunkMapAccess",
     "DecorationMixin",
     "LogOffMixin",
     "NoiseBiomeMixin",
     "PossibleBiomesMixin",
     "TrackedEntityAccess",
-    "TrackingMixin"
+    "TrackingMixin",
+    "UnloadSpinMixin"
   ],
   "injectors": {
     "defaultRequire": 1
