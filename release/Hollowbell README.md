@@ -4,7 +4,23 @@ Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.6.0
+## What's new in 1.7.0
+
+- **His loot waits for you where he fell.** When he dies, a small pale pedestal of his blocks is built on the ground there, 7 blocks across, with glowing posts at the corners. In the middle sits his **Loot Cache**, a chest that holds everything he dropped, so nothing falls in lava or despawns. A beam of light stands up out of it like a beacon's, so you can find it from far off. The beam goes out once the cache is empty. The pedestal stays as a trophy. Break the cache and what's in it drops.
+- **The Stinger is a harpoon now.** Hold right-click and let go to throw it on its strand. A small thing it hits (a mob, an animal, a player) is poisoned and pulled to you. A wall, the ground, something big or the Hollowbell himself, and you're the one pulled in. Sneak as you let go to always pull yourself. It never leaves your hand, and it waits 2.5 seconds between throws. A normal hit still poisons and slows.
+- **Bell glass armour is 3D and alive.** Bone ribs, a low glass dome and a glowing knob on the helmet, with two short strands down the back. Bone ribs and a glowing spot on the chest, two glass pods on the back, bone caps on the shoulders with tendrils. A skirt of glass strands round the legs and copper bands on the boots. The glow breathes like his spots, the strands sway as you walk, and pale motes drift up off you.
+- **Armour power** (the **R** key, change it in Controls): with all four pieces on,
+  - on the ground, the **Bell toll**: you float up, hang for a moment, then slam down. A ring goes out that hurts, throws back and stuns everything close (not you, your pets or players in creative). 12 seconds before the next one.
+  - in the air, a **glide**: you drift the way you're looking and come down slowly. 7 seconds before the next one.
+  - A small chestplate icon right of the hotbar shows when it's ready. The wait also shows on the chestplate.
+- **The set's gifts are stronger.** Poison and his toll's dizziness can't touch you, a fast fall still turns slow, and when you're hurt below a third of your health, the glass rings on its own: what's close is thrown back and you get two hearts of cover (once every 30 seconds).
+- **Commands to control everything** (cheats on):
+  - `/hollowbell config <setting> [value]` looks at or changes any setting (Tab lists them). `/hollowbell config` lists them all. `/giants config <setting> [value]` does it for every boss that has that setting.
+  - `/hollowbell set freeze|speed|invulnerable|glow|name|target|wind|grudge|home|cooldowns` for the nearest one.
+  - `/hollowbell pods mend` and `/hollowbell pods pop <n>`.
+  - `/hollowbell do <move> <target>` and `/hollowbell do <move> at <x y z>` make him do a move at somebody or at a spot.
+
+## What was new in 1.6.0
 
 - **His ground is made by the world now.** The Bell Hollows are picked before the land there exists, and the world makes that land as his ground when it first makes it. No more painting over land that's already there, so no cut trees, steps or odd edges. It's a real biome now: F3 shows `hollowbell:bell_hollows` and `/locate biome hollowbell:bell_hollows` finds it. The ores, caves and stone under it are normal.
   - A new world picks its ground far off, on land (not sea), in land nobody has been to yet.
@@ -267,11 +283,13 @@ A very small Hollowbell has no room inside: he squeezes you and drops you instea
 
 | Drop | What it's for |
 |---|---|
-| Stinger | A whip-like sword, a bit stronger than netherite. What it hits is poisoned and slowed. |
-| Bell Glass | Craft it into bell glass armor (like diamond, with more toughness; the full set keeps poison off and slows a fast fall) and into the book. |
+| Stinger | A whip-like sword, a bit stronger than netherite. What it hits is poisoned and slowed. Hold right-click and let go to throw it like a harpoon: small things are pulled to you, walls and big things pull you to them. |
+| Bell Glass | Craft it into bell glass armor (like diamond, with more toughness). The full set keeps poison and dizziness off, slows a fast fall, rings when you're hurt low, and has its Armour power (R): the Bell toll on the ground, a glide in the air. |
 | Hollowbell Pods | For the book, and a pod in a glass bottle makes a poison potion. |
 | Hollowbell Crown | A glowing trophy block to set down. Wake it with `/hollowbell ward on` and it holds him off. |
 | Oxidized copper, bone blocks, verdant froglight | From his body. |
+
+All of it goes into his Loot Cache on a pedestal where he fell. The beam over it goes out once you've emptied it.
 
 ### His crown
 
@@ -316,7 +334,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | Command | What it does |
 |---|---|
 | `/hollowbell summon [calm/hunting/guardian] [size]` | makes one in front of you |
-| `/hollowbell do <move>` | makes the nearest one do a move at you. Light: `grab`, `harvest`, `sting_volley`, `strand_lash`, `glow_flash`. Medium: `curtain`, `sweep`, `arm_slam`, `arm_wrap`, `pulse_wave`, `shed`, `spore_cloud`, `pod_burst`, `egg_rain`. Heavy: `drop`, `whirlpool`, `sky_dive`, `deep_toll`, `arm_storm`, `stinger_storm`, `sun_lances`, `undertow` |
+| `/hollowbell do <move> [target]` | makes the nearest one do a move at you (or at that target). `/hollowbell do <move> at <x y z>` aims it at a spot. Light: `grab`, `harvest`, `sting_volley`, `strand_lash`, `glow_flash`. Medium: `curtain`, `sweep`, `arm_slam`, `arm_wrap`, `pulse_wave`, `shed`, `spore_cloud`, `pod_burst`, `egg_rain`. Heavy: `drop`, `whirlpool`, `sky_dive`, `deep_toll`, `arm_storm`, `stinger_storm`, `sun_lances`, `undertow` |
 | `/hollowbell list` | where they all are, their health and pods |
 | `/hollowbell where` | where every one is, in the world or out of it (works without cheats) |
 | `/hollowbell away on/off` | whether he steps out of the world when nobody is near. On its own it says which. |
@@ -356,6 +374,18 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell ward rest <0-1440>` | how many minutes the crown sits dark afterwards |
 | `/hollowbell ward blocks <0-20000>` | how far the crown holds him off |
 | `/hollowbell area <x> <z> <radius>` | keeps the nearest one within that many blocks (32 or more) of that spot. `/hollowbell area off` frees him, `/hollowbell area` says which |
+| `/hollowbell config [setting] [value]` | lists every setting, says one, or changes it |
+| `/hollowbell set freeze on/off` | the nearest one stops thinking and moving, or starts again |
+| `/hollowbell set speed <0.1-5>` | how fast the nearest one drifts (1 is normal) |
+| `/hollowbell set invulnerable on/off` | nothing can hurt the nearest one |
+| `/hollowbell set glow on/off` | the nearest one glows through walls |
+| `/hollowbell set name <name>` | names the nearest one |
+| `/hollowbell set target <who>` / `set target none` | sends the nearest one after somebody, or calls him off |
+| `/hollowbell set wind <0-1>` | the nearest one's wind (how much the book can still ask of him) |
+| `/hollowbell set grudge <player> <0-1>` | how much he holds against that player |
+| `/hollowbell set home` | the nearest one's home is where you stand |
+| `/hollowbell set cooldowns clear` | he can do any move again right away |
+| `/hollowbell pods mend` / `pods pop <n>` | grows all his pods back, or pops that many |
 | `/hollowbell reload` | reads the settings file again |
 | `/hollowbell detail on/off` | on (the default): he's drawn simpler far away so the game runs faster. Off: always full detail. On its own it says which. This one works without cheats and only changes your own game. |
 | `/hollowbell detail far <blocks>` | how far off you can see him coming (1024 to start, 0 = off, up to 4096). On its own it says how far. Changing it needs cheats on. |
@@ -384,6 +414,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 | `/giants goto <x> <z>` | sends every one of them there, wherever they are |
 | `/giants tp <boss>` | takes you to that boss |
 | `/giants paint <boss> [radius] [full/biome]` | turns the land round you into that boss's ground. Can't be undone. |
+| `/giants config [setting] [value]` | looks at or changes a setting in every boss that has it. On its own it lists each boss's settings. |
 
 ## Settings
 
