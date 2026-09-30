@@ -13,6 +13,12 @@ git -C $repo pull --ff-only origin claude/amazing-faraday-iutdpo | Out-Host
 $jar = Get-ChildItem (Join-Path $repo 'release') -Filter 'hollowbell-*.jar' -ErrorAction SilentlyContinue |
     Sort-Object { [version]($_.BaseName -replace '^hollowbell-', '') } | Select-Object -Last 1
 if (-not $jar) { Write-Host 'No Hollowbell jar in release\ yet.'; exit 1 }
+# If the all-in-one jar (all five giants in one) is in use, leave it: it already has this mod inside.
+foreach ($t in $targets) {
+    if ((Test-Path $t) -and (Get-ChildItem $t -Filter 'giants-all-*.jar')) {
+        Write-Host 'You use the all-in-one giants jar, so nothing to do here. Run install-all.ps1 in the Hollowbell folder instead.'; exit 0
+    }
+}
 
 foreach ($t in $targets) {
     if (-not (Test-Path $t)) { continue }
