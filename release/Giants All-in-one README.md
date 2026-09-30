@@ -10,11 +10,11 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Pitchgut | 1.31.2 |
-| Furrowmaw | 1.13.0 |
-| Fire & Ice Cerberus | 2.13.1 |
-| Hollowbell | 1.8.1 |
-| Lantern Willow | 1.6.1 |
+| Pitchgut | 1.32.1 |
+| Furrowmaw | 1.14.1 |
+| Fire & Ice Cerberus | 2.14.1 |
+| Hollowbell | 1.9.1 |
+| Lantern Willow | 1.7.1 |
 
 ## Install
 
@@ -22,14 +22,27 @@ Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the five sing
 and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…` and `lanternwillow-…` out of
-your mods folder, then put `giants-all-1.0.0.jar` in. Keep Fabric API in there.
+your mods folder, then put `giants-all-1.1.0.jar` in. Keep Fabric API in there.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
 
 To get new versions on their own, run `watch-all.sh` in the Hollowbell folder. It waits for a new all-in-one jar
 and installs it.
 
-## New this time
+## New in 1.1.0
+
+- **Each giant's ground is made in full.** No more holes where a witch hut, village or other building was, no
+  trees left standing in it, and no lakes, rivers or odd stone patches left over. Buildings simply don't get made
+  inside a giant's ground any more. Checked on real worlds: at most a few hundred columns out of 100,000+ are off,
+  nearly all right at the edge or a few blocks higher or lower than planned.
+- **`/giants paint` paints over everything**: buildings, trees, water, all of it, down to bedrock. What was in chests
+  is dropped on the new ground, and a painted-over witch hut or village stops being one.
+- **`/<giant> ground check`** (operators) makes a map of how well his ground came out.
+- **Giants that keep away from each other keep away every time**, and don't start fights by brushing past each
+  other.
+- Worlds you already have: land made with older versions keeps its gaps. Use `/giants paint` over it.
+
+## New in 1.0.0
 
 - **Giants meet.** When two giants wander near each other they fight or keep away. Fights end when one backs
   down and runs off. You get a chat line when a fight starts and ends. `/giants meetings on|off`, and
