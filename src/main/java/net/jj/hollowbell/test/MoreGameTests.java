@@ -344,7 +344,7 @@ public class MoreGameTests implements FabricGameTest {
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "meet_cooldown")
-    public void theSamePairDoesntMeetAgainStraightAway(GameTestHelper h) {
+    public void heKeepsAwayAgainWhenAGiantHeAvoidsComesBack(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 330);
         h.runAfterDelay(20, () -> {
             var z = giantOfKind(h, under(e).add(16, 0, 0), "lanternwillow");
@@ -356,12 +356,13 @@ public class MoreGameTests implements FabricGameTest {
                 z.teleportTo(far.x, z.getY(), far.z);
                 h.runAfterDelay(20, () -> {
                     h.assertTrue(e.avoiding() == null, "he is still keeping away from one far off");
-                    // it comes back: not a new meeting until the wait is over
+                    // it comes back: keeping away has no wait, so he keeps away from it again (and never fights it)
                     Vec3 near = e.position().add(12, 0, 0);
                     z.teleportTo(near.x, z.getY(), near.z);
                     h.runAfterDelay(100, () -> {
-                        h.assertTrue(e.avoiding() == null && e.getTarget() != z, "they met again straight away");
-                        h.assertTrue(e.meetCooldownLeft(z.getUUID()) > 0, "no wait noted");
+                        h.assertTrue(z.getUUID().equals(e.avoiding()), "he let a giant he keeps away from come back close");
+                        h.assertTrue(e.getTarget() != z, "he went for a giant he keeps away from");
+                        h.assertTrue(e.meetCooldownLeft(z.getUUID()) == 0, "keeping away set a wait");
                         h.getLevel().setChunkForced(net.minecraft.util.Mth.floor(far.x) >> 4, net.minecraft.util.Mth.floor(far.z) >> 4, false);
                         z.discard();
                         release(h, e);
