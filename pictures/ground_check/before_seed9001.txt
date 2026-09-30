@@ -1,0 +1,83 @@
+Hollowbell ground check
+ground at 800, 0, checked 400 blocks out
+chunks: 837 (0 not made at all, 0 marked as made), took 789 s
+columns of his ground: 196146
+right: 190778
+wrong: 4913 (2.505%)
+  not_made - not made at all (plain world ground): 242
+  structure - a structure: 6
+  tree - a tree or leaves: 312
+  water - water: 2943
+  container - a chest or other container: 0
+  height - height off: 539
+  edge - biome at the thin edge: 455
+  other - other: 871
+(the thin edge is not counted as wrong)
+
+examples:
+  HEIGHT at 552, 122: grass_block at 73, the plan says 83 (world 83)
+  HEIGHT at 553, 122: grass_block at 72, the plan says 84 (world 84)
+  HEIGHT at 551, 123: grass_block at 74, the plan says 82 (world 82)
+  HEIGHT at 552, 123: grass_block at 72, the plan says 83 (world 83)
+  HEIGHT at 553, 123: grass_block at 71, the plan says 83 (world 83)
+  HEIGHT at 551, 124: grass_block at 75, the plan says 82 (world 82)
+  HEIGHT at 552, 124: grass_block at 72, the plan says 82 (world 82)
+  HEIGHT at 553, 124: grass_block at 71, the plan says 83 (world 83)
+  OTHER at 546, 127: snow at 83 (top 83)
+  OTHER at 547, 127: snow at 83 (top 83)
+  OTHER at 548, 127: snow at 83 (top 83)
+  OTHER at 536, -54: snow at 74 (top 74)
+  OTHER at 536, -53: snow at 74 (top 74)
+  OTHER at 535, -49: snow at 76 (top 76)
+  OTHER at 535, -48: snow at 76 (top 76)
+  OTHER at 537, -40: snow at 78 (top 78)
+  OTHER at 536, -37: snow at 77 (top 77)
+  OTHER at 537, -37: snow at 78 (top 78)
+  OTHER at 536, -36: snow at 77 (top 77)
+  OTHER at 536, -34: snow at 79 (top 79)
+  NOT_MADE at 543, -23: granite at 86, should be DIORITE at 86
+  NOT_MADE at 542, -22: granite at 86, should be DIORITE at 86
+  NOT_MADE at 543, -22: granite at 86, should be DIORITE at 86
+  NOT_MADE at 542, -21: granite at 85, should be DIORITE at 85
+  NOT_MADE at 543, -21: granite at 86, should be DIORITE at 86
+  NOT_MADE at 541, -20: granite at 85, should be DIORITE at 85
+  NOT_MADE at 542, -20: granite at 85, should be DIORITE at 85
+  NOT_MADE at 543, -20: granite at 85, should be DIORITE at 85
+  NOT_MADE at 536, -19: coal_ore at 85, should be CALCITE at 85
+  NOT_MADE at 537, -19: coal_ore at 85, should be DIORITE at 85
+  HEIGHT at 529, 14: stone at 82, the plan says 86 (world 86)
+  TREE at 536, 95: spruce_leaves at 95 (top 95)
+  TREE at 537, 97: spruce_leaves at 95 (top 95)
+  TREE at 533, 98: snow at 102 (top 102)
+  TREE at 535, 98: snow at 102 (top 102)
+  TREE at 536, 98: snow at 99 (top 99)
+  TREE at 537, 98: spruce_leaves at 95 (top 95)
+  TREE at 534, 99: snow at 102 (top 102)
+  TREE at 535, 99: snow at 99 (top 99)
+  TREE at 536, 99: spruce_leaves at 98 (top 98)
+  TREE at 537, 99: spruce_leaves at 95 (top 95)
+  TREE at 534, 100: snow at 99 (top 99)
+  TREE at 535, 100: spruce_leaves at 98 (top 98)
+  HEIGHT at 552, 84: calcite at 89, the plan says 93 (world 93)
+  HEIGHT at 552, 85: stone at 89, the plan says 93 (world 93)
+  HEIGHT at 553, 85: stone at 89, the plan says 93 (world 93)
+  NOT_MADE at 559, 130: copper_ore at 69, should be DIORITE at 69
+  NOT_MADE at 560, 111: coal_ore at 70, should be DIORITE at 70
+  WATER at 591, 105: bed andesite at 56 under water
+  WATER at 590, 106: bed andesite at 56 under water
+  WATER at 591, 106: bed andesite at 56 under water
+  WATER at 590, 107: bed andesite at 56 under water
+  WATER at 591, 107: bed andesite at 56 under water
+  WATER at 590, 108: bed andesite at 56 under water
+  WATER at 591, 108: bed andesite at 56 under water
+  WATER at 590, 109: bed andesite at 56 under water
+  WATER at 591, 109: bed andesite at 56 under water
+  WATER at 590, 110: bed andesite at 56 under water
+  WATER at 591, 110: bed andesite at 56 under water
+  WATER at 591, 111: bed copper_ore at 56 under water
+  STRUCTURE at 834, 244: snow at 72 (top 72)
+  STRUCTURE at 835, 244: snow at 72 (top 72)
+  STRUCTURE at 836, 244: snow at 72 (top 72)
+  STRUCTURE at 833, 245: snow at 72 (top 72)
+  STRUCTURE at 835, 245: snow at 73 (top 73)
+  STRUCTURE at 836, 245: snow at 73 (top 73)

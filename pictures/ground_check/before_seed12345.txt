@@ -1,0 +1,89 @@
+Hollowbell ground check
+ground at 800, 0, checked 400 blocks out
+chunks: 931 (0 not made at all, 0 marked as made), took 890 s
+columns of his ground: 214213
+right: 190851
+wrong: 22645 (10.571%)
+  not_made - not made at all (plain world ground): 479
+  structure - a structure: 42
+  tree - a tree or leaves: 813
+  water - water: 19882
+  container - a chest or other container: 0
+  height - height off: 937
+  edge - biome at the thin edge: 717
+  other - other: 492
+(the thin edge is not counted as wrong)
+
+examples:
+  NOT_MADE at 570, 124: dirt at 142, should be DIORITE at 142
+  NOT_MADE at 570, 125: dirt at 142, should be DIORITE at 142
+  NOT_MADE at 571, 125: dirt at 142, should be DIORITE at 142
+  NOT_MADE at 575, 125: coal_ore at 145, should be DIORITE at 145
+  NOT_MADE at 570, 126: dirt at 142, should be DIORITE at 142
+  NOT_MADE at 571, 126: dirt at 142, should be DIORITE at 142
+  NOT_MADE at 575, 126: coal_ore at 146, should be DIORITE at 146
+  OTHER at 544, 100: snow at 156 (top 156)
+  OTHER at 545, 100: snow at 157 (top 157)
+  OTHER at 547, 108: snow at 150 (top 150)
+  OTHER at 543, 32: snow at 135 (top 135)
+  TREE at 542, 37: snow at 146 (top 146)
+  TREE at 543, 37: snow at 146 (top 146)
+  TREE at 541, 38: snow at 146 (top 146)
+  TREE at 543, 38: snow at 149 (top 149)
+  OTHER at 527, 60: snow at 151 (top 151)
+  OTHER at 535, 58: snow at 149 (top 149)
+  OTHER at 532, 59: snow at 150 (top 150)
+  OTHER at 533, 59: snow at 150 (top 150)
+  OTHER at 534, 59: snow at 150 (top 150)
+  OTHER at 535, 59: snow at 150 (top 150)
+  OTHER at 536, 59: snow at 150 (top 150)
+  OTHER at 534, 60: snow at 150 (top 150)
+  TREE at 568, -196: snow at 161 (top 161)
+  TREE at 567, -195: snow at 161 (top 161)
+  TREE at 579, -200: snow at 149 (top 149)
+  TREE at 580, -200: snow at 149 (top 149)
+  TREE at 581, -190: snow at 153 (top 153)
+  TREE at 545, -120: spruce_leaves at 157 (top 157)
+  TREE at 546, -120: spruce_leaves at 157 (top 157)
+  TREE at 547, -120: snow at 155 (top 155)
+  NOT_MADE at 554, -99: dirt at 106, should be CALCITE at 107
+  NOT_MADE at 563, 47: coal_ore at 140, should be DIORITE at 140
+  NOT_MADE at 543, 96: packed_ice at 158, should be CALCITE at 158
+  NOT_MADE at 551, 114: packed_ice at 144, should be CALCITE at 144
+  NOT_MADE at 552, 119: packed_ice at 138, should be CALCITE at 138
+  HEIGHT at 596, -202: stone at 121, the plan says 126 (world 126)
+  HEIGHT at 597, -201: stone at 121, the plan says 125 (world 125)
+  HEIGHT at 600, -173: calcite at 115, the plan says 121 (world 121)
+  HEIGHT at 601, -173: calcite at 115, the plan says 120 (world 120)
+  HEIGHT at 600, -172: calcite at 115, the plan says 120 (world 120)
+  HEIGHT at 601, -172: calcite at 115, the plan says 119 (world 119)
+  HEIGHT at 602, -172: calcite at 115, the plan says 119 (world 119)
+  HEIGHT at 600, -171: calcite at 115, the plan says 119 (world 119)
+  HEIGHT at 601, -155: calcite at 104, the plan says 112 (world 112)
+  HEIGHT at 599, -144: calcite at 117, the plan says 121 (world 121)
+  HEIGHT at 598, -143: calcite at 117, the plan says 121 (world 121)
+  HEIGHT at 594, 83: calcite at 124, the plan says 128 (world 128)
+  WATER at 603, 184: bed gravel at 49 under water
+  WATER at 604, 184: bed gravel at 49 under water
+  WATER at 605, 184: bed gravel at 49 under water
+  WATER at 606, 184: bed gravel at 49 under water
+  WATER at 603, 185: bed gravel at 48 under water
+  WATER at 604, 185: bed gravel at 48 under water
+  WATER at 605, 185: bed gravel at 48 under water
+  WATER at 606, 185: bed gravel at 48 under water
+  WATER at 607, 185: bed gravel at 49 under water
+  WATER at 604, 186: bed gravel at 47 under water
+  WATER at 605, 186: bed gravel at 47 under water
+  WATER at 606, 186: bed gravel at 48 under water
+  STRUCTURE at 1019, 90: bed dirt at 56 under water
+  STRUCTURE at 1020, 90: bed dirt at 57 under water
+  STRUCTURE at 1021, 90: bed dirt at 56 under water
+  STRUCTURE at 1022, 90: bed dirt at 56 under water
+  STRUCTURE at 1023, 90: bed gravel at 57 under water
+  STRUCTURE at 1019, 91: bed dirt at 56 under water
+  STRUCTURE at 1020, 91: bed gravel at 57 under water
+  STRUCTURE at 1021, 91: stone_brick_stairs at 62
+  STRUCTURE at 1022, 91: stone_brick_stairs at 62
+  STRUCTURE at 1023, 91: stone_brick_stairs at 62
+  STRUCTURE at 1019, 92: stone_brick_stairs at 62
+  STRUCTURE at 1020, 92: mossy_stone_bricks at 62 (top 62)

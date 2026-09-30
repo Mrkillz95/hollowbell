@@ -1,0 +1,31 @@
+Hollowbell ground check
+ground at 800, 0, checked 400 blocks out
+chunks: 931 (0 not made at all, 931 marked as made), took 813 s
+columns of his ground: 214213
+right: 212610
+wrong: 372 (0.174%)
+  not_made - not made at all (plain world ground): 2
+  structure - a structure: 0
+  tree - a tree or leaves: 0
+  water - water: 0
+  container - a chest or other container: 0
+  height - height off: 370
+  edge - biome at the thin edge: 1231
+  other - other: 0
+(the thin edge is not counted as wrong)
+
+examples:
+  HEIGHT at 619, -160: calcite at 95, the plan says 99 (world 98)
+  HEIGHT at 648, -18: moss_block at 90, the plan says 86 (world 90)
+  HEIGHT at 647, -17: moss_block at 90, the plan says 86 (world 90)
+  HEIGHT at 647, -16: moss_block at 90, the plan says 86 (world 90)
+  HEIGHT at 658, -38: calcite at 86, the plan says 91 (world 93)
+  HEIGHT at 660, -34: calcite at 87, the plan says 91 (world 93)
+  HEIGHT at 661, -34: diorite at 87, the plan says 91 (world 93)
+  HEIGHT at 662, -34: diorite at 88, the plan says 92 (world 93)
+  HEIGHT at 669, -34: diorite at 90, the plan says 94 (world 93)
+  HEIGHT at 662, -33: diorite at 88, the plan says 92 (world 93)
+  HEIGHT at 670, -32: calcite at 90, the plan says 94 (world 93)
+  HEIGHT at 683, 152: moss_block at 72, the plan says 76 (world 77)
+  NOT_MADE at 699, -145: dirt at 95, should be DIORITE at 95
+  NOT_MADE at 818, -177: iron_ore at 85, should be DIORITE at 76
