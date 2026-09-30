@@ -2615,7 +2615,12 @@ public class HollowbellGameTests implements FabricGameTest {
         for (int dx = 3; dx < 9; dx++) {
             int x = x0 + dx;
             h.assertTrue(ours(l.getBlockState(new BlockPos(x, top(h, x, z0 + 5), z0 + 5))), "the column under the wall wasn't made his at " + x);
-            h.assertTrue(ours(l.getBlockState(new BlockPos(x, top(h, x, z0 + 7), z0 + 7))), "the column under the floor wasn't made his at " + x);
+            int fy = top(h, x, z0 + 7);
+            var o = net.jj.hollowbell.world.HomeGround.lastOut;
+            int li = 7 * 16 + dx;
+            h.assertTrue(ours(l.getBlockState(new BlockPos(x, fy, z0 + 7))), "the column under the floor wasn't made his at " + x + ": "
+                    + l.getBlockState(new BlockPos(x, fy, z0 + 7)) + " at " + fy + ", under it " + l.getBlockState(new BlockPos(x, fy - 1, z0 + 7))
+                    + (o == null ? "" : ", planned top " + o.top[li] + " painted " + o.paint[li] + " layers " + o.layers[li] + " first " + (o.layers[li] > 0 ? o.layer[li][0] : null)));
         }
         w.clearForTests();
         force(h, c.getX(), c.getZ(), 1, false);
@@ -2798,6 +2803,8 @@ public class HollowbellGameTests implements FabricGameTest {
             start.placeInChunk(l, l.structureManager(), gen, l.getRandom(), area, new net.minecraft.world.level.ChunkPos(cx, cz));
         }
         ((net.jj.hollowbell.mixin.StructureManagerAccess) l.structureManager()).hollowbell$check().onStructureLoad(chunk.getPos(), chunk.getAllStarts());
+        // the hut's piece settles onto the ground as it is built: its box is read again after
+        bb = start.getPieces().get(0).getBoundingBox();
         BlockPos mid = bb.getCenter();
         h.assertTrue(l.structureManager().getStructureWithPieceAt(mid, hut).isValid(), "the test hut isn't a structure");
         java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> hutBlock = st -> st.is(net.minecraft.world.level.block.Blocks.SPRUCE_PLANKS)
@@ -2828,12 +2835,15 @@ public class HollowbellGameTests implements FabricGameTest {
         h.assertTrue(hollowsAt(h, mid.getX(), top(h, mid.getX(), mid.getZ()) + 1, mid.getZ()), "the biome where the hut stood isn't his");
         h.assertTrue(hollowsAt(h, mid.getX(), -50, mid.getZ()), "the paint didn't reach all the way down the column");
         h.assertTrue(!l.getBlockState(chest).is(net.minecraft.world.level.block.Blocks.CHEST), "the chest is still there");
-        var diamonds = l.getEntitiesOfClass(ItemEntity.class, new AABB(chest).inflate(3, 12, 3), e -> e.getItem().is(net.minecraft.world.item.Items.DIAMOND));
-        int n = diamonds.stream().mapToInt(e -> e.getItem().getCount()).sum();
-        h.assertTrue(n == 3, "the chest's diamonds weren't dropped on the new ground (" + n + " found)");
-        diamonds.forEach(e -> e.discard());
-        force(h, c.getX(), c.getZ(), 2, false);
-        h.succeed();
+        // the chunks here were only just loaded: the dropped things can be looked for once they are up and running
+        h.runAfterDelay(5, () -> {
+            var diamonds = l.getEntitiesOfClass(ItemEntity.class, new AABB(chest).inflate(3, 12, 3), e -> e.getItem().is(net.minecraft.world.item.Items.DIAMOND));
+            int n = diamonds.stream().mapToInt(e -> e.getItem().getCount()).sum();
+            h.assertTrue(n == 3, "the chest's diamonds weren't dropped on the new ground (" + n + " found)");
+            diamonds.forEach(e -> e.discard());
+            force(h, c.getX(), c.getZ(), 2, false);
+            h.succeed();
+        });
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_paint")
@@ -3849,7 +3859,7 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 80, batch = "stinger_reel_me")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "stinger_reel_me")
     public void theStingerReelsYouToAWall(GameTestHelper h) {
         Vec3 at = openGround(h, 317);
         ServerPlayer p = player(h, at);
@@ -3858,13 +3868,14 @@ public class HollowbellGameTests implements FabricGameTest {
         for (int y = 0; y < 4; y++) for (int z = -2; z <= 2; z++)
             h.getLevel().setBlockAndUpdate(w.offset(0, y, z), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
         net.jj.hollowbell.entity.StingerHook[] hook = new net.jj.hollowbell.entity.StingerHook[1];
-        h.runAfterDelay(2, () -> {
+        // (a few ticks first, so the freshly loaded chunks here are running)
+        h.runAfterDelay(10, () -> {
             face(p, Vec3.atCenterOf(w.above()));
             hook[0] = net.jj.hollowbell.item.StingerItem.throwIt(p, new ItemStack(ModItems.STINGER), 1f, false);
         });
         // a tick after it sticks in the wall, the pull is on (when it sticks depends on the throw's own ticks)
         int[] seen = {0};
-        for (int t = 3; t < 40; t++) h.runAfterDelay(t, () -> {
+        for (int t = 11; t < 60; t++) h.runAfterDelay(t, () -> {
             if (hook[0] == null || !hook[0].isAlive() || hook[0].state() != net.jj.hollowbell.entity.StingerHook.REEL_ME || ++seen[0] != 2) return;
             h.assertTrue(p.getDeltaMovement().x > 0.3, "you're not pulled to the wall: " + p.getDeltaMovement());
             h.assertTrue(p.fallDistance == 0f, "being reeled counts as falling");
@@ -3874,7 +3885,7 @@ public class HollowbellGameTests implements FabricGameTest {
             letGo(h, at);
             h.succeed();
         });
-        h.runAfterDelay(42, () -> h.fail("the stinger never stuck in the wall (alive " + (hook[0] != null && hook[0].isAlive()) + ")"));
+        h.runAfterDelay(62, () -> h.fail("the stinger never stuck in the wall (alive " + (hook[0] != null && hook[0].isAlive()) + ")"));
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "stinger_him")

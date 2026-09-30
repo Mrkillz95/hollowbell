@@ -251,7 +251,8 @@ public final class GroundCheck {
                     break;
                 }
                 if (ours && s.is(Blocks.GRASS_BLOCK) || ours && s.is(Blocks.MOSS_BLOCK) || ours && kindOf(s) == 1) {
-                    if (o.above(i, y) != null) continue;           // his own things standing on the ground
+                    // his own things standing on the ground, or standing free over it (a rib, a shard)
+                    if (o.above(i, y) != null || ch.getBlockState(m.set(x, y - 1, z)).isAir()) continue;
                     gy = y;
                     break;
                 }
