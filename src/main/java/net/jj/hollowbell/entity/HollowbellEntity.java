@@ -2125,7 +2125,7 @@ public class HollowbellEntity extends Monster {
         else if (way == Meetings.Way.AVOID) {
             meetAvoid = best.getUUID();
             avoidAt = best.position();
-            metLately.put(best.getUUID(), now + HollowbellConfig.V.meetCooldown * 1200L);
+            // (no cooldown for keeping away: if they drift close again later, he keeps away again)
         }
     }
 
