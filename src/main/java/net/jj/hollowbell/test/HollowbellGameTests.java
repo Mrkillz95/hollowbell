@@ -1309,6 +1309,7 @@ public class HollowbellGameTests implements FabricGameTest {
                 h.getLevel().addFreshEntity(part[i]);
                 h.assertTrue(net.jj.hollowbell.entity.Giants.ownerOf(part[i]) == g[i], "the part's giant wasn't found");
             }
+            e.setTarget(g[0]);                                // the giant he's fighting (his blows leave other giants alone)
             h.assertTrue(e.forceMove(Moves.PULSE, g[0]), "no pulse wave");
         });
         h.runAfterDelay(20 + Moves.length(Moves.PULSE) + 10, () -> {
