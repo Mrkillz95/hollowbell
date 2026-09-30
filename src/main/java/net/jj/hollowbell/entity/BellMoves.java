@@ -61,6 +61,8 @@ public final class BellMoves {
 
     private int move, t, arg = -1, lastArg = -1, cooldown = 60, harvestIn = 400;
     private @Nullable LivingEntity target;
+    /** what the move running now is aimed at (null between moves) */
+    public @Nullable LivingEntity moveTarget() { return target; }
     /** the strand grabbing: who, on which seat, how far up, how many hits it has taken */
     private @Nullable LivingEntity grabbed;
     private @Nullable Tree grabbedTree;
