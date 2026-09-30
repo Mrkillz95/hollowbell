@@ -171,6 +171,7 @@ public final class HomeGround {
             if (sv.wet[i]) { paintBed(level, p, wx, wz, sv.y0[i], m); continue; }
             if (sv.real[i] < sv.y0[i]) fillUnder(p, o, i, wx, wz, sv.real[i]);
             shape(level, o, i, wx, wz, sv.real[i], m, water, admin);
+            if (!admin) closeUnder(level, p, o.top[i], wx, wz, m);
         }
         keepWaterIn(level, water, x0, z0);
         // what was in a chest or the like that stood here comes out on top of the new ground: nothing is lost
@@ -182,7 +183,8 @@ public final class HomeGround {
                 for (var st : sv.drops[i]) {
                     var e = new net.minecraft.world.entity.item.ItemEntity(sl, wx + 0.5, y + 0.2, wz + 0.5, st);
                     e.setDeltaMovement(0, 0.1, 0);
-                    sl.addFreshEntity(e);
+                    boolean in = sl.addFreshEntity(e);
+                    if (DEBUG) HollowbellMod.LOG.info("Painted over a container at {}, {}: {} out at y {} ({})", wx, wz, st, y, in);
                 }
             }
         }
@@ -228,7 +230,7 @@ public final class HomeGround {
     private static final class Survey {
         /** y0: the ground the plan works from; real: where the ground really is (lower where a cave or ravine cut it) */
         final int[] y0 = new int[256], real = new int[256], lowest = new int[256], surface = new int[256];
-        final boolean[] ok = new boolean[256], wet = new boolean[256];
+        final boolean[] ok = new boolean[256], wet = new boolean[256], grass = new boolean[256];
         List<net.minecraft.world.item.ItemStack>[] drops;
         boolean any;
     }
@@ -274,12 +276,13 @@ public final class HomeGround {
             sv.surface[i] = surf;
             // down to the ground: everything standing on it goes, from the very top of the column
             int top = surf;
-            int limit = admin ? minY + 1 : Math.max(minY + 2, surf - DIG);
+            int limit = admin ? minY : Math.max(minY, surf - DIG);
             while (top > limit) {
                 BlockState b = level.getBlockState(m.set(wx, top, wz));
                 if (b.isAir()) { top--; continue; }
                 if (b.is(Blocks.BEDROCK) || isGround(b)) break;
                 if (!b.getFluidState().isEmpty() && !clearedInWater(b)) break;
+                if (admin && b.hasBlockEntity() && DEBUG) HollowbellMod.LOG.info("Paint found {} at {} holding {}", b, m, level.getBlockEntity(m));
                 if (admin && b.hasBlockEntity() && level.getBlockEntity(m) instanceof net.minecraft.world.Container box) {
                     for (int k = 0; k < box.getContainerSize(); k++) {
                         var st = box.getItem(k);
@@ -302,12 +305,7 @@ public final class HomeGround {
             sv.wet[i] = !s.getFluidState().isEmpty();
             sv.ok[i] = true;
             if (sv.wet[i] || !changeable(s)) continue;
-            // a cave or a ravine the world cut into the land before it was made his: his ground goes over it at the
-            // height the land had (the world's own grass top is never cut, so only other tops are asked about)
-            if (!admin && !s.is(Blocks.GRASS_BLOCK)) {
-                int g = p.worldHeight(wx, wz);
-                if (g > top + 2 && g > p.sea) sv.y0[i] = g;
-            }
+            sv.grass[i] = s.is(Blocks.GRASS_BLOCK);
             // cut no deeper than solid ground goes: the new top is itself ground, never air or a cave
             int low = top;
             for (int y = top - 1; y >= top - BellPlan.MAX_DOWN - 1 && y > minY + 1; y--) {
@@ -315,6 +313,23 @@ public final class HomeGround {
                 low = y;
             }
             sv.lowest[i] = low;
+        }
+        // a cave or a ravine the world cut into the land before it was made his: his ground goes over it at the height
+        // the land had. Asked only where it may be so (a top that isn't the world's grass, or one well under the
+        // columns beside it), as asking the world's generator costs time.
+        if (!admin) for (int i = 0; i < 256; i++) {
+            if (!sv.ok[i] || sv.wet[i]) continue;
+            int lx = i & 15, lz = i >> 4;
+            boolean ask = !sv.grass[i];
+            for (int d = 0; d < 4 && !ask; d++) {
+                int nx = lx + (d == 0 ? -1 : d == 1 ? 1 : 0), nz = lz + (d == 2 ? -1 : d == 3 ? 1 : 0);
+                if (nx < 0 || nx > 15 || nz < 0 || nz > 15) continue;
+                int j = nz * 16 + nx;
+                if (sv.ok[j] && !sv.wet[j] && sv.real[j] - sv.real[i] >= 3) ask = true;
+            }
+            if (!ask) continue;
+            int g = p.worldHeight(x0 + lx, z0 + lz);
+            if (g > sv.real[i] + 2 && g > p.sea) sv.y0[i] = g;
         }
         return sv;
     }
@@ -378,13 +393,24 @@ public final class HomeGround {
             int lx = i & 15, lz = i >> 4, wx = x0 + lx, wz = z0 + lz;
             if (!p.painted(wx, wz)) continue;
             int top = n.getHeight(hm, lx, lz);
-            int limit = Math.max(minY + 2, top - DIG);
+            int limit = Math.max(minY, top - DIG);
             for (int y = top; y > limit; y--) {
                 BlockState b = n.getBlockState(m.set(wx, y, wz));
                 if (b.isAir()) continue;
                 if (blobbed(b)) { level.setBlock(m, Blocks.DIORITE.defaultBlockState(), FLAGS); cleared++; break; }
-                if (b.is(Blocks.BEDROCK) || isGround(b) || isOurs(b)) break;
-                if (!b.getFluidState().isEmpty() && !clearedInWater(b)) break;
+                if (!b.getFluidState().isEmpty() && !clearedInWater(b)) {
+                    // under water: the bed may have had a blob put into it too
+                    int by = y;
+                    while (by > limit && !n.getBlockState(m.set(wx, by, wz)).getFluidState().isEmpty()) by--;
+                    if (by > limit && blobbed(n.getBlockState(m))) { level.setBlock(m, state(p.strata(wx, by, wz)), FLAGS); cleared++; }
+                    break;
+                }
+                if (b.is(Blocks.BEDROCK)) break;
+                if (isGround(b) || isOurs(b)) {
+                    // one of his things standing free (a rib, a shard) with air under it: what's under it is looked at too
+                    if (isOurs(b) && n.getBlockState(m.set(wx, y - 1, wz)).isAir()) continue;
+                    break;
+                }
                 level.setBlock(m, emptied(b), FLAGS);
                 cleared++;
             }
@@ -400,6 +426,22 @@ public final class HomeGround {
             BlockState s = level.getBlockState(m.set(wx, y, wz));
             if (!changeable(s)) break;
             level.setBlock(m, state(p.strata(wx, y, wz)), FLAGS);
+        }
+    }
+
+    /**
+     * A cave or an overhang right under his new ground (the world often leaves a thin roof of land over one) is
+     * filled, up to 24 blocks down, so his ground is solid where you walk and no plain cave floor shows under it.
+     */
+    private static void closeUnder(WorldGenLevel level, BellPlan p, int top, int wx, int wz, BlockPos.MutableBlockPos m) {
+        boolean inAir = false;
+        for (int y = top - 1; y > top - BellPlan.MAXL && y > level.getMinBuildHeight() + 1; y--) {
+            BlockState b = level.getBlockState(m.set(wx, y, wz));
+            if (!b.getFluidState().isEmpty()) break;
+            if (b.isAir() || loose(b)) {
+                level.setBlock(m, state(p.strata(wx, y, wz)), FLAGS);
+                inAir = true;
+            } else if (inAir) break;
         }
     }
 
