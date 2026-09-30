@@ -57,6 +57,7 @@ public class LootCacheBlock extends BaseEntityBlock {
     @Override
     protected void onRemove(BlockState st, Level l, BlockPos pos, BlockState now, boolean moved) {
         if (!st.is(now.getBlock()) && l.getBlockEntity(pos) instanceof LootCacheBlockEntity be) Containers.dropContents(l, pos, be);
+        if (!st.is(now.getBlock()) && l instanceof net.minecraft.server.level.ServerLevel sl) net.jj.hollowbell.world.LootBeams.mark(sl, pos, false);
         super.onRemove(st, l, pos, now, moved);
     }
 }

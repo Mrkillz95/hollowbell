@@ -49,6 +49,17 @@ public class LootCacheBlockEntity extends RandomizableContainerBlockEntity {
         boolean full = !isEmpty();
         if (st.hasProperty(LootCacheBlock.LIT) && st.getValue(LootCacheBlock.LIT) != full)
             level.setBlock(worldPosition, st.setValue(LootCacheBlock.LIT, full), 3);
+        // the far-off beam goes with it, for everyone
+        if (level instanceof net.minecraft.server.level.ServerLevel sl && st.is(net.jj.hollowbell.ModBlocks.LOOT_CACHE))
+            net.jj.hollowbell.world.LootBeams.mark(sl, worldPosition, full);
+    }
+
+    /** its ground loaded: a cache from before the list of beams existed goes on it */
+    @Override
+    public void setLevel(net.minecraft.world.level.Level l) {
+        super.setLevel(l);
+        BlockState st = getBlockState();
+        if (!l.isClientSide && st.hasProperty(LootCacheBlock.LIT)) net.jj.hollowbell.world.LootBeams.noteLoaded(l, worldPosition, st.getValue(LootCacheBlock.LIT));
     }
 
     @Override

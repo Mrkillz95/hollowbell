@@ -61,11 +61,13 @@ public class HollowbellClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register((g, t) -> { BeingHim.hud(g); ArmourPowerKey.hud(g); });
         // the glass goes on after every other creature, so whatever he has caught shows through it
         // far-off stand-ins first, then all the glass (theirs too), back to front
-        WorldRenderEvents.AFTER_ENTITIES.register(ctx -> { FarSightClient.render(ctx); BellRenderer.drawGlass(); });
+        WorldRenderEvents.AFTER_ENTITIES.register(ctx -> { FarSightClient.render(ctx); BellRenderer.drawGlass(); LootBeamsClient.render(ctx); });
+        ClientPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.LootBeamsPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> LootBeamsClient.receive(p)));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> c.execute(LootBeamsClient::clear));
         ClientPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.FarSightPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> FarSightClient.receive(p)));
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(FarSightClient::tick);
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> c.execute(FarSightClient::clear));
-        WorldRenderEvents.START.register(ctx -> BellRenderer.forgetFrame());
+        WorldRenderEvents.START.register(ctx -> { BellRenderer.forgetFrame(); LootBeamsClient.startFrame(); });
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
             @Override public ResourceLocation getFabricId() { return ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "model_reload"); }
             @Override public void onResourceManagerReload(ResourceManager rm) { BellMeshes.INSTANCE.invalidate(); }
