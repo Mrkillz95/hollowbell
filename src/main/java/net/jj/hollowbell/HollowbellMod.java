@@ -56,6 +56,7 @@ public class HollowbellMod implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(BeingHimPayload.TYPE, BeingHimPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ThumpPayload.TYPE, ThumpPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.FarSightPayload.TYPE, net.jj.hollowbell.net.FarSightPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.LootBeamsPayload.TYPE, net.jj.hollowbell.net.LootBeamsPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(CodexPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> CodexOrders.handle(ctx.player(), pay)));
         ServerPlayNetworking.registerGlobalReceiver(SafeDropPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> CodexOrders.dropFromSafeList(ctx.player(), pay.id())));
@@ -101,6 +102,7 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Away::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.WorldOne::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarSight::serverTick);
+        ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.LootBeams::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarOrders::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Painter::tick);
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);

@@ -37,6 +37,23 @@ public final class Meetings {
         return -1;
     }
 
+    /**
+     * Who says "X and Y are fighting!": the one that starts the fight, once. A board shared by all five mods in the
+     * same server (kept in the JVM's system properties, so no mod needs the others) stops the second one saying it
+     * again within 6000 ticks. True for the first claim on a pair.
+     */
+    @SuppressWarnings("unchecked")
+    public static boolean claimMeetingLine(java.util.UUID a, java.util.UUID b, long gameTime) {
+        java.util.Properties p = System.getProperties();
+        Object o = p.get("jj.giants.meetings");
+        if (!(o instanceof java.util.Map)) { p.putIfAbsent("jj.giants.meetings", new java.util.concurrent.ConcurrentHashMap<String, Long>()); o = p.get("jj.giants.meetings"); }
+        java.util.Map<String, Long> m = (java.util.Map<String, Long>) o;
+        String key = a.compareTo(b) < 0 ? a + "|" + b : b + "|" + a;
+        boolean[] won = {false};
+        m.compute(key, (k, v) -> { if (v == null || Math.abs(gameTime - v) > 6000L) { won[0] = true; return gameTime; } return v; });
+        return won[0];
+    }
+
     /** what a giant of kind "me" does on meeting one of kind "other" */
     public static Way way(String me, @Nullable String other) {
         int a = index(me), b = index(other);

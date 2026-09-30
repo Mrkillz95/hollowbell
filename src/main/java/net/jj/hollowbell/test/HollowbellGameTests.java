@@ -3863,6 +3863,44 @@ public class HollowbellGameTests implements FabricGameTest {
         h.succeed();
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "loot_beams_far")
+    public void aLootBeamIsSentFarOff(GameTestHelper h) {
+        Vec3 at = onGround(h, 3, 3);
+        java.util.List<ItemStack> loot = new java.util.ArrayList<>();
+        loot.add(new ItemStack(ModItems.POD, 3));
+        BlockPos c = net.jj.hollowbell.world.LootShrine.build(h.getLevel(), at.x, at.z, loot);
+        ServerPlayer p = player(h, new Vec3(c.getX() + 600.5, c.getY() + 4, c.getZ() + 0.5));
+        h.runAfterDelay(3, () -> {
+            var list = net.jj.hollowbell.world.LootBeams.listFor(p);
+            // through the wire and back, the way the player's game gets it
+            var buf = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), h.getLevel().registryAccess());
+            net.jj.hollowbell.net.LootBeamsPayload.CODEC.encode(buf, new net.jj.hollowbell.net.LootBeamsPayload(list));
+            list = net.jj.hollowbell.net.LootBeamsPayload.CODEC.decode(buf).all();
+            h.assertTrue(list.contains(c), "a lit cache six hundred blocks off isn't sent: " + list);
+            // past 1024 blocks it isn't
+            Vec3 was = p.position();
+            p.setPos(c.getX() + 1100.5, was.y, c.getZ() + 0.5);
+            h.assertFalse(net.jj.hollowbell.world.LootBeams.listFor(p).contains(c), "a cache 1100 blocks off is sent");
+            p.setPos(was.x, was.y, was.z);
+            // emptied, it's off
+            var be = (net.jj.hollowbell.block.LootCacheBlockEntity) h.getLevel().getBlockEntity(c);
+            h.assertTrue(be != null, "no cache");
+            for (int i = 0; i < be.getContainerSize(); i++) be.removeItem(i, 64);
+            h.assertFalse(h.getLevel().getBlockState(c).getValue(net.jj.hollowbell.block.LootCacheBlock.LIT), "the emptied cache is still lit");
+            h.assertFalse(net.jj.hollowbell.world.LootBeams.listFor(p).contains(c), "the emptied cache is still sent");
+            // filled again it's on, and broken it's off
+            be.add(new ItemStack(ModItems.POD));
+            h.assertTrue(net.jj.hollowbell.world.LootBeams.listFor(p).contains(c), "filled again, it isn't sent");
+            h.getLevel().setBlockAndUpdate(c, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            h.assertFalse(net.jj.hollowbell.world.LootBeams.listFor(p).contains(c), "a broken cache is still sent");
+            drop(p);
+            for (var x : h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(c).inflate(6))) x.discard();
+            for (BlockPos b : BlockPos.betweenClosed(c.offset(-3, -3, -3), c.offset(3, 3, 3)))
+                if (b.getY() >= c.getY() - 2) h.getLevel().setBlockAndUpdate(b, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            h.succeed();
+        });
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "loot_cache_open")
     public void theLootShrineKeepsWhatDoesntFit(GameTestHelper h) {
         Vec3 at = onGround(h, 3, 3);

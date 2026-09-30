@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.jj.hollowbell.block.LootCacheBlock;
 import net.jj.hollowbell.block.LootCacheBlockEntity;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.blockentity.BeaconRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.phys.Vec3;
@@ -16,9 +15,10 @@ public class LootCacheRenderer implements BlockEntityRenderer<LootCacheBlockEnti
     @Override
     public void render(LootCacheBlockEntity be, float partial, PoseStack ps, MultiBufferSource buf, int light, int overlay) {
         if (be.getLevel() == null || !be.getBlockState().hasProperty(LootCacheBlock.LIT) || !be.getBlockState().getValue(LootCacheBlock.LIT)) return;
-        long t = be.getLevel().getGameTime();
-        int top = be.getLevel().getMaxBuildHeight() - be.getBlockPos().getY();
-        BeaconRenderer.renderBeaconBeam(ps, buf, BeaconRenderer.BEAM_LOCATION, partial, 1f, t, 1, top, 0xFFA8F0B4, 0.25f, 0.32f);
+        // the same beam as the far-off one (LootBeamsClient), which stands aside while this one draws
+        net.jj.hollowbell.client.LootBeamsClient.cacheDrew(be.getBlockPos());
+        net.jj.hollowbell.client.LootBeamsClient.draw(new org.joml.Matrix4f(ps.last().pose()), be.getBlockPos(), partial, be.getLevel().getGameTime(),
+                be.getLevel().getMaxBuildHeight(), net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera());
     }
 
     @Override public boolean shouldRenderOffScreen(LootCacheBlockEntity be) { return true; }

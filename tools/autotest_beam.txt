@@ -1,0 +1,23 @@
+# 1.8.1: a loot cache's beam seen from far off at render distance 8 (near: the cache draws it; far: the game draws it from the server's list)
+world flat
+gui off
+render 8
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd hollowbell natural off
+cmd setblock 0 -60 0 hollowbell:loot_cache[lit=true]{Items:[{Slot:0b,id:"minecraft:diamond",count:1}]}
+cmd tp @p 0 -55 60 180 -20
+wait 100
+shot beam_060_near
+cmd tp @p 0 -50 400 180 -12
+wait 200
+shot beam_400_far
+cmd tp @p 0 -50 900 180 -8
+wait 200
+shot beam_900_far
+cmd tp @p 0 -50 400 180 -12
+wait 200
+cmd setblock 0 -60 0 air
+wait 60
+shot beam_400_after_empty
+quit

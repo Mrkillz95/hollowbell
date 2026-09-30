@@ -1561,7 +1561,7 @@ public class HollowbellEntity extends Monster {
         if (justBack > 0) { justBack = Math.max(0, justBack - every); return; }
         if (!(level() instanceof ServerLevel sl) || isRemoved() || isDeadOrDying()) return;
         // never while somebody has a stake in him being here
-        if (rider != null || comingForSomebody() || moveNow() != Moves.NONE) { aloneOut = 0; return; }
+        if (rider != null || comingForSomebody() || moveNow() != Moves.NONE || meetFoe != null) { aloneOut = 0; return; }
         double away = net.jj.hollowbell.world.Away.awayRange(sl.getServer(), bellScale());
         for (ServerPlayer p : sl.players())
             if (!p.isSpectator() && p.distanceToSqr(getX(), p.getY(), getZ()) < away * away) { aloneOut = 0; return; }
@@ -2141,8 +2141,8 @@ public class HollowbellEntity extends Monster {
         setTarget(other);
         angerTicks = Math.max(angerTicks, 1200);
         String them = Meetings.kindOf(other);
-        // the one with the smaller id tells everyone near (the other mod does the same, so it's said once)
-        boolean tell = getUUID().compareTo(other.getUUID()) < 0 || them == null;
+        // the one that starts it tells everyone near; the shared board stops the other one saying it too
+        boolean tell = Meetings.claimMeetingLine(getUUID(), other.getUUID(), now);
         for (ServerPlayer p : sl.players()) {
             double dMe = p.distanceToSqr(this), dThem = p.distanceToSqr(other);
             if (tell && (dMe < 256 * 256 || dThem < 256 * 256))

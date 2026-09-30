@@ -1,10 +1,16 @@
-# Hollowbell (Java mod) — version 1.8.0
+# Hollowbell (Java mod) — version 1.8.1
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.8.0
+## What's new in 1.8.1
+
+- **You can see his loot beam from far off.** The beam over his Loot Cache now shows from up to 1024 blocks away, not just while you're close. It goes out for everyone within two seconds of the cache being emptied or broken.
+- The "are fighting!" message when two giants meet now always shows once. Before, it could be missed.
+- Fixed: in a giants' fight with no player near, he could step out of the world and end the fight.
+
+## What was new in 1.8.0
 
 - **Orders last through a restart.** Come to me, go there, send him to a spot, stay, an area he's kept to, a `/hollowbell goto` or `/giants goto` trip, and trips he's on while out of the world all carry on after the server stops and starts. If you told him to come to you and then left the game, he goes to where he last saw you and waits there. When you're back he carries on to you. After 20 minutes of waiting he gives up.
 - **The egg rain is big and easy to see.** He takes two seconds to wind up: he tips his mouth toward you, his glow builds, the egg clumps rattle and glow, and a glassy shiver rises, then a toll. The clumps that fall are the real clumps off his strands, at his size (at least three blocks across, so you can see them from far off), glowing and trailing sparks. A ring shows on the ground where each one will land. It starts wide and green and closes in, turning red, as the egg comes down. Each lands with a heavy splat you can feel. Most of them then shake and crack, and a Belling bursts out.
@@ -192,7 +198,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.8.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.8.1.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
@@ -330,7 +336,7 @@ A very small Hollowbell has no room inside: he squeezes you and drops you instea
 | Hollowbell Crown | A glowing trophy block to set down. Wake it with `/hollowbell ward on` and it holds him off. |
 | Oxidized copper, bone blocks, verdant froglight | From his body. |
 
-All of it goes into his Loot Cache on a pedestal where he fell. The beam over it goes out once you've emptied it.
+All of it goes into his Loot Cache on a pedestal where he fell. Its beam shows from up to 1024 blocks away, and goes out once you've emptied it.
 
 ### His crown
 

@@ -247,6 +247,17 @@ public class MoreGameTests implements FabricGameTest {
         h.succeed();
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "meet_table")
+    public void theFightLineIsSaidOnce(GameTestHelper h) {
+        java.util.UUID a = java.util.UUID.randomUUID(), b = java.util.UUID.randomUUID();
+        long t = 1_000_000L + h.getLevel().getGameTime();
+        h.assertTrue(net.jj.hollowbell.entity.Meetings.claimMeetingLine(a, b, t), "the first claim didn't win");
+        h.assertFalse(net.jj.hollowbell.entity.Meetings.claimMeetingLine(b, a, t), "the other one said it too");
+        h.assertFalse(net.jj.hollowbell.entity.Meetings.claimMeetingLine(a, b, t + 6000), "said again too soon");
+        h.assertTrue(net.jj.hollowbell.entity.Meetings.claimMeetingLine(b, a, t + 6001), "not said again after 6001 ticks");
+        h.succeed();
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "meet_fight")
     public void heFightsAGiantTheTableSaysToFight(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 326);
