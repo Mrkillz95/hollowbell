@@ -2530,8 +2530,15 @@ public class HollowbellGameTests implements FabricGameTest {
         net.jj.hollowbell.world.HomeGround.decorate(h.getLevel(), chunk, h.getLevel().structureManager(), s);
     }
 
+    /** every block in these columns from a little under the ground to high over it */
+    private static int count(GameTestHelper h, java.util.List<BlockPos> at, java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> what) {
+        int n = 0;
+        for (BlockPos p : at) if (what.test(h.getLevel().getBlockState(p))) n++;
+        return n;
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_trees")
-    public void hisGroundLeavesTreesAndCabinsWhole(GameTestHelper h) {
+    public void hisGroundClearsTreesAndCabins(GameTestHelper h) {
         var l = h.getLevel();
         var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
         w.clearForTests();
@@ -2543,8 +2550,6 @@ public class HollowbellGameTests implements FabricGameTest {
         var LOG = net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState();
         var PLANK = net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState();
         var LEAF = net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState();
-        int floorY = top(h, x0 + 4, z0 + 4);
-        var floor = l.getBlockState(new BlockPos(x0 + 4, floorY, z0 + 4));
         java.util.List<BlockPos> cabin = new java.util.ArrayList<>();
         // a log cabin: log walls 3 high round a 5x5, a plank roof over it
         for (int dx = 2; dx <= 6; dx++) for (int dz = 2; dz <= 6; dz++) {
@@ -2554,30 +2559,33 @@ public class HollowbellGameTests implements FabricGameTest {
             l.setBlock(r, PLANK, 2);
             cabin.add(r);
         }
-        // a tree: a trunk five high, a leaf cap three across on top. It stays whole: its columns are left as they are
+        // a tree: a trunk five high, a leaf cap three across on top
         int tx = x0 + 11, tz = z0 + 11;
         int tg = top(h, tx, tz);
         java.util.List<BlockPos> tree = new java.util.ArrayList<>();
         for (int y = 1; y <= 5; y++) { BlockPos p = new BlockPos(tx, tg + y, tz); l.setBlock(p, LOG, 2); tree.add(p); }
         for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) { BlockPos p = new BlockPos(tx + dx, tg + 6, tz + dz); l.setBlock(p, LEAF, 2); tree.add(p); }
-        var underTree = l.getBlockState(new BlockPos(tx, tg, tz));
+        // and leaves hanging over a column from next door, nothing under them
+        BlockPos hang = new BlockPos(x0 + 14, top(h, x0 + 14, z0 + 2) + 4, z0 + 2);
+        l.setBlock(hang, LEAF, 2);
         decorate(h, chunk);
-        for (BlockPos p : cabin) h.assertTrue(!l.getBlockState(p).isAir(), "the cabin lost a block at " + p);
-        h.assertTrue(l.getBlockState(new BlockPos(x0 + 4, floorY, z0 + 4)) == floor, "the floor under the cabin roof was changed");
-        for (BlockPos p : tree) h.assertTrue(!l.getBlockState(p).isAir(), "the tree lost a block at " + p);
-        h.assertTrue(l.getBlockState(new BlockPos(tx, tg, tz)) == underTree, "the ground under the tree was changed");
+        h.assertTrue(count(h, cabin, st -> st.is(net.minecraft.world.level.block.Blocks.OAK_LOG) || st.is(net.minecraft.world.level.block.Blocks.OAK_PLANKS)) == 0, "the cabin is still there");
+        h.assertTrue(count(h, tree, st -> st.is(net.minecraft.world.level.block.Blocks.OAK_LOG) || st.is(net.minecraft.world.level.block.Blocks.OAK_LEAVES)) == 0, "the tree is still there");
+        h.assertTrue(!l.getBlockState(hang).is(net.minecraft.world.level.block.Blocks.OAK_LEAVES), "the leaves from next door are still there");
+        // the columns under them are his ground now, like all the rest
+        h.assertTrue(ours(l.getBlockState(new BlockPos(tx, top(h, tx, tz), tz))) || !net.jj.hollowbell.world.HomeGround.plan().painted(tx, tz), "the column under the tree wasn't made");
+        h.assertTrue(ours(l.getBlockState(new BlockPos(x0 + 4, top(h, x0 + 4, z0 + 4), z0 + 4))), "the column under the cabin wasn't made");
         int ours = 0;
         for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) if (ours(l.getBlockState(new BlockPos(x0 + dx, top(h, x0 + dx, z0 + dz), z0 + dz)))) ours++;
-        h.assertTrue(ours > 150, "only " + ours + " columns round them were made his");
-        for (BlockPos p : cabin) l.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
-        for (BlockPos p : tree) l.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        h.assertTrue(ours >= 240, "only " + ours + " columns were made his");
+        h.assertTrue(net.jj.hollowbell.world.BellGen.made(chunk), "the chunk isn't marked as made");
         w.clearForTests();
         force(h, c.getX(), c.getZ(), 1, false);
         h.succeed();
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_structure")
-    public void aStructureReachingInIsLeftAlone(GameTestHelper h) {
+    public void whatIsLeftOfAStructureIsPaintedOver(GameTestHelper h) {
         var l = h.getLevel();
         var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
         w.clearForTests();
@@ -2585,31 +2593,246 @@ public class HollowbellGameTests implements FabricGameTest {
         claimNear(h, w, c);
         var chunk = plainChunk(h, c);
         int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
-        int ty = top(h, x0, z0);
-        // a building from the next chunk reaches over the west half of this one
-        var box = new net.minecraft.world.level.levelgen.structure.BoundingBox(x0 - 20, ty - 6, z0 - 4, x0 + 7, ty + 12, z0 + 20);
-        // and a mine far under the ground under all of it doesn't count
-        var mine = new net.minecraft.world.level.levelgen.structure.BoundingBox(x0 - 30, ty - 60, z0 - 30, x0 + 40, ty - 40, z0 + 40);
-        java.util.List<net.minecraft.world.level.block.state.BlockState> before = new java.util.ArrayList<>();
-        java.util.List<Integer> tops = new java.util.ArrayList<>();
-        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
-            int x = x0 + dx, z = z0 + dz;
-            tops.add(top(h, x, z));
-            before.add(l.getBlockState(new BlockPos(x, top(h, x, z), z)));
+        // bits of a building on the ground: a cobblestone wall, a plank floor, a chest, a path
+        java.util.List<BlockPos> built = new java.util.ArrayList<>();
+        for (int dx = 3; dx < 9; dx++) {
+            int y = top(h, x0 + dx, z0 + 5);
+            for (int k = 1; k <= 4; k++) { BlockPos p = new BlockPos(x0 + dx, y + k, z0 + 5); l.setBlock(p, net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState(), 2); built.add(p); }
+            BlockPos f = new BlockPos(x0 + dx, top(h, x0 + dx, z0 + 7), z0 + 7);
+            l.setBlock(f, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState(), 2);
+            built.add(f);
         }
-        h.assertTrue(net.jj.hollowbell.world.HomeGround.inStructure(java.util.List.of(box), x0 + 3, z0 + 3, ty), "the box doesn't hold its own column");
-        h.assertTrue(!net.jj.hollowbell.world.HomeGround.inStructure(java.util.List.of(mine), x0 + 3, z0 + 3, ty), "a deep mine counts as reaching the ground");
-        net.jj.hollowbell.world.HomeGround.decorate(l, chunk, net.jj.hollowbell.world.BellGen.SNAP, java.util.List.of(box, mine));
-        int changedEast = 0, k = 0;
-        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++, k++) {
-            int x = x0 + dx, z = z0 + dz;
-            boolean same = top(h, x, z) == tops.get(k) && l.getBlockState(new BlockPos(x, top(h, x, z), z)) == before.get(k);
-            if (dx <= 7) h.assertTrue(same, "a column the building reaches was changed at " + x + ", " + z);
-            else if (!same) changedEast++;
+        BlockPos chest = new BlockPos(x0 + 10, top(h, x0 + 10, z0 + 10) + 1, z0 + 10);
+        l.setBlock(chest, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 2);
+        built.add(chest);
+        BlockPos path = new BlockPos(x0 + 12, top(h, x0 + 12, z0 + 3), z0 + 3);
+        l.setBlock(path, net.minecraft.world.level.block.Blocks.DIRT_PATH.defaultBlockState(), 2);
+        built.add(path);
+        decorate(h, chunk);
+        int left = count(h, built, st -> st.is(net.minecraft.world.level.block.Blocks.COBBLESTONE) || st.is(net.minecraft.world.level.block.Blocks.OAK_PLANKS)
+                || st.is(net.minecraft.world.level.block.Blocks.CHEST) || st.is(net.minecraft.world.level.block.Blocks.DIRT_PATH));
+        h.assertTrue(left == 0, left + " blocks of the building are still there");
+        for (int dx = 3; dx < 9; dx++) {
+            int x = x0 + dx;
+            h.assertTrue(ours(l.getBlockState(new BlockPos(x, top(h, x, z0 + 5), z0 + 5))), "the column under the wall wasn't made his at " + x);
+            h.assertTrue(ours(l.getBlockState(new BlockPos(x, top(h, x, z0 + 7), z0 + 7))), "the column under the floor wasn't made his at " + x);
         }
-        h.assertTrue(changedEast > 60, "only " + changedEast + " columns clear of the building were made his");
         w.clearForTests();
         force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    /** a piece of a structure with just a box: enough for the structure hook to look at */
+    private static final class BoxPiece extends net.minecraft.world.level.levelgen.structure.StructurePiece {
+        BoxPiece(net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+            super(net.minecraft.world.level.levelgen.structure.pieces.StructurePieceType.SWAMPLAND_HUT, 0, box);
+        }
+        @Override protected void addAdditionalSaveData(net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext ctx, CompoundTag tag) {}
+        @Override public void postProcess(net.minecraft.world.level.WorldGenLevel level, net.minecraft.world.level.StructureManager sm, net.minecraft.world.level.chunk.ChunkGenerator gen,
+                                          net.minecraft.util.RandomSource r, net.minecraft.world.level.levelgen.structure.BoundingBox box, net.minecraft.world.level.ChunkPos cp, BlockPos pivot) {}
+    }
+
+    private static net.minecraft.world.level.levelgen.structure.StructureStart fakeStart(GameTestHelper h, net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+        var hut = h.getLevel().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE)
+                .getOrThrow(net.minecraft.world.level.levelgen.structure.BuiltinStructures.SWAMP_HUT);
+        var pieces = new net.minecraft.world.level.levelgen.structure.pieces.PiecesContainer(java.util.List.of(new BoxPiece(box)));
+        return new net.minecraft.world.level.levelgen.structure.StructureStart(hut, new net.minecraft.world.level.ChunkPos(box.minX() >> 4, box.minZ() >> 4), 0, pieces);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "ground_no_structures")
+    public void noSurfaceStructuresInHisGround(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 229);
+        claimNear(h, w, c);
+        var s = net.jj.hollowbell.world.BellGen.SNAP;
+        h.assertTrue(s != null && s.claimed, "no claim was published");
+        int sea = l.getSeaLevel();
+        var gen = l.getChunkSource().getGenerator();
+        int cx = w.homeX(), cz = w.homeZ();
+        var BB = (java.util.function.Function<int[], net.minecraft.world.level.levelgen.structure.BoundingBox>)
+                a -> new net.minecraft.world.level.levelgen.structure.BoundingBox(a[0], a[1], a[2], a[3], a[4], a[5]);
+        // a hut in the middle of his ground: refused
+        var inHut = BB.apply(new int[]{cx + 40, sea - 2, cz + 40, cx + 47, sea + 9, cz + 49});
+        h.assertTrue(net.jj.hollowbell.world.BellGen.refuses(s, inHut), "a hut in the middle of his ground was let in");
+        h.assertTrue(net.jj.hollowbell.world.BellGen.refuses(gen, fakeStart(h, inHut)), "the structure hook let a hut start in his ground");
+        // a village far off: kept
+        var far = BB.apply(new int[]{cx + 4000, sea - 2, cz, cx + 4100, sea + 20, cz + 100});
+        h.assertTrue(!net.jj.hollowbell.world.BellGen.refuses(s, far), "a village 4000 blocks off was refused");
+        h.assertTrue(!net.jj.hollowbell.world.BellGen.refuses(gen, fakeStart(h, far)), "the structure hook refused a village far off");
+        // a big one outside whose box only just reaches in at one corner: refused (its corner is looked at)
+        int edge = w.homeRadius();
+        var corner = BB.apply(new int[]{cx + 5, sea - 5, cz + 5, cx + edge + 400, sea + 30, cz + edge + 400});
+        h.assertTrue(net.jj.hollowbell.world.BellGen.refuses(s, corner), "a structure reaching into his middle from outside was let in");
+        // deep ones under his ground stay: a mineshaft, a stronghold, an ancient city
+        var mine = BB.apply(new int[]{cx - 60, -40, cz - 60, cx + 60, sea - 17, cz + 60});
+        h.assertTrue(!net.jj.hollowbell.world.BellGen.refuses(s, mine), "a deep mine under his ground was refused");
+        h.assertTrue(!net.jj.hollowbell.world.BellGen.refuses(gen, fakeStart(h, mine)), "the structure hook refused a deep mine");
+        // another world's generator (the nether) is never touched
+        h.assertTrue(!net.jj.hollowbell.world.BellGen.refuses(new Object(), fakeStart(h, inHut)), "another generator's structure was refused");
+        // with no ground claimed nothing is refused
+        w.clearForTests();
+        h.assertTrue(!net.jj.hollowbell.world.BellGen.refuses(gen, fakeStart(h, inHut)), "a structure was refused with no ground claimed");
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_tidy")
+    public void treesFromNextDoorAreClearedOffHisGround(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 230);
+        claimNear(h, w, c);
+        var s = net.jj.hollowbell.world.BellGen.SNAP;
+        var chunk = plainChunk(h, c);
+        var next = plainChunk(h, c.offset(16, 0, 0));
+        next.removeAttached(net.jj.hollowbell.world.BellGen.MADE);
+        chunk.removeAttached(net.jj.hollowbell.world.BellGen.MADE);
+        int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
+        decorate(h, chunk);
+        h.assertTrue(net.jj.hollowbell.world.BellGen.made(chunk), "the chunk isn't marked as made");
+        // the next chunk's decoration puts a big tree whose crown reaches over the border into the made chunk
+        var LOG = net.minecraft.world.level.block.Blocks.DARK_OAK_LOG.defaultBlockState();
+        var LEAF = net.minecraft.world.level.block.Blocks.DARK_OAK_LEAVES.defaultBlockState();
+        var VINE = net.minecraft.world.level.block.Blocks.VINE.defaultBlockState();
+        java.util.List<BlockPos> crown = new java.util.ArrayList<>();
+        java.util.List<Integer> groundY = new java.util.ArrayList<>();
+        for (int dx = 11; dx <= 15; dx++) for (int dz = 4; dz <= 8; dz++) {
+            int y = top(h, x0 + dx, z0 + dz);
+            BlockPos p = new BlockPos(x0 + dx, y + 7, z0 + dz);
+            l.setBlock(p, LEAF, 2); crown.add(p);
+            if (dx == 15 && dz == 6) {                                     // a branch and a vine hanging down
+                for (int k = 1; k <= 6; k++) { BlockPos b = new BlockPos(x0 + dx, y + k, z0 + dz); l.setBlock(b, LOG, 2); crown.add(b); }
+            }
+            if (dx == 12 && dz == 5) { BlockPos v = new BlockPos(x0 + dx, y + 6, z0 + dz); l.setBlock(v, VINE, 2); crown.add(v); }
+        }
+        // a made column the tree didn't reach keeps exactly what his ground put there
+        var keepAt = new BlockPos(x0 + 3, top(h, x0 + 3, z0 + 12), z0 + 12);
+        var keep = l.getBlockState(keepAt);
+        // the next chunk is not made: nothing on it is touched
+        int nx = next.getPos().getMinBlockX();
+        BlockPos theirs = new BlockPos(nx + 4, top(h, nx + 4, z0 + 4) + 3, z0 + 4);
+        l.setBlock(theirs, LEAF, 2);
+        int cleared = net.jj.hollowbell.world.HomeGround.tidyAround(l, next, s);
+        h.assertTrue(cleared > 0, "nothing was cleared");
+        int left = count(h, crown, st -> !st.isAir() && !ours(st));
+        h.assertTrue(left == 0, left + " blocks of the tree are still on his ground");
+        h.assertTrue(l.getBlockState(keepAt) == keep, "a column the tree didn't reach was changed");
+        h.assertTrue(l.getBlockState(theirs).is(net.minecraft.world.level.block.Blocks.DARK_OAK_LEAVES), "leaves on a chunk not made yet were touched");
+        // made later, the next chunk clears the leaves on it itself
+        decorate(h, next);
+        h.assertTrue(!l.getBlockState(theirs).is(net.minecraft.world.level.block.Blocks.DARK_OAK_LEAVES) || !net.jj.hollowbell.world.HomeGround.plan().painted(theirs.getX(), theirs.getZ()),
+                "the leaves stayed on a column made after them");
+        l.setBlock(theirs, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 60, batch = "ground_check")
+    public void theGroundCheckSeesAMadeChunkAndATree(GameTestHelper h) {
+        var l = h.getLevel();
+        var w = net.jj.hollowbell.world.WorldOne.get(l.getServer());
+        w.clearForTests();
+        BlockPos c = groundSpot(h, 231);
+        claimNear(h, w, c);
+        var chunk = plainChunk(h, c);
+        var plan = net.jj.hollowbell.world.HomeGround.plan();
+        int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
+        boolean[] want = new boolean[256];
+        var cols = new net.jj.hollowbell.world.GroundCheck.Col[256];
+        int wanted = 0;
+        for (int i = 0; i < 256; i++) { want[i] = plan.painted(x0 + (i & 15), z0 + (i >> 4)); if (want[i]) wanted++; }
+        h.assertTrue(wanted > 200, "the test chunk is hardly his ground: " + wanted);
+        // not made yet: the check says so
+        net.jj.hollowbell.world.GroundCheck.check(l, chunk, plan, want, cols);
+        int notMade = 0;
+        for (int k = 0; k < 256; k++) if (want[k] && cols[k].cause != net.jj.hollowbell.world.GroundCheck.Cause.OK && cols[k].cause != net.jj.hollowbell.world.GroundCheck.Cause.EDGE) notMade++;
+        h.assertTrue(notMade > wanted / 3, "the check didn't see plain world ground: " + notMade + " of " + wanted);
+        decorate(h, chunk);
+        net.jj.hollowbell.world.GroundCheck.check(l, chunk, plan, want, cols);
+        int right = 0;
+        StringBuilder bad = new StringBuilder();
+        for (int i = 0; i < 256; i++) {
+            if (!want[i]) continue;
+            var cs = cols[i].cause;
+            if (cs == net.jj.hollowbell.world.GroundCheck.Cause.OK || cs == net.jj.hollowbell.world.GroundCheck.Cause.EDGE) right++;
+            else if (bad.length() < 300) bad.append(cs).append(' ').append(cols[i].what).append("; ");
+        }
+        h.assertTrue(right >= wanted * 95 / 100, "the check finds " + (wanted - right) + " wrong columns on a made chunk: " + bad);
+        // leaves on one column: the check names them
+        int i = 0;
+        while (!want[i]) i++;
+        int x = x0 + (i & 15), z = z0 + (i >> 4);
+        BlockPos leaf = new BlockPos(x, top(h, x, z) + 5, z);
+        l.setBlock(leaf, net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState(), 2);
+        net.jj.hollowbell.world.GroundCheck.check(l, chunk, plan, want, cols);
+        h.assertTrue(cols[i].cause == net.jj.hollowbell.world.GroundCheck.Cause.TREE, "leaves on his ground came out as " + cols[i].cause);
+        l.setBlock(leaf, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        w.clearForTests();
+        force(h, c.getX(), c.getZ(), 1, false);
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "paint_hut")
+    public void paintOverAWitchHutLeavesNoHut(GameTestHelper h) {
+        var l = h.getLevel();
+        BlockPos c = groundSpot(h, 232);
+        force(h, c.getX(), c.getZ(), 2, true);
+        var chunk = l.getChunkAt(c);
+        var gen = l.getChunkSource().getGenerator();
+        var hut = l.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE)
+                .getOrThrow(net.minecraft.world.level.levelgen.structure.BuiltinStructures.SWAMP_HUT);
+        // a real witch hut, as the world makes one: its start kept in its chunk, references in every chunk it stands in
+        var start = hut.generate(l.registryAccess(), gen, gen.getBiomeSource(), l.getChunkSource().randomState(), l.getStructureManager(),
+                l.getSeed(), chunk.getPos(), 0, l, b -> true);
+        h.assertTrue(start.isValid(), "no witch hut could be made for the test");
+        chunk.setStartForStructure(hut, start);
+        var bb = start.getBoundingBox();
+        for (int cx = bb.minX() >> 4; cx <= bb.maxX() >> 4; cx++) for (int cz = bb.minZ() >> 4; cz <= bb.maxZ() >> 4; cz++) {
+            var ch = l.getChunk(cx, cz);
+            ch.addReferenceForStructure(hut, chunk.getPos().toLong());
+            var area = new net.minecraft.world.level.levelgen.structure.BoundingBox(cx << 4, l.getMinBuildHeight(), cz << 4, (cx << 4) + 15, l.getMaxBuildHeight(), (cz << 4) + 15);
+            start.placeInChunk(l, l.structureManager(), gen, l.getRandom(), area, new net.minecraft.world.level.ChunkPos(cx, cz));
+        }
+        ((net.jj.hollowbell.mixin.StructureManagerAccess) l.structureManager()).hollowbell$check().onStructureLoad(chunk.getPos(), chunk.getAllStarts());
+        BlockPos mid = bb.getCenter();
+        h.assertTrue(l.structureManager().getStructureWithPieceAt(mid, hut).isValid(), "the test hut isn't a structure");
+        java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> hutBlock = st -> st.is(net.minecraft.world.level.block.Blocks.SPRUCE_PLANKS)
+                || st.is(net.minecraft.world.level.block.Blocks.SPRUCE_STAIRS) || st.is(net.minecraft.world.level.block.Blocks.OAK_LOG)
+                || st.is(net.minecraft.world.level.block.Blocks.OAK_FENCE) || st.is(net.minecraft.world.level.block.Blocks.CAULDRON)
+                || st.is(net.minecraft.world.level.block.Blocks.CRAFTING_TABLE) || st.is(net.minecraft.world.level.block.Blocks.POTTED_RED_MUSHROOM);
+        java.util.List<BlockPos> box = new java.util.ArrayList<>();
+        for (BlockPos p : BlockPos.betweenClosed(bb.minX(), bb.minY() - 4, bb.minZ(), bb.maxX(), bb.maxY() + 2, bb.maxZ())) box.add(p.immutable());
+        int hutBefore = count(h, box, hutBlock);
+        h.assertTrue(hutBefore > 40, "the test hut has only " + hutBefore + " blocks");
+        // somebody's chest by the hut, a diamond in it
+        BlockPos chest = new BlockPos(bb.maxX() + 3, top(h, bb.maxX() + 3, bb.minZ()) + 1, bb.minZ());
+        l.setBlock(chest, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 2);
+        if (l.getBlockEntity(chest) instanceof net.minecraft.world.Container box2) box2.setItem(0, new ItemStack(net.minecraft.world.item.Items.DIAMOND, 3));
+        // paint over it, round its middle
+        net.jj.hollowbell.world.Painter.startAt(l, null, mid.getX() + 0.5, mid.getZ() + 0.5, 24, true);
+        net.jj.hollowbell.world.Painter.finishAll(l.getServer());
+        int hutAfter = count(h, box, hutBlock);
+        h.assertTrue(hutAfter == 0, hutAfter + " blocks of the hut are still there");
+        h.assertTrue(!l.structureManager().getStructureWithPieceAt(mid, hut).isValid(), "the hut is still a structure after the paint");
+        h.assertTrue(chunk.getStartForStructure(hut) == null || !chunk.getStartForStructure(hut).isValid(), "the hut's start is still kept");
+        int his = 0, cols = 0;
+        for (int x = bb.minX(); x <= bb.maxX(); x++) for (int z = bb.minZ(); z <= bb.maxZ(); z++) {
+            cols++;
+            if (ours(l.getBlockState(new BlockPos(x, top(h, x, z), z)))) his++;
+        }
+        h.assertTrue(his >= cols * 9 / 10, "only " + his + " of " + cols + " columns where the hut stood are his ground");
+        h.assertTrue(hollowsAt(h, mid.getX(), top(h, mid.getX(), mid.getZ()) + 1, mid.getZ()), "the biome where the hut stood isn't his");
+        h.assertTrue(hollowsAt(h, mid.getX(), -50, mid.getZ()), "the paint didn't reach all the way down the column");
+        h.assertTrue(!l.getBlockState(chest).is(net.minecraft.world.level.block.Blocks.CHEST), "the chest is still there");
+        var diamonds = l.getEntitiesOfClass(ItemEntity.class, new AABB(chest).inflate(3, 12, 3), e -> e.getItem().is(net.minecraft.world.item.Items.DIAMOND));
+        int n = diamonds.stream().mapToInt(e -> e.getItem().getCount()).sum();
+        h.assertTrue(n == 3, "the chest's diamonds weren't dropped on the new ground (" + n + " found)");
+        diamonds.forEach(e -> e.discard());
+        force(h, c.getX(), c.getZ(), 2, false);
         h.succeed();
     }
 
@@ -3563,7 +3786,7 @@ public class HollowbellGameTests implements FabricGameTest {
                 if (l.getBlockState(new BlockPos(b.getX(), y, b.getZ())).is(net.minecraft.world.level.block.Blocks.OAK_PLANKS)) plank++;
             h.assertTrue(plank < planks.size(), "the built floor wasn't painted over");
             h.assertTrue(hollowsAt(h, x0 + 8, top(h, x0 + 8, z0 + 8), z0 + 8), "the biome wasn't changed");
-            if (top(h, x0 + 8, z0 + 8) > 20) h.assertTrue(!hollowsAt(h, x0 + 8, -40, z0 + 8), "the caves under it were changed");
+            h.assertTrue(hollowsAt(h, x0 + 8, -40, z0 + 8), "the paint didn't reach all the way down the column");
             drop(p);
             force(h, c.getX(), c.getZ(), 1, false);
             h.succeed();

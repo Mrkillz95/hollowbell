@@ -105,6 +105,7 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.LootBeams::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarOrders::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Painter::tick);
+        ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.GroundCheck::tick);
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
             if (!(entity instanceof HollowbellEntity h)) return;
@@ -127,10 +128,11 @@ public class HollowbellMod implements ModInitializer {
             }
         });
         // his ground: chosen as the overworld is made, before any of its land, so the world makes that land as his
+        net.jj.hollowbell.world.BellGen.init();
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents.LOAD.register((server, world) -> {
             if (world.dimension() == net.minecraft.world.level.Level.OVERWORLD) net.jj.hollowbell.world.WorldOne.worldLoaded(world);
         });
-        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.BellGen.forget(); net.jj.hollowbell.world.FarOrders.forget(); });
+        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.BellGen.forget(); net.jj.hollowbell.world.FarOrders.forget(); net.jj.hollowbell.world.GroundCheck.forget(); });
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 CodexOrders.forgetPlayer(handler.getPlayer().getUUID()));
 

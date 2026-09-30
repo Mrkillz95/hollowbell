@@ -157,7 +157,11 @@ public final class HollowbellCommand {
                 .then(Commands.literal("tp").requires(OP).executes(c -> tp(c, 0))
                         .then(Commands.argument("which", IntegerArgumentType.integer(1, 999)).executes(c -> tp(c, IntegerArgumentType.getInteger(c, "which")))))
                 .then(Commands.literal("ground").requires(OP).executes(HollowbellCommand::groundSay)
-                        .then(Commands.literal("new").executes(HollowbellCommand::groundNew)))
+                        .then(Commands.literal("new").executes(HollowbellCommand::groundNew))
+                        // check: goes over his whole ground on the real world and says what came out wrong (a map in the world folder)
+                        .then(Commands.literal("check").executes(c -> groundCheck(c, 0))
+                                .then(Commands.argument("radius", IntegerArgumentType.integer(16, 4000))
+                                        .executes(c -> groundCheck(c, IntegerArgumentType.getInteger(c, "radius"))))))
                 .then(Commands.literal("stay").requires(OP).executes(c -> near(c, h -> h.setStay(!h.staying()), "stay"))
                         .then(Commands.literal("on").executes(c -> near(c, h -> h.setStay(true), "stay")))
                         .then(Commands.literal("off").executes(c -> near(c, h -> h.setStay(false), "stay")))
@@ -597,6 +601,13 @@ public final class HollowbellCommand {
         net.minecraft.core.BlockPos at = w.newGround(over);
         boolean alive = w.aliveNow();
         c.getSource().sendSuccess(() -> Component.translatable(alive ? "command.hollowbell.ground_new" : "command.hollowbell.ground_new_next", at.getX(), at.getZ()), true);
+        return 1;
+    }
+
+    /** /hollowbell ground check [radius]: every column of his ground looked at, the answer in chat and the world folder */
+    private static int groundCheck(CommandContext<CommandSourceStack> c, int radius) {
+        Component msg = net.jj.hollowbell.world.GroundCheck.start(c.getSource(), radius);
+        c.getSource().sendSuccess(() -> msg, true);
         return 1;
     }
 
