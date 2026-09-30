@@ -183,6 +183,9 @@ public final class BellPlan {
 
     // ================================================================== the shape of the land
 
+    /** the height of the land at a column as the world's generator makes it, before caves and ravines cut it */
+    public int worldHeight(int x, int z) { return ground.height(x, z); }
+
     /** the den sits at the height the world's generator gives its centre */
     public int denY() {
         if (denY == Integer.MIN_VALUE) denY = ground.height(cx, cz);

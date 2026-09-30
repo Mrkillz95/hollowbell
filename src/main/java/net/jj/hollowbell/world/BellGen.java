@@ -88,6 +88,11 @@ public final class BellGen {
 
         public boolean inBox(int x, int z) { return x >= minX && x <= maxX && z >= minZ && z <= maxZ; }
 
+        /** could any of this chunk, or of the chunks next to it, be his? */
+        public boolean touchesNear(ChunkPos p) {
+            return claimed && p.getMaxBlockX() + 16 >= minX && p.getMinBlockX() - 16 <= maxX && p.getMaxBlockZ() + 16 >= minZ && p.getMinBlockZ() - 16 <= maxZ;
+        }
+
         /** could any of this chunk be his? */
         public boolean touches(ChunkPos p) {
             return claimed && p.getMaxBlockX() >= minX && p.getMinBlockX() <= maxX && p.getMaxBlockZ() >= minZ && p.getMinBlockZ() <= maxZ;
@@ -207,17 +212,68 @@ public final class BellGen {
 
     // ------------------------------------------------------------------ the decoration hook (generator threads)
 
-    /** a chunk of the overworld has had its vanilla decoration: if it is his, his land is made in it now */
+    /**
+     * A chunk of the overworld has had its vanilla decoration: if it is his, his land is made in it now. Then the
+     * chunks round it that are his and made already are tidied: this chunk's decoration may have put a tree or
+     * leaves on them (a chunk's trees reach into the chunks next to it).
+     */
     public static void decorated(Object generator, WorldGenLevel level, ChunkAccess chunk, StructureManager structures) {
         Snap s = SNAP;
-        if (s == null || !s.claimed || generator != s.generator || !s.touches(chunk.getPos())) return;
+        if (s == null || !s.claimed || generator != s.generator || !s.touchesNear(chunk.getPos())) return;
         try {
-            HomeGround.decorate(level, chunk, structures, s);
+            if (s.touches(chunk.getPos())) HomeGround.decorate(level, chunk, s);
+            HomeGround.tidyAround(level, chunk, s);
         } catch (Throwable t) {
             // never break the world's generation over his ground: the chunk just stays as the world made it
             HollowbellMod.LOG.error("Could not make the Bell Hollows in chunk {}", chunk.getPos(), t);
         }
     }
+
+    // ------------------------------------------------------------------ the "made" mark on a chunk
+
+    /** set on a chunk once his ground has been made in it (kept with the chunk when it is saved) */
+    public static final net.fabricmc.fabric.api.attachment.v1.AttachmentType<Boolean> MADE =
+            net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry.createPersistent(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "ground_made"), com.mojang.serialization.Codec.BOOL);
+
+    /** loads this class at start, so the mark is known before any chunk is read */
+    public static void init() {}
+
+    public static void markMade(ChunkAccess chunk) { chunk.setAttached(MADE, Boolean.TRUE); }
+
+    public static boolean made(ChunkAccess chunk) { return Boolean.TRUE.equals(chunk.getAttached(MADE)); }
+
+    // ------------------------------------------------------------------ no surface structures in his ground
+
+    /**
+     * Would a structure with this box sit in his ground? Only one reaching up to the surface counts (deep ones like
+     * mineshafts, strongholds and ancient cities stay); its whole footprint is looked at every 8 blocks and at its
+     * corners, against the same outline the land itself is made by. Such a structure is never made at all.
+     */
+    public static boolean refuses(Snap s, net.minecraft.world.level.levelgen.structure.BoundingBox b) {
+        if (s == null || !s.claimed || s.outline == null) return false;
+        if (b.maxY() < s.sea - 16) return false;
+        if (b.maxX() < s.minX || b.minX() > s.maxX || b.maxZ() < s.minZ || b.minZ() > s.maxZ) return false;
+        for (int x = b.minX(); ; x = Math.min(x + 8, b.maxX())) {
+            for (int z = b.minZ(); ; z = Math.min(z + 8, b.maxZ())) {
+                if (s.inBox(x, z) && s.outline.painted(x, z)) return true;
+                if (z >= b.maxZ()) break;
+            }
+            if (x >= b.maxX()) break;
+        }
+        return false;
+    }
+
+    /** the structure hook: is this new structure start refused (for the overworld's own generator only)? */
+    public static boolean refuses(Object generator, net.minecraft.world.level.levelgen.structure.StructureStart start) {
+        Snap s = SNAP;
+        if (s == null || !s.claimed || generator != s.generator || !start.isValid()) return false;
+        boolean no = refuses(s, start.getBoundingBox());
+        if (no && DEBUG) HollowbellMod.LOG.info("No {} in the Bell Hollows at {}", start.getStructure(), start.getBoundingBox());
+        return no;
+    }
+
+    private static final boolean DEBUG = Boolean.getBoolean("hollowbell.debug");
 
     /** the standard overworld ores and stone blobs; the biome swap took them, so he puts them back himself */
     @SuppressWarnings("unchecked")

@@ -204,6 +204,17 @@ public class WorldOne extends SavedData {
         BellGen.capture(over);
         WorldOne w = get(over.getServer());
         w.upgradeGround();
+        // for checking his ground on a real world: -Dhollowbell.groundAt=x,z puts it there, laid out from the world seed
+        String at = System.getProperty("hollowbell.groundAt");
+        if (!IN_TESTS && at != null && !w.homeClaimed) {
+            String[] xz = at.split(",");
+            w.x = Integer.parseInt(xz[0].trim()); w.z = Integer.parseInt(xz[1].trim());
+            w.claimHome(over, w.x, w.z);
+            w.homeSeed = BellPlan.mix(over.getSeed(), 0x6B2E11L);
+            w.placed = true;
+            w.setDirty();
+            BellGen.publish(w);
+        }
         if (!IN_TESTS && HollowbellConfig.V.oneInTheWorld && !w.homeClaimed) {
             if (!w.placed) w.pickFirstSpot(over);
             w.claimFresh(over);

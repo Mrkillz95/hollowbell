@@ -15,16 +15,26 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.Nullable;
 
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
+
 import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * /giants paint hollowbell [radius] [full|biome] (admins only): the land round the player becomes the Bell Hollows,
- * whatever is there. The biome of every column in the circle (from y 0 up) is set to his; in "full" the land is
- * also shaped and dressed like his own ground (no den). A chunk or two a tick, so the server keeps up. It can't be
- * undone.
+ * whatever is there. The biome of every column in the circle (every height) is set to his; in "full" the land is
+ * also shaped and dressed like his own ground (no den): everything standing on it (buildings, trees, a witch hut)
+ * is cleared first, only bedrock is left, and what was in chests comes out on the new ground. Structures standing
+ * there stop being structures (no more witches from a painted-over hut, /locate stops pointing there). A chunk or
+ * two a tick, so the server keeps up. It can't be undone.
  */
 public final class Painter {
     private Painter() {}
@@ -40,10 +50,15 @@ public final class Painter {
 
     /** starts painting round this player; returns how many chunks it will take */
     public static int start(ServerPlayer p, int radius, boolean full) {
+        return startAt(p.serverLevel(), p.getUUID(), p.getX(), p.getZ(), radius, full);
+    }
+
+    /** starts painting round a spot; who (may be null) is told how it goes */
+    public static int startAt(ServerLevel level, @Nullable UUID who, double atX, double atZ, int radius, boolean full) {
         Job j = new Job();
-        j.who = p.getUUID();
-        j.level = p.serverLevel();
-        j.cx = p.getX(); j.cz = p.getZ();
+        j.who = who;
+        j.level = level;
+        j.cx = atX; j.cz = atZ;
         j.radius = Mth.clamp(radius, 16, 512);
         j.full = full;
         ServerLevel l = j.level;
@@ -84,7 +99,20 @@ public final class Painter {
         }
     }
 
+    /** for the tests: every paint waiting is done now */
+    public static void finishAll(MinecraftServer server) {
+        while (!jobs.isEmpty()) {
+            Job j = jobs.remove(0);
+            while (!j.todo.isEmpty()) {
+                ChunkPos cp = j.todo.poll();
+                paintChunk(j, cp);
+                j.done++;
+            }
+        }
+    }
+
     private static void tell(MinecraftServer server, Job j, Component c) {
+        if (j.who == null) return;
         ServerPlayer p = server.getPlayerList().getPlayer(j.who);
         if (p != null) p.displayClientMessage(c, false);
     }
@@ -101,14 +129,10 @@ public final class Painter {
         double r2 = (double) j.radius * j.radius;
         if (home != null) {
             var sampler = l.getChunkSource().randomState().sampler();
-            // from y 0 up (the caves below keep theirs), or from a little under the ground where it lies lower than that
-            int low = Integer.MAX_VALUE;
-            for (int dx = 0; dx < 16; dx += 5) for (int dz = 0; dz < 16; dz += 5)
-                low = Math.min(low, chunk.getHeight(Heightmap.Types.WORLD_SURFACE, dx, dz));
-            int floor = Math.min(0, low - 16);
+            // the whole column, every height: nothing under or over it keeps the old biome
             chunk.fillBiomesFromNoise((qx, qy, qz, s) -> {
                 double bx = QuartPos.toBlock(qx) + 2, bz = QuartPos.toBlock(qz) + 2;
-                boolean in = QuartPos.toBlock(qy) + 3 >= floor && Mth.square(bx - j.cx) + Mth.square(bz - j.cz) <= r2;
+                boolean in = Mth.square(bx - j.cx) + Mth.square(bz - j.cz) <= r2;
                 return in ? home : chunk.getNoiseBiome(qx, qy, qz);
             }, sampler);
             chunk.setUnsaved(true);
@@ -118,6 +142,43 @@ public final class Painter {
             // only the columns inside the circle: the plan says "his" for all of them; the rest of the chunk is kept
             BellPlan clipped = j.plan;
             HomeGround.paintInCircle(l, chunk, clipped, j.cx, j.cz, j.radius);
+            forgetStructures(l, chunk);
+        }
+    }
+
+    /** a structure reaching up to the surface: a hut, a village, a ruin (a mine or a stronghold deep down is not) */
+    public static boolean surface(StructureStart st, int sea) {
+        return st.isValid() && st.getBoundingBox().maxY() >= sea - 16;
+    }
+
+    /**
+     * The structures standing in a painted chunk stop being structures: the starts in it and its references to them
+     * are dropped (no more witches from a painted-over hut, no more village, /locate stops pointing there).
+     */
+    public static void forgetStructures(ServerLevel l, LevelChunk chunk) {
+        int sea = l.getSeaLevel();
+        boolean changed = false;
+        Map<Structure, LongSet> keep = new HashMap<>();
+        for (var e : chunk.getAllReferences().entrySet()) {
+            LongSet kept = new LongOpenHashSet();
+            for (long ref : e.getValue()) {
+                ChunkPos at = new ChunkPos(ref);
+                StructureStart st = l.getChunk(at.x, at.z, ChunkStatus.STRUCTURE_STARTS, true).getStartForStructure(e.getKey());
+                if (st == null || !st.isValid() || surface(st, sea)) { changed = true; continue; }
+                kept.add(ref);
+            }
+            if (!kept.isEmpty()) keep.put(e.getKey(), kept);
+        }
+        if (changed) chunk.setAllReferences(keep);
+        Map<Structure, StructureStart> starts = new HashMap<>(chunk.getAllStarts());
+        if (starts.values().removeIf(st -> surface(st, sea))) {
+            chunk.setAllStarts(starts);
+            changed = true;
+        }
+        if (changed) {
+            chunk.setUnsaved(true);
+            // what /locate and mob spawns remember about this chunk is told again
+            ((net.jj.hollowbell.mixin.StructureManagerAccess) l.structureManager()).hollowbell$check().onStructureLoad(chunk.getPos(), chunk.getAllStarts());
         }
     }
 }

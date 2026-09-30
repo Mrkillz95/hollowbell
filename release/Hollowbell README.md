@@ -1,10 +1,20 @@
-# Hollowbell (Java mod) — version 1.8.1
+# Hollowbell (Java mod) — version 1.9.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.8.1
+## What's new in 1.9.0
+
+- **His ground always comes out whole.** Before, bits of the Bell Hollows could stay plain land: where a structure stood (a witch hut, a village), under trees at the edge of a forest, and now and then somewhere else. Now:
+  - No surface structure is ever made in his ground: no witch huts, villages, outposts, ruins or wells. Deep ones (mineshafts, strongholds, ancient cities) are still there under it.
+  - Trees, leaves, vines, flowers and anything else from the land next to it are cleared off his ground, even when they grow in after his ground is made.
+  - Caves and ravines that open at the top are covered over with his ground. Lakes and rivers keep their water, with his ground under it.
+- **`/hollowbell ground check [radius]`** (cheats on) looks at every column of his ground and says how many came out wrong, and why. It makes any of that land not made yet as it goes, so it can take a few minutes. It draws a map into the world folder, `hollowbell_ground_check.png` (green is right, red is wrong), with a list next to it.
+- **`/giants paint` really paints everything.** The whole column gets his biome, top to bottom. Buildings, trees and anything else standing there are cleared right up to the top. Only bedrock and water stay (his ground goes under the water). What was in chests and barrels drops out on the new ground, so nothing is lost. Structures there stop being structures: a painted-over witch hut stops making witches, a village stops being a village, and `/locate` stops pointing there.
+- **Worlds you already have:** chunks made with older versions keep their gaps. Use `/giants paint` over them.
+
+## What was new in 1.8.1
 
 - **You can see his loot beam from far off.** The beam over his Loot Cache now shows from up to 1024 blocks away, not just while you're close. It goes out for everyone within two seconds of the cache being emptied or broken.
 - The "are fighting!" message when two giants meet now always shows once. Before, it could be missed.
@@ -198,7 +208,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.8.1.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.9.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
@@ -452,6 +462,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell detail far <blocks>` | how far off you can see him coming (1024 to start, 0 = off, up to 4096). On its own it says how far. Changing it needs cheats on. |
 | `/hollowbell ground` | where his ground, the Bell Hollows, is and how far it reaches |
 | `/hollowbell ground new` | new Bell Hollows in land nobody has been to yet. The old ground stays as it is. If he isn't out, the next one comes down there. |
+| `/hollowbell ground check [radius]` | looks at every column of his ground (or only this many blocks out from its middle) and says how many came out wrong and why. It makes land not made yet as it goes. A map, `hollowbell_ground_check.png`, and a list go in the world folder. |
 
 ### /giants (all of JJ's bosses at once)
 

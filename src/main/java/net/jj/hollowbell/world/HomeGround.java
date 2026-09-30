@@ -30,9 +30,11 @@ import java.util.List;
  * glass shards, spires, ribs, reefs, gardens, pools and lights, the ores under it, and his great glass bell in the
  * middle. The biome itself is the world's own answer there (hollowbell:bell_hollows).
  *
- * The rules: only this chunk's own columns are written; a column a structure reaches into (from outside) is left
- * alone, and so is one with a tree or anything but plain ground at its top; water is only put where it has a floor
- * and walls. Land made before the claim is never touched.
+ * The rules: every column of his ground is made. Whatever stands on it (a tree, leaves from next door, a plant,
+ * anything left of a building) is cleared first, from the very top of the column; no surface structure is ever
+ * started in his ground (see BellGen.refuses). A chunk's own columns are made in its own pass; afterwards the made
+ * chunks next to it are tidied of anything its decoration put on them. Water is only put where it has a floor and
+ * walls. Land made before the claim is never touched.
  */
 public final class HomeGround {
     private HomeGround() {}
@@ -44,11 +46,21 @@ public final class HomeGround {
 
     /** any block his ground is made of, on it or in it */
     public static boolean isOurs(BlockState s) {
+        return oursBlocks().contains(s.getBlock());
+    }
+
+    private static volatile java.util.Set<Block> OURS;
+
+    private static java.util.Set<Block> oursBlocks() {
+        java.util.Set<Block> o = OURS;
+        if (o != null) return o;
+        java.util.Set<Block> n = new java.util.HashSet<>();
         for (BellPlan.Mat m : BellPlan.Mat.values()) {
             BlockState b = state(m);
-            if (b != null && s.is(b.getBlock())) return true;
+            if (b != null) n.add(b.getBlock());
         }
-        return false;
+        OURS = o = java.util.Set.copyOf(n);
+        return o;
     }
 
     /** the real block for each thing the plan asks for */
@@ -108,17 +120,19 @@ public final class HomeGround {
 
     /**
      * Makes this chunk his: the ores under it, the land's shape, its blocks, and everything standing on it. Called
-     * from the world's generation (a WorldGenRegion) and by the tests (a ServerLevel on a real chunk).
+     * from the world's generation (a WorldGenRegion) and by the tests (a ServerLevel on a real chunk). Whatever stands
+     * on a column (a tree from next door, leaves, a plant, anything left of a building) is cleared first: every
+     * column of his ground is made, none is skipped.
      */
     public static void decorate(WorldGenLevel level, ChunkAccess chunk, StructureManager structures, BellGen.Snap s) {
-        decorate(level, chunk, s, structureBoxes(level, chunk, structures));
+        decorate(level, chunk, s);
     }
 
-    public static void decorate(WorldGenLevel level, ChunkAccess chunk, BellGen.Snap s, List<BoundingBox> boxes) {
+    public static void decorate(WorldGenLevel level, ChunkAccess chunk, BellGen.Snap s) {
         if (!s.claimed || !s.touches(chunk.getPos())) return;
         BellPlan p = planFor(s);
         if (!p.near(chunk.getPos().x, chunk.getPos().z)) return;
-        make(level, chunk, p, boxes, false, s, null);
+        make(level, chunk, p, false, s, null);
     }
 
     /** which columns a paint may touch */
@@ -130,20 +144,20 @@ public final class HomeGround {
      * furnaces...) are left; the ground is dressed round them.
      */
     public static void paint(WorldGenLevel level, ChunkAccess chunk, BellPlan p) {
-        make(level, chunk, p, List.of(), true, null, null);
+        make(level, chunk, p, true, null, null);
     }
 
     /** an admin's paint, only inside the circle */
     public static void paintInCircle(WorldGenLevel level, ChunkAccess chunk, BellPlan p, double cx, double cz, int r) {
         double r2 = (double) r * r;
-        make(level, chunk, p, List.of(), true, null, (x, z) -> (x + 0.5 - cx) * (x + 0.5 - cx) + (z + 0.5 - cz) * (z + 0.5 - cz) <= r2);
+        make(level, chunk, p, true, null, (x, z) -> (x + 0.5 - cx) * (x + 0.5 - cx) + (z + 0.5 - cz) * (z + 0.5 - cz) <= r2);
     }
 
-    private static void make(WorldGenLevel level, ChunkAccess chunk, BellPlan p, List<BoundingBox> boxes, boolean admin,
+    private static void make(WorldGenLevel level, ChunkAccess chunk, BellPlan p, boolean admin,
                              @org.jetbrains.annotations.Nullable BellGen.Snap s, @org.jetbrains.annotations.Nullable Clip clip) {
         ChunkPos cp = chunk.getPos();
         long t0 = System.nanoTime();
-        Survey sv = survey(level, chunk, p, boxes, admin, clip);
+        Survey sv = survey(level, chunk, p, admin, clip);
         if (!sv.any) return;
         if (s != null) BellGen.ores(level, chunk, s);
         BellPlan.Out o = new BellPlan.Out();
@@ -155,10 +169,24 @@ public final class HomeGround {
             if (!o.paint[i]) continue;
             int wx = x0 + (i & 15), wz = z0 + (i >> 4);
             if (sv.wet[i]) { paintBed(level, p, wx, wz, sv.y0[i], m); continue; }
-            clearLoose(level, wx, sv.y0[i], wz, sv.surface[i], m);
-            shape(level, o, i, wx, wz, sv.y0[i], m, water, admin);
+            if (sv.real[i] < sv.y0[i]) fillUnder(p, o, i, wx, wz, sv.real[i]);
+            shape(level, o, i, wx, wz, sv.real[i], m, water, admin);
         }
         keepWaterIn(level, water, x0, z0);
+        // what was in a chest or the like that stood here comes out on top of the new ground: nothing is lost
+        if (sv.drops != null && level instanceof net.minecraft.server.level.ServerLevel sl) {
+            for (int i = 0; i < 256; i++) {
+                if (sv.drops[i] == null) continue;
+                int wx = x0 + (i & 15), wz = z0 + (i >> 4);
+                int y = Math.max(o.paint[i] ? o.top[i] : sv.y0[i], sv.y0[i]) + 1;
+                for (var st : sv.drops[i]) {
+                    var e = new net.minecraft.world.entity.item.ItemEntity(sl, wx + 0.5, y + 0.2, wz + 0.5, st);
+                    e.setDeltaMovement(0, 0.1, 0);
+                    sl.addFreshEntity(e);
+                }
+            }
+        }
+        if (!admin) BellGen.markMade(chunk);
         if (WorldOne.IN_TESTS && !(level instanceof net.minecraft.server.level.WorldGenRegion)) { lastOut = o; lastY0 = sv.y0; }
         if (DEBUG) HollowbellMod.LOG.info("Made chunk {}, {} of the Bell Hollows in {} ms", cp.x, cp.z,
                 String.format("%.1f", (System.nanoTime() - t0) / 1e6));
@@ -198,18 +226,44 @@ public final class HomeGround {
 
     /** a chunk's columns as they stand: where the ground is, whether it may be changed, water, how deep it may be cut */
     private static final class Survey {
-        final int[] y0 = new int[256], lowest = new int[256], surface = new int[256];
+        /** y0: the ground the plan works from; real: where the ground really is (lower where a cave or ravine cut it) */
+        final int[] y0 = new int[256], real = new int[256], lowest = new int[256], surface = new int[256];
         final boolean[] ok = new boolean[256], wet = new boolean[256];
+        List<net.minecraft.world.item.ItemStack>[] drops;
         boolean any;
     }
 
-    private static Survey survey(WorldGenLevel level, ChunkAccess chunk, BellPlan p, List<BoundingBox> boxes, boolean admin, @org.jetbrains.annotations.Nullable Clip clip) {
+    /** how far down from the top of a column its ground is looked for (the tallest trees are well under this) */
+    public static final int DIG = 96;
+
+    /**
+     * The block a column's ground starts at: the world's own ground (or his). Everything over it is cleared: trees
+     * and leaves (from this chunk or the next), plants, snow cover, and whatever else stands there. Water stops the
+     * search: under water only the bed is changed.
+     */
+    public static boolean isGround(BlockState b) {
+        return natural(b) || (leftAlone(b) && !b.is(Blocks.SNOW)) || (isOurs(b) && b.getFluidState().isEmpty() && b.isSolid());
+    }
+
+    /** a block holding water that is still cleared (leaves or roots grown into water); water, kelp and seagrass stop */
+    private static boolean clearedInWater(BlockState b) {
+        return treePart(b) || b.is(Blocks.MANGROVE_ROOTS);
+    }
+
+    /** what a cleared block leaves behind: water where it held a water source, else air */
+    public static BlockState emptied(BlockState b) {
+        return b.getFluidState().isSource() && b.getFluidState().is(net.minecraft.tags.FluidTags.WATER) ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Survey survey(WorldGenLevel level, ChunkAccess chunk, BellPlan p, boolean admin, @org.jetbrains.annotations.Nullable Clip clip) {
         Survey sv = new Survey();
         ChunkPos cp = chunk.getPos();
         int x0 = cp.getMinBlockX(), z0 = cp.getMinBlockZ();
         int minY = level.getMinBuildHeight();
-        // a chunk still being made keeps the generation height map; a finished one (the tests) the live one
-        Heightmap.Types hm = chunk instanceof LevelChunk ? Heightmap.Types.WORLD_SURFACE : Heightmap.Types.WORLD_SURFACE_WG;
+        // the live height map: the generation one stops following the blocks once the caves are cut, so it misses
+        // trees and leaves the chunks next door put here afterwards (a chunk being decorated has the live one ready)
+        Heightmap.Types hm = surfaceMap(chunk);
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int i = 0; i < 256; i++) {
             int lx = i & 15, lz = i >> 4;
@@ -218,30 +272,46 @@ public final class HomeGround {
             sv.any = true;
             int surf = chunk.getHeight(hm, lx, lz);        // the top block
             sv.surface[i] = surf;
-            // down through grass, flowers and snow to the ground; a tree standing here keeps its column
+            // down to the ground: everything standing on it goes, from the very top of the column
             int top = surf;
-            boolean tree = false;
-            while (top > minY + 2) {
+            int limit = admin ? minY + 1 : Math.max(minY + 2, surf - DIG);
+            while (top > limit) {
                 BlockState b = level.getBlockState(m.set(wx, top, wz));
-                if (b.isAir() || loose(b)) { top--; continue; }
-                if (treePart(b)) {
-                    // painted by an admin, the tree goes; made by the world, a tree keeps its column
-                    if (admin) { level.setBlock(m, Blocks.AIR.defaultBlockState(), FLAGS); top--; continue; }
-                    tree = true;
+                if (b.isAir()) { top--; continue; }
+                if (b.is(Blocks.BEDROCK) || isGround(b)) break;
+                if (!b.getFluidState().isEmpty() && !clearedInWater(b)) break;
+                if (admin && b.hasBlockEntity() && level.getBlockEntity(m) instanceof net.minecraft.world.Container box) {
+                    for (int k = 0; k < box.getContainerSize(); k++) {
+                        var st = box.getItem(k);
+                        if (st.isEmpty()) continue;
+                        if (sv.drops == null) sv.drops = new List[256];
+                        if (sv.drops[i] == null) sv.drops[i] = new ArrayList<>();
+                        sv.drops[i].add(st.copy());
+                    }
+                    box.clearContent();
                 }
-                break;
+                level.setBlock(m, emptied(b), FLAGS);
+                top--;
             }
             sv.y0[i] = top;
+            sv.real[i] = top;
             sv.lowest[i] = top;
-            if (tree || top <= minY + 2) continue;
+            if (top <= limit) continue;                   // no ground in reach: the column stays as it is
             BlockState s = level.getBlockState(m.set(wx, top, wz));
+            if (s.is(Blocks.BEDROCK)) continue;
             sv.wet[i] = !s.getFluidState().isEmpty();
-            sv.ok[i] = admin ? !s.hasBlockEntity() : plainGround(level, wx, wz, top, m) && !inStructure(boxes, wx, wz, top);
-            if (!sv.ok[i] || sv.wet[i] || !changeable(s, admin)) continue;
-            // cut no deeper than the plain ground goes: the new top is itself plain ground, never air or a cave
+            sv.ok[i] = true;
+            if (sv.wet[i] || !changeable(s)) continue;
+            // a cave or a ravine the world cut into the land before it was made his: his ground goes over it at the
+            // height the land had (the world's own grass top is never cut, so only other tops are asked about)
+            if (!admin && !s.is(Blocks.GRASS_BLOCK)) {
+                int g = p.worldHeight(wx, wz);
+                if (g > top + 2 && g > p.sea) sv.y0[i] = g;
+            }
+            // cut no deeper than solid ground goes: the new top is itself ground, never air or a cave
             int low = top;
             for (int y = top - 1; y >= top - BellPlan.MAX_DOWN - 1 && y > minY + 1; y--) {
-                if (!changeable(level.getBlockState(m.set(wx, y, wz)), admin)) break;
+                if (!changeable(level.getBlockState(m.set(wx, y, wz)))) break;
                 low = y;
             }
             sv.lowest[i] = low;
@@ -249,45 +319,96 @@ public final class HomeGround {
         return sv;
     }
 
-    /** for the tests: what this chunk would become, worked out without changing anything */
+    /** for the tests: what this chunk would become, worked out without changing anything but what stands on it */
     public static BellPlan.Out preview(WorldGenLevel level, ChunkAccess chunk, BellGen.Snap s, int[] y0Out) {
         BellPlan p = planFor(s);
-        Survey sv = survey(level, chunk, p, List.of(), false, null);
+        Survey sv = survey(level, chunk, p, false, null);
         BellPlan.Out o = new BellPlan.Out();
         p.chunk(chunk.getPos().x, chunk.getPos().z, sv.y0, sv.ok, sv.wet, sv.lowest, o);
         if (y0Out != null) System.arraycopy(sv.y0, 0, y0Out, 0, 256);
         return o;
     }
 
-    /** a column with only plain ground in its top few blocks (no planks, path, chest or crop): it can be changed */
-    private static boolean plainGround(WorldGenLevel level, int wx, int wz, int top, BlockPos.MutableBlockPos m) {
-        for (int k = 0; k < 4; k++) {
-            int y = top - k;
-            if (y <= level.getMinBuildHeight()) break;
-            BlockState s = level.getBlockState(m.set(wx, y, wz));
-            if (s.isAir() || !s.getFluidState().isEmpty() || natural(s) || leftAlone(s)) continue;
-            return false;
+    // ------------------------------------------------------------------ tidying next door
+
+    /**
+     * After a chunk's decoration, the chunks round it that are already his may have had a tree (or leaves, vines, a
+     * bee nest...) put on them by this chunk's own decoration. Those are cleared off his ground again. Only chunks
+     * already made are looked at, and only what stands above his ground is touched.
+     */
+    public static int tidyAround(WorldGenLevel level, ChunkAccess center, BellGen.Snap s) {
+        BellPlan p = planFor(s);
+        ChunkPos c = center.getPos();
+        int cleared = 0;
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+            if (dx == 0 && dz == 0) continue;
+            int nx = c.x + dx, nz = c.z + dz;
+            if (!s.touches(new ChunkPos(nx, nz)) || !p.near(nx, nz) || !level.hasChunk(nx, nz)) continue;
+            ChunkAccess n = level.getChunk(nx, nz);
+            if (!BellGen.made(n)) continue;
+            cleared += tidy(level, n, p);
         }
-        return true;
+        return cleared;
+    }
+
+    /** the height map that follows every block of this chunk as it is now */
+    public static Heightmap.Types surfaceMap(ChunkAccess c) {
+        return c instanceof LevelChunk || c.hasPrimedHeightmap(Heightmap.Types.WORLD_SURFACE) ? Heightmap.Types.WORLD_SURFACE : Heightmap.Types.WORLD_SURFACE_WG;
+    }
+
+    /**
+     * A block a neighbour's ore or stone blob put into the top of his ground: those blobs replace plain stone, and the
+     * only plain stone in his ground is diorite, so the top block goes back to diorite.
+     */
+    private static boolean blobbed(BlockState b) {
+        return (b.is(BlockTags.BASE_STONE_OVERWORLD) && !b.is(Blocks.DIORITE)) || b.is(Blocks.GRAVEL) || b.is(Blocks.DIRT)
+                || b.is(BlockTags.COAL_ORES) || b.is(BlockTags.IRON_ORES) || b.is(BlockTags.COPPER_ORES) || b.is(BlockTags.GOLD_ORES)
+                || b.is(BlockTags.REDSTONE_ORES) || b.is(BlockTags.LAPIS_ORES) || b.is(BlockTags.DIAMOND_ORES) || b.is(BlockTags.EMERALD_ORES);
+    }
+
+    /** clears what stands on the columns of his ground in one chunk; returns how many blocks went */
+    public static int tidy(WorldGenLevel level, ChunkAccess n, BellPlan p) {
+        ChunkPos cp = n.getPos();
+        int x0 = cp.getMinBlockX(), z0 = cp.getMinBlockZ();
+        int minY = level.getMinBuildHeight();
+        Heightmap.Types hm = surfaceMap(n);
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        int cleared = 0;
+        for (int i = 0; i < 256; i++) {
+            int lx = i & 15, lz = i >> 4, wx = x0 + lx, wz = z0 + lz;
+            if (!p.painted(wx, wz)) continue;
+            int top = n.getHeight(hm, lx, lz);
+            int limit = Math.max(minY + 2, top - DIG);
+            for (int y = top; y > limit; y--) {
+                BlockState b = n.getBlockState(m.set(wx, y, wz));
+                if (b.isAir()) continue;
+                if (blobbed(b)) { level.setBlock(m, Blocks.DIORITE.defaultBlockState(), FLAGS); cleared++; break; }
+                if (b.is(Blocks.BEDROCK) || isGround(b) || isOurs(b)) break;
+                if (!b.getFluidState().isEmpty() && !clearedInWater(b)) break;
+                level.setBlock(m, emptied(b), FLAGS);
+                cleared++;
+            }
+        }
+        return cleared;
     }
 
     /** under water only the bed is changed: the water stays where it is */
     private static void paintBed(WorldGenLevel level, BellPlan p, int wx, int wz, int top, BlockPos.MutableBlockPos m) {
         int y = top;
-        while (y > top - 12 && y > level.getMinBuildHeight() + 1 && !level.getBlockState(m.set(wx, y, wz)).getFluidState().isEmpty()) y--;
+        while (y > top - DIG && y > level.getMinBuildHeight() + 1 && !level.getBlockState(m.set(wx, y, wz)).getFluidState().isEmpty()) y--;
         for (int k = 0; k < 2; k++, y--) {
             BlockState s = level.getBlockState(m.set(wx, y, wz));
-            if (!natural(s) || !s.getFluidState().isEmpty()) break;
+            if (!changeable(s)) break;
             level.setBlock(m, state(p.strata(wx, y, wz)), FLAGS);
         }
     }
 
-    /** grass, flowers and snow cover over the ground go before the ground is changed */
-    private static void clearLoose(WorldGenLevel level, int wx, int y0, int wz, int surface, BlockPos.MutableBlockPos m) {
-        for (int y = surface; y > y0; y--) {
-            BlockState s = level.getBlockState(m.set(wx, y, wz));
-            if (loose(s)) level.setBlock(m, Blocks.AIR.defaultBlockState(), FLAGS);
-        }
+    /** over a cut (a cave or ravine): the layers of his ground reach down to where the ground really is, up to 24 deep */
+    private static void fillUnder(BellPlan p, BellPlan.Out o, int i, int wx, int wz, int real) {
+        int t = o.top[i];
+        int n = Math.min(BellPlan.MAXL, t - real + 1);
+        for (int k = o.layers[i]; k < n; k++) o.layer[i][k] = p.strata(wx, t - k, wz);
+        if (n > o.layers[i]) o.layers[i] = n;
     }
 
     /** one column: cut down or built up to its new height, its ground changed, and what stands on it set */
@@ -295,7 +416,7 @@ public final class HomeGround {
         int top = o.top[i];
         if (top < y0) {
             for (int y = y0; y > top; y--) {
-                if (admin && !changeable(level.getBlockState(m.set(wx, y, wz)), true)) continue;
+                if (!changeable(level.getBlockState(m.set(wx, y, wz)))) continue;
                 level.setBlock(m.set(wx, y, wz), Blocks.AIR.defaultBlockState(), FLAGS);
             }
         }
@@ -310,7 +431,7 @@ public final class HomeGround {
                 continue;
             }
             if (mat == BellPlan.Mat.KEEP || !s.getFluidState().isEmpty()) continue;
-            if (!changeable(s, admin)) continue;
+            if (!changeable(s)) continue;
             level.setBlock(m, state(mat), FLAGS);
         }
         for (int k = 0; k < o.an[i]; k++) {
@@ -353,25 +474,24 @@ public final class HomeGround {
     }
 
     /** grass, flowers, snow cover and the like: loose on top of the ground, never somebody's work */
-    private static boolean loose(BlockState s) {
+    public static boolean loose(BlockState s) {
         if (s.isAir() || s.is(BlockTags.LEAVES) || !s.getFluidState().isEmpty()) return false;
         return s.is(BlockTags.REPLACEABLE_BY_TREES) || s.is(BlockTags.FLOWERS) || s.is(BlockTags.SAPLINGS) || s.canBeReplaced();
     }
 
     /** a tree or a giant mushroom: its column is left whole */
-    private static boolean treePart(BlockState s) {
+    public static boolean treePart(BlockState s) {
         return s.is(BlockTags.LEAVES) || s.is(BlockTags.LOGS) || s.is(Blocks.MUSHROOM_STEM) || s.is(Blocks.RED_MUSHROOM_BLOCK)
                 || s.is(Blocks.BROWN_MUSHROOM_BLOCK) || s.is(Blocks.BEE_NEST);
     }
 
-    /** what may be changed: the world's own ground blocks; for an admin's paint anything but bedrock and blocks holding things */
-    private static boolean changeable(BlockState s, boolean admin) {
-        if (!admin) return natural(s);
+    /** what may be changed into his ground: anything solid but bedrock and blocks holding things */
+    private static boolean changeable(BlockState s) {
         return !s.is(Blocks.BEDROCK) && !s.hasBlockEntity() && s.getFluidState().isEmpty() && !s.isAir();
     }
 
     /** the ground blocks the world made: only these are changed into his */
-    private static boolean natural(BlockState s) {
+    public static boolean natural(BlockState s) {
         return s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.PODZOL)
                 || s.is(Blocks.ROOTED_DIRT) || s.is(Blocks.MYCELIUM)
                 || s.is(BlockTags.BASE_STONE_OVERWORLD) || s.is(Blocks.SAND) || s.is(Blocks.RED_SAND)
@@ -381,7 +501,7 @@ public final class HomeGround {
     }
 
     /** natural too, but left as it is: bedrock, sandstone under a desert, ores showing at the top */
-    private static boolean leftAlone(BlockState s) {
+    public static boolean leftAlone(BlockState s) {
         return s.is(Blocks.BEDROCK) || s.is(Blocks.SANDSTONE) || s.is(Blocks.RED_SANDSTONE) || s.is(Blocks.PACKED_ICE)
                 || s.is(Blocks.BLUE_ICE) || s.is(Blocks.POWDER_SNOW) || s.is(Blocks.SNOW)
                 || s.is(BlockTags.COAL_ORES) || s.is(BlockTags.IRON_ORES) || s.is(BlockTags.COPPER_ORES)
