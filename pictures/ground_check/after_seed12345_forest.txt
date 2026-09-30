@@ -1,0 +1,36 @@
+Hollowbell ground check
+ground at 91, -3865, checked 400 blocks out
+chunks: 924 (0 not made at all, 924 marked as made), took 801 s
+columns of his ground: 216191
+right: 215015
+wrong: 160 (0.074%)
+  not_made - not made at all (plain world ground): 0
+  structure - a structure: 0
+  tree - a tree or leaves: 0
+  water - water: 1
+  container - a chest or other container: 0
+  height - height off: 153
+  edge - biome at the thin edge: 1016
+  other - other: 6
+(the thin edge is not counted as wrong)
+
+examples:
+  HEIGHT at -132, -3743: verdant_froglight at 63, the plan says 67 (world 67)
+  HEIGHT at -133, -3742: grass_block at 64, the plan says 69 (world 68)
+  HEIGHT at -132, -3742: end_stone at 64, the plan says 69 (world 68)
+  HEIGHT at -133, -3741: grass_block at 65, the plan says 69 (world 68)
+  HEIGHT at -135, -3740: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -134, -3740: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -135, -3739: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -134, -3739: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -135, -3738: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -136, -3737: grass_block at 67, the plan says 71 (world 70)
+  HEIGHT at -135, -3734: grass_block at 67, the plan says 71 (world 70)
+  HEIGHT at -15, -3988: moss_block at 120, the plan says 116 (world 120)
+  WATER at 74, -3742: bed stone at 57 under water
+  OTHER at 79, -3612: tall_seagrass at 62
+  OTHER at 79, -3611: tall_seagrass at 62
+  OTHER at 86, -3613: tall_seagrass at 62
+  OTHER at 83, -3611: tall_seagrass at 62
+  OTHER at 84, -3611: tall_seagrass at 62
+  OTHER at 84, -3610: tall_seagrass at 62

@@ -1,0 +1,69 @@
+Hollowbell ground check
+ground at 800, 0, checked 400 blocks out
+chunks: 823 (0 not made at all, 0 marked as made), took 811 s
+columns of his ground: 191021
+right: 148229
+wrong: 42270 (22.128%)
+  not_made - not made at all (plain world ground): 174
+  structure - a structure: 0
+  tree - a tree or leaves: 4
+  water - water: 41715
+  container - a chest or other container: 0
+  height - height off: 171
+  edge - biome at the thin edge: 522
+  other - other: 206
+(the thin edge is not counted as wrong)
+
+examples:
+  WATER at 562, -80: bed gravel at 46 under water
+  WATER at 563, -80: bed gravel at 46 under water
+  WATER at 564, -80: bed gravel at 46 under water
+  WATER at 565, -80: bed gravel at 46 under water
+  WATER at 566, -80: bed gravel at 46 under water
+  WATER at 567, -80: bed gravel at 46 under water
+  WATER at 568, -80: bed gravel at 47 under water
+  WATER at 569, -80: bed gravel at 47 under water
+  WATER at 570, -80: bed gravel at 47 under water
+  WATER at 571, -80: bed gravel at 47 under water
+  WATER at 572, -80: bed gravel at 47 under water
+  WATER at 573, -80: bed gravel at 47 under water
+  OTHER at 576, -92: short_grass at 70 (top 70)
+  OTHER at 572, -92: short_grass at 71 (top 71)
+  OTHER at 571, -91: short_grass at 70 (top 70)
+  OTHER at 572, -91: short_grass at 70 (top 70)
+  OTHER at 587, -98: short_grass at 72 (top 72)
+  OTHER at 603, -154: short_grass at 76 (top 76)
+  OTHER at 604, -153: short_grass at 75 (top 75)
+  OTHER at 603, -149: short_grass at 74 (top 74)
+  OTHER at 604, -140: short_grass at 72 (top 72)
+  OTHER at 607, -114: short_grass at 74 (top 74)
+  OTHER at 601, -112: short_grass at 72 (top 72)
+  OTHER at 602, -111: short_grass at 72 (top 72)
+  NOT_MADE at 607, -31: dirt at 69, should be DIORITE at 69
+  NOT_MADE at 607, -30: dirt at 69, should be DIORITE at 69
+  NOT_MADE at 607, -29: dirt at 69, should be DIORITE at 69
+  NOT_MADE at 639, -145: stone at 66, should be GRASS at 69
+  NOT_MADE at 634, -140: stone at 66, should be GRASS at 69
+  NOT_MADE at 635, -140: stone at 66, should be GRASS at 69
+  NOT_MADE at 634, -139: stone at 66, should be GRASS at 69
+  NOT_MADE at 634, -138: stone at 66, should be GRASS at 69
+  HEIGHT at 628, -136: stone at 64, the plan says 68 (world 68)
+  HEIGHT at 629, -136: stone at 64, the plan says 68 (world 68)
+  HEIGHT at 627, -135: stone at 65, the plan says 69 (world 69)
+  HEIGHT at 628, -135: stone at 64, the plan says 68 (world 68)
+  HEIGHT at 629, -135: stone at 64, the plan says 68 (world 68)
+  HEIGHT at 628, -134: stone at 64, the plan says 68 (world 68)
+  HEIGHT at 628, -133: stone at 64, the plan says 68 (world 68)
+  HEIGHT at 629, -133: stone at 64, the plan says 68 (world 68)
+  HEIGHT at 629, -132: stone at 64, the plan says 68 (world 68)
+  NOT_MADE at 637, -29: copper_ore at 68, should be LIME_GLASS at 69
+  NOT_MADE at 640, -146: stone at 65, should be GRASS at 70
+  HEIGHT at 641, -146: calcite at 65, the plan says 70 (world 69)
+  NOT_MADE at 640, -145: stone at 65, should be GRASS at 69
+  HEIGHT at 641, -145: calcite at 65, the plan says 70 (world 69)
+  NOT_MADE at 640, -144: stone at 66, should be GRASS at 69
+  HEIGHT at 641, -144: calcite at 65, the plan says 69 (world 68)
+  TREE at 714, -234: oak_leaves at 71 (top 71)
+  TREE at 1017, 164: cherry_leaves at 105 (top 105)
+  TREE at 1017, 165: cherry_leaves at 106 (top 106)
+  TREE at 1017, 166: cherry_leaves at 106 (top 106)

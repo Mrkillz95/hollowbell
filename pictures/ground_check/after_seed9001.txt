@@ -1,0 +1,42 @@
+Hollowbell ground check
+ground at 800, 0, checked 400 blocks out
+chunks: 837 (0 not made at all, 837 marked as made), took 745 s
+columns of his ground: 196146
+right: 194885
+wrong: 168 (0.086%)
+  not_made - not made at all (plain world ground): 80
+  structure - a structure: 0
+  tree - a tree or leaves: 0
+  water - water: 1
+  container - a chest or other container: 0
+  height - height off: 87
+  edge - biome at the thin edge: 1093
+  other - other: 0
+(the thin edge is not counted as wrong)
+
+examples:
+  NOT_MADE at 612, 95: copper_ore at 65, should be CALCITE at 62
+  HEIGHT at 629, -75: calcite at 84, the plan says 88 (world 85)
+  HEIGHT at 628, -74: calcite at 84, the plan says 88 (world 85)
+  HEIGHT at 628, -69: grass_block at 84, the plan says 88 (world 85)
+  HEIGHT at 629, -68: grass_block at 83, the plan says 87 (world 84)
+  HEIGHT at 630, -68: grass_block at 82, the plan says 86 (world 84)
+  HEIGHT at 630, -67: grass_block at 83, the plan says 87 (world 84)
+  HEIGHT at 631, -67: grass_block at 82, the plan says 86 (world 84)
+  HEIGHT at 630, -66: grass_block at 82, the plan says 87 (world 84)
+  HEIGHT at 646, -196: packed_ice at 70, the plan says 64 (world 64)
+  HEIGHT at 647, -195: packed_ice at 70, the plan says 64 (world 64)
+  HEIGHT at 647, -194: packed_ice at 69, the plan says 64 (world 64)
+  HEIGHT at 668, -58: end_stone at 90, the plan says 86 (world 90)
+  WATER at 673, -172: bed dirt at 56 under water
+  NOT_MADE at 886, -157: moss_block at 70, should be CALCITE at 70
+  NOT_MADE at 887, -157: moss_block at 68, should be CALCITE at 70
+  NOT_MADE at 888, -157: moss_block at 68, should be CALCITE at 69
+  NOT_MADE at 889, -157: moss_block at 68, should be CALCITE at 69
+  NOT_MADE at 890, -157: moss_block at 69, should be CALCITE at 69
+  NOT_MADE at 885, -156: moss_block at 70, should be CALCITE at 70
+  NOT_MADE at 886, -156: moss_block at 67, should be CALCITE at 70
+  NOT_MADE at 887, -156: moss_block at 69, should be CALCITE at 67
+  NOT_MADE at 888, -156: moss_block at 69, should be CALCITE at 67
+  NOT_MADE at 889, -156: moss_block at 69, should be CALCITE at 67
+  NOT_MADE at 890, -156: moss_block at 69, should be CALCITE at 69

@@ -1,0 +1,36 @@
+Hollowbell ground check
+ground at 800, 0, checked 400 blocks out
+chunks: 823 (0 not made at all, 823 marked as made), took 697 s
+columns of his ground: 191021
+right: 190395
+wrong: 49 (0.026%)
+  not_made - not made at all (plain world ground): 5
+  structure - a structure: 0
+  tree - a tree or leaves: 0
+  water - water: 1
+  container - a chest or other container: 0
+  height - height off: 42
+  edge - biome at the thin edge: 577
+  other - other: 1
+(the thin edge is not counted as wrong)
+
+examples:
+  HEIGHT at 737, 187: calcite at 73, the plan says 69 (world 73)
+  HEIGHT at 750, 214: calcite at 74, the plan says 78 (world 77)
+  HEIGHT at 751, 214: calcite at 74, the plan says 78 (world 77)
+  HEIGHT at 771, -109: calcite at 72, the plan says 68 (world 72)
+  HEIGHT at 781, 139: end_stone at 69, the plan says 64 (world 69)
+  HEIGHT at 781, 140: end_stone at 69, the plan says 64 (world 69)
+  HEIGHT at 782, 140: end_stone at 68, the plan says 64 (world 69)
+  HEIGHT at 782, 141: end_stone at 69, the plan says 64 (world 69)
+  HEIGHT at 782, 142: calcite at 69, the plan says 64 (world 69)
+  HEIGHT at 783, 142: calcite at 68, the plan says 64 (world 69)
+  HEIGHT at 783, 143: calcite at 68, the plan says 64 (world 69)
+  HEIGHT at 783, 144: calcite at 69, the plan says 64 (world 69)
+  WATER at 833, 141: bed stone at 57 under water
+  NOT_MADE at 857, -3: dirt at 74, should be CALCITE at 62
+  NOT_MADE at 856, -2: dirt at 74, should be GRASS at 62
+  NOT_MADE at 857, -2: dirt at 74, should be CALCITE at 63
+  NOT_MADE at 858, -2: dirt at 74, should be CALCITE at 63
+  NOT_MADE at 857, -1: dirt at 74, should be CALCITE at 63
+  OTHER at 953, -199: seagrass at 62

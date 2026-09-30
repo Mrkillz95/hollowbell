@@ -1,0 +1,80 @@
+Hollowbell ground check
+ground at 91, -3865, checked 400 blocks out
+chunks: 924 (0 not made at all, 0 marked as made), took 765 s
+columns of his ground: 216191
+right: 212156
+wrong: 3202 (1.481%)
+  not_made - not made at all (plain world ground): 178
+  structure - a structure: 3
+  tree - a tree or leaves: 389
+  water - water: 1926
+  container - a chest or other container: 0
+  height - height off: 432
+  edge - biome at the thin edge: 833
+  other - other: 274
+(the thin edge is not counted as wrong)
+
+examples:
+  TREE at -176, -3888: oak_leaves at 68 (top 68)
+  TREE at -175, -3888: oak_leaves at 67 (top 67)
+  TREE at -176, -3887: oak_leaves at 67 (top 67)
+  TREE at -175, -3887: oak_leaves at 67 (top 67)
+  OTHER at -172, -3882: short_grass at 67 (top 67)
+  OTHER at -175, -3881: short_grass at 67 (top 67)
+  OTHER at -171, -3881: short_grass at 67 (top 67)
+  TREE at -175, -3880: oak_leaves at 69 (top 69)
+  OTHER at -168, -3880: short_grass at 68 (top 68)
+  OTHER at -174, -3879: short_grass at 67 (top 67)
+  OTHER at -168, -3879: short_grass at 67 (top 67)
+  TREE at -175, -3878: oak_leaves at 69 (top 69)
+  TREE at -175, -3876: vine at 70 (top 70)
+  TREE at -176, -3875: oak_leaves at 69 (top 69)
+  TREE at -175, -3875: oak_leaves at 69 (top 69)
+  TREE at -175, -3894: vine at 66 (top 66)
+  TREE at -176, -3892: vine at 68 (top 68)
+  TREE at -175, -3892: oak_leaves at 67 (top 67)
+  OTHER at -182, -3871: short_grass at 65 (top 65)
+  NOT_MADE at -189, -3858: andesite at 66, should be DIORITE at 66
+  NOT_MADE at -189, -3857: andesite at 66, should be DIORITE at 66
+  OTHER at -183, -3873: short_grass at 64 (top 64)
+  OTHER at -186, -3852: brown_mushroom at 69 (top 69)
+  OTHER at -187, -3848: short_grass at 68 (top 68)
+  OTHER at -186, -3845: brown_mushroom at 69 (top 69)
+  OTHER at -158, -3908: short_grass at 64 (top 64)
+  HEIGHT at -132, -3743: verdant_froglight at 63, the plan says 67 (world 67)
+  HEIGHT at -131, -3743: calcite at 64, the plan says 69 (world 68)
+  HEIGHT at -133, -3742: grass_block at 64, the plan says 69 (world 68)
+  HEIGHT at -132, -3742: end_stone at 64, the plan says 69 (world 68)
+  HEIGHT at -131, -3742: end_stone at 64, the plan says 69 (world 68)
+  HEIGHT at -133, -3741: grass_block at 65, the plan says 69 (world 68)
+  NOT_MADE at -132, -3741: stone at 64, should be GRASS at 70
+  HEIGHT at -135, -3740: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -134, -3740: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -133, -3740: grass_block at 65, the plan says 70 (world 69)
+  HEIGHT at -135, -3739: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -134, -3739: grass_block at 66, the plan says 70 (world 69)
+  HEIGHT at -133, -3739: grass_block at 66, the plan says 70 (world 69)
+  NOT_MADE at -134, -3738: dirt at 66, should be GRASS at 71
+  NOT_MADE at -135, -3737: dirt at 67, should be GRASS at 71
+  NOT_MADE at -135, -3736: dirt at 67, should be GRASS at 71
+  NOT_MADE at -135, -3735: dirt at 67, should be GRASS at 71
+  NOT_MADE at -134, -3735: dirt at 67, should be GRASS at 71
+  NOT_MADE at -134, -3734: dirt at 67, should be GRASS at 71
+  NOT_MADE at -135, -3733: dirt at 67, should be GRASS at 71
+  NOT_MADE at -135, -3732: dirt at 67, should be GRASS at 71
+  NOT_MADE at -115, -4005: gravel at 87, should be DIORITE at 87
+  WATER at -110, -3863: bed stone at 47 under water
+  WATER at -101, -3818: bed granite at 55 under water
+  WATER at -100, -3818: bed granite at 54 under water
+  WATER at -93, -3659: bed stone at 36 under water
+  WATER at -93, -3658: bed stone at 36 under water
+  WATER at -93, -3657: bed iron_ore at 37 under water
+  WATER at -49, -3742: bed stone at 45 under water
+  WATER at -49, -3741: bed stone at 44 under water
+  WATER at -49, -3740: bed stone at 44 under water
+  WATER at -49, -3739: bed stone at 44 under water
+  WATER at -36, -4055: bed granite at 43 under water
+  WATER at -37, -4054: bed copper_ore at 42 under water
+  STRUCTURE at 200, -4081: bed granite at 56 under water
+  STRUCTURE at 201, -4081: bed granite at 56 under water
+  STRUCTURE at 202, -4081: bed granite at 56 under water
