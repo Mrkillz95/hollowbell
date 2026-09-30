@@ -2079,6 +2079,21 @@ public class HollowbellEntity extends Monster {
     /** the giant this body or part belongs to, as a creature */
     private static @Nullable LivingEntity giantOf(Entity e) { return Giants.ownerOf(e); }
 
+    /**
+     * Whether his blows, stings and clouds may touch this: anything that isn't a giant, and of the giants only the one
+     * he's going for, the one in his meeting fight, or any while a player steers him. A giant just drifting past under
+     * his strands is left alone (else a pair meant to keep apart would start a fight by accident).
+     */
+    public boolean fightingGiant(@Nullable Entity e) {
+        if (e == null || !Giants.isGiant(e)) return true;
+        if (rider != null) return true;
+        LivingEntity g = giantOf(e);
+        if (g == null) return true;
+        LivingEntity t = getTarget();
+        if (t != null && (t == g || giantOf(t) == g)) return true;
+        return meetFoe != null && meetFoe.equals(g.getUUID());
+    }
+
     private void meetTick(long now) {
         if (!(level() instanceof ServerLevel sl)) return;
         if (yieldUntil > 0 && now >= yieldUntil) { removeTag(Meetings.YIELD); yieldUntil = 0; }

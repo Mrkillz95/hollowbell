@@ -492,6 +492,7 @@ public final class BellMoves {
      * and throws what it hits away from from, out and up.
      */
     private void blow(LivingEntity e, float base, Vec3 from, double out, double up) {
+        if (!h.fightingGiant(e)) return;                  // a giant he isn't fighting is left alone
         e.invulnerableTime = 0;
         e.hurt(h.damageSources().mobAttack(h), h.dmg(base, e));
         Vec3 d = new Vec3(e.getX() - from.x, 0, e.getZ() - from.z);
@@ -809,7 +810,7 @@ public final class BellMoves {
             }
             if (c.tickCount % 10 == 0) {
                 double r = c.getRadius();
-                for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, new AABB(c.position(), c.position()).inflate(r, 3 + 3 * s, r), h::fairGame)) {
+                for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, new AABB(c.position(), c.position()).inflate(r, 3 + 3 * s, r), x -> h.fairGame(x) && h.fightingGiant(x))) {
                     if (Math.hypot(e.getX() - c.getX(), e.getZ() - c.getZ()) > r) continue;
                     e.invulnerableTime = 0;
                     e.hurt(h.damageSources().indirectMagic(c, h), h.dmg(5f, e));
@@ -1912,6 +1913,7 @@ public final class BellMoves {
 
     public void sting(LivingEntity e) {
         if (e instanceof Player p && (p.isCreative() || p.isSpectator())) return;
+        if (!h.fightingGiant(e)) return;                  // a giant he isn't fighting is left alone
         long now = h.level().getGameTime();
         Integer last = stingAt.get(e.getUUID());
         if (last != null && now - last < 20) return;

@@ -543,4 +543,28 @@ public class MoreGameTests implements FabricGameTest {
             h.succeed();
         });
     }
+
+    /** his strands' stings and blows leave a giant he isn't fighting alone (else a pair meant to keep apart fights) */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "fighting_giant")
+    public void hisStingsLeaveAGiantHeIsNotFightingAlone(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 361);
+        h.runAfterDelay(10, () -> {
+            var z = fakeGiant(h, e.position().add(20, 0, 0));
+            z.addTag(net.jj.hollowbell.entity.Meetings.KIND + "lanternwillow");
+            float was = z.getHealth();
+            h.assertFalse(e.fightingGiant(z), "a giant drifting past counts as one he's fighting");
+            e.moves().sting(z);
+            h.assertTrue(z.getHealth() == was, "his sting hurt a giant he isn't fighting: " + z.getHealth() + " of " + was);
+            // once it's the one he's going for, it's fair game
+            e.setTarget(z);
+            h.assertTrue(e.fightingGiant(z), "the giant he's going for doesn't count");
+            z.invulnerableTime = 0;
+            e.moves().sting(z);
+            h.assertTrue(z.getHealth() < was, "his sting didn't touch the giant he's going for");
+            e.setTarget(null);
+            z.discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
 }
