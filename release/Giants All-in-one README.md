@@ -1,8 +1,8 @@
 # JJ's Giants: all five in one jar
 
 One jar with all five giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell and the
-Lantern Willow. It works the same as having the five jars. Each giant keeps its own name inside, so your worlds
-keep working.
+Lantern Willow, and the **Giants Guide**, a book about all of them. It works the same as having the five jars.
+Each giant keeps its own name inside, so your worlds keep working.
 
 Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reserved.
 
@@ -10,6 +10,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
+| Giants Guide | 1.2.0 |
 | Pitchgut | 1.32.1 |
 | Furrowmaw | 1.14.1 |
 | Fire & Ice Cerberus | 2.14.1 |
@@ -22,12 +23,44 @@ Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the five sing
 and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…` and `lanternwillow-…` out of
-your mods folder, then put `giants-all-1.1.0.jar` in. Keep Fabric API in there.
+your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.2.0.jar` in. Keep Fabric API in there.
+For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
 
 To get new versions on their own, run `watch-all.sh` in the Hollowbell folder. It waits for a new all-in-one jar
 and installs it.
+
+## The Giants Guide
+
+A book about every giant you have. Right-click it to open it.
+
+- **Getting one:** everybody gets one the first time they join a world. Craft another from a book and a compass
+  (any shape). `/giantsguide` gives you one, no cheats needed.
+- **On the left:** every giant that's installed, with a picture of him. Click one.
+- **On the right**, a tab for each part:
+
+| Tab | What's on it |
+|---|---|
+| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial or fortress), his moods |
+| Where | his ground and what it looks like, how to find him (the finder and its recipe), whether the world keeps one of him out there and how many at once. On a server it also says where he is right now. |
+| Moves | every move, light, medium and heavy, with what it does (the same words as his own book) |
+| Fighting | where to hit him, what hurts him most, and tips |
+| Drops | his weapon, his armour and its Armour power (R), his ward, the rest of his loot and his book, with pictures of the real items and their recipes |
+| Commands | the commands anyone can use, and the ones that need cheats |
+
+- **Giants together** (the last one on the left): who fights whom and who keeps away when they meet, and every
+  `/giants` command.
+- Scroll with the mouse wheel, the arrow keys or the bar on the right. Hold the mouse over an item to see its name.
+- It only shows the giants you have, so it works with any of them on their own too.
+- The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
+  tells you to use `/giants where`.
+- Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.2.0
+
+- **The Giants Guide** (see above).
+- The five giants are the same versions as in 1.1.0.
 
 ## New in 1.1.0
 
