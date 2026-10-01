@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:book" },
+    { "item": "minecraft:compass" }
+  ],
+  "result": { "id": "jj_giants:giants_guide", "count": 1 }
+}

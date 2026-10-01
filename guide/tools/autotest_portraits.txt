@@ -1,0 +1,62 @@
+# The giants' pictures for the guide's list: each one small, alone on a flat world, from the front.
+# Run with the giants loaded:  GUIDE_SCRIPT=tools/autotest_portraits.txt gradle runAutotest -Pgiants
+gui off
+cmd gamerule doDaylightCycle false
+cmd time set 6000
+cmd giants meetings off
+cmd giants natural off
+cmd tp @p 0 -60 0 0 0
+wait 40
+cmd pitchgut summon calm 0.1
+wait 200
+cmd pitchgut stay on
+cmd gamemode spectator
+cmd execute at @e[type=mountain_breathes:mountain,limit=1] rotated as @e[type=mountain_breathes:mountain,limit=1] run tp @p ^14 ^12 ^30 facing ~ ~8 ~
+wait 60
+shot portrait_pitchgut
+cmd pitchgut remove
+cmd gamemode creative
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd furrowmaw summon calm 0.06
+wait 300
+cmd furrowmaw sleep on
+wait 200
+cmd gamemode spectator
+cmd execute at @e[type=furrowmaw:furrowmaw,limit=1] run tp @p ~12 ~10 ~12 facing ~ ~1 ~
+wait 60
+shot portrait_furrowmaw
+cmd furrowmaw remove
+cmd gamemode creative
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd cerberus summon calm 0.1
+wait 200
+cmd cerberus stay on
+cmd gamemode spectator
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1] rotated as @e[type=fire_ice_cerberus:cerberus,limit=1] run tp @p ^10 ^12 ^30 facing ~ ~10 ~
+wait 60
+shot portrait_cerberus
+cmd cerberus remove
+cmd gamemode creative
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 0.12
+wait 300
+cmd hollowbell stay on
+cmd gamemode spectator
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run tp @p ~0 ~14 ~34 facing ~ ~12 ~
+wait 60
+shot portrait_hollowbell
+cmd hollowbell remove
+cmd gamemode creative
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd lanternwillow summon calm 0.1
+wait 300
+cmd lanternwillow stay on
+cmd gamemode spectator
+cmd execute at @e[type=lanternwillow:lanternwillow,limit=1] rotated as @e[type=lanternwillow:lanternwillow,limit=1] run tp @p ^0 ^11 ^30 facing ~ ~10 ~
+wait 60
+shot portrait_lanternwillow
+quit
