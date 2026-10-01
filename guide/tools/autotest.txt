@@ -1,0 +1,92 @@
+# Pictures of the guide's screen, every tab, for a few giants. Run with the giants loaded:
+#   gradle runAutotest -Pgiants   (pictures land in build/autotest/screenshots/)
+cmd time set 6000
+cmd giants meetings off
+cmd tp @p 0 -60 0 0 0
+wait 40
+cmd hollowbell summon calm 0.2
+cmd cerberus summon calm 0.2
+wait 60
+guide hollowbell 0
+wait 30
+shot hollowbell_1_about
+guide hollowbell 1
+wait 40
+shot hollowbell_2_where
+guide hollowbell 1 9999
+wait 30
+shot hollowbell_2_where_end
+guide hollowbell 2
+wait 20
+shot hollowbell_3_moves
+guide hollowbell 2 9999
+wait 20
+shot hollowbell_3_moves_end
+guide hollowbell 3
+wait 20
+shot hollowbell_4_fighting
+guide hollowbell 4
+wait 20
+shot hollowbell_5_drops
+guide hollowbell 4 9999
+wait 20
+shot hollowbell_5_drops_end
+guide hollowbell 5
+wait 20
+shot hollowbell_6_commands
+guide cerberus 0
+wait 20
+shot cerberus_1_about
+guide cerberus 1
+wait 40
+shot cerberus_2_where
+guide cerberus 1 9999
+wait 30
+shot cerberus_2_where_end
+guide cerberus 2
+wait 20
+shot cerberus_3_moves
+guide cerberus 3
+wait 20
+shot cerberus_4_fighting
+guide cerberus 4
+wait 20
+shot cerberus_5_drops
+guide cerberus 4 9999
+wait 20
+shot cerberus_5_drops_end
+guide cerberus 5
+wait 20
+shot cerberus_6_commands
+guide pitchgut 0
+wait 20
+shot pitchgut_1_about
+guide pitchgut 4
+wait 20
+shot pitchgut_5_drops
+guide furrowmaw 0
+wait 20
+shot furrowmaw_1_about
+guide furrowmaw 2
+wait 20
+shot furrowmaw_3_moves
+guide lanternwillow 0
+wait 20
+shot lanternwillow_1_about
+guide lanternwillow 3
+wait 20
+shot lanternwillow_4_fighting
+guide together 0
+wait 20
+shot together_1_meetings
+guide together 1
+wait 20
+shot together_2_giants
+guiscale 2
+guide hollowbell 4
+wait 30
+shot scale2_hollowbell_5_drops
+guide together 0
+wait 20
+shot scale2_together_1_meetings
+quit
