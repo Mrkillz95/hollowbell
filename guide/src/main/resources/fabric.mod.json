@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "jj_giants",
+  "version": "${version}",
+  "name": "JJ's Giants",
+  "description": "The Giants Guide: one book about all of JJ's giants that are installed. Where their ground is, what each move does, what they drop, and the commands.",
+  "authors": [
+    "JJ"
+  ],
+  "license": "All rights reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.jj.giants.GiantsGuideMod"
+    ],
+    "client": [
+      "net.jj.giants.client.GuideClient"
+    ],
+    "fabric-gametest": [
+      "net.jj.giants.test.GuideGameTests"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
