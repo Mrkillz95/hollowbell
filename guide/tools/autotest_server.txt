@@ -1,0 +1,18 @@
+# Joins the real test server (the all-in-one jar on a Fabric server) as a plain player (no operator), checks the
+# book from the first join and /giantsguide, and takes pictures of the live news on the Where page.
+join localhost:25587
+wait 100
+log guides
+chat /giantsguide
+wait 40
+log guides
+guide hollowbell 1 9999
+wait 80
+shot server_hollowbell_where_live
+guide pitchgut 1 9999
+wait 60
+shot server_pitchgut_where_live
+guide together 0
+wait 20
+shot server_together_meetings
+quit

@@ -352,16 +352,25 @@ public class GuideScreen extends Screen {
         if (font.width(away) > colW - 2) away = Component.translatable("guide.jj_giants.together.away_short");
         final Component fightC = fight, awayC = away;
         final int lab = labelW;
+        // the column heads are the names when they fit, or else the giants' pictures
+        boolean names = true;
+        for (Giant g : giants) names &= font.width(Component.translatable("guide.jj_giants." + g.key() + ".short")) <= colW - 4;
+        final boolean byName = names;
+        final int headH = byName ? 13 : 18;
         blocks.add(new Block() {
-            public int height() { return (n + 1) * 13 + 4; }
+            public int height() { return headH + n * 13 + 4; }
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 for (int c = 0; c < n; c++) {
-                    Component h = Component.translatable("guide.jj_giants." + giants.get(c).key() + ".short");
+                    Giant gc = giants.get(c);
                     int hx = x + lab + c * colW + colW / 2;
-                    g.drawString(font, h, hx - font.width(h) / 2, y + 2, KEY, false);
+                    if (byName) {
+                        Component h = Component.translatable("guide.jj_giants." + gc.key() + ".short");
+                        g.drawString(font, h, hx - font.width(h) / 2, y + 2, KEY, false);
+                    } else g.blit(ResourceLocation.fromNamespaceAndPath(GiantsGuideMod.ID, "textures/gui/giant/" + gc.key() + ".png"),
+                            hx - 8, y, 16, 16, 0, 0, 64, 64, 64, 64);
                 }
                 for (int r = 0; r < n; r++) {
-                    int ry = y + (r + 1) * 13;
+                    int ry = y + headH + r * 13;
                     g.fill(x, ry - 1, x + lab + n * colW, ry, LINE);
                     g.drawString(font, Component.translatable("guide.jj_giants." + giants.get(r).key() + ".short"), x, ry + 2, KEY, false);
                     for (int c = 0; c < n; c++) {
@@ -446,7 +455,12 @@ public class GuideScreen extends Screen {
         // the live news came in (or changed): lay the page out again where it is
         if (!together() && !giants.isEmpty() && Giants.PAGES[tab].equals("where")) {
             Live.News n = Live.news(giant().key());
-            if (n != shownNews) { keptScroll = scroll; layout(); scroll = Mth.clamp(keptScroll, 0, Math.max(0, contentH - ch)); }
+            if (n != shownNews) {
+                boolean atEnd = contentH > ch && scroll >= contentH - ch - 1;
+                keptScroll = scroll;
+                layout();
+                scroll = Mth.clamp(atEnd ? contentH : keptScroll, 0, Math.max(0, contentH - ch));
+            }
         }
         super.render(g, mx, my, partial);
         hovered = null;

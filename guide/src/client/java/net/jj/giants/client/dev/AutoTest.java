@@ -24,7 +24,8 @@ import java.util.List;
 /**
  * Development only (-Djj_giants.autotest=<script>), the same idea as the giants' own: makes a creative flat world,
  * runs a list of lines with waits between them, takes screenshots, then quits. Never runs in a normal game.
- * Lines: wait N, cmd ..., guiscale N, gui on|off, guide KEY TAB [SCROLL], close, shot NAME, quit.
+ * Lines: join HOST:PORT (a real server instead), wait N, cmd ... (as an operator, own world only), chat /..., guiscale N,
+ * gui on|off, guide KEY TAB [SCROLL], close, shot NAME, quit.
  */
 public final class AutoTest {
     private static List<String> script;
@@ -45,6 +46,15 @@ public final class AutoTest {
             if (mc.screen instanceof net.minecraft.client.gui.screens.AccessibilityOnboardingScreen) { mc.setScreen(new TitleScreen()); return; }
             if (!asked && mc.screen instanceof TitleScreen) {
                 asked = true;
+                // "join host:port": play on a real server instead of a new world of its own
+                String join = script.stream().filter(l -> l.startsWith("join ")).map(l -> l.substring(5).trim()).findFirst().orElse(null);
+                if (join != null) {
+                    GiantsGuideMod.LOG.info("autotest: joining {}", join);
+                    net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen, mc,
+                            net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(join),
+                            new net.minecraft.client.multiplayer.ServerData("guide test", join, net.minecraft.client.multiplayer.ServerData.Type.OTHER), false, null);
+                    return;
+                }
                 GameRules rules = new GameRules();
                 rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
                 rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
@@ -56,11 +66,18 @@ public final class AutoTest {
             return;
         }
         if (mc.player == null) return;
-        if (++joined < 40) return;
+        if (++joined < 40) {
+            // no "move with W, A, S and D" in the pictures
+            mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
+            mc.getToasts().clear();
+            return;
+        }
         if (wait > 0) { wait--; return; }
         while (line < script.size()) {
             String s = script.get(line++).trim();
-            if (s.isEmpty() || s.startsWith("#")) continue;
+            if (s.isEmpty() || s.startsWith("#") || s.startsWith("join ")) continue;
+            // chat /...: typed the way a player types it (on a real server: as that player, with their own rights)
+            if (s.startsWith("chat /")) { GiantsGuideMod.LOG.info("autotest chat: {}", s.substring(5)); mc.player.connection.sendCommand(s.substring(6).trim()); continue; }
             if (s.startsWith("wait ")) { wait = Integer.parseInt(s.substring(5).trim()); return; }
             if (s.startsWith("cmd ")) { run(mc, s.substring(4).trim()); continue; }
             if (s.startsWith("guiscale ")) { mc.options.guiScale().set(Integer.parseInt(s.substring(9).trim())); mc.resizeDisplay(); continue; }
@@ -72,6 +89,14 @@ public final class AutoTest {
                 continue;
             }
             if (s.equals("close")) { mc.setScreen(null); continue; }
+            // log guides: how many Giants Guides the player has (the first-join book on a real server)
+            if (s.equals("log guides")) {
+                int n = 0;
+                for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++)
+                    if (mc.player.getInventory().getItem(i).is(GiantsGuideMod.GUIDE)) n += mc.player.getInventory().getItem(i).getCount();
+                GiantsGuideMod.LOG.info("autotest guides: {} as {}", n, mc.player.getGameProfile().getName());
+                continue;
+            }
             if (s.startsWith("shot ")) {
                 String name = s.substring(5).trim() + ".png";
                 Screenshot.grab(mc.gameDirectory, name, mc.getMainRenderTarget(), c -> GiantsGuideMod.LOG.info("autotest shot {}", name));
