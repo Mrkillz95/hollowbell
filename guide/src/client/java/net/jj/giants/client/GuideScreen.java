@@ -394,8 +394,8 @@ public class GuideScreen extends Screen {
         for (Giant.Move m : g.moves()) leftW = Math.max(leftW, font.width(moveName(g, m)) + 6);
         leftW = Math.min(leftW, (int) (cw * 0.4f));
         for (String s : intro) line(s, leftW);
-        int[] colours = {0xFFFFFFFF, 0xFFFFAA00, 0xFFFF5555};
-        for (int t = 0; t < 3; t++) {
+        int[] colours = {0xFFFFFFFF, 0xFFFFAA00, 0xFFFF5555, 0xFF55FFFF};
+        for (int t = 0; t < Giants.TIER_NAMES.length; t++) {
             final int tier = t;
             if (g.moves().stream().noneMatch(m -> m.tier() == tier)) continue;
             heading(Component.translatable("guide.jj_giants.tier." + Giants.TIER_NAMES[t]), colours[t]);

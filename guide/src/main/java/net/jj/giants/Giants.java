@@ -13,7 +13,9 @@ import java.util.Set;
  */
 public final class Giants {
     public static final int LIGHT = 0, MEDIUM = 1, HEAVY = 2;
-    public static final String[] TIER_NAMES = {"light", "medium", "heavy"};
+    public static final String[] TIER_NAMES = {"light", "medium", "heavy", "sea"};
+    /** Wreckback's fourth kind: the sea moves he only does in deep water */
+    public static final int SEA = 3;
     /** the pages every giant has, in the order of the tabs (moves is made from the list above, not from lines) */
     public static final String[] PAGES = {"about", "where", "moves", "fight", "drops", "commands"};
     /** most numbered lines one page can have */
@@ -25,19 +27,19 @@ public final class Giants {
                             new String[]{"goo_lob", "leg_sweep", "hand_slam", "darts", "leg_stomp"},
                             new String[]{"gaze", "body_slam", "vomit", "tentacle_eruption", "loose_eyes", "scream", "tongue", "belly_crush"},
                             new String[]{"goo_storm", "eye_storm", "draw_in", "tear_off", "quake", "tentacle_field"}),
-                    Set.of("furrowmaw", "cerberus")),
+                    Set.of("furrowmaw", "cerberus", "wreckback")),
             new Giant("furrowmaw", "furrowmaw", "furrowmaw", "net.jj.furrowmaw.GiantsBridge",
                     moves("attack.furrowmaw.", "codex.furrowmaw.move_tip.",
                             new String[]{"bite", "spit", "tail_flick", "dust"},
                             new String[]{"slam", "swallow", "charge", "shriek", "vent", "tail_whip", "tremor", "thrash", "coil", "breach=codex.furrowmaw.breach_short"},
                             new String[]{"roll", "erupt", "sinkhole", "great_slam", "magma_storm", "rupture", "inhale"}),
-                    Set.of("pitchgut", "cerberus", "lanternwillow")),
+                    Set.of("pitchgut", "cerberus", "lanternwillow", "wreckback")),
             new Giant("cerberus", "fire_ice_cerberus", "cerberus", "net.jj.cerberus.GiantsBridge",
                     moves("attack.fire_ice_cerberus.", "codex.fire_ice_cerberus.move_tip.",
                             new String[]{"bite", "swipe", "tail_sweep", "fireballs", "shake"},
                             new String[]{"flame_breath", "frost_breath", "ice_spikes", "boulder", "stomp", "roar", "cinder_rain", "hail", "howl"},
                             new String[]{"pounce", "charge", "twin_breath", "firestorm", "frost_nova", "frenzy", "quake_slam"}),
-                    Set.of("pitchgut", "furrowmaw", "hollowbell", "lanternwillow")),
+                    Set.of("pitchgut", "furrowmaw", "hollowbell", "lanternwillow", "wreckback")),
             new Giant("hollowbell", "hollowbell", "hollowbell", "net.jj.hollowbell.GiantsBridge",
                     moves("move.hollowbell.", "codex.hollowbell.move_tip.",
                             new String[]{"grab", "harvest", "sting_volley", "strand_lash", "glow_flash"},
@@ -49,7 +51,15 @@ public final class Giants {
                             new String[]{"strand_lash", "root_jab", "mud_spit", "lure_call", "eye_flash", "bite"},
                             new String[]{"swallow", "strand_sweep", "root_stamp", "root_snare", "lantern_burst", "call_the_small", "bog", "seed_cloud"},
                             new String[]{"weeping_storm", "uproot_slam", "devour", "root_web", "lantern_nova", "limb_crash", "root_quake", "drink_the_land", "pull_under"}),
-                    Set.of("furrowmaw", "cerberus")));
+                    Set.of("furrowmaw", "cerberus")),
+            new Giant("wreckback", "wreckback", "wreckback", "net.jj.wreckback.GiantsBridge",
+                    moves("move.wreckback.", "codex.wreckback.move_tip.",
+                            new String[]{"claw_snip", "feeler_lash", "barnacle_spit", "claw_sweep", "leg_stab", "grapeshot"},
+                            new String[]{"claw_clamp", "feeler_grab", "cannon_broadside", "burrow", "gaze", "claw_hammer", "leg_flurry", "scuttle_charge",
+                                    "hull_ram", "barnacle_mortar", "kelp_snare", "silt_cloud", "drowned_crew", "ships_bell"},
+                            new String[]{"anchor_swing", "mast_sweep", "tide_pull", "shell_slam", "pincer_crush", "cannon_barrage", "feeler_storm", "whirlpool"},
+                            new String[]{"tidal_wave", "deeps_grasp", "full_broadside", "maelstrom", "depth_charge", "storm_call", "riptide_charge"}),
+                    Set.of("pitchgut", "furrowmaw", "cerberus")));
 
     private Giants() {}
 
