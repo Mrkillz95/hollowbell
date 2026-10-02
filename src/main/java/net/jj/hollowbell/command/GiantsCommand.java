@@ -20,8 +20,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * /giants: one command for all of JJ's bosses at once. Every one of the five mods carries this class, but only
- * one registers it: the first of the five bridges (in this fixed, sorted order) that is actually loaded. This
+ * /giants: one command for all of JJ's bosses at once. Every one of the six mods carries this class, but only
+ * one registers it: the first of the six bridges (in this fixed, sorted order) that is actually loaded. This
  * mod's bridge sorts first, so with the Cerberus installed it is this class that answers.
  *
  * The command asks every loaded bridge in turn, by name. Each one is asked on its own, and whatever goes wrong
@@ -32,13 +32,14 @@ public final class GiantsCommand {
     private GiantsCommand() {
     }
 
-    /** the five bridges, sorted; the same list in every mod */
+    /** the six bridges, sorted; the same list in every mod */
     public static final String[] BRIDGES = {
         "net.jj.cerberus.GiantsBridge",
         "net.jj.furrowmaw.GiantsBridge",
         "net.jj.hollowbell.GiantsBridge",
         "net.jj.lanternwillow.GiantsBridge",
-        "net.jj.mountain.GiantsBridge"};
+        "net.jj.mountain.GiantsBridge",
+        "net.jj.wreckback.GiantsBridge"};
 
     private static final String MINE = net.jj.hollowbell.GiantsBridge.class.getName();
 
@@ -89,7 +90,7 @@ public final class GiantsCommand {
     }
 
     /** the name /giants tp takes for each bridge, in the same order as BRIDGES */
-    public static final String[] TP_NAMES = {"cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut"};
+    public static final String[] TP_NAMES = {"cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback"};
 
     /** every loaded bridge's answer, in order */
     public static List<String> ask(MinecraftServer server, String action, String arg) {
@@ -185,7 +186,8 @@ public final class GiantsCommand {
         "furrowmaw:furrowmaw",
         "hollowbell:hollowbell",
         "lanternwillow:lanternwillow",
-        "mountain_breathes:mountain"};
+        "mountain_breathes:mountain",
+        "wreckback:wreckback"};
 
     /** which bridge (index into BRIDGES) owns this entity as a giant's main body, or -1 */
     public static int bridgeOf(net.minecraft.world.entity.Entity e) {
