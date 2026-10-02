@@ -41,7 +41,7 @@ public final class BellGen {
     private BellGen() {}
 
     /** the other JJ giants' ground: a column one of them already took stays theirs */
-    private static final Set<String> GIANTS = Set.of("mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow");
+    private static final Set<String> GIANTS = Set.of("mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback");
 
     /** everything a generator thread may know. Never changed once made; a new claim makes a new one. */
     public static final class Snap {

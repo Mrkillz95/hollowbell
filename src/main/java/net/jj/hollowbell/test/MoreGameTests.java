@@ -232,9 +232,9 @@ public class MoreGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "meet_table")
     public void theMeetingTable(GameTestHelper h) {
-        String[] k = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow"};
-        String[] want = {"-ffaa", "f-faf", "ff-ff", "aaf-a", "affa-"};
-        for (int a = 0; a < 5; a++) for (int b = 0; b < 5; b++) {
+        String[] k = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback"};
+        String[] want = {"-ffaaf", "f-faff", "ff-fff", "aaf-aa", "affa-a", "fffaa-"};
+        for (int a = 0; a < 6; a++) for (int b = 0; b < 6; b++) {
             var w = net.jj.hollowbell.entity.Meetings.way(k[a], k[b]);
             char c = want[a].charAt(b);
             var expect = c == 'f' ? net.jj.hollowbell.entity.Meetings.Way.FIGHT : c == 'a' ? net.jj.hollowbell.entity.Meetings.Way.AVOID : net.jj.hollowbell.entity.Meetings.Way.NONE;

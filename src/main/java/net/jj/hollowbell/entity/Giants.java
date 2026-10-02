@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 
 /**
- * The giants: JJ's five bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell and the Lantern Willow). They
+ * The giants: JJ's six bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow and Wreckback). They
  * all follow the same rules with each other: a blow from one giant lands on another by the other's own armour
  * against giants, and none of them ever picks another up, swallows it or drags it about. Each one tags itself
  * {@link #TAG}; the ids below catch the others even from older versions that don't.
@@ -28,7 +28,8 @@ public final class Giants {
             "mountain_breathes:mountain", "mountain_breathes:mountain_part",
             "furrowmaw:furrowmaw", "furrowmaw:furrowmaw_part",
             "fire_ice_cerberus:cerberus", "fire_ice_cerberus:cerberus_part",
-            "hollowbell:hollowbell", "lanternwillow:lanternwillow");
+            "hollowbell:hollowbell", "lanternwillow:lanternwillow",
+            "wreckback:wreckback");
 
     /** one of the giants, or a part of one */
     public static boolean isGiant(@Nullable Entity e) {

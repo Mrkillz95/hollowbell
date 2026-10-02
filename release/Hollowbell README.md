@@ -1,10 +1,15 @@
-# Hollowbell (Java mod) — version 1.9.1
+# Hollowbell (Java mod) — version 1.9.2
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.9.1
+## What's new in 1.9.2
+
+- Knows Wreckback, JJ's sixth giant (the hermit crab with a shipwreck on his back). He keeps away from Wreckback when they meet. Wreckback counts as a giant
+  for blows and armour, and `/giants` reaches him too.
+
+## What was new in 1.9.1
 
 - Two giants that keep away from each other now keep away every time they come close, not just the first time.
 - His strands no longer sting or hit a giant he isn't fighting as he drifts past it. Before, that could start a fight with a giant he was meant to keep away from.
