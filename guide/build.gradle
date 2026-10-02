@@ -41,7 +41,7 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    // -Pgiants: the five giants loaded too (copies of their released jars in run-mods/, made by
+    // -Pgiants: the six giants loaded too (copies of their released jars in run-mods/, made by
     // tools/giant_mods.py without their own game tests), for the tests and pictures that need them.
     if (project.hasProperty('giants')) fileTree(dir: 'run-mods', include: '*.jar').each { modLocalRuntime files(it) }
 }
