@@ -18,7 +18,7 @@ import java.util.Set;
 public record Giant(String key, String modId, String command, String bridge, List<Move> moves, Set<String> fights) {
     /**
      * @param id       the move's own name in his mod
-     * @param tier     {@link Giants#LIGHT}, {@link Giants#MEDIUM} or {@link Giants#HEAVY}
+     * @param tier     {@link Giants#LIGHT}, {@link Giants#MEDIUM}, {@link Giants#HEAVY} or {@link Giants#SEA}
      * @param nameKey  his mod's own lang key for the move's name
      * @param whatKey  his mod's own lang key for what it does (his book's tooltip)
      */
