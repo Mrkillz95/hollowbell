@@ -218,7 +218,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.9.1.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.9.2.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
