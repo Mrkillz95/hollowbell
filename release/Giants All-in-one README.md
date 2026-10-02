@@ -1,7 +1,7 @@
-# JJ's Giants: all five in one jar
+# JJ's Giants: all six in one jar
 
-One jar with all five giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell and the
-Lantern Willow, and the **Giants Guide**, a book about all of them. It works the same as having the five jars.
+One jar with all six giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
+Willow and Wreckback, and the **Giants Guide**, a book about all of them. It works the same as having the six jars.
 Each giant keeps its own name inside, so your worlds keep working.
 
 Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reserved.
@@ -10,20 +10,21 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.2.0 |
-| Pitchgut | 1.32.1 |
-| Furrowmaw | 1.14.1 |
-| Fire & Ice Cerberus | 2.14.1 |
-| Hollowbell | 1.9.1 |
-| Lantern Willow | 1.7.1 |
+| Giants Guide | 1.3.0 |
+| Pitchgut | 1.32.2 |
+| Furrowmaw | 1.14.2 |
+| Fire & Ice Cerberus | 2.14.2 |
+| Hollowbell | 1.9.2 |
+| Lantern Willow | 1.7.2 |
+| Wreckback | 0.9.9 (early version) |
 
 ## Install
 
-Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the five single jars out of your mods folder
+Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the six single jars out of your mods folder
 and puts this one in.
 
-By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…` and `lanternwillow-…` out of
-your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.2.0.jar` in. Keep Fabric API in there.
+By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…` and
+`wreckback-…` out of your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.3.0.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -42,9 +43,9 @@ A book about every giant you have. Right-click it to open it.
 
 | Tab | What's on it |
 |---|---|
-| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial or fortress), his moods |
+| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial, fortress or warship), his moods |
 | Where | his ground and what it looks like, how to find him (the finder and its recipe), whether the world keeps one of him out there and how many at once. On a server it also says where he is right now. |
-| Moves | every move, light, medium and heavy, with what it does (the same words as his own book) |
+| Moves | every move, light, medium and heavy (and Wreckback's sea moves), with what it does (the same words as his own book) |
 | Fighting | where to hit him, what hurts him most, and tips |
 | Drops | his weapon, his armour and its Armour power (R), his ward, the rest of his loot and his book, with pictures of the real items and their recipes |
 | Commands | the commands anyone can use, and the ones that need cheats |
@@ -56,6 +57,14 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.3.0
+
+- **Wreckback is in**: JJ's sixth giant, a hermit crab the size of a ship with a wrecked galleon on his back. He has
+  his own README (`Wreckback README.md` in the Wreckback folder) and his own pages in the Giants Guide.
+- The other five know him: Pitchgut, Furrowmaw and the Cerberus fight him when they meet; the Hollowbell and the
+  Lantern Willow keep away from him. `/giants` reaches him too.
+- Every giant is at its newest version (see the table).
 
 ## New in 1.2.0
 
