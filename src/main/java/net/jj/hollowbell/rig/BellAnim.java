@@ -297,12 +297,15 @@ public final class BellAnim {
                         if (sl < 1e-4f) { sx = -bz; sy = 0f; sz = bx; sl = Math.max(1e-4f, (float) Math.sqrt(sx * sx + sz * sz)); }
                         // (eased back a quarter of the way each tick, a little at a time: snapped straight to the
                         // limit, a strand was yanked along whole when his bell came down hard)
-                        float to = ang - (ang - lim) * 0.25f;
+                        // (lying on the ground or knocked against it, held to the limit outright: there the ground
+                        // would otherwise fold it right back on itself)
+                        boolean onGround = steps - knockedAt[c] <= 8;
+                        float to = ang - (ang - lim) * (onGround ? 1f : 0.25f);
                         float cl = Mth.cos(to), sn = Mth.sin(to);
                         dx = bx * cl + sx / sl * sn; dy = by * cl + sy / sl * sn; dz = bz * cl + sz / sl * sn;
                         // and never more than a little way in a tick
                         float ox = (dx - ux) * want, oy = (dy - uy) * want, oz = (dz - uz) * want;
-                        float ol = (float) Math.sqrt(ox * ox + oy * oy + oz * oz), cap = 0.3f;
+                        float ol = (float) Math.sqrt(ox * ox + oy * oy + oz * oz), cap = onGround ? Float.MAX_VALUE : 0.3f;
                         if (ol > cap) { float f = cap / ol; dx = ux + (dx - ux) * f; dy = uy + (dy - uy) * f; dz = uz + (dz - uz) * f; }
                         d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
                     }

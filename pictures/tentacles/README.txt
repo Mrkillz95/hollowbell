@@ -9,15 +9,15 @@ What the pose lab counted, over 344 poses (idle, drifting, turning, climbing, si
 about ten moments, carrying someone up, asleep, lost his lift, dying):
 
                                          1.9.2    1.9.3
-  blocks cut off, average per pose        1828      569
-  pairs come apart by more than 1 block  11641     4277
-  pairs come apart by more than 2 blocks  6627     1574
-  sharpest bend at a joint (degrees)       179       52 (152 only while carrying someone)
+  blocks cut off, average per pose        1828      617
+  pairs come apart by more than 1 block  11641     4377
+  pairs come apart by more than 2 blocks  6627     1636
+  sharpest bend lying down (degrees)       179       90
   standing still as built: cut off         1468       38
 
 Without the poses where he lies on the ground (drop, lost lift, asleep, dying, sky dive):
-  blocks cut off, average per pose        1794      339
-  pairs come apart by more than 2 blocks  2806      644
+  blocks cut off, average per pose        1794      375
+  pairs come apart by more than 2 blocks  2806      716
 
 What was wrong:
 - Bits of strands, pods and egg clumps only joined to their own part through another part, so they
@@ -34,3 +34,5 @@ What was wrong:
   longer, up to ten times. Fixed.
 - Lying down, strands folded back in a zig zag, and pieces pointing down were squashed into balls by
   the ground. They now lie out round him and slide along the ground at their full length.
+- Nothing bent harder at a joint than it can: lying down, strands folded right back through themselves.
+  Now each joint has a limit (a move may bend an arm or strand further than its own swing does).
