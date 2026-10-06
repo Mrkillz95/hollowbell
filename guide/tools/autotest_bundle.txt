@@ -1,0 +1,22 @@
+# Joins a real server running the all-in-one jar (port 25600) as a player the server makes an operator, and runs
+# /giants list and /giants paint for each of the six giants (16 blocks, full, 5 deep). The answers go to the log.
+join localhost:25600
+wait 4000
+chat /giants list
+wait 40
+chat /giants paint pitchgut 16 full 5
+wait 200
+chat /giants paint furrowmaw 16 full 5
+wait 200
+chat /giants paint cerberus 16 full 5
+wait 200
+chat /giants paint hollowbell 16 full 5
+wait 200
+chat /giants paint willow 16 full 5
+wait 200
+chat /giants paint wreckback 16 full 5
+wait 200
+shot bundle_paint
+chat /giants list
+wait 40
+quit
