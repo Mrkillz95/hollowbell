@@ -10,13 +10,13 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.3.0 |
-| Pitchgut | 1.32.2 |
-| Furrowmaw | 1.14.2 |
-| Fire & Ice Cerberus | 2.14.2 |
-| Hollowbell | 1.9.2 |
-| Lantern Willow | 1.7.2 |
-| Wreckback | 0.9.9 (early version) |
+| Giants Guide | 1.3.1 |
+| Pitchgut | 1.32.3 |
+| Furrowmaw | 1.14.3 |
+| Fire & Ice Cerberus | 2.14.3 |
+| Hollowbell | 1.9.3 |
+| Lantern Willow | 1.7.4 |
+| Wreckback | 1.0.0 |
 
 ## Install
 
@@ -24,7 +24,7 @@ Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the six singl
 and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…` and
-`wreckback-…` out of your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.3.0.jar` in. Keep Fabric API in there.
+`wreckback-…` out of your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.3.1.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -57,6 +57,19 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.3.1
+
+- **Wreckback 1.0.0**, the full version: `/giants` answers for him everywhere, his chains look like the game's own
+  chain made big and hang under their weight, his rope ladders are short and stiff (a rope's end hangs down to climb
+  on from the ground), his ship rides calmer while he walks, and you can see him on the skyline from far off again.
+  A Drowned Crewman spawn egg and a "Below Decks" advancement too. See his own README.
+- **`/giants paint` goes 5 blocks deep** for every giant, not just the top block. Add a number after `full` to go
+  deeper or shallower, 1 to 64: `/giants paint wreckback 64 full 10`. Caves under it stay open, and it never goes
+  through bedrock.
+- **Hollowbell 1.9.3**: his arms, strands and glowing pods hold together now.
+- The Giants Guide has the new `/giants paint` depth and Wreckback's new bits.
+- Every giant is at its newest version (see the table).
 
 ## New in 1.3.0
 
