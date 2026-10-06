@@ -7,8 +7,9 @@ base { archivesName = project.archives_base_name }
 repositories {
     maven { name = 'CentralMirror'; url = 'https://maven-central.storage-download.googleapis.com/maven2/' }
 }
-// the autotest script: -Pscript=tools/<script>.txt (read out here: inside the run's settings it always came out empty)
-def autotestScript = findProperty("script") ?: "tools/autotest.txt"
+// the autotest script: -Pscript=tools/<script>.txt (read straight from the command line: findProperty("script")
+// always came out empty, so the default script ran whatever was asked)
+def autotestScript = gradle.startParameter.projectProperties.script ?: "tools/autotest.txt"
 loom {
     splitEnvironmentSourceSets()
     mods {
