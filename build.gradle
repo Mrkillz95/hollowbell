@@ -28,7 +28,8 @@ loom {
         autotest {
             client()
             name "Auto Test"
-            vmArg "-Dhollowbell.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "tools/autotest.txt")
+            // (in brackets: without them the script given was dropped and the default one always ran)
+            vmArg("-Dhollowbell.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "tools/autotest.txt"))
             vmArg "-Xmx6G"
             programArgs "--width", "1280", "--height", "720"
             runDir "build/autotest"
