@@ -71,6 +71,28 @@ public final class PoseLab {
         log.close();
     }
 
+    static final boolean JERK = Boolean.getBoolean("lab.jerk");
+    static float[][] jl, jl2;
+    static float worstJerk;
+
+    /** like the blend test: the biggest change of speed of any joint in a tick (not counting knocks on the ground) */
+    static void jerk(BellAnim anim, int t, String scene) {
+        BellState st = anim.now();
+        if (t == 0) { jl = null; jl2 = null; worstJerk = 0; }
+        if (jl2 != null) for (int c = 0; c < st.chain.length; c++) {
+            if (anim.knocked(c)) continue;
+            float[] a = jl2[c], b = jl[c], n = st.chain[c];
+            for (int i = 0; i < n.length; i += 3) {
+                float jx = n[i] - 2 * b[i] + a[i], jy = n[i + 1] - 2 * b[i + 1] + a[i + 1], jz = n[i + 2] - 2 * b[i + 2] + a[i + 2];
+                float j = (float) Math.sqrt(jx * jx + jy * jy + jz * jz);
+                if (j > worstJerk) { worstJerk = j; say(String.format("    jerk %s t%d chain %d (%s %d) point %d: %.1f", scene, t - SETTLE, c, rig.chains[c].arm ? "arm" : "strand", rig.chains[c].index, i / 3, j)); }
+            }
+        }
+        jl2 = jl;
+        jl = new float[st.chain.length][];
+        for (int c = 0; c < st.chain.length; c++) jl[c] = st.chain[c].clone();
+    }
+
     static void say(String s) { System.out.println(s); log.println(s); log.flush(); }
 
     // ------------------------------------------------------------------ the model's blocks
@@ -145,7 +167,7 @@ public final class PoseLab {
 
     record Scene(String name, int ticks, int[] samples, Driver d) {}
 
-    static final float GROUND = -14f;
+    static float GROUND = Float.parseFloat(System.getProperty("lab.ground", "-14"));
     static final int SETTLE = 160;
 
     static Map<String, Scene> scenes() {
@@ -178,6 +200,15 @@ public final class PoseLab {
                 moveTick(mv, t - SETTLE, len, in, st);
             }));
         }
+        // the blend test: a slam cut off by a sweep, that by a drop, then a curtain, then stopped
+        m.put("blend", new Scene("blend", SETTLE + 400, every(SETTLE, SETTLE + 400, 400), (t, in, st) -> {
+            if (t < SETTLE) return;
+            int k = t - SETTLE;
+            int mv = k < 32 ? Moves.SLAM : k < 60 ? Moves.SWEEP : k < 120 ? Moves.DROP : k < 150 ? Moves.CURTAIN : Moves.NONE;
+            int start = k < 32 ? 0 : k < 60 ? 32 : k < 120 ? 60 : k < 150 ? 120 : 150;
+            if (mv != Moves.NONE) Moves.pose(rig, st, in, mv, k - start, 1, 30f, 1f, 10f, -1f);
+            if (mv == Moves.DROP) move(in, 0f, 0f, 0f);
+        }));
         // the grab carrying somebody up onto his crown
         m.put("carry", new Scene("carry", SETTLE + 200, every(SETTLE, SETTLE + 200, 20), (t, in, st) -> {
             if (t < SETTLE) return;
@@ -274,6 +305,7 @@ public final class PoseLab {
             BellState now = anim.now();
             s.d.tick(t, in, now);
             anim.step(in);
+            if (JERK) jerk(anim, t, s.name);
             if (t == s.samples[si]) {
                 anim.fill(st, 1f);
                 rig.computePose(st, pose, labHang);
