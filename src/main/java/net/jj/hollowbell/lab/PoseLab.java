@@ -41,6 +41,7 @@ public final class PoseLab {
     static int[] vb, vcol, vs;
     static net.jj.hollowbell.rig.BellPieces pieces;
     static boolean rigid = Boolean.getBoolean("lab.rigid");
+    static Matrix4f[] labHang;
     static float[] rx, ry, rz;
     static boolean[] glow;
     static String[] palName;
@@ -80,6 +81,7 @@ public final class PoseLab {
         for (int b = 0; b < nb; b++) n += model.count(b);
         N = n;
         pieces = net.jj.hollowbell.rig.BellPieces.get();
+        labHang = pieces.newHang();
         vs = new int[n];
         vb = new int[n]; vcol = new int[n]; rx = new float[n]; ry = new float[n]; rz = new float[n]; glow = new boolean[n];
         palName = model.palette;
@@ -274,7 +276,7 @@ public final class PoseLab {
             anim.step(in);
             if (t == s.samples[si]) {
                 anim.fill(st, 1f);
-                rig.computePose(st, pose);
+                rig.computePose(st, pose, labHang);
                 Result r = measure(pose);
                 StringBuilder bw = new StringBuilder();
                 r.bend = bend(st, bw);
@@ -317,7 +319,7 @@ public final class PoseLab {
             anim.step(in);
         }
         anim.fill(st, 1f);
-        rig.computePose(st, pose);
+        rig.computePose(st, pose, labHang);
         picture(s.name + "_worst_" + (tt - SETTLE), pose, measure(pose), st);
     }
 
@@ -358,7 +360,7 @@ public final class PoseLab {
     static Result measure(Matrix4f[] pose) {
         Result r = new Result();
         Matrix4f[] sp = pose;
-        if (!rigid) { sp = pieces.newPose(); pieces.pose(pose, sp); }
+        if (!rigid) { sp = pieces.newPose(); pieces.pose(pose, labHang, sp); }
         int nb = sp.length;
         r.scale = new float[nb];
         Vector3f v = new Vector3f();

@@ -220,6 +220,70 @@ function buildRig(M, C) {
     if (!left) break;
   }
 
+  // ---------------- 1.9.3: every part in one piece, before any bones are made. A bit of a strand (or of a pod, an
+  // egg clump, an arm) that only touches the rest of its part through some other part goes with the part it touches
+  // most: left where it was, it would float off when the two swing apart, and a strand in pieces would hang its top
+  // from nothing. Repeated until every part is one piece.
+  let earlyBits = 0, earlyVox = 0;
+  {
+    const partOf = k => {
+      if (gone[k]) return null;
+      if (label[k] !== null) return 'body';
+      if (pods.of[k] >= 0) return 'P' + pods.of[k];
+      if (eggs.of[k] >= 0) return 'E' + eggs.of[k];
+      if (strandOf[k] >= 0) return 'S' + strandOf[k];
+      if (lab[k] >= 0 && lab[k] < 8) return 'A' + lab[k];
+      return null;
+    };
+    const setPart = (k, p, from) => {
+      pods.of[k] = -1; eggs.of[k] = -1; strandOf[k] = -1;
+      const c = p[0], i = p === 'body' ? -1 : +p.slice(1);
+      if (p === 'body') { label[k] = label[from]; lab[k] = -1; }
+      else if (c === 'P') { pods.of[k] = i; lab[k] = 200; }
+      else if (c === 'E') { eggs.of[k] = i; lab[k] = 300; }
+      else if (c === 'S') { strandOf[k] = i; lab[k] = 100; }
+      else { lab[k] = i; }
+    };
+    for (let pass = 0; pass < 20; pass++) {
+      const part = new Array(n);
+      for (let k = 0; k < n; k++) part[k] = partOf(k);
+      const comp = new Int32Array(n).fill(-1);
+      const comps = [];
+      for (let s0 = 0; s0 < n; s0++) {
+        if (comp[s0] >= 0 || part[s0] === null || part[s0] === 'body') continue;
+        const g = part[s0], id = comps.length, ks = [s0];
+        comp[s0] = id;
+        for (let q = 0; q < ks.length; q++) {
+          const k = ks[q];
+          for (const [a, b, c] of N26) {
+            const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+            if (j !== undefined && comp[j] < 0 && part[j] === g) { comp[j] = id; ks.push(j); }
+          }
+        }
+        comps.push({ g, ks });
+      }
+      const biggest = new Map();
+      comps.forEach((c, i) => { const b = biggest.get(c.g); if (b === undefined || comps[b].ks.length < c.ks.length) biggest.set(c.g, i); });
+      let changed = 0;
+      comps.forEach((c, i) => {
+        if (biggest.get(c.g) === i) return;
+        const touch = new Map(), via = new Map();
+        for (const k of c.ks) for (const [a, b, d] of N26) {
+          const j = find(X[k] + a, Y[k] + b, Z[k] + d);
+          if (j === undefined || part[j] === null || part[j] === c.g) continue;
+          touch.set(part[j], (touch.get(part[j]) || 0) + 1);
+          if (!via.has(part[j])) via.set(part[j], j);
+        }
+        if (!touch.size) return;
+        const into = [...touch].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0][0];
+        for (const k of c.ks) setPart(k, into, via.get(into));
+        changed++; earlyVox += c.ks.length;
+      });
+      earlyBits += changed;
+      if (!changed) break;
+    }
+  }
+
   // ---------------- bones
   const bones = [];
   const boneIndex = new Map();
@@ -583,7 +647,7 @@ function buildRig(M, C) {
       dome: profile,
       bands: bandDefs, sectors: sectorDefs,
     },
-    stats: { rehung, piecesMoved: movedBits, piecesMovedBlocks: movedVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
+    stats: { rehung, earlyBits, earlyVox, piecesMoved: movedBits, piecesMovedBlocks: movedVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
   };
 }
 
