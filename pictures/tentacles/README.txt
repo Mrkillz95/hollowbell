@@ -9,15 +9,15 @@ What the pose lab counted, over 344 poses (idle, drifting, turning, climbing, si
 about ten moments, carrying someone up, asleep, lost his lift, dying):
 
                                          1.9.2    1.9.3
-  blocks cut off, average per pose        1828      618
-  pairs come apart by more than 1 block  11641     4588
-  pairs come apart by more than 2 blocks  6627     1816
-  sharpest bend lying down (degrees)       179       90
+  blocks cut off, average per pose        1828      792
+  pairs come apart by more than 1 block  11641     4707
+  pairs come apart by more than 2 blocks  6627     1859
+  sharpest bend lying down (degrees)       179       93
   standing still as built: cut off         1468       38
 
 Without the poses where he lies on the ground (drop, lost lift, asleep, dying, sky dive):
-  blocks cut off, average per pose        1794      367
-  pairs come apart by more than 2 blocks  2806      836
+  blocks cut off, average per pose        1794      451
+  pairs come apart by more than 2 blocks  2806      866
 
 What was wrong:
 - Bits of strands, pods and egg clumps only joined to their own part through another part, so they
@@ -32,7 +32,8 @@ What was wrong:
   laid along a smooth curve, and come smoothly out of the rim, the vase, a pod or an arm.
 - When what a strand hangs from moved fast (an arm's end in the whirlpool) the strand grew longer and
   longer, up to ten times. Fixed.
-- Lying down, strands folded back in a zig zag, and pieces pointing down were squashed into balls by
+- Lying down, strands folded back in a zig zag, and strand pieces pointing down were squashed into balls by
   the ground. They now lie out round him and slide along the ground at their full length.
-- Nothing bent harder at a joint than it can: lying down, strands folded right back through themselves.
-  Now each joint has a limit (a move may bend an arm or strand further than its own swing does).
+- Joints bent as far as anything pushed them: lying down, strands folded right back through themselves.
+  Now each joint may only bend so far from the shape asked of it (eased back a little at a time, held
+  outright where it lies on the ground).

@@ -278,13 +278,14 @@ public final class BellAnim {
                 // never bent sharper than it can at a joint (or out of what it hangs from): past that it would fold
                 // back through itself. A move may bend an arm or strand further than its own swing does
                 float bx, by, bz;
-                if (i == 1) { tv2.set(ch.joints[1]).sub(ch.joints[0]); mAnchor.transformDirection(tv2); bx = tv2.x; by = tv2.y; bz = tv2.z; }
+                // the way the shape asked for goes on from the piece above (the first piece: just the way it's asked
+                // to go), turned the way the piece above really goes now: a joint may bend only so far from that
+                if (i == 1) { bx = lx; by = ly; bz = lz; }
                 else {
-                    // the way this piece went from the one above as built, turned the way the one above is now
-                    tv.set(ch.joints[i - 1]).sub(ch.joints[i - 2]).normalize();
+                    tv.set(tg[o - 3] - tg[o - 6], tg[o - 2] - tg[o - 5], tg[o - 1] - tg[o - 4]);
                     tv2.set(p[o - 3] - p[o - 6], p[o - 2] - p[o - 5], p[o - 1] - p[o - 4]);
-                    if (tv2.lengthSquared() > 1e-8f) qTmp.rotationTo(tv, tv2.normalize()); else qTmp.identity();
-                    qTmp.transform(tv2.set(ch.joints[i]).sub(ch.joints[i - 1]));
+                    if (tv.lengthSquared() > 1e-8f && tv2.lengthSquared() > 1e-8f) qTmp.rotationTo(tv.normalize(), tv2.normalize()); else qTmp.identity();
+                    qTmp.transform(tv2.set(lx, ly, lz));
                     bx = tv2.x; by = tv2.y; bz = tv2.z;
                 }
                 float lim = ch.arm ? (i == 1 ? 1.45f : 0.6f + 0.35f * hk) : (i == 1 ? 0.75f : 0.45f + 0.35f * hk);
