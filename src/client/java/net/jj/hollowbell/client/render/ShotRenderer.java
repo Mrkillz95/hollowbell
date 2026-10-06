@@ -160,7 +160,8 @@ public class ShotRenderer extends EntityRenderer<Shot> {
             if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(kk, kk, kk, 1f); shader.COLOR_MODULATOR.upload(); }
             mv.set(view).mul(base);
             if (shader.MODEL_VIEW_MATRIX != null) { shader.MODEL_VIEW_MATRIX.set(mv); shader.MODEL_VIEW_MATRIX.upload(); }
-            BellMeshes.Mesh m = meshes.mesh(BellMeshes.FULL, kind, E.bone());
+            // (an egg clump or pod is one slice of the full meshes)
+            BellMeshes.Mesh m = meshes.mesh(BellMeshes.FULL, kind, net.jj.hollowbell.rig.BellPieces.get().first[E.bone()]);
             if (m != null) { m.vb.bind(); m.vb.draw(); }
             shader.clear();
             com.mojang.blaze3d.vertex.VertexBuffer.unbind();

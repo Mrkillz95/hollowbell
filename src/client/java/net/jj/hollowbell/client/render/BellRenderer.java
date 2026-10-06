@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.rig.BellModel;
+import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -42,7 +43,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
 
     /** the glass waiting to be drawn this frame */
     private static final List<Glass> glass = new ArrayList<>();
-    private record Glass(Matrix4f entity, Matrix4f view, Matrix4f proj, Matrix4f[] bones, int lod, float lit, float hurt, boolean red,
+    private record Glass(Matrix4f entity, Matrix4f view, Matrix4f proj, Matrix4f[] units, boolean sliced, int lod, float lit, float hurt, boolean red,
                          float fogStart, float fogEnd, Vector3f l0, Vector3f l1, boolean[] shown) {}
 
     public BellRenderer(EntityRendererProvider.Context ctx) {
@@ -96,8 +97,10 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         BellMeshes meshes = BellMeshes.INSTANCE;
         if (!meshes.ensureReady()) return;
         Matrix4f[] draw = rig.newPose();
+        BellPieces pieces = BellPieces.get();
+        Matrix4f[] hang = pieces.newHang();
         e.fillState(partial);
-        rig.computePose(e.state, draw);
+        rig.computePose(e.state, draw, hang);
         float s = e.bellScale();
         Minecraft mc0 = Minecraft.getInstance();
         var cam0 = mc0.gameRenderer.getMainCamera().getPosition();
@@ -137,6 +140,12 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             case net.jj.hollowbell.Detail.FAR -> BellMeshes.FAR;
             default -> BellMeshes.FULL;
         };
+        // up close his arms and strands are drawn in slices laid along a smooth curve (see BellPieces), so they bend
+        // with no gaps; further off a piece at a time
+        boolean sliced = lod == BellMeshes.FULL;
+        Matrix4f[] units = draw;
+        if (sliced) { units = pieces.newPose(); pieces.pose(e.state, draw, hang, units); }
+        int unitCount = sliced ? pieces.count : rig.boneCount();
 
         RenderType rt = RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
         rt.setupRenderState();
@@ -171,7 +180,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             if (!shown[b] || bb == null || fr == null) continue;
             boneAbs.set(abs).mul(draw[b]);
             boneAbs.transformPosition(cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f));
-            float r = 0.5f * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0]) + (bb[4] - bb[1]) * (bb[4] - bb[1]) + (bb[5] - bb[2]) * (bb[5] - bb[2])) * s * 1.35f + 1f;
+            // (a slice of an arm or strand may lie a few blocks off its bone, where the curve takes a corner off)
+            float r = (0.5f * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0]) + (bb[4] - bb[1]) * (bb[4] - bb[1]) + (bb[5] - bb[2]) * (bb[5] - bb[2])) * 1.35f + 8f) * s + 1f;
             if (!fr.isVisible(new net.minecraft.world.phys.AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r))) shown[b] = false;
         }
         Matrix4f mv = new Matrix4f(), boneWorld = new Matrix4f();
@@ -179,11 +189,12 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         Vector3f l0 = new Vector3f(), l1 = new Vector3f();
         for (int pass = 0; pass < 2; pass++) {
             int kind = pass == 0 ? BellMeshes.SOLID : BellMeshes.GLOW;
-            for (int b = 0; b < rig.boneCount(); b++) {
+            for (int u = 0; u < unitCount; u++) {
+                int b = sliced ? pieces.bone[u] : u;
                 if (!shown[b]) continue;
-                BellMeshes.Mesh m = meshes.mesh(lod, kind, b);
+                BellMeshes.Mesh m = meshes.mesh(lod, kind, u);
                 if (m == null) continue;
-                boneWorld.set(entity).mul(draw[b]);
+                boneWorld.set(entity).mul(units[u]);
                 mv.set(view).mul(boneWorld);
                 upload(shader.MODEL_VIEW_MATRIX, mv);
                 boneWorld.get3x3(rot).normal().transpose();
@@ -204,7 +215,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         if (nether) Lighting.setupNetherLevel(); else Lighting.setupLevel();
         rt.clearRenderState();
-        glass.add(new Glass(entity, view, proj, draw, lod, lit * (1f - 0.2f * dying), hurt, e.state.red, fs, fe, l0w, l1w, shown));
+        glass.add(new Glass(entity, view, proj, units, sliced, lod, lit * (1f - 0.2f * dying), hurt, e.state.red, fs, fe, l0w, l1w, shown));
     }
 
     private static void upload(Uniform u, Matrix4f m) { if (u != null) { u.set(m); u.upload(); } }
@@ -255,22 +266,25 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             shader.apply();
             // which bones have glass, furthest first
             List<float[]> order = new ArrayList<>();
-            for (int b = 0; b < rig.boneCount(); b++) {
+            BellPieces pieces = BellPieces.get();
+            int unitCount = gl.sliced ? pieces.count : rig.boneCount();
+            for (int u = 0; u < unitCount; u++) {
+                int b = gl.sliced ? pieces.bone[u] : u;
                 if (!gl.shown[b]) continue;
                 boolean redLoops = gl.red && rig.kind[b] == BellRig.Kind.ARM;
-                BellMeshes.Mesh m = meshes.mesh(gl.lod, redLoops && gl.lod == BellMeshes.FULL ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, b);
+                BellMeshes.Mesh m = meshes.mesh(gl.lod, redLoops && gl.lod == BellMeshes.FULL ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
                 if (m == null) continue;
-                float[] bb = model.bounds[b];
+                float[] bb = gl.sliced ? pieces.bounds[u] : model.bounds[b];
                 if (bb == null) continue;
-                boneWorld.set(gl.entity).mul(gl.bones[b]);
+                boneWorld.set(gl.entity).mul(gl.units[u]);
                 boneWorld.transformPosition(c.set((bb[0] + bb[3]) / 2, (bb[1] + bb[4]) / 2, (bb[2] + bb[5]) / 2));
-                order.add(new float[]{c.lengthSquared(), b, redLoops && gl.lod == BellMeshes.FULL ? 1 : 0});
+                order.add(new float[]{c.lengthSquared(), u, redLoops && gl.lod == BellMeshes.FULL ? 1 : 0});
             }
             order.sort((a, b2) -> Float.compare(b2[0], a[0]));
             for (float[] o : order) {
-                int b = (int) o[1];
-                BellMeshes.Mesh m = meshes.mesh(gl.lod, o[2] > 0 ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, b);
-                boneWorld.set(gl.entity).mul(gl.bones[b]);
+                int u = (int) o[1];
+                BellMeshes.Mesh m = meshes.mesh(gl.lod, o[2] > 0 ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
+                boneWorld.set(gl.entity).mul(gl.units[u]);
                 // the camera sits at 0 0 0 here: where is that in the bone's own blocks
                 boneWorld.invert(inv);
                 inv.transformPosition(cam.set(0, 0, 0));

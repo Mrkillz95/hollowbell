@@ -623,35 +623,44 @@ public final class BellRig {
     /**
      * The first block of him along a ray (model space; dir need not be unit, t is in its units), up to maxT.
      */
-    public @Nullable Hit raycast(BellState st, Matrix4f[] pose, Vector3f from, Vector3f dir, float maxT) {
+    public @Nullable Hit raycast(BellState st, Matrix4f[] pose, Vector3f from, Vector3f dir, float maxT) { return raycast(st, pose, null, from, dir, maxT); }
+
+    /**
+     * The same, against his arms and strands as they are drawn up close (slices: see {@link BellPieces}), when given.
+     */
+    public @Nullable Hit raycast(BellState st, Matrix4f[] pose, @Nullable Matrix4f[] slices, Vector3f from, Vector3f dir, float maxT) {
         BellModel m = BellModel.get();
+        BellPieces pc = slices != null ? BellPieces.get() : null;
         Hit best = null;
         float bestT = maxT;
         Matrix4f inv = new Matrix4f();
         Vector3f o = new Vector3f(), d = new Vector3f(), c = new Vector3f();
-        for (int b = 0; b < boneCount(); b++) {
-            float[] bb = m.bounds[b];
+        int units = pc != null ? pc.count : boneCount();
+        for (int u = 0; u < units; u++) {
+            int b = pc != null ? pc.bone[u] : u;
+            float[] bb = pc != null ? pc.bounds[u] : m.bounds[b];
+            Matrix4f at = pc != null ? slices[u] : pose[b];
             if (bb == null || !shown(st, b)) continue;
             // quick: the bone's box as a ball, where it is now
             c.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f);
             float r = 0.5f * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0]) + (bb[4] - bb[1]) * (bb[4] - bb[1]) + (bb[5] - bb[2]) * (bb[5] - bb[2])) * 1.3f + 1f;
-            pose[b].transformPosition(c);
+            at.transformPosition(c);
             float dl2 = dir.lengthSquared();
             float tc = ((c.x - from.x) * dir.x + (c.y - from.y) * dir.y + (c.z - from.z) * dir.z) / dl2;
             float tt = Mth.clamp(tc, 0f, bestT);
             float px = from.x + dir.x * tt - c.x, py = from.y + dir.y * tt - c.y, pz = from.z + dir.z * tt - c.z;
             if (px * px + py * py + pz * pz > r * r) continue;
-            pose[b].invert(inv);
+            at.invert(inv);
             inv.transformPosition(from, o);
             inv.transformDirection(dir, d);
-            Hit h = march(m, b, o, d, bb, bestT);
+            Hit h = march(m, b, pc, pc != null && pc.num[b] > 1 ? u : -1, o, d, bb, bestT);
             if (h != null && h.t() < bestT) { best = h; bestT = h.t(); }
         }
         return best;
     }
 
     /** walks the ray through the bone's blocks (in its rest space) and returns the first one it enters */
-    private static @Nullable Hit march(BellModel m, int b, Vector3f o, Vector3f d, float[] bb, float maxT) {
+    private static @Nullable Hit march(BellModel m, int b, @Nullable BellPieces pc, int slice, Vector3f o, Vector3f d, float[] bb, float maxT) {
         // clip to the bone's box
         float t0 = 0f, t1 = maxT;
         float[] oo = {o.x, o.y, o.z}, dd = {d.x, d.y, d.z};
@@ -673,7 +682,7 @@ public final class BellRig {
         float tmz = Math.abs(dd[2]) < 1e-9f ? Float.MAX_VALUE : t0 + ((sz > 0 ? (z + 1 - pz) : (pz - z)) * tdz);
         float t = t0;
         for (int guard = 0; guard < 2048 && t <= t1; guard++) {
-            if (m.has(b, x, y, z)) return new Hit(b, t, x, y, z);
+            if (m.has(b, x, y, z) && (slice < 0 || pc.in(slice, b, x, y, z))) return new Hit(b, t, x, y, z);
             if (tmx < tmy && tmx < tmz) { t = tmx; tmx += tdx; x += sx; }
             else if (tmy < tmz) { t = tmy; tmy += tdy; y += sy; }
             else { t = tmz; tmz += tdz; z += sz; }
@@ -682,16 +691,28 @@ public final class BellRig {
     }
 
     /** is a model-space point inside (or within pad blocks of) one of this bone's blocks */
-    public boolean touches(Matrix4f[] pose, int b, Vector3f p, int pad, Matrix4f invScratch) {
+    public boolean touches(Matrix4f[] pose, int b, Vector3f p, int pad, Matrix4f invScratch) { return touches(pose, null, b, p, pad, invScratch); }
+
+    /** the same, against the bone as drawn up close (slices: see {@link BellPieces}), when given */
+    public boolean touches(Matrix4f[] pose, @Nullable Matrix4f[] slices, int b, Vector3f p, int pad, Matrix4f invScratch) {
         BellModel m = BellModel.get();
-        float[] bb = m.bounds[b];
+        if (slices == null || BellPieces.get().num[b] == 1) {
+            Matrix4f at = slices == null ? pose[b] : slices[BellPieces.get().first[b]];
+            return touchesIn(m, null, -1, b, at, m.bounds[b], p, pad, invScratch);
+        }
+        BellPieces pc = BellPieces.get();
+        for (int u = pc.first[b]; u < pc.first[b] + pc.num[b]; u++) if (touchesIn(m, pc, u, b, slices[u], pc.bounds[u], p, pad, invScratch)) return true;
+        return false;
+    }
+
+    private static boolean touchesIn(BellModel m, @Nullable BellPieces pc, int slice, int b, Matrix4f at, float @Nullable [] bb, Vector3f p, int pad, Matrix4f invScratch) {
         if (bb == null) return false;
-        pose[b].invert(invScratch);
+        at.invert(invScratch);
         Vector3f q = invScratch.transformPosition(p, new Vector3f());
         if (q.x < bb[0] - pad || q.y < bb[1] - pad || q.z < bb[2] - pad || q.x > bb[3] + pad || q.y > bb[4] + pad || q.z > bb[5] + pad) return false;
         int x = (int) Math.floor(q.x), y = (int) Math.floor(q.y), z = (int) Math.floor(q.z);
         for (int a = -pad; a <= pad; a++) for (int c = -pad; c <= pad; c++) for (int e = -pad; e <= pad; e++)
-            if (m.has(b, x + a, y + c, z + e)) return true;
+            if (m.has(b, x + a, y + c, z + e) && (slice < 0 || pc.in(slice, b, x + a, y + c, z + e))) return true;
         return false;
     }
 }

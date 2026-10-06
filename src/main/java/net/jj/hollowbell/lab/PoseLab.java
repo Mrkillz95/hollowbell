@@ -463,9 +463,8 @@ public final class PoseLab {
             for (int k = 0; k < pa.length; k++) {
                 int a = pa[k], b = pb[k];
                 int ra = find(parent, a), rb = find(parent, b);
-                if (ra == rb || (ra != big && rb != big)) continue;
-                int in = ra == big ? b : a;
-                if (size.get(find(parent, in)) < 200) continue;
+                if (ra == rb) continue;
+                if (Math.min(size.get(ra), size.get(rb)) < 200) continue;
                 float dx = px[a] - px[b], dy = py[a] - py[b], dz = pz[a] - pz[b];
                 float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
                 String key = rig.boneNames[vb[a]] + "~" + rig.boneNames[vb[b]];
