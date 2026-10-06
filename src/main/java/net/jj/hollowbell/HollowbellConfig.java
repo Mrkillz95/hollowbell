@@ -84,6 +84,8 @@ public final class HollowbellConfig {
         public boolean ambientSounds = true;
         /** The screen shakes when his bell or arm slams down. */
         public boolean screenShake = true;
+        /** How much flies about in his big moves (dust and chunks of ground, splashes and waves, flashes, clouds): 0 = none, 1 = normal, 2 = more. */
+        public float bigEffects = 1.0f;
         /** Shows his health and pods bars. */
         public boolean bossBar = true;
         /** How far away (in blocks) he is still drawn. */
@@ -172,6 +174,7 @@ public final class HollowbellConfig {
         v.homeRadius = Math.max(200, Math.min(2000, v.homeRadius));
         v.farSightBlocks = Math.max(0, Math.min(4096, v.farSightBlocks));
         v.soundVolume = Math.max(0f, Math.min(2f, v.soundVolume));
+        v.bigEffects = Math.max(0f, Math.min(2f, v.bigEffects));
         v.maxInWorld = Math.max(0, Math.min(20, v.maxInWorld));
         v.meetRange = Math.max(16, Math.min(1000, v.meetRange));
         v.yieldAt = Math.max(0f, Math.min(0.9f, v.yieldAt));

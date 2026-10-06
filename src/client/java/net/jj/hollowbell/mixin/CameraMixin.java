@@ -38,5 +38,7 @@ public abstract class CameraMixin {
         }
         float[] o = Shake.offset(partial);
         if (o != null) move(o[2], o[1], o[0]);
+        float[] o2 = net.jj.hollowbell.fx.client.BigFxClient.cameraShake(partial);
+        if (o2 != null) move(o2[2], o2[1], o2[0]);
     }
 }

@@ -202,6 +202,10 @@ public class HollowbellGameTests implements FabricGameTest {
 
     // ------------------------------------------------------------------ every move starts and ends
 
+    /** the moves that must send a big moment (fx/BigFx) when they run */
+    static final java.util.Set<Integer> BIG_MOMENTS = java.util.Set.of(Moves.SLAM, Moves.PULSE, Moves.DROP, Moves.SPORES, Moves.POD_BURST, Moves.EGG_RAIN,
+            Moves.WHIRLPOOL, Moves.SKY_DIVE, Moves.DEEP_TOLL, Moves.ARM_STORM, Moves.SUN_LANCES, Moves.UNDERTOW);
+
     private static void moveRuns(GameTestHelper h, int move, int slot) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, slot);
         Pig[] p = new Pig[1];
@@ -215,8 +219,13 @@ public class HollowbellGameTests implements FabricGameTest {
             h.assertTrue(e.forceMove(move, p[0]), "could not start " + Moves.NAMES[move]);
         });
         h.runAfterDelay(24, () -> h.assertTrue(e.moveNow() == move, Moves.NAMES[move] + " is not running (" + e.moveNow() + ")"));
+        long[] from = {0};
+        h.runAfterDelay(19, () -> from[0] = h.getLevel().getGameTime());
         h.runAfterDelay(20 + len + 20, () -> {
             h.assertTrue(e.moveNow() != move, Moves.NAMES[move] + " never finished");
+            // the big ones are seen from far off: each sends its big moment (dust, splashes, flashes...) to the players near
+            if (BIG_MOMENTS.contains(move))
+                h.assertTrue(!net.jj.hollowbell.fx.BigFx.sentNear(e.position(), 400, from[0]).isEmpty(), Moves.NAMES[move] + " sent no big moment");
             h.assertTrue(e.isAlive(), "he died doing " + Moves.NAMES[move]);
             e.moves().letGoOfEverything(false);
             p[0].discard();

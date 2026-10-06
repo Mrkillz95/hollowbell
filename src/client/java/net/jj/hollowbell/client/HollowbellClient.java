@@ -51,6 +51,9 @@ public class HollowbellClient implements ClientModInitializer {
             var pl = ctx.client().player;
             if (pl != null) Shake.crash(Math.sqrt(pl.distanceToSqr(p.x(), p.y(), p.z())), p.power());
         }));
+        // the big moments: dust and chunks of ground, splashes and waves, flashes, clouds, shake and late sound
+        net.jj.hollowbell.fx.client.BigFxClient.init(() -> net.jj.hollowbell.HollowbellConfig.V.screenShake, () -> net.jj.hollowbell.HollowbellConfig.V.soundVolume,
+                () -> net.jj.hollowbell.HollowbellConfig.V.simpleFarAway, () -> net.jj.hollowbell.HollowbellConfig.V.bigEffects);
         ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); FightMusic.clear(); });
         ArmourPowerKey.init();
         ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); ArmourPowerKey.tick(c); FightMusic.tick(c); });

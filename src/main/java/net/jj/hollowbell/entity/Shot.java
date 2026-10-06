@@ -225,6 +225,8 @@ public class Shot extends ThrowableItemProjectile {
             if (d < radius * 4 + 8 && HollowbellConfig.V.screenShake)
                 net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new net.jj.hollowbell.net.ThumpPayload(c.x, c.y, c.z, 0.25f));
         }
+        // (the egg bursting on the ground: a little ring of dirt and chunks, or a splash on the water)
+        net.jj.hollowbell.fx.BigFx.send(sl, net.jj.hollowbell.fx.BigFx.STOMP, c, (float) radius * 1.3f);
         java.util.List<LivingEntity> hit = new java.util.ArrayList<>(sl.getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(radius), e -> canHitEntity(e) && e.isAlive() && e.position().distanceTo(c) <= radius));
         // (another giant's part boxes in the burst count as that giant)
         for (Entity p : sl.getEntities((Entity) null, new AABB(c, c).inflate(radius), x -> !(x instanceof LivingEntity) && x.getTags().contains(Giants.TAG))) {

@@ -1862,7 +1862,10 @@ public class HollowbellEntity extends Monster {
             Vec3 c = position();
             sound(c, net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), 3f, 0.4f);
             particles(net.minecraft.core.particles.ParticleTypes.CLOUD, c.add(0, 2, 0), 120, 80 * s, 0.1);
-            clientThump.thump(c.x, c.y, c.z, 1f);
+            // (he comes down: the whole bell on the ground, dust or a splash and a wave, a ring running out)
+            Vec3 g = new Vec3(c.x, groundAt(c.x, c.z), c.z);
+            net.jj.hollowbell.fx.BigFx.send(level(), net.jj.hollowbell.fx.BigFx.SLAM, g, 70 * s + 8);
+            net.jj.hollowbell.fx.BigFx.send(level(), net.jj.hollowbell.fx.BigFx.SHOCKWAVE, g, 140 * s + 20, Vec3.ZERO, 30);
         }
         if (deathTime > 190 && deathTime % 8 == 0)
             particles(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK,
