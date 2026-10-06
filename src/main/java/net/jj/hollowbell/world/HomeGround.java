@@ -422,7 +422,9 @@ public final class HomeGround {
     private static void paintBed(WorldGenLevel level, BellPlan p, int wx, int wz, int top, BlockPos.MutableBlockPos m) {
         int y = top;
         while (y > top - DIG && y > level.getMinBuildHeight() + 1 && !level.getBlockState(m.set(wx, y, wz)).getFluidState().isEmpty()) y--;
-        for (int k = 0; k < 2; k++, y--) {
+        // two blocks of bed as the world makes it; a painting lays its own depth
+        int bed = p.paintDepth > 0 ? p.paintDepth : 2;
+        for (int k = 0; k < bed && y > level.getMinBuildHeight(); k++, y--) {
             BlockState s = level.getBlockState(m.set(wx, y, wz));
             if (!changeable(s)) break;
             level.setBlock(m, state(p.strata(wx, y, wz)), FLAGS);
@@ -473,6 +475,10 @@ public final class HomeGround {
                 continue;
             }
             if (mat == BellPlan.Mat.KEEP || !s.getFluidState().isEmpty()) continue;
+            if (s.is(Blocks.BEDROCK)) break;
+            // deeper than the world lays it (a painting's depth): only solid ground is changed, so a cave under it
+            // stays open with his ground for its roof, and nothing pours
+            if (k >= BellPlan.MADE_DEPTH && k < o.laid[i] && s.isAir()) continue;
             if (!changeable(s)) continue;
             level.setBlock(m, state(mat), FLAGS);
         }

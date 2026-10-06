@@ -415,7 +415,8 @@ public final class HollowbellCommand {
     private static int paint(CommandContext<CommandSourceStack> c, int radius, boolean full) throws CommandSyntaxException {
         ServerPlayer p = c.getSource().getPlayerOrException();
         int n = net.jj.hollowbell.world.Painter.start(p, radius, full);
-        c.getSource().sendSuccess(() -> Component.translatable(full ? "command.hollowbell.paint_full" : "command.hollowbell.paint_biome", radius, n), true);
+        c.getSource().sendSuccess(() -> full ? Component.translatable("command.hollowbell.paint_full", radius, net.jj.hollowbell.world.Painter.DEPTH, n)
+                : Component.translatable("command.hollowbell.paint_biome", radius, n), true);
         return n;
     }
 

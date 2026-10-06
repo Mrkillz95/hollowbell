@@ -29,18 +29,22 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * /giants paint hollowbell [radius] [full|biome] (admins only): the land round the player becomes the Bell Hollows,
+ * /giants paint hollowbell [radius] [full|biome] [depth] (admins only): the land round the player becomes the Bell Hollows,
  * whatever is there. The biome of every column in the circle (every height) is set to his; in "full" the land is
  * also shaped and dressed like his own ground (no den): everything standing on it (buildings, trees, a witch hut)
  * is cleared first, only bedrock is left, and what was in chests comes out on the new ground. Structures standing
- * there stop being structures (no more witches from a painted-over hut, /locate stops pointing there). A chunk or
+ * there stop being structures (no more witches from a painted-over hut, /locate stops pointing there). His ground
+ * goes depth blocks down from the new top (5 unless told; caves under it stay open). A chunk or
  * two a tick, so the server keeps up. It can't be undone.
  */
 public final class Painter {
     private Painter() {}
 
+    /** how deep /giants paint lays his ground when not told (the top block and four under it), and the least and most */
+    public static final int DEPTH = 5, MIN_DEPTH = 1, MAX_DEPTH = 64;
+
     private static final class Job {
-        UUID who; ServerLevel level; double cx, cz; int radius; boolean full;
+        UUID who; ServerLevel level; double cx, cz; int radius; boolean full; int depth = DEPTH;
         BellPlan plan;
         final ArrayDeque<ChunkPos> todo = new ArrayDeque<>();
         int total, done;
@@ -48,14 +52,22 @@ public final class Painter {
 
     private static final List<Job> jobs = new ArrayList<>();
 
-    /** starts painting round this player; returns how many chunks it will take */
-    public static int start(ServerPlayer p, int radius, boolean full) {
-        return startAt(p.serverLevel(), p.getUUID(), p.getX(), p.getZ(), radius, full);
+    /** starts painting round this player, DEPTH deep; returns how many chunks it will take */
+    public static int start(ServerPlayer p, int radius, boolean full) { return start(p, radius, full, DEPTH); }
+
+    /** the same, depth blocks deep (1 to 64, counting the new top block) */
+    public static int start(ServerPlayer p, int radius, boolean full, int depth) {
+        return startAt(p.serverLevel(), p.getUUID(), p.getX(), p.getZ(), radius, full, depth);
     }
 
     /** starts painting round a spot; who (may be null) is told how it goes */
     public static int startAt(ServerLevel level, @Nullable UUID who, double atX, double atZ, int radius, boolean full) {
+        return startAt(level, who, atX, atZ, radius, full, DEPTH);
+    }
+
+    public static int startAt(ServerLevel level, @Nullable UUID who, double atX, double atZ, int radius, boolean full, int depth) {
         Job j = new Job();
+        j.depth = Mth.clamp(depth, MIN_DEPTH, MAX_DEPTH);
         j.who = who;
         j.level = level;
         j.cx = atX; j.cz = atZ;
@@ -69,6 +81,7 @@ public final class Painter {
                 l.getMinBuildHeight(), l.getMaxBuildHeight(),
                 (x, z) -> src.getGenerator().getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, l, src.randomState()) - 1);
         j.plan.withDen = false;
+        j.plan.paintDepth = j.depth;
         int r = j.radius;
         for (int x = Math.floorDiv(Mth.floor(j.cx) - r, 16); x <= Math.floorDiv(Mth.floor(j.cx) + r, 16); x++)
             for (int z = Math.floorDiv(Mth.floor(j.cz) - r, 16); z <= Math.floorDiv(Mth.floor(j.cz) + r, 16); z++) {
@@ -81,6 +94,9 @@ public final class Painter {
     }
 
     public static boolean busy() { return !jobs.isEmpty(); }
+
+    /** for the tests: drop every paint waiting */
+    public static void forget() { jobs.clear(); }
 
     /** every tick: a chunk or two, about 8 ms at most */
     public static void tick(MinecraftServer server) {
