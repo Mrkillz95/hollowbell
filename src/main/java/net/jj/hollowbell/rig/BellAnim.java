@@ -35,7 +35,7 @@ public final class BellAnim {
     /** 0 to 1 while he's dead and sinking away into the ground */
     private float sinkingIn;
     private static final int LOWER = 0, TX = 1, TZ = 2, SQUEEZE = 3, RIPPLE = 4, DEATH = 5, DROOP = 6, GLOW = 7, SWELL = 8, SHAKE = 9,
-            SPIN = 10, DX = 11, DY = 12, DZ = 13, CLIMB = 14, SINK = 15, FOLD = 16, SLEEP = 17, N = 18;
+            SPIN = 10, DX = 11, DY = 12, DZ = 13, CLIMB = 14, SINK = 15, FOLD = 16, SLEEP = 17, SPLAY = 18, N = 19;
     private final float[] x = new float[N], v = new float[N], xl = new float[N];
     private float timeNow;
 
@@ -122,6 +122,9 @@ public final class BellAnim {
         // asleep, the bell settles part way down and everything hanging from it lies on the ground
         float fold = Math.max(Math.max(Math.max(in.drop, in.sunk), deathK), 0.6f * x[SLEEP]);
         spring(FOLD, fold, 0.09f, 0.9f, first);
+        // the strands lie out round him as he comes down, and gather back in slowly when he rises (let go all at
+        // once, the long ones lying out on the ground were flung back up like whips)
+        spring(SPLAY, x[FOLD], x[FOLD] > x[SPLAY] ? 0.09f : 0.012f, 1f, first);
         // (the rest of the way down he flies himself)
         float ground = Float.isNaN(in.groundUnder) ? 0f : Mth.clamp(in.groundUnder, -40f, 20f);
         float sinkIn = in.dying < 0 ? 0f : Mth.clamp((in.dying - 190f) / 120f, 0f, 1f);
@@ -154,7 +157,7 @@ public final class BellAnim {
 
         st.lower = x[LOWER]; st.tiltX = x[TX]; st.tiltZ = x[TZ]; st.squeeze = x[SQUEEZE]; st.ripple = x[RIPPLE];
         st.death = x[DEATH]; st.droop = x[DROOP]; st.glow = x[GLOW]; st.podSwell = x[SWELL]; st.eggShake = x[SHAKE]; st.spin = x[SPIN];
-        st.driftX = x[DX]; st.driftY = x[DY]; st.driftZ = x[DZ]; st.climb = x[CLIMB]; st.sink = x[SINK]; st.fold = x[FOLD];
+        st.driftX = x[DX]; st.driftY = x[DY]; st.driftZ = x[DZ]; st.climb = x[CLIMB]; st.sink = x[SINK]; st.fold = x[FOLD]; st.splay = x[SPLAY];
         st.pulse = in.pulse; st.red = in.red; st.sleep = x[SLEEP];
 
         chains(in, first);
@@ -567,9 +570,9 @@ public final class BellAnim {
         if (open > 0f) local.premul(swing(qTmp, ox, oz, open * (sg == 0 ? 0.3f : 0.12f)));
         // laid out round him when the bell comes down: swung out from the root and curving on out, flat along the
         // ground (the ground takes the rest). Before 1.9.3 they buckled in a zig zag, folding right back on themselves
-        if (st.fold > 0f) {
+        if (st.splay > 0f) {
             float z = sg == 0 ? 0.75f : sg <= 2 ? 0.35f : 0f;
-            local.premul(swing(qTmp, ox, oz, z * st.fold));
+            local.premul(swing(qTmp, ox, oz, z * st.splay));
         }
         // the sweep: everything swung one way
         if (st.sweep != 0f) {
@@ -623,7 +626,7 @@ public final class BellAnim {
         out.spin = Mth.lerp(k, xl[SPIN], x[SPIN]);
         out.sleep = Mth.lerp(k, xl[SLEEP], x[SLEEP]);
         out.driftX = st.driftX; out.driftY = st.driftY; out.driftZ = st.driftZ;
-        out.climb = st.climb; out.sink = st.sink; out.fold = st.fold; out.pulse = st.pulse; out.red = st.red;
+        out.climb = st.climb; out.sink = st.sink; out.fold = st.fold; out.splay = st.splay; out.pulse = st.pulse; out.red = st.red;
         for (int c = 0; c < st.chain.length; c++) {
             float[] a = last[c], b = st.chain[c], o = out.chain[c];
             if (k >= 1f) System.arraycopy(b, 0, o, 0, b.length);

@@ -55,6 +55,8 @@ public final class BellState {
     public float pulse;
     /** folded down (drop, sunk, dying): the strands buckle and the arms spread on the ground */
     public float fold;
+    /** how far the strands lie out round him on the ground (follows fold, but lets go slowly) */
+    public float splay;
     public float sweep, sweepDir;
     public float curtain, curtainX, curtainZ;
     public int slamArm = -1;

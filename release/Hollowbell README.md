@@ -1,10 +1,19 @@
-# Hollowbell (Java mod) — version 1.9.2
+# Hollowbell (Java mod) — version 1.9.3
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.9.2
+## What's new in 1.9.3
+
+- **His arms, strands and glowing pods hold together.** Before, bits of him came loose and floated as he moved, the glowing pods came off the strands they hang on, and arms and strands showed gaps and kinks where they bent. Now:
+  - The strands in the middle hang from the glowing pods and arm ends they really sit on, and each pod and egg clump stays on its strand or arm as it swings and swells.
+  - Up close his arms and strands bend in one smooth curve, with no gaps at the bends, and come smoothly out from under his bell.
+  - Nothing folds back on itself. When he sinks or sleeps, his strands lie out round him on the ground and gather back in as he rises.
+  - Hits land on him just where he's drawn.
+- **`/giants paint` takes a depth**: `/giants paint hollowbell [radius] [full] [depth]`. His ground goes that many blocks down from the top (5 if you leave it out, 1 to 64). Caves under it stay open, and it never goes through bedrock.
+
+## What was new in 1.9.2
 
 - Knows Wreckback, JJ's sixth giant (the hermit crab with a shipwreck on his back). He keeps away from Wreckback when they meet. Wreckback counts as a giant
   for blows and armour, and `/giants` reaches him too.
@@ -88,7 +97,7 @@ He's made from your build block for block. Every block wears its real texture, a
 - Settings: `maxHollowbells` is now called `maxInWorld` (your number is kept). A settings file that can't be read is kept as it is and never written over until it reads cleanly.
 - Tooltips on the book, the Stinger and his crown. The hunting egg has orange spots, the guardian egg green ones.
 - **Fixed: `/giants kill` and `/hollowbell kill` left an invisible Hollowbell behind** with no health, still there, with bits of him hanging in the air. Now they really kill every one of him: in the world, out of it, or in land nobody has loaded. His death also always finishes now, even if everybody walks away while he's dying.
-- **`/giants paint hollowbell [radius] [full|biome]`** (cheats on, also `/hollowbell paint`): the land round you becomes the Bell Hollows. `full` (the default) shapes and dresses the land like his ground and sets the biome; `biome` only sets the biome. The radius is 16 to 512 blocks (64 if you leave it out). It paints over everything in the circle, villages and builds too; only bedrock, water and blocks holding things (like chests) stay. **It can't be undone**, so save a copy of your world first.
+- **`/giants paint hollowbell [radius] [full|biome] [depth]`** (cheats on, also `/hollowbell paint`): the land round you becomes the Bell Hollows. `full` (the default) shapes and dresses the land like his ground and sets the biome; `biome` only sets the biome. The radius is 16 to 512 blocks (64 if you leave it out). The depth (after `full`) is how many blocks down from the top his ground goes, 5 if you leave it out, 1 to 64; caves under it stay open. It paints over everything in the circle, villages and builds too; only bedrock, water and blocks holding things (like chests) stay. **It can't be undone**, so save a copy of your world first.
 
 ## What was new in 1.5.0
 
@@ -218,7 +227,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.9.2.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.9.3.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
@@ -497,7 +506,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 | `/giants remove` | removes them all, no loot |
 | `/giants goto <x> <z>` | sends every one of them there, wherever they are |
 | `/giants tp <boss>` | takes you to that boss |
-| `/giants paint <boss> [radius] [full/biome]` | turns the land round you into that boss's ground. Can't be undone. |
+| `/giants paint <boss> [radius] [full/biome] [depth]` | turns the land round you into that boss's ground. depth is how many blocks down from the top his ground goes, 5 if you leave it out, 1 to 64. Can't be undone. |
 | `/giants config [setting] [value]` | looks at or changes a setting in every boss that has it. On its own it lists each boss's settings. |
 
 ## Settings
