@@ -156,10 +156,26 @@ public final class GiantsCommand {
         return one(c, "tp", c.getSource().getPlayerOrException().getUUID().toString());
     }
 
-    /** /giants paint <name> [radius] [full|biome]: turns the land round you into that giant's ground (asks only its own mod) */
-    private static int paint(CommandContext<CommandSourceStack> c, int radius, String mode) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        return one(c, "paint", radius + " " + mode + " " + c.getSource().getPlayerOrException().getUUID());
+    /** how deep /giants paint lays a giant's ground when no depth is given, and the most and least it takes */
+    public static final int PAINT_DEPTH = 5, PAINT_DEPTH_MIN = 1, PAINT_DEPTH_MAX = 64;
+
+    /**
+     * /giants paint <name> [radius] [full|biome] [depth]: turns the land round you into that giant's ground (asks
+     * only its own mod). The arg is "radius mode playerUUID depth=N": the depth goes last, as "depth=N", so a
+     * giant's older mod (which reads only the first three words, or takes any bare number for the radius) still
+     * paints, at its own old depth.
+     */
+    private static int paint(CommandContext<CommandSourceStack> c, int radius, String mode, int depth) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        return one(c, "paint", radius + " " + mode + " " + c.getSource().getPlayerOrException().getUUID() + " depth=" + depth);
     }
+
+    /** the depth a paint command was given */
+    private static int depth(CommandContext<CommandSourceStack> c) {
+        return IntegerArgumentType.getInteger(c, "depth");
+    }
+
+    /** the depths offered when typing one */
+    private static final String[] PAINT_DEPTHS = {"1", "3", "5", "8", "10", "16", "32", "64"};
 
     /** one action, asked of just the named giant's mod */
     private static int one(CommandContext<CommandSourceStack> c, String action, String arg) {
@@ -286,11 +302,14 @@ public final class GiantsCommand {
             .then(Commands.literal("paint").requires(s -> s.hasPermission(2))
                 .then(Commands.argument("which", StringArgumentType.word())
                     .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
-                    .executes(c -> paint(c, 64, "full"))
+                    .executes(c -> paint(c, 64, "full", PAINT_DEPTH))
                     .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512))
-                        .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full"))
-                        .then(Commands.literal("full").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full")))
-                        .then(Commands.literal("biome").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "biome"))))))
+                        .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full", PAINT_DEPTH))
+                        .then(Commands.literal("full").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full", PAINT_DEPTH))
+                            .then(Commands.argument("depth", IntegerArgumentType.integer(PAINT_DEPTH_MIN, PAINT_DEPTH_MAX))
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(PAINT_DEPTHS, b))
+                                .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full", depth(c)))))
+                        .then(Commands.literal("biome").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "biome", PAINT_DEPTH))))))
             .then(Commands.literal("tp").requires(s -> s.hasPermission(2))
                 .then(Commands.argument("which", StringArgumentType.word())
                     .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))

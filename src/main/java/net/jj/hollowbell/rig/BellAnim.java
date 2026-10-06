@@ -285,7 +285,7 @@ public final class BellAnim {
                 }
                 float lim = ch.arm ? (i == 1 ? 1.45f : 0.6f + 0.35f * hk) : (i == 1 ? 0.75f : 0.45f + 0.35f * hk);
                 float bl = (float) Math.sqrt(bx * bx + by * by + bz * bz);
-                if (bl > 1e-4f && !Boolean.getBoolean("x.nolim") && !(i == 1 && Boolean.getBoolean("x.noroot")) && !(i > 1 && Boolean.getBoolean("x.nojoint"))) {
+                if (bl > 1e-4f) {
                     bx /= bl; by /= bl; bz /= bl;
                     float ux = dx / d, uy = dy / d, uz = dz / d;
                     float cos = Mth.clamp(ux * bx + uy * by + uz * bz, -1f, 1f);
@@ -295,14 +295,14 @@ public final class BellAnim {
                         float sx = ux - cos * bx, sy = uy - cos * by, sz = uz - cos * bz;
                         float sl = (float) Math.sqrt(sx * sx + sy * sy + sz * sz);
                         if (sl < 1e-4f) { sx = -bz; sy = 0f; sz = bx; sl = Math.max(1e-4f, (float) Math.sqrt(sx * sx + sz * sz)); }
-                        // (eased back a part of the way each tick: snapped straight to the limit, a strand was
-                        // yanked along whole when his bell came down hard)
-                        float to = ang - (ang - lim) * Float.parseFloat(System.getProperty("x.k", "0.35"));
+                        // (eased back a quarter of the way each tick, a little at a time: snapped straight to the
+                        // limit, a strand was yanked along whole when his bell came down hard)
+                        float to = ang - (ang - lim) * 0.25f;
                         float cl = Mth.cos(to), sn = Mth.sin(to);
                         dx = bx * cl + sx / sl * sn; dy = by * cl + sy / sl * sn; dz = bz * cl + sz / sl * sn;
                         // and never more than a little way in a tick
                         float ox = (dx - ux) * want, oy = (dy - uy) * want, oz = (dz - uz) * want;
-                        float ol = (float) Math.sqrt(ox * ox + oy * oy + oz * oz), cap = Float.parseFloat(System.getProperty("x.cap", "2"));
+                        float ol = (float) Math.sqrt(ox * ox + oy * oy + oz * oz), cap = 0.3f;
                         if (ol > cap) { float f = cap / ol; dx = ux + (dx - ux) * f; dy = uy + (dy - uy) * f; dz = uz + (dz - uz) * f; }
                         d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
                     }
@@ -557,7 +557,7 @@ public final class BellAnim {
         // laid out round him when the bell comes down: swung out from the root and curving on out, flat along the
         // ground (the ground takes the rest). Before 1.9.3 they buckled in a zig zag, folding right back on themselves
         if (st.fold > 0f) {
-            float z = sg == 0 ? Float.parseFloat(System.getProperty("x.f0","0.75")) : sg <= 2 ? Float.parseFloat(System.getProperty("x.f1","0.35")) : 0f;
+            float z = sg == 0 ? 0.75f : sg <= 2 ? 0.35f : 0f;
             local.premul(swing(qTmp, ox, oz, z * st.fold));
         }
         // the sweep: everything swung one way
