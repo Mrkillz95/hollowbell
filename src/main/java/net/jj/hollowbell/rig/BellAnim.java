@@ -175,7 +175,7 @@ public final class BellAnim {
     private final Matrix4f mBody = new Matrix4f(), mAnchor = new Matrix4f(), mInv = new Matrix4f();
     private final Quaternionf qRot = new Quaternionf(), qBody = new Quaternionf(), qLocal = new Quaternionf(), qTmp = new Quaternionf();
     private final Vector3f tv = new Vector3f(), tv2 = new Vector3f();
-    private final float[] velScratch = new float[3 * 64];
+    private final float[] velScratch = new float[3 * 64], oldScratch = new float[3 * 64];
 
     private void chains(In in, boolean first) {
         BellState st = now;
@@ -206,12 +206,20 @@ public final class BellAnim {
             boolean scripted = scripted(ch, st);
             held[c] += ((scripted ? 1f : 0f) - held[c]) * (scripted ? 0.3f : 0.06f);
             float ease = scripted ? (ch.arm ? 0.55f : 0.35f) : 0.07f + 0.05f * (1f - held[c]);
+            // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs. Each
+            // piece eases from the way it pointed a tick ago (before 1.9.3 this took the joint above's new place, so
+            // when what it hangs from moved fast, an arm's end swinging round, every piece grew longer and longer),
+            // and keeps the length asked for
+            float[] old = oldScratch;
+            System.arraycopy(tg, 0, old, 0, raw.length);
             tg[0] = raw[0]; tg[1] = raw[1]; tg[2] = raw[2];
-            for (int i = 3; i < raw.length; i++) {
-                // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs
-                int j = i - 3;
-                float relRaw = raw[i] - raw[j], relNow = tg[i] - tg[j];
-                tg[i] = tg[j] + relNow + (relRaw - relNow) * ease;
+            for (int i = 3; i < raw.length; i += 3) {
+                float rx = raw[i] - raw[i - 3], ry = raw[i + 1] - raw[i - 2], rz = raw[i + 2] - raw[i - 1];
+                float nx = old[i] - old[i - 3], ny = old[i + 1] - old[i - 2], nz = old[i + 2] - old[i - 1];
+                float ex = nx + (rx - nx) * ease, ey = ny + (ry - ny) * ease, ez = nz + (rz - nz) * ease;
+                float rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz), el = (float) Math.sqrt(ex * ex + ey * ey + ez * ez);
+                if (el > 1e-4f) { float f = rl / el; ex *= f; ey *= f; ez *= f; } else { ex = rx; ey = ry; ez = rz; }
+                tg[i] = tg[i - 3] + ex; tg[i + 1] = tg[i - 2] + ey; tg[i + 2] = tg[i - 1] + ez;
             }
             // the ground under this one, looked at now and then (and kept level with the world as he rises and sinks)
             if ((tick + c) % 4 == 0) groundAt[c] = in.ground.at(p[3 * m], p[3 * m + 2]);
