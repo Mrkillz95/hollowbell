@@ -50,6 +50,34 @@ public final class BellPlan {
     public static final int MAX_DOWN = 8, MAX_UP = 14;
     /** per column: at most this many ground layers and this many blocks above the ground */
     public static final int MAXL = 24, MAXA = 72;
+    /** how deep the world lays his ground (the top and three under it); /giants paint may ask for more */
+    public static final int MADE_DEPTH = 4;
+    /** the most layers a column can be given: a painted depth of 64 under land raised up to 14 or so, and room over */
+    public static final int LAYERS = 104;
+
+    /**
+     * How deep /giants paint lays his ground, counting the new top block as the first (0: as the world lays it,
+     * MADE_DEPTH deep, and two blocks of bed under water). Only a painter's own plan sets it: the plans the world's
+     * generation uses are shared and keep 0.
+     */
+    public int paintDepth = 0;
+
+    public int depth() { return paintDepth > 0 ? paintDepth : MADE_DEPTH; }
+
+    /**
+     * The block k down from a column's top (k = 0 the top, at y), with topMat its top block and y0 the old ground:
+     * the first MADE_DEPTH exactly what the world lays (lime glass has froglight under it, grass keeps the land's own
+     * block under it, the fringe keeps what it had), and deeper (only a painting goes deeper) his own rock.
+     */
+    public Mat layer(int x, int y, int z, int k, Mat topMat, int y0) {
+        if (k == 0) return topMat;
+        Mat m = strata(x, y, z);
+        if (k >= MADE_DEPTH && paintDepth > 0) return m;
+        if (k == 1 && topMat == Mat.LIME_GLASS) m = Mat.VERDANT;
+        if (topMat == Mat.KEEP && y <= y0) m = Mat.KEEP;
+        if (k == 1 && topMat == Mat.GRASS && y <= y0) m = Mat.KEEP;
+        return m;
+    }
 
     public final long seed;
     public final int cx, cz, radius, sea, minY, maxY;
@@ -588,8 +616,12 @@ public final class BellPlan {
         /** the new height of the ground */
         public final int[] top = new int[256];
         /** the ground's blocks from the top down: layer[i][k] is at y = top - k */
-        public final Mat[][] layer = new Mat[256][MAXL];
+        public final Mat[][] layer = new Mat[256][LAYERS];
         public final int[] layers = new int[256];
+        /** how many of the layers are his ground as laid (any more are a cut filled in under it) */
+        public final int[] laid = new int[256];
+        /** each column's top block as planned (before a raised fringe is given grass) */
+        public Mat topMat(int i) { return topMat[i]; }
         /** blocks set above the ground, bottom to top is not promised */
         public final int[][] ay = new int[256][MAXA];
         public final Mat[][] am = new Mat[256][MAXA];
@@ -685,20 +717,16 @@ public final class BellPlan {
             int x = x0 + (i & 15), z = z0 + (i >> 4);
             if (wet[i]) {                        // under water: only the bed is turned, the water stays
                 o.layers[i] = 0;
+                o.laid[i] = 0;
                 continue;
             }
             int top = o.top[i];
-            int bottom = Math.min(y0[i], top) - 3;
-            int n = Math.min(MAXL, top - bottom + 1);
+            // the top and depth-1 under it (raised land is filled right through), never down into the world's floor
+            int bottom = Math.max(Math.min(y0[i], top) - (depth() - 1), minY + 1);
+            int n = Math.max(0, Math.min(paintDepth > 0 ? LAYERS : MAXL, top - bottom + 1));
             o.layers[i] = n;
-            for (int k = 0; k < n; k++) {
-                int y = top - k;
-                Mat m = k == 0 ? o.topMat[i] : strata(x, y, z);
-                if (k == 1 && o.topMat[i] == Mat.LIME_GLASS) m = Mat.VERDANT;
-                if (k >= 1 && o.topMat[i] == Mat.KEEP && y <= y0[i]) m = Mat.KEEP;   // the fringe keeps what it had
-                if (k == 1 && o.topMat[i] == Mat.GRASS && y <= y0[i]) m = Mat.KEEP;
-                o.layer[i][k] = m;
-            }
+            o.laid[i] = n;
+            for (int k = 0; k < n; k++) o.layer[i][k] = layer(x, top - k, z, k, o.topMat[i], y0[i]);
             if (o.topMat[i] == Mat.KEEP && top > y0[i]) o.layer[i][0] = Mat.GRASS;  // raised fringe: grass on top, as it was
         }
     }

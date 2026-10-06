@@ -160,21 +160,24 @@ public final class GiantsBridge {
                 out.add(WHO + kv[0] + (bad != null ? " can't be set to " + kv[1] + "." : " = " + net.jj.hollowbell.command.Settings.get(kv[0])));
             }
             case "paint" -> {
-                // "radius mode playerUUID"
+                // "radius mode playerUUID depth=N" (an older /giants sends no depth: 5 then; a bare number after the
+                // player is taken as the depth too)
                 String[] w = arg == null ? new String[0] : arg.trim().split("\\s+");
                 net.minecraft.server.level.ServerPlayer p = null;
-                int radius = 64;
-                boolean full = true;
+                int radius = 64, depth = net.jj.hollowbell.world.Painter.DEPTH;
+                boolean full = true, sawPlayer = false;
                 for (String x : w) {
                     if (x.equalsIgnoreCase("biome")) full = false;
                     else if (x.equalsIgnoreCase("full")) full = true;
-                    else if (x.matches("\\d+")) radius = Integer.parseInt(x);
-                    else try { p = server.getPlayerList().getPlayer(java.util.UUID.fromString(x)); } catch (Exception ignored) {}
+                    else if (x.startsWith("depth=")) { try { depth = Integer.parseInt(x.substring(6)); } catch (NumberFormatException ignored) {} }
+                    else if (x.matches("\\d+")) { if (sawPlayer) depth = Integer.parseInt(x); else radius = Integer.parseInt(x); }
+                    else try { p = server.getPlayerList().getPlayer(java.util.UUID.fromString(x)); sawPlayer = true; } catch (Exception ignored) {}
                 }
                 if (p == null) { out.add(WHO + "nobody to paint round."); return out; }
-                int n = net.jj.hollowbell.world.Painter.start(p, radius, full);
+                depth = Mth.clamp(depth, net.jj.hollowbell.world.Painter.MIN_DEPTH, net.jj.hollowbell.world.Painter.MAX_DEPTH);
+                int n = net.jj.hollowbell.world.Painter.start(p, radius, full, depth);
                 out.add(WHO + "painting the Bell Hollows " + Mth.clamp(radius, 16, 512) + " blocks round " + p.getGameProfile().getName()
-                        + (full ? " (land and biome)" : " (biome only)") + ", " + n + " chunks. It can't be undone.");
+                        + (full ? " (land and biome, " + depth + " blocks deep)" : " (biome only)") + ", " + n + " chunks. It can't be undone.");
             }
             case "tp" -> {
                 net.minecraft.server.level.ServerPlayer p = null;
