@@ -189,6 +189,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         Vector3f l0 = new Vector3f(), l1 = new Vector3f();
         for (int pass = 0; pass < 2; pass++) {
             int kind = pass == 0 ? BellMeshes.SOLID : BellMeshes.GLOW;
+            int lastBone = -1;
             for (int u = 0; u < unitCount; u++) {
                 int b = sliced ? pieces.bone[u] : u;
                 if (!shown[b]) continue;
@@ -197,13 +198,17 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 boneWorld.set(entity).mul(units[u]);
                 mv.set(view).mul(boneWorld);
                 upload(shader.MODEL_VIEW_MATRIX, mv);
-                boneWorld.get3x3(rot).normal().transpose();
-                rot.transform(l0.set(l0w)).normalize();
-                rot.transform(l1.set(l1w)).normalize();
-                if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
-                if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
-                float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying);
-                if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f); shader.COLOR_MODULATOR.upload(); }
+                // the light and the colour once a bone: its slices lie close enough to the same way
+                if (b != lastBone) {
+                    lastBone = b;
+                    boneWorld.get3x3(rot).normal().transpose();
+                    rot.transform(l0.set(l0w)).normalize();
+                    rot.transform(l1.set(l1w)).normalize();
+                    if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
+                    if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
+                    float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying);
+                    if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f); shader.COLOR_MODULATOR.upload(); }
+                }
                 m.vb.bind();
                 m.vb.draw();
             }
