@@ -7,6 +7,8 @@ base { archivesName = project.archives_base_name }
 repositories {
     maven { name = 'CentralMirror'; url = 'https://maven-central.storage-download.googleapis.com/maven2/' }
 }
+// the autotest script: -Pscript=tools/<script>.txt (read out here: inside the run's settings it always came out empty)
+def autotestScript = findProperty("script") ?: "tools/autotest.txt"
 loom {
     splitEnvironmentSourceSets()
     mods {
@@ -28,8 +30,7 @@ loom {
         autotest {
             client()
             name "Auto Test"
-            // (in brackets: without them the script given was dropped and the default one always ran)
-            vmArg("-Dhollowbell.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "tools/autotest.txt"))
+            vmArg "-Dhollowbell.autotest=${project.projectDir}/${autotestScript}"
             vmArg "-Xmx6G"
             programArgs "--width", "1280", "--height", "720"
             runDir "build/autotest"
