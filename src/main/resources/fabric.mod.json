@@ -18,7 +18,8 @@
     ],
     "fabric-gametest": [
       "net.jj.hollowbell.test.HollowbellGameTests",
-      "net.jj.hollowbell.test.MoreGameTests"
+      "net.jj.hollowbell.test.MoreGameTests",
+      "net.jj.hollowbell.test.PaintDepthTests"
     ]
   },
   "depends": {
