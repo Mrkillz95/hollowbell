@@ -334,8 +334,8 @@ public final class BellAnim {
                     // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under with him)
                     float floor = gy + (ch.arm ? 1.2f : 0.5f) - sinkingIn * (rig.crownY + 30f);
                     if (p[o + 1] < floor) {
-                        // it lies on the ground and slides out along it, keeping its length (pushed straight up, a
-                        // piece pointing down would be squashed to nothing, a short stub or a ball at its end)
+                        // a strand lies on the ground and slides out along it, keeping its length (pushed straight up,
+                        // a piece pointing down would be squashed to nothing, a short stub or a ball at its end)
                         float above = Math.max(0f, p[o - 2] - floor);
                         float seg = Math.max(want, 1e-3f);
                         float flat = above < seg ? (float) Math.sqrt(seg * seg - above * above) : 0f;
@@ -352,8 +352,9 @@ public final class BellAnim {
                         float sx = p[o - 3] + hx / hl * flat - p[o], sz = p[o - 1] + hz / hl * flat - p[o + 2];
                         float sl = (float) Math.sqrt(sx * sx + sz * sz);
                         if (sl > SLIDE) { sx *= SLIDE / sl; sz *= SLIDE / sl; }
-                        // (an arm a move swings down, a slam, lands where it comes down and stays there)
-                        if (ch.arm && hk > 0.5f) { sx = 0f; sz = 0f; }
+                        // (an arm only stops where it comes down: one a move swings down, a slam, lands where it's
+                        // aimed, and one laid down when he sinks is laid out straight already)
+                        if (ch.arm) { sx = 0f; sz = 0f; }
                         p[o] += sx;
                         p[o + 2] += sz;
                         p[o + 1] = floor;

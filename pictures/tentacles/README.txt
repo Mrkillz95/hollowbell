@@ -9,15 +9,15 @@ What the pose lab counted, over 344 poses (idle, drifting, turning, climbing, si
 about ten moments, carrying someone up, asleep, lost his lift, dying):
 
                                          1.9.2    1.9.3
-  blocks cut off, average per pose        1828      617
-  pairs come apart by more than 1 block  11641     4377
-  pairs come apart by more than 2 blocks  6627     1636
+  blocks cut off, average per pose        1828      618
+  pairs come apart by more than 1 block  11641     4588
+  pairs come apart by more than 2 blocks  6627     1816
   sharpest bend lying down (degrees)       179       90
   standing still as built: cut off         1468       38
 
 Without the poses where he lies on the ground (drop, lost lift, asleep, dying, sky dive):
-  blocks cut off, average per pose        1794      375
-  pairs come apart by more than 2 blocks  2806      716
+  blocks cut off, average per pose        1794      367
+  pairs come apart by more than 2 blocks  2806      836
 
 What was wrong:
 - Bits of strands, pods and egg clumps only joined to their own part through another part, so they
