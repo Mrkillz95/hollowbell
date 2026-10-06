@@ -44,11 +44,11 @@ public final class BellRig {
     /** which band / sector / arm / strand / pod / egg / spot the bone belongs to, and which segment of it */
     public final int[] part, seg;
     /**
-     * Pods and egg clumps that lie on two pieces of the same strand or arm go along with both: the other piece, and
-     * how much of it (0-1). -1 for the rest.
+     * Where along the piece of strand or arm it hangs from (0 its top joint, 1 its bottom) each pod and egg clump
+     * hangs, and each chain that grows from a strand or an arm; NaN for the rest.
      */
-    public final int[] blendBone;
-    public final float[] blendW;
+    public final float[] blobU;
+    public final float[] hangU;
     public final Map<String, Integer> index = new HashMap<>();
 
     public final int crownY, rimY;
@@ -102,8 +102,8 @@ public final class BellRig {
         int nb = bs.size();
         boneNames = new String[nb]; parent = new int[nb]; pivot = new Vector3f[nb]; kind = new Kind[nb];
         part = new int[nb]; seg = new int[nb];
-        blendBone = new int[nb]; blendW = new float[nb];
-        java.util.Arrays.fill(blendBone, -1);
+        blobU = new float[nb];
+        java.util.Arrays.fill(blobU, Float.NaN);
         for (int i = 0; i < nb; i++) {
             JsonObject b = bs.get(i).getAsJsonObject();
             boneNames[i] = b.get("name").getAsString();
@@ -150,15 +150,6 @@ public final class BellRig {
         }
         pods = blobs(j.getAsJsonArray("pods"));
         eggs = blobs(j.getAsJsonArray("eggs"));
-        for (String list : new String[]{"pods", "eggs"}) for (JsonElement e : j.getAsJsonArray(list)) {
-            JsonObject o = e.getAsJsonObject();
-            if (!o.has("blend")) continue;
-            JsonObject bl = o.getAsJsonObject("blend");
-            int b = o.get("bone").getAsInt(), other = bl.get("bone").getAsInt();
-            if (other >= b) throw new IllegalStateException("bone " + boneNames[b] + " goes along with a later one");
-            blendBone[b] = other;
-            blendW[b] = bl.get("w").getAsFloat();
-        }
         spots = blobs(j.getAsJsonArray("spots"));
         JsonObject c = j.getAsJsonObject("crown");
         crown = new BlobDef(0, c.get("bone").getAsInt(), vec(c.getAsJsonArray("centre")), c.get("radius").getAsFloat());
@@ -219,10 +210,47 @@ public final class BellRig {
                 if (ch.parentChain >= ch.id) throw new IllegalStateException("chain " + ch.id + " hangs from a later one");
             }
         }
+        hangU = new float[chains.length];
+        java.util.Arrays.fill(hangU, Float.NaN);
+        for (Chain ch : chains) if (ch.parentBone >= 0 && chainOf[ch.parentBone] >= 0) hangU[ch.id] = along(ch.parentBone, ch.joints[0]);
+        for (int b = 0; b < nb; b++) if ((kind[b] == Kind.POD || kind[b] == Kind.EGG) && parent[b] >= 0 && chainOf[parent[b]] >= 0) blobU[b] = along(parent[b], pivot[b]);
         armChain = new int[arms.length];
         strandChain = new int[strands.length];
         for (Chain ch : chains) { if (ch.arm) armChain[ch.index] = ch.id; else strandChain[ch.index] = ch.id; }
     }
+
+    /** how far along chain bone b (0 its top joint, 1 its bottom one) a rest point lies, kept within it */
+    public float along(int b, Vector3f p) {
+        Chain ch = chains[chainOf[b]];
+        Vector3f a = ch.joints[seg[b]], c = ch.joints[seg[b] + 1];
+        float dx = c.x - a.x, dy = c.y - a.y, dz = c.z - a.z;
+        float l2 = dx * dx + dy * dy + dz * dz;
+        if (l2 < 1e-6f) return 0.5f;
+        return Mth.clamp(((p.x - a.x) * dx + (p.y - a.y) * dy + (p.z - a.z) * dz) / l2, 0f, 1f);
+    }
+
+    /**
+     * How a point at u along a piece of an arm or strand is drawn: mostly with its own piece, leaning toward the piece
+     * across the nearer joint (half and half right at it). The first piece leans toward what the chain hangs from all
+     * the way down (wholly at the root), so the root bends smoothly out of the rim, the vase, a pod or a strand.
+     */
+    public static float wPrev(float u, boolean root) { return root ? Mth.clamp(1f - u, 0f, 1f) : Math.max(0f, 0.5f - u); }
+    public static float wNext(float u) { return Math.max(0f, u - 0.5f); }
+
+    /** out = self, leaning toward prev by wp and next by wn (any of them may be the same matrix as out) */
+    public static Matrix4f mix(Matrix4f self, @Nullable Matrix4f prev, float wp, @Nullable Matrix4f next, float wn, Matrix4f out) {
+        if (prev == null) wp = 0f;
+        if (next == null) wn = 0f;
+        if (wp <= 0f && wn <= 0f) return out == self ? out : out.set(self);
+        float ws = 1f - wp - wn;
+        float[] a = MIX_A.get(), b = MIX_B.get();
+        self.get(a);
+        for (int i = 0; i < 16; i++) a[i] *= ws;
+        if (wp > 0f) { prev.get(b); for (int i = 0; i < 16; i++) a[i] += b[i] * wp; }
+        if (wn > 0f) { next.get(b); for (int i = 0; i < 16; i++) a[i] += b[i] * wn; }
+        return out.set(a);
+    }
+    private static final ThreadLocal<float[]> MIX_A = ThreadLocal.withInitial(() -> new float[16]), MIX_B = ThreadLocal.withInitial(() -> new float[16]);
 
     /** which chain is arm a / strand s */
     public final int[] armChain, strandChain;
@@ -324,28 +352,87 @@ public final class BellRig {
      * Fills pose[b] with each bone's transform from its rest position to where it is now, in model space.
      * The arms and strands are laid along the chain points in st.chain.
      */
-    public void computePose(BellState st, Matrix4f[] pose) {
-        Scratch s = scratch.get();
-        Matrix4f body = body(st, s.body);
-        Quaternionf brot = bodyRotation(st, s.brot);
+    public void computePose(BellState st, Matrix4f[] pose) { computePose(st, pose, null); }
+
+    /**
+     * The same, and (if hang is not null) for each chain the matrix of what it hangs from, as drawn: what the first
+     * piece of each arm and strand leans toward (see {@link BellPieces}).
+     */
+    public void computePose(BellState st, Matrix4f[] pose, @Nullable Matrix4f[] hang) {
+        Poser p = posers.get();
+        p.start(st, pose);
         int nb = boneCount();
-        for (int b = 0; b < nb; b++) {
+        for (int b = 0; b < nb; b++) p.bone(b);
+        if (hang != null) for (int c = 0; c < chains.length; c++) hang[c].set(p.hang(c));
+    }
+
+    private final ThreadLocal<Poser> posers = ThreadLocal.withInitial(Poser::new), anchorPosers = ThreadLocal.withInitial(Poser::new);
+
+    /**
+     * Works out bones' transforms as they are asked for, each from what it needs (a pod from the strand it hangs on,
+     * a strand from what it hangs from...), each once.
+     */
+    private final class Poser {
+        BellState st;
+        final Matrix4f body = new Matrix4f();
+        final Quaternionf brot = new Quaternionf();
+        final Matrix4f[] own = newPose();
+        Matrix4f[] m;
+        final boolean[] has = new boolean[boneCount()];
+        final Matrix4f[] hang = new Matrix4f[chains.length];
+        final boolean[] hasHang = new boolean[chains.length];
+
+        Poser() { for (int i = 0; i < hang.length; i++) hang[i] = new Matrix4f(); }
+
+        void start(BellState st, @Nullable Matrix4f[] into) {
+            this.st = st;
+            m = into != null ? into : own;
+            java.util.Arrays.fill(has, false);
+            java.util.Arrays.fill(hasHang, false);
+            BellRig.this.body(st, body);
+            bodyRotation(st, brot);
+        }
+
+        Matrix4f bone(int b) {
+            if (has[b]) return m[b];
+            Matrix4f out = m[b];
+            Scratch s = scratch.get();
             switch (kind[b]) {
-                case BELL -> band(st, bands[part[b]].mid(), body, pose[b]);
-                case RIM -> sector(st, part[b], body, pose[b]);
-                case CROWN -> band(st, crownY - 3, body, pose[b]);
-                case SPOT -> spot(st, part[b], body, pose[b]);
-                case ARM, STRAND -> {
-                    int c = chainOf[b];
-                    segmentPose(chains[c], seg[b], st.chain[c], brot, pose[b], s);
-                }
+                case BELL -> band(st, bands[part[b]].mid(), body, out);
+                case RIM -> sector(st, part[b], body, out);
+                case CROWN -> band(st, crownY - 3, body, out);
+                case SPOT -> spot(st, part[b], body, out);
+                case ARM, STRAND -> segmentPose(chains[chainOf[b]], seg[b], st.chain[chainOf[b]], brot, out, s);
                 case POD, EGG -> {
-                    // hung where it touches its strand or arm (between two pieces of it, if it lies on both)
-                    s.m2.set(pose[parent[b]]);
-                    if (blendBone[b] >= 0) s.m2.lerp(pose[blendBone[b]], blendW[b]);
-                    blob(st, b, s.m2, pose[b], s);
+                    // hung where it touches its strand or arm, just as that is drawn there
+                    Matrix4f base = Float.isNaN(blobU[b]) ? new Matrix4f(bone(parent[b])) : smooth(parent[b], blobU[b], new Matrix4f());
+                    blob(st, b, base, out, scratch.get());
                 }
             }
+            has[b] = true;
+            return out;
+        }
+
+        /** what chain c hangs from, as drawn where it hangs */
+        Matrix4f hang(int c) {
+            if (hasHang[c]) return hang[c];
+            Chain ch = chains[c];
+            int pb = ch.parentBone;
+            if (pb < 0) hang[c].set(body);
+            else if (!Float.isNaN(hangU[c])) smooth(pb, hangU[c], hang[c]);
+            else hang[c].set(bone(pb));
+            hasHang[c] = true;
+            return hang[c];
+        }
+
+        /** a point u along chain bone b, as drawn */
+        Matrix4f smooth(int b, float u, Matrix4f out) {
+            Chain ch = chains[chainOf[b]];
+            int i = seg[b];
+            boolean root = i == 0;
+            Matrix4f prev = root ? (ch.parentBone >= 0 ? hang(ch.id) : null) : bone(ch.bones[i - 1]);
+            Matrix4f next = i + 1 < ch.bones.length ? bone(ch.bones[i + 1]) : null;
+            return mix(bone(b), prev, wPrev(u, root), next, wNext(u), out);
         }
     }
 
@@ -371,24 +458,6 @@ public final class BellRig {
         out.set(base).translate(pv).rotate(local);
         if (grow != 1f) out.scale(grow);
         out.translate(-pv.x, -pv.y, -pv.z);
-    }
-
-    /** where one bone is now, worked out on its own (for what a chain hangs from) */
-    private Matrix4f bonePose(BellState st, int b, Matrix4f body, Matrix4f out) {
-        Scratch s = scratch.get();
-        switch (kind[b]) {
-            case BELL -> band(st, bands[part[b]].mid(), body, out);
-            case RIM -> sector(st, part[b], body, out);
-            case CROWN -> band(st, crownY - 3, body, out);
-            case SPOT -> spot(st, part[b], body, out);
-            case ARM, STRAND -> segmentPose(chains[chainOf[b]], seg[b], st.chain[chainOf[b]], bodyRotation(st, s.brot2), out, s);
-            case POD, EGG -> {
-                Matrix4f base = bonePose(st, parent[b], body, new Matrix4f());
-                if (blendBone[b] >= 0) base.lerp(bonePose(st, blendBone[b], body, new Matrix4f()), blendW[b]);
-                blob(st, b, base, out, s);
-            }
-        }
-        return out;
     }
 
     /** a glowing spot: the four balls go with the dome; the vase hangs from the crown and throbs a little on its own */
@@ -436,11 +505,12 @@ public final class BellRig {
 
     /** the matrix a chain hangs from right now: its rim sector, the vase, the dome, or the strand it grows from */
     public Matrix4f anchor(BellState st, Chain c, Matrix4f body, Matrix4f out) {
-        int pb = c.parentBone;
-        if (pb < 0) return out.set(body);
-        // just as what it hangs from is drawn (a rim sector, the vase, a pod, the piece of a strand or arm it grows
-        // from), so its root stays on it however that swings, swells or throbs
-        return bonePose(st, pb, body, out);
+        if (c.parentBone < 0) return out.set(body);
+        // just as what it hangs from is drawn (a rim sector, the vase, a pod, the arm or strand it grows from), so its
+        // root stays on it however that swings, swells or throbs
+        Poser p = anchorPosers.get();
+        p.start(st, null);
+        return out.set(p.hang(c.id));
     }
 
     private final ThreadLocal<Scratch> scratch = ThreadLocal.withInitial(Scratch::new);

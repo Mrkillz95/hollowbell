@@ -281,6 +281,22 @@ public final class BellAnim {
                     // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under with him)
                     float floor = gy + (ch.arm ? 1.2f : 0.5f) - sinkingIn * (rig.crownY + 30f);
                     if (p[o + 1] < floor) {
+                        // it lies on the ground and slides out along it, keeping its length (pushed straight up, a
+                        // piece pointing down would be squashed to nothing, a short stub or a ball at its end)
+                        float above = Math.max(0f, p[o - 2] - floor);
+                        float seg = Math.max(want, 1e-3f);
+                        float flat = above < seg ? (float) Math.sqrt(seg * seg - above * above) : 0f;
+                        float hx = p[o] - p[o - 3], hz = p[o + 2] - p[o - 1];
+                        float hl = (float) Math.sqrt(hx * hx + hz * hz);
+                        if (hl < 0.05f) {
+                            // straight down: out away from where it hangs from (or from his middle)
+                            hx = p[o - 3] - p[0]; hz = p[o - 1] - p[2];
+                            hl = (float) Math.sqrt(hx * hx + hz * hz);
+                            if (hl < 0.05f) { hx = p[o - 3]; hz = p[o - 1]; hl = (float) Math.sqrt(hx * hx + hz * hz); }
+                            if (hl < 0.05f) { hx = (float) Math.cos(c); hz = (float) Math.sin(c); hl = 1f; }
+                        }
+                        p[o] = p[o - 3] + hx / hl * flat;
+                        p[o + 2] = p[o - 1] + hz / hl * flat;
                         p[o + 1] = floor;
                         knockedAt[c] = steps;
                         if (q[o + 1] < floor) q[o + 1] = floor;
@@ -487,11 +503,11 @@ public final class BellAnim {
         if (sg == 0 && st.climb > 0f) local.premul(swing(qTmp, -ox, -oz, free * 0.1f * st.climb * Math.min(1f, r / 50f)));
         float open = free * Math.max(st.sink, st.spread);
         if (open > 0f) local.premul(swing(qTmp, ox, oz, open * (sg == 0 ? 0.3f : 0.12f)));
-        // buckling under him when the bell comes down: zig zag, out
+        // laid out round him when the bell comes down: swung out from the root and curving on out, flat along the
+        // ground (the ground takes the rest). Before 1.9.3 they buckled in a zig zag, folding right back on themselves
         if (st.fold > 0f) {
-            float z = (sg % 2 == 0 ? 1f : -1.6f) * st.fold * 1.05f * 4f / (m + 1);
-            if (sg == 0) z = st.fold * 0.7f;
-            local.premul(swing(qTmp, ox, oz, z));
+            float z = sg == 0 ? 0.75f : sg <= 2 ? 0.35f : 0f;
+            local.premul(swing(qTmp, ox, oz, z * st.fold));
         }
         // the sweep: everything swung one way
         if (st.sweep != 0f) {
