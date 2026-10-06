@@ -10,13 +10,13 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.3.1 |
-| Pitchgut | 1.32.3 |
-| Furrowmaw | 1.14.3 |
-| Fire & Ice Cerberus | 2.14.3 |
-| Hollowbell | 1.9.3 |
-| Lantern Willow | 1.7.4 |
-| Wreckback | 1.0.0 |
+| Giants Guide | 1.3.2 |
+| Pitchgut | 1.32.4 |
+| Furrowmaw | 1.14.4 |
+| Fire & Ice Cerberus | 2.14.4 |
+| Hollowbell | 1.9.4 |
+| Lantern Willow | 1.7.5 |
+| Wreckback | 1.0.1 |
 
 ## Install
 
@@ -24,7 +24,7 @@ Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the six singl
 and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…` and
-`wreckback-…` out of your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.3.1.jar` in. Keep Fabric API in there.
+`wreckback-…` out of your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.3.2.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -57,6 +57,15 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.3.2
+
+- **All six giants' big moves look and feel bigger.** Chunks of the real ground fly up when they slam down, dust
+  rolls out, shockwaves run along the ground with cracks behind them, and on water there are splashes and real
+  waves. Wreckback's tidal wave is a wall of water you can see rolling at you, his whirlpool and maelstrom spin the
+  sea, and his cannons flash and smoke. The screen shakes near the big hits, the boom comes late from far off, and
+  they move heavier round their slams. Each giant has a new `bigEffects` setting (0 = none, 1 = normal, 2 = more).
+  See each giant's own README.
 
 ## New in 1.3.1
 

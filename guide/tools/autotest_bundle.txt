@@ -1,6 +1,6 @@
-# Joins a real server running the all-in-one jar (port 25600) as a player the server makes an operator, and runs
+# Joins a real server running the all-in-one jar (port 25610) as a player the server makes an operator, and runs
 # /giants list and /giants paint for each of the six giants (16 blocks, full, 5 deep). The answers go to the log.
-join localhost:25600
+join localhost:25610
 wait 4000
 chat /giants list
 wait 40
