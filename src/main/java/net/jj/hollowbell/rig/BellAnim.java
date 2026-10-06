@@ -208,10 +208,10 @@ public final class BellAnim {
             boolean scripted = scripted(ch, st);
             held[c] += ((scripted ? 1f : 0f) - held[c]) * (scripted ? 0.3f : 0.06f);
             float ease = scripted ? (ch.arm ? 0.55f : 0.35f) : 0.07f + 0.05f * (1f - held[c]);
-            // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs. Each
-            // piece eases from the way it pointed a tick ago (before 1.9.3 this took the joint above's new place, so
-            // when what it hangs from moved fast, an arm's end swinging round, every piece grew longer and longer),
-            // and keeps the length asked for
+            // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs. A
+            // strand's piece eases from the way it pointed a tick ago (before 1.9.3 this took the joint above's new
+            // place, so when what it hangs from moved fast, an arm's end swinging round, every piece grew longer and
+            // longer), and keeps the length asked for
             float[] old = oldScratch;
             System.arraycopy(tg, 0, old, 0, raw.length);
             tg[0] = raw[0]; tg[1] = raw[1]; tg[2] = raw[2];
@@ -220,7 +220,11 @@ public final class BellAnim {
                 float nx = old[i] - old[i - 3], ny = old[i + 1] - old[i - 2], nz = old[i + 2] - old[i - 1];
                 float ex = nx + (rx - nx) * ease, ey = ny + (ry - ny) * ease, ez = nz + (rz - nz) * ease;
                 float rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz), el = (float) Math.sqrt(ex * ex + ey * ey + ez * ez);
-                if (el > 1e-4f) { float f = rl / el; ex *= f; ey *= f; ez *= f; } else { ex = rx; ey = ry; ez = rz; }
+                if (ch.arm) {
+                    // an arm eases as it always has (its moves, the slam landing where it's aimed, are made for it)
+                    float ax = tg[i] - tg[i - 3], ay = tg[i + 1] - tg[i - 2], az = tg[i + 2] - tg[i - 1];
+                    ex = ax + (rx - ax) * ease; ey = ay + (ry - ay) * ease; ez = az + (rz - az) * ease;
+                } else if (el > 1e-4f) { float f = rl / el; ex *= f; ey *= f; ez *= f; } else { ex = rx; ey = ry; ez = rz; }
                 tg[i] = tg[i - 3] + ex; tg[i + 1] = tg[i - 2] + ey; tg[i + 2] = tg[i - 1] + ez;
             }
             // the ground under this one, looked at now and then (and kept level with the world as he rises and sinks)
@@ -348,6 +352,8 @@ public final class BellAnim {
                         float sx = p[o - 3] + hx / hl * flat - p[o], sz = p[o - 1] + hz / hl * flat - p[o + 2];
                         float sl = (float) Math.sqrt(sx * sx + sz * sz);
                         if (sl > SLIDE) { sx *= SLIDE / sl; sz *= SLIDE / sl; }
+                        // (an arm a move swings down, a slam, lands where it comes down and stays there)
+                        if (ch.arm && hk > 0.5f) { sx = 0f; sz = 0f; }
                         p[o] += sx;
                         p[o + 2] += sz;
                         p[o + 1] = floor;
