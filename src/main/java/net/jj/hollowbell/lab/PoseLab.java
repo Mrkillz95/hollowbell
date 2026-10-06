@@ -38,7 +38,9 @@ public final class PoseLab {
     static BellRig rig;
     static BellModel model;
     static int N;
-    static int[] vb, vcol;
+    static int[] vb, vcol, vs;
+    static net.jj.hollowbell.rig.BellPieces pieces;
+    static boolean rigid = Boolean.getBoolean("lab.rigid");
     static float[] rx, ry, rz;
     static boolean[] glow;
     static String[] palName;
@@ -77,6 +79,8 @@ public final class PoseLab {
         int n = 0;
         for (int b = 0; b < nb; b++) n += model.count(b);
         N = n;
+        pieces = net.jj.hollowbell.rig.BellPieces.get();
+        vs = new int[n];
         vb = new int[n]; vcol = new int[n]; rx = new float[n]; ry = new float[n]; rz = new float[n]; glow = new boolean[n];
         palName = model.palette;
         int[] palCol = new int[palName.length];
@@ -88,7 +92,7 @@ public final class PoseLab {
         int i = 0;
         HashMap<Long, Integer> at = new HashMap<>(n * 2);
         for (int b = 0; b < nb; b++) for (int k = 0; k < model.count(b); k++, i++) {
-            vb[i] = b; rx[i] = model.x[b][k]; ry[i] = model.y[b][k]; rz[i] = model.z[b][k];
+            vb[i] = b; vs[i] = rigid ? b : pieces.sliceOf[b][k]; rx[i] = model.x[b][k]; ry[i] = model.y[b][k]; rz[i] = model.z[b][k];
             vcol[i] = palCol[model.pal[b][k]]; glow[i] = palGlow[model.pal[b][k]];
             at.put(BellModel.key(model.x[b][k], model.y[b][k], model.z[b][k]), i);
         }
@@ -353,11 +357,13 @@ public final class PoseLab {
 
     static Result measure(Matrix4f[] pose) {
         Result r = new Result();
-        int nb = rig.boneCount();
+        Matrix4f[] sp = pose;
+        if (!rigid) { sp = pieces.newPose(); pieces.pose(pose, sp); }
+        int nb = sp.length;
         r.scale = new float[nb];
         Vector3f v = new Vector3f();
         for (int b = 0; b < nb; b++) {
-            Matrix4f m = pose[b];
+            Matrix4f m = sp[b];
             float c0 = (float) Math.sqrt(m.m00() * m.m00() + m.m01() * m.m01() + m.m02() * m.m02());
             float c1 = (float) Math.sqrt(m.m10() * m.m10() + m.m11() * m.m11() + m.m12() * m.m12());
             float c2 = (float) Math.sqrt(m.m20() * m.m20() + m.m21() * m.m21() + m.m22() * m.m22());
@@ -365,7 +371,7 @@ public final class PoseLab {
         }
         float[] px = new float[N], py = new float[N], pz = new float[N];
         for (int i = 0; i < N; i++) {
-            pose[vb[i]].transformPosition(v.set(rx[i] + 0.5f, ry[i] + 0.5f, rz[i] + 0.5f));
+            sp[vs[i]].transformPosition(v.set(rx[i] + 0.5f, ry[i] + 0.5f, rz[i] + 0.5f));
             px[i] = v.x; py[i] = v.y; pz[i] = v.z;
         }
         r.px = px; r.py = py; r.pz = pz;
@@ -375,7 +381,7 @@ public final class PoseLab {
             int a = pa[k], b = pb[k];
             float dx = px[a] - px[b], dy = py[a] - py[b], dz = pz[a] - pz[b];
             float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-            float g = d - prd[k] * Math.max(r.scale[vb[a]], r.scale[vb[b]]);
+            float g = d - prd[k] * Math.max(r.scale[vs[a]], r.scale[vs[b]]);
             if (g <= 1f) continue;
             String c = cat(vb[a], vb[b]);
             if (!own(c)) { r.touchApart++; continue; }
@@ -403,14 +409,14 @@ public final class PoseLab {
         }
         for (int i = 0; i < N; i++) {
             int cx = (int) Math.floor(px[i] / cell), cy = (int) Math.floor(py[i] / cell), cz = (int) Math.floor(pz[i] / cell);
-            float si = r.scale[vb[i]];
+            float si = r.scale[vs[i]];
             for (int a = -1; a <= 1; a++) for (int b = -1; b <= 1; b++) for (int c = -1; c <= 1; c++) {
                 int[] head = grid.get(cellKey(cx + a, cy + b, cz + c));
                 if (head == null) continue;
                 for (int j = head[0]; j >= 0; j = next[j]) {
                     if (j <= i) continue;
                     float dx = px[i] - px[j], dy = py[i] - py[j], dz = pz[i] - pz[j];
-                    float lim = 1.8f * Math.max(si, r.scale[vb[j]]);
+                    float lim = 1.8f * Math.max(si, r.scale[vs[j]]);
                     if (lim > 2.95f) lim = 2.95f;
                     if (dx * dx + dy * dy + dz * dz <= lim * lim) union(parent, i, j);
                 }
@@ -421,20 +427,25 @@ public final class PoseLab {
         int big = -1, bs = -1;
         for (var e : size.entrySet()) if (e.getValue() > bs) { bs = e.getValue(); big = e.getKey(); }
         r.cut = new boolean[N];
-        HashMap<Integer, int[]> bitBone = new HashMap<>();
+        HashMap<Integer, Map<Integer, Integer>> bitBones = new HashMap<>();
         for (int i = 0; i < N; i++) {
             int root = find(parent, i);
             if (root == big) continue;
             r.cut[i] = true;
             r.floating++;
-            final int bi = vb[i];
-            bitBone.computeIfAbsent(root, k -> new int[]{bi, 0})[1]++;
+            bitBones.computeIfAbsent(root, k -> new HashMap<>()).merge(vb[i], 1, Integer::sum);
         }
         r.bits = size.size() - 1;
-        bitBone.values().stream().sorted((x, y) -> y[1] - x[1]).limit(8)
-                .forEach(x -> r.bitList.add(rig.boneNames[x[0]] + ":" + x[1]));
+        bitBones.values().stream().sorted((x, y) -> sum(y) - sum(x)).limit(6).forEach(m -> {
+            StringBuilder sb = new StringBuilder();
+            m.entrySet().stream().sorted((x, y) -> y.getValue() - x.getValue()).limit(4)
+                    .forEach(e -> sb.append(sb.length() == 0 ? "" : "+").append(rig.boneNames[e.getKey()]).append(':').append(e.getValue()));
+            r.bitList.add(sb.toString());
+        });
         return r;
     }
+
+    static int sum(Map<Integer, Integer> m) { int t = 0; for (int v : m.values()) t += v; return t; }
 
     static long cellKey(int x, int y, int z) { return ((long) (x + 100000) * 200003L + (y + 100000)) * 200003L + (z + 100000); }
     static int find(int[] p, int i) { while (p[i] != i) { p[i] = p[p[i]]; i = p[i]; } return i; }
@@ -499,7 +510,7 @@ public final class PoseLab {
             float y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;
             float u = w / 2f + x1 * S, vv = h / 2f - y2 * S;
             float depth = z2;
-            int sz = (int) Math.ceil(S * Math.max(1f, r.scale[vb[i]])) + 1;
+            int sz = (int) Math.ceil(S * Math.max(1f, r.scale[vs[i]])) + 1;
             int col = r.cut[i] ? 0xff00ff : r.gapped[i] ? 0xff2020 : vcol[i];
             float shade = Math.max(0.45f, Math.min(1.1f, 0.8f - depth / 400f));
             if (glow[i] && !r.cut[i] && !r.gapped[i]) shade = 1.1f;
