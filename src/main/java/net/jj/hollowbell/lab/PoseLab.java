@@ -285,7 +285,7 @@ public final class PoseLab {
                 floats[si] = r.floating;
                 String at = s.name + "@" + (t >= SETTLE && s.ticks > SETTLE ? "t" + (t - SETTLE) : "" + t);
                 say(String.format("  %-16s floating %5d in %3d bits | breaks>1: %5d (worst %5.1f %s) | glow breaks %4d (worst %4.1f %s) | bend %3.0f %s | parts that only touch, apart: %d",
-                        at, r.floating, r.bits, r.gapPairs, r.worstGap, r.worstGapWhat, r.glowGaps, r.worstGlowGap, r.worstGlowWhat, Math.toDegrees(r.bend), r.bendWhat, r.touchApart));
+                        at, r.floating, r.bits, r.gapPairs, r.worstGap, r.worstGapWhat, r.glowGaps, r.worstGlowGap, r.worstGlowWhat, Math.toDegrees(r.bend), r.bendWhat, r.touchApart) + " | over 2: " + r.big2);
                 if (!r.byCat.isEmpty()) say("      by kind: " + r.byCat);
                 if (!r.bitList.isEmpty()) say("      bits: " + r.bitList);
                 tot.poses++;
@@ -330,7 +330,7 @@ public final class PoseLab {
     static final class Result {
         float[] px, py, pz, scale;
         boolean[] cut, gapped;
-        int floating, bits, gapPairs, glowGaps, touchApart;
+        int floating, bits, gapPairs, glowGaps, touchApart, big2;
         float worstGap, worstGlowGap, bend;
         String worstGapWhat = "", worstGlowWhat = "", bendWhat = "";
         Map<String, Integer> byCat = new java.util.TreeMap<>();
@@ -397,6 +397,7 @@ public final class PoseLab {
                 say(String.format("      dbg %s v%d(%s slice %d) %.0f,%.0f,%.0f -> %.1f,%.1f,%.1f | %s v%d(slice %d) %.0f,%.0f,%.0f -> %.1f,%.1f,%.1f gap %.1f",
                         rig.boneNames[vb[a]], a, "", vs[a], rx[a], ry[a], rz[a], px[a], py[a], pz[a], rig.boneNames[vb[b]], b, vs[b], rx[b], ry[b], rz[b], px[b], py[b], pz[b], g));
             r.gapPairs++;
+            if (g > 2f) r.big2++;
             r.gapped[a] = true; r.gapped[b] = true;
             r.byCat.merge(c, 1, Integer::sum);
             if (g > r.worstGap) { r.worstGap = g; r.worstGapWhat = rig.boneNames[vb[a]] + "/" + rig.boneNames[vb[b]]; }
