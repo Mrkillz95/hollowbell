@@ -175,6 +175,8 @@ public final class BellAnim {
     private final Matrix4f mBody = new Matrix4f(), mAnchor = new Matrix4f(), mInv = new Matrix4f();
     private final Quaternionf qRot = new Quaternionf(), qBody = new Quaternionf(), qLocal = new Quaternionf(), qTmp = new Quaternionf();
     private final Vector3f tv = new Vector3f(), tv2 = new Vector3f();
+    /** how far a piece lying on the ground slides out along it in a tick, at most (model blocks) */
+    private static final float SLIDE = 1.5f;
     private final float[] velScratch = new float[3 * 64], oldScratch = new float[3 * 64];
 
     private void chains(In in, boolean first) {
@@ -332,8 +334,12 @@ public final class BellAnim {
                             if (hl < 0.05f) { hx = p[o - 3]; hz = p[o - 1]; hl = (float) Math.sqrt(hx * hx + hz * hz); }
                             if (hl < 0.05f) { hx = (float) Math.cos(c); hz = (float) Math.sin(c); hl = 1f; }
                         }
-                        p[o] = p[o - 3] + hx / hl * flat;
-                        p[o + 2] = p[o - 1] + hz / hl * flat;
+                        // (out along the ground a little at a time, so it never jumps)
+                        float sx = p[o - 3] + hx / hl * flat - p[o], sz = p[o - 1] + hz / hl * flat - p[o + 2];
+                        float sl = (float) Math.sqrt(sx * sx + sz * sz);
+                        if (sl > SLIDE) { sx *= SLIDE / sl; sz *= SLIDE / sl; }
+                        p[o] += sx;
+                        p[o + 2] += sz;
                         p[o + 1] = floor;
                         knockedAt[c] = steps;
                         if (q[o + 1] < floor) q[o + 1] = floor;

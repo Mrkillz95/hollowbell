@@ -74,8 +74,12 @@ public class HollowbellGameTests implements FabricGameTest {
     }
 
     @SuppressWarnings("deprecation")
+    private static final java.util.concurrent.atomic.AtomicInteger PLAYERS = new java.util.concurrent.atomic.AtomicInteger();
+
     static ServerPlayer player(GameTestHelper h, Vec3 at) {
-        CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), "hb-test"), false);
+        // each one its own name: tests run side by side, and a command naming a player takes the first one online by
+        // that name (with every test player called the same, "set target" in one test picked another test's player)
+        CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), "hb-test" + PLAYERS.incrementAndGet()), false);
         ServerPlayer p = new ServerPlayer(h.getLevel().getServer(), h.getLevel(), cookie.gameProfile(), cookie.clientInformation()) {
             @Override public boolean isSpectator() { return false; }
             @Override public boolean isCreative() { return false; }
@@ -1606,7 +1610,8 @@ public class HollowbellGameTests implements FabricGameTest {
         // up a way first, so he has to come down for it
         for (int i = 25; i < 85; i += 5) h.runAfterDelay(i, () -> e.drive(pl[0], 0f, 0f, 0f, 1));
         h.runAfterDelay(90, () -> {
-            h.assertTrue(e.getY() > e.groundAt(e.getX(), e.getZ()) + 3 * s + 1, "he didn't go up");
+            h.assertTrue(e.getY() > e.groundAt(e.getX(), e.getZ()) + 3 * s + 1, "he didn't go up: y " + e.getY() + " ground " + e.groundAt(e.getX(), e.getZ())
+                    + " rider " + (e.rider() == pl[0]) + " asleep " + e.asleep() + " sunk " + e.sunk() + " move " + e.moveNow() + " setting down " + e.moves().settingDown());
             e.setMeDown(pl[0]);
             h.assertTrue(e.moves().settingDown(), "he isn't setting the player down");
         });
