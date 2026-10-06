@@ -261,6 +261,28 @@ public final class BellAnim {
                 // its length over a few ticks. An arm keeps its length
                 float want = len;
                 if (!ch.arm) want = Mth.clamp(len + (d - len) * (d < len ? 0.9f : 0.55f), 0.6f * len, 1.12f * len);
+                // never bent sharper than it can at a joint (or out of what it hangs from): past that it would fold
+                // back through itself. A move may bend an arm or strand further than its own swing does
+                float bx, by, bz;
+                if (i == 1) { tv2.set(ch.joints[1]).sub(ch.joints[0]); mAnchor.transformDirection(tv2); bx = tv2.x; by = tv2.y; bz = tv2.z; }
+                else { bx = p[o - 3] - p[o - 6]; by = p[o - 2] - p[o - 5]; bz = p[o - 1] - p[o - 4]; }
+                float lim = ch.arm ? (i == 1 ? 1.45f : 0.6f + 0.35f * hk) : (i == 1 ? 0.75f : 0.45f + 0.35f * hk);
+                float bl = (float) Math.sqrt(bx * bx + by * by + bz * bz);
+                if (bl > 1e-4f) {
+                    bx /= bl; by /= bl; bz /= bl;
+                    float ux = dx / d, uy = dy / d, uz = dz / d;
+                    float cos = Mth.clamp(ux * bx + uy * by + uz * bz, -1f, 1f);
+                    float ang = (float) Math.acos(cos);
+                    if (ang > lim) {
+                        // turned back toward the way the piece above goes, just to the limit
+                        float sx = ux - cos * bx, sy = uy - cos * by, sz = uz - cos * bz;
+                        float sl = (float) Math.sqrt(sx * sx + sy * sy + sz * sz);
+                        if (sl < 1e-4f) { sx = -bz; sy = 0f; sz = bx; sl = Math.max(1e-4f, (float) Math.sqrt(sx * sx + sz * sz)); }
+                        float cl = Mth.cos(lim), sn = Mth.sin(lim);
+                        dx = bx * cl + sx / sl * sn; dy = by * cl + sy / sl * sn; dz = bz * cl + sz / sl * sn;
+                        d = 1f;
+                    }
+                }
                 p[o] = p[o - 3] + dx / d * want;
                 p[o + 1] = p[o - 2] + dy / d * want;
                 p[o + 2] = p[o - 1] + dz / d * want;

@@ -230,27 +230,87 @@ public final class BellRig {
     }
 
     /**
-     * How a point at u along a piece of an arm or strand is drawn: mostly with its own piece, leaning toward the piece
-     * across the nearer joint (half and half right at it). The first piece leans toward what the chain hangs from all
-     * the way down (wholly at the root), so the root bends smoothly out of the rim, the vase, a pod or a strand.
+     * How the piece of an arm or strand (bone b) is drawn at u along it (0 its top joint, 1 its bottom one): the
+     * chain is drawn as one smooth curve through its joints (each piece leaving a joint the way the two pieces either
+     * side of it share; the first piece leaving its root the way what it hangs from points it, hang), and the blocks at u
+     * are carried from the same curve through the joints as built to that one. At the joints this is exactly where the
+     * bone puts them; between them the curve takes the corners off, so a bend is spread along the piece instead of
+     * opening a gap at the joint, and the root bends smoothly out of the rim, the vase, a pod or a strand.
      */
-    public static float wPrev(float u, boolean root) { return root ? Mth.clamp(1f - u, 0f, 1f) : Math.max(0f, 0.5f - u); }
-    public static float wNext(float u) { return Math.max(0f, u - 0.5f); }
-
-    /** out = self, leaning toward prev by wp and next by wn (any of them may be the same matrix as out) */
-    public static Matrix4f mix(Matrix4f self, @Nullable Matrix4f prev, float wp, @Nullable Matrix4f next, float wn, Matrix4f out) {
-        if (prev == null) wp = 0f;
-        if (next == null) wn = 0f;
-        if (wp <= 0f && wn <= 0f) return out == self ? out : out.set(self);
-        float ws = 1f - wp - wn;
-        float[] a = MIX_A.get(), b = MIX_B.get();
-        self.get(a);
-        for (int i = 0; i < 16; i++) a[i] *= ws;
-        if (wp > 0f) { prev.get(b); for (int i = 0; i < 16; i++) a[i] += b[i] * wp; }
-        if (wn > 0f) { next.get(b); for (int i = 0; i < 16; i++) a[i] += b[i] * wn; }
-        return out.set(a);
+    public Matrix4f frame(BellState st, int b, float u, @Nullable Matrix4f hang, Quaternionf brot, Matrix4f out) {
+        Chain ch = chains[chainOf[b]];
+        int i = seg[b], m = ch.bones.length;
+        float[] p = st.chain[ch.id];
+        Vector3f[] J = ch.joints;
+        FrameScratch f = frames.get();
+        // the curve as built: it leaves each joint halfway between the ways the pieces either side of it go, at the
+        // piece's own length (so it runs along evenly and the blocks keep their spacing)
+        Vector3f a0 = J[i], a1 = J[i + 1];
+        float l0 = a0.distance(a1);
+        Vector3f ta0 = i == 0 ? f.t0.set(a1).sub(a0) : halfway(J[i - 1], a0, a1, f.t0);
+        Vector3f ta1 = i + 1 == m ? f.t1.set(a1).sub(a0) : halfway(a0, a1, J[i + 2], f.t1);
+        ta0.normalize(l0); ta1.normalize(l0);
+        hermite(a0, ta0, a1, ta1, u, f.restAt, f.restDir);
+        // the curve now (the first piece leaving its root the way what it hangs from points it)
+        f.p0.set(p[3 * i], p[3 * i + 1], p[3 * i + 2]);
+        f.p1.set(p[3 * i + 3], p[3 * i + 4], p[3 * i + 5]);
+        float l = f.p0.distance(f.p1);
+        Vector3f tp0;
+        if (i == 0 && hang != null) {
+            tp0 = hang.transformDirection(f.t2.set(a1).sub(a0));
+            if (tp0.lengthSquared() < 1e-8f) tp0.set(f.p1).sub(f.p0);
+        } else if (i == 0) tp0 = f.t2.set(f.p1).sub(f.p0);
+        else tp0 = halfway(f.t3.set(p[3 * i - 3], p[3 * i - 2], p[3 * i - 1]), f.p0, f.p1, f.t2);
+        Vector3f tp1 = i + 1 == m ? f.t3.set(f.p1).sub(f.p0) : halfway(f.p0, f.p1, f.t4.set(p[3 * i + 6], p[3 * i + 7], p[3 * i + 8]), f.t3);
+        if (l > 1e-4f) { tp0.normalize(l); tp1.normalize(l); }
+        hermite(f.p0, tp0, f.p1, tp1, u, f.nowAt, f.nowDir);
+        // turned from the way the curve went as built (turned with his body) to the way it goes now
+        Vector3f dr = f.restDir, dn = f.nowDir;
+        float lr = dr.length(), ln = dn.length();
+        if (lr < 1e-5f) { dr.set(a1).sub(a0); lr = Math.max(1e-5f, dr.length()); }
+        if (ln < 1e-5f) { dn.set(f.p1).sub(f.p0); ln = Math.max(1e-5f, dn.length()); }
+        dr.div(lr); dn.div(ln);
+        Vector3f drT = brot.transform(f.t0.set(dr));
+        Quaternionf r = f.q.rotationTo(drT, dn).mul(brot);
+        out.identity().translate(f.nowAt).rotate(r);
+        float k = l0 > 1e-4f ? l / l0 : 1f;
+        if (Math.abs(k - 1f) > 0.01f) {
+            float cs = k < DRAWN_IN ? Math.max(0.02f, k / DRAWN_IN) : 1f;
+            float e = k - cs;
+            f.m.identity()
+              .m00(cs + e * dr.x * dr.x).m01(e * dr.x * dr.y).m02(e * dr.x * dr.z)
+              .m10(e * dr.y * dr.x).m11(cs + e * dr.y * dr.y).m12(e * dr.y * dr.z)
+              .m20(e * dr.z * dr.x).m21(e * dr.z * dr.y).m22(cs + e * dr.z * dr.z);
+            out.mul(f.m);
+        }
+        return out.translate(-f.restAt.x, -f.restAt.y, -f.restAt.z);
     }
-    private static final ThreadLocal<float[]> MIX_A = ThreadLocal.withInitial(() -> new float[16]), MIX_B = ThreadLocal.withInitial(() -> new float[16]);
+
+    /** the way halfway between a to b and b to c (out, not unit) */
+    private static Vector3f halfway(Vector3f a, Vector3f b, Vector3f c, Vector3f out) {
+        float abx = b.x - a.x, aby = b.y - a.y, abz = b.z - a.z, bcx = c.x - b.x, bcy = c.y - b.y, bcz = c.z - b.z;
+        float l1 = Math.max(1e-5f, (float) Math.sqrt(abx * abx + aby * aby + abz * abz)), l2 = Math.max(1e-5f, (float) Math.sqrt(bcx * bcx + bcy * bcy + bcz * bcz));
+        out.set(abx / l1 + bcx / l2, aby / l1 + bcy / l2, abz / l1 + bcz / l2);
+        if (out.lengthSquared() < 1e-6f) out.set(bcx, bcy, bcz);
+        return out;
+    }
+
+    /** a point and the way it goes, u along the curve from a0 (leaving it along t0) to a1 (arriving along t1) */
+    private static void hermite(Vector3f a0, Vector3f t0, Vector3f a1, Vector3f t1, float u, Vector3f at, Vector3f dir) {
+        float u2 = u * u, u3 = u2 * u;
+        float h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
+        float d00 = 6 * u2 - 6 * u, d10 = 3 * u2 - 4 * u + 1, d01 = -6 * u2 + 6 * u, d11 = 3 * u2 - 2 * u;
+        at.set(a0.x * h00 + t0.x * h10 + a1.x * h01 + t1.x * h11, a0.y * h00 + t0.y * h10 + a1.y * h01 + t1.y * h11, a0.z * h00 + t0.z * h10 + a1.z * h01 + t1.z * h11);
+        dir.set(a0.x * d00 + t0.x * d10 + a1.x * d01 + t1.x * d11, a0.y * d00 + t0.y * d10 + a1.y * d01 + t1.y * d11, a0.z * d00 + t0.z * d10 + a1.z * d01 + t1.z * d11);
+    }
+
+    private static final class FrameScratch {
+        final Vector3f t0 = new Vector3f(), t1 = new Vector3f(), t2 = new Vector3f(), t3 = new Vector3f(), t4 = new Vector3f(), p0 = new Vector3f(), p1 = new Vector3f();
+        final Vector3f restAt = new Vector3f(), restDir = new Vector3f(), nowAt = new Vector3f(), nowDir = new Vector3f();
+        final Quaternionf q = new Quaternionf();
+        final Matrix4f m = new Matrix4f();
+    }
+    private static final ThreadLocal<FrameScratch> frames = ThreadLocal.withInitial(FrameScratch::new);
 
     /** which chain is arm a / strand s */
     public final int[] armChain, strandChain;
@@ -428,11 +488,8 @@ public final class BellRig {
         /** a point u along chain bone b, as drawn */
         Matrix4f smooth(int b, float u, Matrix4f out) {
             Chain ch = chains[chainOf[b]];
-            int i = seg[b];
-            boolean root = i == 0;
-            Matrix4f prev = root ? (ch.parentBone >= 0 ? hang(ch.id) : null) : bone(ch.bones[i - 1]);
-            Matrix4f next = i + 1 < ch.bones.length ? bone(ch.bones[i + 1]) : null;
-            return mix(bone(b), prev, wPrev(u, root), next, wNext(u), out);
+            Matrix4f h = seg[b] == 0 && ch.parentBone >= 0 ? hang(ch.id) : null;
+            return frame(st, b, u, h, brot, out);
         }
     }
 
