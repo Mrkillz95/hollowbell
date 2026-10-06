@@ -34,6 +34,8 @@ public final class BellPieces {
     public final int[][] sliceOf;
     /** per slice: its box at rest (minx miny minz maxx maxy maxz), or null if empty */
     public final float[][] bounds;
+    /** per bone cut into slices: which slice each of its blocks is in, by place (see {@link BellModel#key}) */
+    private final it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap[] where;
 
     private BellPieces(BellRig rig, BellModel model) {
         int nb = rig.boneCount();
@@ -51,6 +53,7 @@ public final class BellPieces {
         chain = new int[total];
         u = new float[total];
         bounds = new float[total][];
+        where = new it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap[nb];
         for (int b = 0; b < nb; b++) {
             int P = num[b];
             for (int k = 0; k < P; k++) {
@@ -73,6 +76,10 @@ public final class BellPieces {
                 }
             } else java.util.Arrays.fill(of, first[b]);
             sliceOf[b] = of;
+            if (P > 1) {
+                var w = where[b] = new it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap(n);
+                for (int v = 0; v < n; v++) w.put(BellModel.key(model.x[b][v], model.y[b][v], model.z[b][v]), of[v]);
+            }
             for (int v = 0; v < n; v++) {
                 float[] bb = bounds[of[v]];
                 if (bb == null) bb = bounds[of[v]] = new float[]{Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
@@ -81,6 +88,11 @@ public final class BellPieces {
                 bb[3] = Math.max(bb[3], x + 1); bb[4] = Math.max(bb[4], y + 1); bb[5] = Math.max(bb[5], z + 1);
             }
         }
+    }
+
+    /** is the block of bone b at (x, y, z) in slice s (a bone not cut into slices is all one) */
+    public boolean in(int s, int b, int x, int y, int z) {
+        return where[b] == null || where[b].getOrDefault(BellModel.key(x, y, z), -1) == s;
     }
 
     public Matrix4f[] newPose() { Matrix4f[] m = new Matrix4f[count]; for (int i = 0; i < count; i++) m[i] = new Matrix4f(); return m; }

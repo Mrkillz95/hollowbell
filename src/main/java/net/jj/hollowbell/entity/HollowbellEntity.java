@@ -561,7 +561,23 @@ public class HollowbellEntity extends Monster {
         if (poseTick == now) return;
         poseTick = now;
         fillState(1f);
-        rig.computePose(state, pose);
+        rig.computePose(state, pose, poseHang);
+    }
+
+    /** what each arm and strand hangs from, as drawn (with the pose) */
+    private final Matrix4f[] poseHang = net.jj.hollowbell.rig.BellPieces.get().newHang();
+    /** his arms and strands in slices as they are drawn up close (see BellPieces), worked out when a hit needs them */
+    private final Matrix4f[] slices = net.jj.hollowbell.rig.BellPieces.get().newPose();
+    private long slicesTick = Long.MIN_VALUE;
+
+    /** the slices as of this tick, so a hit lands on him just where he's drawn */
+    public Matrix4f[] slicesNow() {
+        ensurePose();
+        if (slicesTick != poseTick) {
+            slicesTick = poseTick;
+            net.jj.hollowbell.rig.BellPieces.get().pose(state, pose, poseHang, slices);
+        }
+        return slices;
     }
 
     /** the pose state at this moment (partial: how far into the tick, for drawing) */
@@ -1255,7 +1271,7 @@ public class HollowbellEntity extends Monster {
         Matrix4f inv = new Matrix4f();
         int pad = (int) Math.ceil(within / bellScale());
         if (pad > 12) pad = 12;
-        return rig.touches(pose, b, m, pad, inv);
+        return rig.touches(pose, slicesNow(), b, m, pad, inv);
     }
 
     /** the first block of him along a line in the world, up to maxDist blocks */
@@ -1264,7 +1280,7 @@ public class HollowbellEntity extends Monster {
         Vector3f o = toModel(from);
         Vec3 unit = dir.normalize();
         Vector3f d = dirToModel(unit);
-        return rig.raycast(state, pose, o, d, (float) maxDist);
+        return rig.raycast(state, pose, slicesNow(), o, d, (float) maxDist);
     }
 
     @Override
@@ -1454,7 +1470,7 @@ public class HollowbellEntity extends Monster {
                 // cheap first: is it anywhere near this strand's line
                 Vector3f top = S.joints()[0];
                 if (Math.abs(m.x - top.x) > 40 || Math.abs(m.z - top.z) > 40) continue;
-                for (int b : S.bones()) if (rig.touches(pose, b, m, pad, inv)) { hit = true; break; }
+                for (int b : S.bones()) if (rig.touches(pose, slicesNow(), b, m, pad, inv)) { hit = true; break; }
                 if (hit) break;
             }
             if (hit) moves.sting(e);

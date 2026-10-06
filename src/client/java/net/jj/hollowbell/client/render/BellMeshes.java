@@ -12,6 +12,7 @@ import com.mojang.blaze3d.vertex.VertexSorting;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.rig.BellModel;
+import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -63,7 +64,7 @@ public final class BellMeshes {
 
     record SortJob(ByteBufferBuilder mem, ByteBufferBuilder.Result result) {}
 
-    /** [lod][kind][bone] */
+    /** [lod][kind][bone], except the full version: [FULL][kind][slice] (see {@link BellPieces}) */
     private Mesh[][][] meshes;
     private CompletableFuture<Built> building;
     private boolean ready;
@@ -84,10 +85,11 @@ public final class BellMeshes {
         Built b;
         try { b = building.join(); }
         catch (Exception e) { HollowbellMod.LOG.error("Hollowbell mesh build failed", e); building = null; return false; }
-        int nb = b.parts[0][0].length;
-        meshes = new Mesh[3][4][nb];
+        meshes = new Mesh[3][4][];
+        for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) meshes[l][k] = new Mesh[b.parts[l][k].length];
+        int nb = b.parts[1][0].length;
         long q = 0, fq = 0;
-        for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) for (int i = 0; i < nb; i++) {
+        for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) for (int i = 0; i < b.parts[l][k].length; i++) {
             Part p = b.parts[l][k][i];
             if (p == null) continue;
             VertexBuffer vb = new VertexBuffer(VertexBuffer.Usage.STATIC);
@@ -106,7 +108,8 @@ public final class BellMeshes {
 
     public boolean isReady() { return ready; }
 
-    public @Nullable Mesh mesh(int lod, int kind, int bone) { return meshes == null ? null : meshes[lod][kind][bone]; }
+    /** a mesh: for FULL, of one slice (see {@link BellPieces}); for FAR and TINY, of one bone */
+    public @Nullable Mesh mesh(int lod, int kind, int unit) { return meshes == null ? null : meshes[lod][kind][unit]; }
 
     /**
      * Re-sorts a see-through mesh for the camera at camRest (the bone's rest space), off the render thread,
@@ -165,7 +168,10 @@ public final class BellMeshes {
         BakedModel redModel = mc.getBlockRenderer().getBlockModel(red);
 
         int nb = model.boneCount();
-        Part[][][] parts = new Part[3][4][nb];
+        BellPieces pieces = BellPieces.get();
+        // up close each arm and strand is drawn in slices that bend smoothly; further off, a piece at a time
+        Part[][][] parts = new Part[3][4][];
+        for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) parts[l][k] = new Part[l == FULL ? pieces.count : nb];
         java.util.List<ByteBufferBuilder> mem = new java.util.ArrayList<>();
         RandomSource rnd = RandomSource.create(42);
         PoseStack ps = new PoseStack();
@@ -174,16 +180,24 @@ public final class BellMeshes {
 
         for (int lod = 0; lod < 3; lod++) {
             int L = LUMP[lod];
-            for (int b = 0; b < nb; b++) {
+            int units = lod == FULL ? pieces.count : nb;
+            for (int unit = 0; unit < units; unit++) {
+                int b = lod == FULL ? pieces.bone[unit] : unit;
                 int n = model.count(b);
                 if (n == 0) continue;
-                // voxels (or merged lumps) of this bone: x y z palette faces alpha
+                // voxels (or merged lumps) of this bone (or of this slice of it): x y z palette faces alpha
                 int[] vx, vy, vz, vp, vf, va;
                 if (L == 1) {
-                    vx = new int[n]; vy = new int[n]; vz = new int[n]; vp = new int[n]; vf = new int[n]; va = new int[n];
-                    for (int i = 0; i < n; i++) {
-                        vx[i] = model.x[b][i]; vy[i] = model.y[b][i]; vz[i] = model.z[b][i]; vp[i] = model.pal[b][i];
-                        vf[i] = model.faces[b][i] & 0x3f; va[i] = model.alpha[b] == null ? 255 : model.alpha[b][i] & 0xff;
+                    int[] of = pieces.sliceOf[b];
+                    int m = 0;
+                    for (int i = 0; i < n; i++) if (of[i] == unit) m++;
+                    if (m == 0) continue;
+                    vx = new int[m]; vy = new int[m]; vz = new int[m]; vp = new int[m]; vf = new int[m]; va = new int[m];
+                    for (int i = 0, j = 0; i < n; i++) {
+                        if (of[i] != unit) continue;
+                        vx[j] = model.x[b][i]; vy[j] = model.y[b][i]; vz[j] = model.z[b][i]; vp[j] = model.pal[b][i];
+                        vf[j] = model.faces[b][i] & 0x3f; va[j] = model.alpha[b] == null ? 255 : model.alpha[b][i] & 0xff;
+                        j++;
                     }
                 } else {
                     Long2IntOpenHashMap pal = new Long2IntOpenHashMap(n / 4 + 8), best = new Long2IntOpenHashMap(n / 4 + 8);
@@ -246,7 +260,7 @@ public final class BellMeshes {
                         // sorted once from above and outside; re-sorted for the real camera once he is drawn
                         sort = md.sortQuads(memI, VertexSorting.byDistance(0f, 400f, 300f));
                     }
-                    parts[lod][k][b] = new Part(md, sort, quads);
+                    parts[lod][k][unit] = new Part(md, sort, quads);
                 }
             }
         }
