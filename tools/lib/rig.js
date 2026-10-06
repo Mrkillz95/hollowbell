@@ -476,6 +476,83 @@ function buildRig(M, C) {
   // whatever is still left touches nothing of him at all: a floating bit, taken off
   for (let k = 0; k < n; k++) if (boneOf[k] < 0 && !gone[k]) { gone[k] = 1; orphans++; }
 
+  // ---------------- 1.9.3: what each lower strand really hangs from. Many of the middle ones hang from a pod (the
+  // glowing balls), some from the end of an arm; before, each was hung from whatever strand it touched most, often
+  // only by a block or two, so it came away from the pod or arm it was really stuck to. Now it hangs from the
+  // strand, arm or pod its top touches most, and turns about the middle of where it touches it.
+  const chainKey = b => { const w = bones[b].name.split('_'); return w[0] === 'strand' || w[0] === 'arm' ? w[0] + '_' + w[1] : bones[b].name; };
+  const comesFrom = (name, key) => {
+    for (let nm = name, guard = 0; nm && guard < 400; nm = bones[boneIndex.get(nm)].parent, guard++) if (chainKey(boneIndex.get(nm)) === key) return true;
+    return false;
+  };
+  const strandBones = new Map();
+  for (let k = 0; k < n; k++) {
+    if (gone[k] || boneOf[k] < 0) continue;
+    const w = bones[boneOf[k]].name.split('_');
+    if (w[0] !== 'strand') continue;
+    if (!strandBones.has(+w[1])) strandBones.set(+w[1], []);
+    strandBones.get(+w[1]).push(k);
+  }
+  let rehung = 0;
+  for (const I of strandInfo) {
+    if (I.y1 >= 118) continue;
+    const ks = strandBones.get(I.id) || [];
+    if (!ks.length) continue;
+    let top = -1e9; for (const k of ks) top = Math.max(top, Y[k]);
+    const myKey = 'strand_' + I.id;
+    const touch = new Map(), sum = new Map();
+    for (const k of ks) {
+      if (Y[k] < top - 3) continue;
+      const seen = new Set();
+      for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) for (let c = -2; c <= 2; c++) {
+        const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+        if (j === undefined || gone[j] || boneOf[j] < 0) continue;
+        const o = boneOf[j];
+        if (!/^(strand|arm|pod)_/.test(bones[o].name) || chainKey(o) === myKey) continue;
+        touch.set(o, (touch.get(o) || 0) + 1);
+        if (!seen.has(o)) { seen.add(o); const m = sum.get(o) || [0, 0, 0, 0]; m[0] += X[k]; m[1] += Y[k]; m[2] += Z[k]; m[3]++; sum.set(o, m); }
+      }
+    }
+    const order = [...touch].sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+    const pick = order.find(([o]) => !comesFrom(bones[o].name, myKey));
+    if (!pick) continue;
+    const seg0 = boneIndex.get(`strand_${I.id}_0`);
+    if (bones[seg0].parent !== bones[pick[0]].name) rehung++;
+    bones[seg0].parent = bones[pick[0]].name;
+    const m = sum.get(pick[0]);
+    const J = strandDefs[I.id].joints;
+    J[0] = [m[0] / m[3], Math.max(m[1] / m[3], J[1] ? J[1][1] + 1 : -1e9), m[2] / m[3]];
+  }
+
+  // ---------------- bones in an order where each comes after the one it hangs from (a pod before the strand that
+  // hangs from it), otherwise as they were made
+  {
+    const nb = bones.length;
+    const done = new Array(nb).fill(false), order = [];
+    while (order.length < nb) {
+      let moved = false;
+      for (let i = 0; i < nb; i++) {
+        if (done[i]) continue;
+        const p = bones[i].parent;
+        if (p !== null && p !== undefined && !done[boneIndex.get(p)]) continue;
+        done[i] = true; order.push(i); moved = true;
+        break;
+      }
+      if (!moved) throw new Error('the bones hang from each other in a ring');
+    }
+    const to = new Int32Array(nb);
+    order.forEach((o, i) => { to[o] = i; });
+    const nbones = order.map(o => bones[o]);
+    bones.length = 0; nbones.forEach(b => bones.push(b));
+    boneIndex.clear(); bones.forEach((b, i) => boneIndex.set(b.name, i));
+    for (let k = 0; k < n; k++) if (boneOf[k] >= 0) boneOf[k] = to[boneOf[k]];
+    for (const D of bandDefs) D.bone = to[D.bone];
+    for (const D of sectorDefs) D.bone = to[D.bone];
+    for (const D of armDefs) D.bones = D.bones.map(b => to[b]);
+    for (const D of strandDefs) D.bones = D.bones.map(b => to[b]);
+    for (const D of [...podDefs, ...eggDefs]) { D.bone = to[D.bone]; if (D.blend) D.blend.bone = to[D.blend.bone]; }
+  }
+
   // ---------------- the dome's shape, for the inside: the inner wall's radius at each height, and its outside
   const inner = {}, outer = {};
   for (let k = 0; k < n; k++) {
@@ -506,7 +583,7 @@ function buildRig(M, C) {
       dome: profile,
       bands: bandDefs, sectors: sectorDefs,
     },
-    stats: { piecesMoved: movedBits, piecesMovedBlocks: movedVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
+    stats: { rehung, piecesMoved: movedBits, piecesMovedBlocks: movedVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
   };
 }
 

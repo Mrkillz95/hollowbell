@@ -43,6 +43,12 @@ public final class BellRig {
     public final Kind[] kind;
     /** which band / sector / arm / strand / pod / egg / spot the bone belongs to, and which segment of it */
     public final int[] part, seg;
+    /**
+     * Pods and egg clumps that lie on two pieces of the same strand or arm go along with both: the other piece, and
+     * how much of it (0-1). -1 for the rest.
+     */
+    public final int[] blendBone;
+    public final float[] blendW;
     public final Map<String, Integer> index = new HashMap<>();
 
     public final int crownY, rimY;
@@ -96,6 +102,8 @@ public final class BellRig {
         int nb = bs.size();
         boneNames = new String[nb]; parent = new int[nb]; pivot = new Vector3f[nb]; kind = new Kind[nb];
         part = new int[nb]; seg = new int[nb];
+        blendBone = new int[nb]; blendW = new float[nb];
+        java.util.Arrays.fill(blendBone, -1);
         for (int i = 0; i < nb; i++) {
             JsonObject b = bs.get(i).getAsJsonObject();
             boneNames[i] = b.get("name").getAsString();
@@ -142,6 +150,15 @@ public final class BellRig {
         }
         pods = blobs(j.getAsJsonArray("pods"));
         eggs = blobs(j.getAsJsonArray("eggs"));
+        for (String list : new String[]{"pods", "eggs"}) for (JsonElement e : j.getAsJsonArray(list)) {
+            JsonObject o = e.getAsJsonObject();
+            if (!o.has("blend")) continue;
+            JsonObject bl = o.getAsJsonObject("blend");
+            int b = o.get("bone").getAsInt(), other = bl.get("bone").getAsInt();
+            if (other >= b) throw new IllegalStateException("bone " + boneNames[b] + " goes along with a later one");
+            blendBone[b] = other;
+            blendW[b] = bl.get("w").getAsFloat();
+        }
         spots = blobs(j.getAsJsonArray("spots"));
         JsonObject c = j.getAsJsonObject("crown");
         crown = new BlobDef(0, c.get("bone").getAsInt(), vec(c.getAsJsonArray("centre")), c.get("radius").getAsFloat());
@@ -189,6 +206,8 @@ public final class BellRig {
         }
         for (Chain ch : chains) {
             int pb = ch.parentBone;
+            // a strand hanging from a pod belongs with the strand or arm the pod hangs from
+            if (pb >= 0 && (kind[pb] == Kind.POD || kind[pb] == Kind.EGG)) pb = parent[pb];
             if (pb >= 0 && chainOf[pb] >= 0) {
                 ch.parentChain = chainOf[pb];
                 ch.parentSeg = seg[pb];
@@ -315,39 +334,69 @@ public final class BellRig {
                 case BELL -> band(st, bands[part[b]].mid(), body, pose[b]);
                 case RIM -> sector(st, part[b], body, pose[b]);
                 case CROWN -> band(st, crownY - 3, body, pose[b]);
-                case SPOT -> {
-                    if (part[b] == 4) {
-                        // the glowing vase hangs from the crown and throbs a little on its own
-                        band(st, crownY - 3, body, pose[b]);
-                        float th = 1f + 0.02f * (float) Math.sin(st.time * 0.21f) + 0.02f * st.glow;
-                        pose[b].translate(0, crownY, 0).scale(th, 1f, th).translate(0, -crownY, 0);
-                    } else band(st, 182, body, pose[b]);
-                }
+                case SPOT -> spot(st, part[b], body, pose[b]);
                 case ARM, STRAND -> {
                     int c = chainOf[b];
                     segmentPose(chains[c], seg[b], st.chain[c], brot, pose[b], s);
                 }
                 case POD, EGG -> {
-                    Vector3f pv = pivot[b];
-                    Quaternionf local = s.q.identity();
-                    boolean pod = kind[b] == Kind.POD;
-                    int k = part[b];
-                    float ph = k * 1.7f + (pod ? 0f : 0.5f);
-                    // pods bob and swing slowly, egg clumps wobble quicker
-                    float amp = pod ? 0.06f + 0.03f * Math.abs(st.squeeze) : 0.05f + 0.05f * st.eggShake;
-                    float sp = pod ? 1f : 1.6f + 1.5f * st.eggShake;
-                    local.rotateX(amp * (float) Math.sin(st.time * 0.11f * sp + ph)).rotateZ(amp * (float) Math.cos(st.time * 0.09f * sp + ph * 1.3f));
-                    float grow = 1f;
-                    if (pod) {
-                        grow = 0.3f + 0.7f * st.podGrowth[k];
-                        if (!st.podPopped[k]) grow *= 1f + 0.03f * (float) Math.sin(st.time * 0.13f + ph) + 0.28f * st.podSwell;
-                    } else grow = 1f + 0.12f * st.eggShake * (float) Math.max(0, Math.sin(st.time * 0.9f + ph));
-                    pose[b].set(pose[parent[b]]).translate(pv).rotate(local);
-                    if (grow != 1f) pose[b].scale(grow);
-                    pose[b].translate(-pv.x, -pv.y, -pv.z);
+                    // hung where it touches its strand or arm (between two pieces of it, if it lies on both)
+                    s.m2.set(pose[parent[b]]);
+                    if (blendBone[b] >= 0) s.m2.lerp(pose[blendBone[b]], blendW[b]);
+                    blob(st, b, s.m2, pose[b], s);
                 }
             }
         }
+    }
+
+    /**
+     * A pod or egg clump on what it hangs from (base): it bobs and swings a little about the spot where it touches it,
+     * and swells or shrinks about that spot too, so it never comes off it.
+     */
+    private void blob(BellState st, int b, Matrix4f base, Matrix4f out, Scratch s) {
+        Vector3f pv = pivot[b];
+        Quaternionf local = s.q3.identity();
+        boolean pod = kind[b] == Kind.POD;
+        int k = part[b];
+        float ph = k * 1.7f + (pod ? 0f : 0.5f);
+        // pods bob and swing slowly, egg clumps wobble quicker
+        float amp = pod ? 0.06f + 0.03f * Math.abs(st.squeeze) : 0.05f + 0.05f * st.eggShake;
+        float sp = pod ? 1f : 1.6f + 1.5f * st.eggShake;
+        local.rotateX(amp * (float) Math.sin(st.time * 0.11f * sp + ph)).rotateZ(amp * (float) Math.cos(st.time * 0.09f * sp + ph * 1.3f));
+        float grow;
+        if (pod) {
+            grow = 0.3f + 0.7f * st.podGrowth[k];
+            if (!st.podPopped[k]) grow *= 1f + 0.03f * (float) Math.sin(st.time * 0.13f + ph) + 0.28f * st.podSwell;
+        } else grow = 1f + 0.12f * st.eggShake * (float) Math.max(0, Math.sin(st.time * 0.9f + ph));
+        out.set(base).translate(pv).rotate(local);
+        if (grow != 1f) out.scale(grow);
+        out.translate(-pv.x, -pv.y, -pv.z);
+    }
+
+    /** where one bone is now, worked out on its own (for what a chain hangs from) */
+    private Matrix4f bonePose(BellState st, int b, Matrix4f body, Matrix4f out) {
+        Scratch s = scratch.get();
+        switch (kind[b]) {
+            case BELL -> band(st, bands[part[b]].mid(), body, out);
+            case RIM -> sector(st, part[b], body, out);
+            case CROWN -> band(st, crownY - 3, body, out);
+            case SPOT -> spot(st, part[b], body, out);
+            case ARM, STRAND -> segmentPose(chains[chainOf[b]], seg[b], st.chain[chainOf[b]], bodyRotation(st, s.brot2), out, s);
+            case POD, EGG -> {
+                Matrix4f base = bonePose(st, parent[b], body, new Matrix4f());
+                if (blendBone[b] >= 0) base.lerp(bonePose(st, blendBone[b], body, new Matrix4f()), blendW[b]);
+                blob(st, b, base, out, s);
+            }
+        }
+        return out;
+    }
+
+    /** a glowing spot: the four balls go with the dome; the vase hangs from the crown and throbs a little on its own */
+    private Matrix4f spot(BellState st, int i, Matrix4f body, Matrix4f out) {
+        if (i != 4) return band(st, 182, body, out);
+        band(st, crownY - 3, body, out);
+        float th = 1f + 0.02f * (float) Math.sin(st.time * 0.21f) + 0.02f * st.glow;
+        return out.translate(0, crownY, 0).scale(th, 1f, th).translate(0, -crownY, 0);
     }
 
     /**
@@ -389,38 +438,17 @@ public final class BellRig {
     public Matrix4f anchor(BellState st, Chain c, Matrix4f body, Matrix4f out) {
         int pb = c.parentBone;
         if (pb < 0) return out.set(body);
-        return switch (kind[pb]) {
-            case RIM -> sector(st, part[pb], body, out);
-            case BELL -> band(st, bands[part[pb]].mid(), body, out);
-            case SPOT -> {
-                band(st, crownY - 3, body, out);
-                yield out;
-            }
-            case ARM, STRAND -> {
-                // a branch: the spot on the strand it grows from, carried along it (no turn, so it can never flip)
-                Chain pc = chains[c.parentChain];
-                float[] pp = st.chain[c.parentChain];
-                int i = c.parentSeg;
-                float f = c.parentFrac;
-                float ax = pp[3 * i] + (pp[3 * i + 3] - pp[3 * i]) * f, ay = pp[3 * i + 1] + (pp[3 * i + 4] - pp[3 * i + 1]) * f, az = pp[3 * i + 2] + (pp[3 * i + 5] - pp[3 * i + 2]) * f;
-                Vector3f j0 = pc.joints[i], j1 = pc.joints[i + 1];
-                float rx = j0.x + (j1.x - j0.x) * f, ry = j0.y + (j1.y - j0.y) * f, rz = j0.z + (j1.z - j0.z) * f;
-                Quaternionf q = bodyRotation(st, scratch.get().brot2);
-                // translate so that the rest spot on the parent lands where it is now; the body's turn round it
-                Vector3f rest = new Vector3f(rx, ry, rz);
-                Vector3f turned = q.transform(new Vector3f(rest));
-                yield out.identity().translate(ax - turned.x, ay - turned.y, az - turned.z).rotate(q);
-            }
-            default -> out.set(body);
-        };
+        // just as what it hangs from is drawn (a rim sector, the vase, a pod, the piece of a strand or arm it grows
+        // from), so its root stays on it however that swings, swells or throbs
+        return bonePose(st, pb, body, out);
     }
 
     private final ThreadLocal<Scratch> scratch = ThreadLocal.withInitial(Scratch::new);
 
     private static final class Scratch {
-        final Quaternionf q = new Quaternionf(), q2 = new Quaternionf(), brot = new Quaternionf(), brot2 = new Quaternionf();
+        final Quaternionf q = new Quaternionf(), q2 = new Quaternionf(), q3 = new Quaternionf(), brot = new Quaternionf(), brot2 = new Quaternionf();
         final Vector3f v = new Vector3f(), v2 = new Vector3f();
-        final Matrix4f body = new Matrix4f(), m = new Matrix4f();
+        final Matrix4f body = new Matrix4f(), m = new Matrix4f(), m2 = new Matrix4f();
     }
 
     // ------------------------------------------------------------------ points on him
