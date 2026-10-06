@@ -1,0 +1,248 @@
+# the big moves, filmed round each one's wind-up, blow and after (pictures/cinematic)
+world flat
+gui off
+render 16
+cmd time set 6000
+cmd gamerule doMobSpawning false
+cmd gamerule doDaylightCycle false
+cmd tp @p 0 -60 0 0 0
+cmd gamemode spectator @p
+wait 20
+cmd hollowbell away off
+cmd hollowbell summon calm 0.5
+waitmodel
+wait 100
+cmd hollowbell stay true
+view 0 75 -250 0 75 0
+wait 240
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_slam
+atmove arm_slam 30
+wait 4
+shot mv_arm_slam_t030
+atmove arm_slam 44
+wait 4
+shot mv_arm_slam_t044
+atmove arm_slam 48
+wait 4
+shot mv_arm_slam_t048
+atmove arm_slam 51
+wait 4
+shot mv_arm_slam_t051
+atmove arm_slam 56
+wait 4
+shot mv_arm_slam_t056
+atmove arm_slam 66
+wait 4
+shot mv_arm_slam_t066
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do pulse_wave
+atmove pulse_wave 8
+wait 4
+shot mv_pulse_wave_t008
+atmove pulse_wave 13
+wait 4
+shot mv_pulse_wave_t013
+atmove pulse_wave 17
+wait 4
+shot mv_pulse_wave_t017
+atmove pulse_wave 24
+wait 4
+shot mv_pulse_wave_t024
+atmove pulse_wave 34
+wait 4
+shot mv_pulse_wave_t034
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do drop
+atmove drop 20
+wait 4
+shot mv_drop_t020
+atmove drop 40
+wait 4
+shot mv_drop_t040
+atmove drop 52
+wait 4
+shot mv_drop_t052
+atmove drop 55
+wait 4
+shot mv_drop_t055
+atmove drop 58
+wait 4
+shot mv_drop_t058
+atmove drop 64
+wait 4
+shot mv_drop_t064
+atmove drop 80
+wait 4
+shot mv_drop_t080
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do whirlpool
+atmove whirlpool 30
+wait 4
+shot mv_whirlpool_t030
+atmove whirlpool 60
+wait 4
+shot mv_whirlpool_t060
+atmove whirlpool 120
+wait 4
+shot mv_whirlpool_t120
+atmove whirlpool 140
+wait 4
+shot mv_whirlpool_t140
+atmove whirlpool 143
+wait 4
+shot mv_whirlpool_t143
+atmove whirlpool 150
+wait 4
+shot mv_whirlpool_t150
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do deep_toll
+atmove deep_toll 3
+wait 4
+shot mv_deep_toll_t003
+atmove deep_toll 40
+wait 4
+shot mv_deep_toll_t040
+atmove deep_toll 100
+wait 4
+shot mv_deep_toll_t100
+atmove deep_toll 111
+wait 4
+shot mv_deep_toll_t111
+atmove deep_toll 116
+wait 4
+shot mv_deep_toll_t116
+atmove deep_toll 124
+wait 4
+shot mv_deep_toll_t124
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_storm
+atmove arm_storm 36
+wait 4
+shot mv_arm_storm_t036
+atmove arm_storm 50
+wait 4
+shot mv_arm_storm_t050
+atmove arm_storm 62
+wait 4
+shot mv_arm_storm_t062
+atmove arm_storm 90
+wait 4
+shot mv_arm_storm_t090
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do undertow
+atmove undertow 24
+wait 4
+shot mv_undertow_t024
+atmove undertow 34
+wait 4
+shot mv_undertow_t034
+atmove undertow 56
+wait 4
+shot mv_undertow_t056
+atmove undertow 61
+wait 4
+shot mv_undertow_t061
+atmove undertow 64
+wait 4
+shot mv_undertow_t064
+atmove undertow 74
+wait 4
+shot mv_undertow_t074
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sun_lances
+atmove sun_lances 40
+wait 4
+shot mv_sun_lances_t040
+atmove sun_lances 70
+wait 4
+shot mv_sun_lances_t070
+atmove sun_lances 100
+wait 4
+shot mv_sun_lances_t100
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do spore_cloud
+atmove spore_cloud 20
+wait 4
+shot mv_spore_cloud_t020
+atmove spore_cloud 26
+wait 4
+shot mv_spore_cloud_t026
+atmove spore_cloud 40
+wait 4
+shot mv_spore_cloud_t040
+atmove none 0
+wait 80
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do egg_rain
+atmove egg_rain 45
+wait 4
+shot mv_egg_rain_t045
+atmove egg_rain 75
+wait 4
+shot mv_egg_rain_t075
+atmove none 0
+wait 80
+view 0 170 -340 0 120 0
+wait 60
+cmd kill @e[type=zombie]
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sky_dive
+atmove sky_dive 80
+wait 4
+shot mv_sky_dive_t080
+atmove sky_dive 112
+wait 4
+shot mv_sky_dive_t112
+atmove sky_dive 140
+wait 4
+shot mv_sky_dive_t140
+atmove sky_dive 160
+wait 4
+shot mv_sky_dive_t160
+atmove sky_dive 175
+wait 4
+shot mv_sky_dive_t175
+atmove sky_dive 190
+wait 4
+shot mv_sky_dive_t190
+atmove none 0
+wait 80
+quit

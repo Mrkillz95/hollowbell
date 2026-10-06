@@ -1,0 +1,57 @@
+# the sky dive, filmed round the landing (pictures/cinematic)
+world flat
+gui off
+render 16
+cmd time set 6000
+cmd gamerule doMobSpawning false
+cmd gamerule doDaylightCycle false
+cmd tp @p 0 -60 0 0 0
+cmd gamemode spectator @p
+wait 20
+cmd hollowbell away off
+cmd hollowbell summon calm 0.5
+waitmodel
+wait 100
+cmd hollowbell stay true
+view 0 120 -330 0 90 0
+fixed
+wait 240
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] facing entity @p feet positioned ^ ^ ^45 run summon zombie ~ -60 ~ {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b}
+wait 5
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sky_dive
+atmove sky_dive 60
+wait 4
+shot mv_sky_dive_t060
+atmove sky_dive 110
+wait 4
+shot mv_sky_dive_t110
+atmove sky_dive 170
+wait 4
+shot mv_sky_dive_t170
+atmove sky_dive 186
+wait 4
+shot mv_sky_dive_t186
+atmove sky_dive 192
+wait 4
+shot mv_sky_dive_t192
+atmove sky_dive 196
+wait 4
+shot mv_sky_dive_t196
+atmove sky_dive 200
+wait 4
+shot mv_sky_dive_t200
+atmove sky_dive 206
+wait 4
+shot mv_sky_dive_t206
+atmove sky_dive 214
+wait 4
+shot mv_sky_dive_t214
+atmove sky_dive 226
+wait 4
+shot mv_sky_dive_t226
+atmove sky_dive 240
+wait 4
+shot mv_sky_dive_t240
+atmove none 0
+wait 40
+quit

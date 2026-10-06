@@ -31,7 +31,7 @@ import java.util.List;
  */
 public final class AutoTest {
     private static List<String> script;
-    private static int line, wait, joined;
+    private static int line, wait, joined, atWaited;
     private static boolean asked;
     private static String follow;
 
@@ -72,6 +72,31 @@ public final class AutoTest {
             if (s.startsWith("wait ")) { wait = Integer.parseInt(s.substring(5).trim()); return; }
             if (s.equals("waitmodel")) { if (!BellMeshes.INSTANCE.ensureReady()) { line--; wait = 10; } return; }
             if (s.startsWith("cmd ")) { run(mc, s.substring(4).trim()); continue; }
+            // atmove name tick: wait until the nearest one is that far into that move (gives up after 40 s)
+            if (s.startsWith("atmove ")) {
+                String[] a = s.substring(7).trim().split("\\s+");
+                int want = a[0].equals("none") ? 0 : net.jj.hollowbell.entity.Moves.byName(a[0]);
+                float at = Float.parseFloat(a[1]);
+                net.jj.hollowbell.entity.HollowbellEntity near = null;
+                for (var e : mc.level.entitiesForRendering()) if (e instanceof net.jj.hollowbell.entity.HollowbellEntity w && (near == null || w.distanceToSqr(mc.player) < near.distanceToSqr(mc.player))) near = w;
+                boolean there = near != null && near.moveNow() == want && near.moveT(0f) >= at;
+                if (!there && ++atWaited < 800) { line--; return; }
+                if (!there) net.jj.hollowbell.HollowbellMod.LOG.info("autotest {}: gave up waiting", s);
+                atWaited = 0;
+                continue;
+            }
+            // fx kind x y z size [dx dy dz extra]: one of the big-moment effects, sent by the server as a move sends it
+            if (s.startsWith("fx ")) {
+                String[] a = s.substring(3).trim().split("\\s+");
+                int kind = java.util.Arrays.asList(net.jj.hollowbell.fx.BigFx.NAMES).indexOf(a[0]);
+                double fx = Double.parseDouble(a[1]), fy = Double.parseDouble(a[2]), fz = Double.parseDouble(a[3]);
+                float size = Float.parseFloat(a[4]);
+                float dx = a.length > 5 ? Float.parseFloat(a[5]) : 0, dy = a.length > 6 ? Float.parseFloat(a[6]) : 0, dz = a.length > 7 ? Float.parseFloat(a[7]) : 0;
+                int extra = a.length > 8 ? (int) Long.parseLong(a[8].replace("0x", ""), a[8].startsWith("0x") ? 16 : 10) : 0;
+                MinecraftServer sv = mc.getSingleplayerServer();
+                if (sv != null) sv.execute(() -> net.jj.hollowbell.fx.BigFx.send(sv.overworld(), kind, fx, fy, fz, size, dx, dy, dz, extra));
+                continue;
+            }
             // chat /...: typed the way a player types it, through the client (so client-side command handling counts)
             if (s.startsWith("chat /")) { String c = s.substring(6).trim(); HollowbellMod.LOG.info("autotest chat: /{}", c); mc.player.connection.sendCommand(c); continue; }
             if (s.startsWith("guiscale ")) { mc.options.guiScale().set(Integer.parseInt(s.substring(9).trim())); mc.resizeDisplay(); continue; }

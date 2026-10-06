@@ -181,10 +181,16 @@ public final class Moves {
             case PULSE -> in.glow = t < PULSE_AT ? smooth(t / PULSE_AT) : 1f - smooth((t - PULSE_AT) / 20f);
             case DROP -> {
                 in.drop = drop(move, t);
-                // the warning: he lifts a little, glowing, then down he comes
-                in.lowerAdd = -6f * hump(t, 0, DROP_WIND * 0.7f, DROP_WIND * 0.8f, DROP_WIND + 4);
+                // the warning: he lifts a little, glowing, drawn tight and shivering at the top, then down he comes;
+                // landing, the bell squashes out flat and the strands are flung wide, then it springs back
+                int hit = DROP_WIND + DROP_FALL;
+                float shiver = t > DROP_WIND * 0.6f && t < DROP_WIND ? (float) Math.sin(t * 2.3f) : 0f;
+                float squash = hump(t, hit - 2, hit + 1, hit + 3, hit + 16);
+                float spring = t > hit ? (float) (Math.exp(-(t - hit) / 12.0) * Math.sin((t - hit) * 0.25)) : 0f;
+                in.lowerAdd = -6f * hump(t, 0, DROP_WIND * 0.7f, DROP_WIND * 0.8f, DROP_WIND + 4) + 0.8f * shiver;
                 in.glow = 0.9f * hump(t, 0, DROP_WIND, DROP_WIND + 2, DROP_WIND + DROP_FALL);
-                st.spread = 0.5f * hump(t, 0, DROP_WIND, DROP_WIND, DROP_WIND + 10);
+                in.squeezeAdd = 0.3f * hump(t, 4, DROP_WIND - 4, DROP_WIND, DROP_WIND + 6) - 0.6f * squash + 0.3f * spring;
+                st.spread = 0.5f * hump(t, 0, DROP_WIND, DROP_WIND, DROP_WIND + 10) + 0.35f * hump(t, hit - 2, hit + 5, hit + 8, hit + 34);
             }
             case SHED -> in.eggShake = t < SHED_AT ? smooth(t / SHED_AT) : 1f - smooth((t - SHED_AT) / 16f);
             case VOLLEY -> st.flick = hump(t, 0, VOLLEY_AT, VOLLEY_AT + 18, len) * (t > VOLLEY_AT && t < VOLLEY_AT + 18 ? 0.8f + 0.2f * (float) Math.cos((t - VOLLEY_AT) * 0.8f) : 1f);

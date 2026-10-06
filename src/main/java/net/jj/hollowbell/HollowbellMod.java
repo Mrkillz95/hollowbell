@@ -55,6 +55,7 @@ public class HollowbellMod implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.DetailPayload.TYPE, net.jj.hollowbell.net.DetailPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BeingHimPayload.TYPE, BeingHimPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ThumpPayload.TYPE, ThumpPayload.CODEC);
+        net.jj.hollowbell.fx.BigFx.register();
         PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.FarSightPayload.TYPE, net.jj.hollowbell.net.FarSightPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(net.jj.hollowbell.net.LootBeamsPayload.TYPE, net.jj.hollowbell.net.LootBeamsPayload.CODEC);
 

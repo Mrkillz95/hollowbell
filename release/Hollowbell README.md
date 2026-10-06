@@ -1,10 +1,17 @@
-# Hollowbell (Java mod) — version 1.9.3
+# Hollowbell (Java mod) — version 1.9.4
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.9.3
+## What's new in 1.9.4
+
+- **His big moves look a lot bigger.** When he drops onto the ground or lands from the sky dive, chunks of the real ground fly up, tumble and fade, dust rolls out in a ring and a shockwave runs out along the ground with cracks behind it. On water it splashes and a wave rolls out. His arms slam down with chunks and dust. The pulse wave and the deep toll flash his green light and push a ring of dust out, and the big toll's shock ring shows running out with the real one. The whirlpool and the undertow pull the dust round in a swirl. Sun lances scorch the ground with embers and smoke, spores hang as a real cloud, pods burst in green sparks, eggs thump when they land, and his death ends in one last slam.
+- **The screen shakes** near his slams, less the further off you are. **The sound comes late from far off**, like thunder.
+- **He moves heavier.** Before the drop he shivers at the top and squeezes in, then comes down faster and faster, squashes flat on the ground and springs back, with his strands flung out wide.
+- It's all drawn by your own game: nothing in the world gets broken by it. Far away it's drawn simpler (with `detail` on). New setting `bigEffects` in the config: 0 = none, 1 = normal, 2 = more.
+
+## What was new in 1.9.3
 
 - **His arms, strands and glowing pods hold together.** Before, bits of him came loose and floated as he moved, the glowing pods came off the strands they hang on, and arms and strands showed gaps and kinks where they bent. Now:
   - The strands in the middle hang from the glowing pods and arm ends they really sit on, and each pod and egg clump stays on its strand or arm as it swings and swells.
@@ -227,7 +234,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.9.3.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.9.4.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
@@ -532,6 +539,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 - `wardBlocks` (700), `wardSeconds` (1200) and `wardRestSeconds` (1200): how far his woken crown holds him off, for how long, and how long it sits dark afterwards
 - `bookCosts`, `windSeconds`, `freeHits`, `grudgeRate`, `bookRange`: how the book works, the same as the Mountain's
 - `screenShake`, `bossBar`, `soundVolume`, `renderDistance`
+- `bigEffects`: how much flies about when he slams down (0 = none, 1 = normal, 2 = more)
 - `bossBarRange`: how far off his boss bars show (0 = worked out from his size, about 550 at full size)
 - `offscreenTravel` (on) and `awayBlocks` (0): whether he steps out of the world when nobody is near, and how far off they have to be (0 = worked out for you)
 - `ambientSounds`: his hum and drifting sound (off keeps the rest)
