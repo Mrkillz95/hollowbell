@@ -1,0 +1,66 @@
+# 1.9.3 tentacle check: his arms, strands and the glowing pods, whole and up close, idle and in a few moves
+# (pictures in build/autotest/screenshots). Run: ./gradlew runAutotest -Pscript=tools/autotest_tentacles.txt
+world flat
+gui off
+render 24
+sim 24
+detail off
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd hollowbell summon calm 1
+waitmodel
+wait 300
+cmd hollowbell stay true
+cmd execute at @e[type=hollowbell:hollowbell,limit=1] run summon zombie ~45 ~ ~20 {NoAI:1b,Invulnerable:1b,PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:leather_helmet",count:1}]}
+wait 5
+view 0 100 -300 0 95 0
+wait 30
+shot tent_01_idle_whole
+view 20 55 -150 0 55 0
+wait 20
+shot tent_02_idle_close
+view -120 40 -110 0 50 0
+wait 20
+shot tent_03_idle_close_side
+view 0 -5 -60 0 60 0
+wait 20
+shot tent_04_idle_from_below
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do sweep
+view 0 100 -300 0 95 0
+wait 49
+shot tent_05_sweep_whole
+view 20 55 -150 0 55 0
+wait 2
+shot tent_06_sweep_close
+wait 60
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do arm_slam
+view 0 100 -300 0 95 0
+wait 40
+shot tent_07_slam_whole
+view 20 55 -150 0 55 0
+wait 2
+shot tent_08_slam_close
+wait 80
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do whirlpool
+view 0 100 -300 0 95 0
+wait 68
+shot tent_09_whirlpool_whole
+view 20 55 -150 0 55 0
+wait 2
+shot tent_10_whirlpool_close
+wait 140
+cmd hollowbell set cooldowns clear
+cmd execute as @e[type=zombie,limit=1] run hollowbell do drop
+wait 120
+view 0 90 -300 0 40 0
+wait 2
+shot tent_11_drop_whole
+view 30 40 -170 0 20 0
+wait 2
+shot tent_12_drop_close
+quit

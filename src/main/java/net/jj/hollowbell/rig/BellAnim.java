@@ -492,7 +492,8 @@ public final class BellAnim {
         if (sg == 0) out += -0.28f * st.climb * free + 0.45f * open;
         else out += 0.06f * st.climb * free + 0.14f * open;
         // folded out when the bell comes down
-        if (sg == 0) out += st.fold * 0.85f; else out -= st.fold * 0.2f;
+        // (and lying straight out along the ground: curled back in, the ground rolled them into loops)
+        if (sg == 0) out += st.fold * 0.85f; else out += st.fold * 0.04f;
         int segK = Math.min(sg, 2);
         if (A.k() == st.slamArm) {
             out += BellRig.slam(st.slamT, segK);
