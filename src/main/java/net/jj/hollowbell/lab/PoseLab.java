@@ -79,6 +79,7 @@ public final class PoseLab {
     static void jerk(BellAnim anim, int t, String scene) {
         BellState st = anim.now();
         if (t == 0) { jl = null; jl2 = null; worstJerk = 0; }
+        if (t == Integer.getInteger("lab.jerkFrom", 0)) worstJerk = 0;
         if (jl2 != null) for (int c = 0; c < st.chain.length; c++) {
             if (anim.knocked(c)) continue;
             float[] a = jl2[c], b = jl[c], n = st.chain[c];
@@ -294,7 +295,7 @@ public final class PoseLab {
         int[] floats = new int[s.samples.length];
         for (int t = 0; t <= s.ticks && si < s.samples.length; t++) {
             in.time = 1000 + t;
-            in.speedRef = 0.3f;
+            in.speedRef = Float.parseFloat(System.getProperty("lab.speed", "0.3"));
             in.groundUnder = GROUND;
             in.ground = (mx, mz) -> GROUND;
             in.pulse = Moves.pulseCurve(t % 60, 1f);
