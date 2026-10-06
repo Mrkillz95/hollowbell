@@ -70,27 +70,30 @@ public class PaintDepthTests implements FabricGameTest {
             for (int i = 0; i < 256; i++) {
                 int x = cp.getMinBlockX() + (i & 15), z = cp.getMinBlockZ() + (i >> 4);
                 if ((x - cx) * (x - cx) + (z - cz) * (z - cz) > (R - 1) * (R - 1)) continue;
-                // (a column raised over the land is filled right through with his ground: its depth can't be told)
-                if (!o.paint[i] || o.laid[i] == 0 || o.top[i] > y0[i] || y0[i] != LAND) continue;
+                if (!o.paint[i] || o.laid[i] == 0 || y0[i] != LAND) continue;
                 int top = o.top[i];
+                // (land raised over the old ground is filled right through with his ground; the depth counts down
+                // from the old ground there)
+                int bottom = Math.min(top, y0[i]) - (d - 1);
                 checked++;
                 boolean ok = true;
-                for (int k = 0; k < d; k++) {
-                    BellPlan.Mat m = k == 0 ? o.layer[i][0] : plan.layer(x, top - k, z, k, o.topMat(i), y0[i]);
-                    BlockState want = m == BellPlan.Mat.KEEP ? stone : HomeGround.state(m);
-                    BlockState got = lv.getBlockState(new BlockPos(x, top - k, z));
+                for (int k = 0; top - k >= bottom; k++) {
+                    int y = top - k;
+                    BellPlan.Mat m = k == 0 ? o.layer[i][0] : plan.layer(x, y, z, k, o.topMat(i), y0[i]);
+                    BlockState want = m == BellPlan.Mat.KEEP ? (y > y0[i] ? HomeGround.state(BellPlan.Mat.CALCITE) : stone) : HomeGround.state(m);
+                    BlockState got = lv.getBlockState(new BlockPos(x, y, z));
                     if (!got.equals(want)) {
                         ok = false;
-                        if (first.length() < 400) first.append(" (").append(x).append(",").append(top - k).append(",").append(z).append(" k").append(k)
+                        if (first.length() < 400) first.append(" (").append(x).append(",").append(y).append(",").append(z).append(" k").append(k)
                                 .append(": ").append(got.getBlock().getName().getString()).append(" not ").append(want.getBlock().getName().getString()).append(")");
                     }
-                    if (k >= BellPlan.MADE_DEPTH && m == plan.strata(x, top - k, z)) deepOnes++;
+                    if (k >= BellPlan.MADE_DEPTH && y <= y0[i] && m == plan.strata(x, y, z)) deepOnes++;
                 }
                 if (!ok) bad++;
-                BlockState below = lv.getBlockState(new BlockPos(x, top - d, z));
+                BlockState below = lv.getBlockState(new BlockPos(x, bottom - 1, z));
                 if (!below.is(Blocks.STONE)) {
                     badBelow++;
-                    if (first.length() < 400) first.append(" [under ").append(x).append(",").append(top - d).append(",").append(z).append(": ")
+                    if (first.length() < 400) first.append(" [under ").append(x).append(",").append(bottom - 1).append(",").append(z).append(": ")
                             .append(below.getBlock().getName().getString()).append("]");
                 }
             }
