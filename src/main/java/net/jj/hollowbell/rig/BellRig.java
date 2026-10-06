@@ -270,8 +270,15 @@ public final class BellRig {
         if (lr < 1e-5f) { dr.set(a1).sub(a0); lr = Math.max(1e-5f, dr.length()); }
         if (ln < 1e-5f) { dn.set(f.p1).sub(f.p0); ln = Math.max(1e-5f, dn.length()); }
         dr.div(lr); dn.div(ln);
-        Vector3f drT = brot.transform(f.t0.set(dr));
-        Quaternionf r = f.q.rotationTo(drT, dn).mul(brot);
+        // the twist: the root piece starts out turned just as what it hangs from is (an arm's end may be turned right
+        // round its own length), and comes round to his body's turn by its far end
+        Quaternionf base = brot;
+        if (i == 0 && hang != null) {
+            hang.getNormalizedRotation(f.qh);
+            base = f.qh.slerp(brot, Mth.clamp(u, 0f, 1f));
+        }
+        Vector3f drT = base.transform(f.t0.set(dr));
+        Quaternionf r = f.q.rotationTo(drT, dn).mul(base);
         out.identity().translate(f.nowAt).rotate(r);
         float k = l0 > 1e-4f ? l / l0 : 1f;
         if (Math.abs(k - 1f) > 0.01f) {
@@ -307,7 +314,7 @@ public final class BellRig {
     private static final class FrameScratch {
         final Vector3f t0 = new Vector3f(), t1 = new Vector3f(), t2 = new Vector3f(), t3 = new Vector3f(), t4 = new Vector3f(), p0 = new Vector3f(), p1 = new Vector3f();
         final Vector3f restAt = new Vector3f(), restDir = new Vector3f(), nowAt = new Vector3f(), nowDir = new Vector3f();
-        final Quaternionf q = new Quaternionf();
+        final Quaternionf q = new Quaternionf(), qh = new Quaternionf();
         final Matrix4f m = new Matrix4f();
     }
     private static final ThreadLocal<FrameScratch> frames = ThreadLocal.withInitial(FrameScratch::new);

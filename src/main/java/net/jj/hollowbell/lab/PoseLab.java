@@ -278,6 +278,15 @@ public final class PoseLab {
                 anim.fill(st, 1f);
                 rig.computePose(st, pose, labHang);
                 curState = st;
+                if (Integer.getInteger("lab.strand", -1) >= 0) {
+                    int sc = rig.strandChain[Integer.getInteger("lab.strand")];
+                    float[] cp = st.chain[sc];
+                    StringBuilder sb = new StringBuilder("      chain");
+                    for (int q = 0; q < cp.length / 3; q++) sb.append(String.format(" (%.1f %.1f %.1f)", cp[3 * q], cp[3 * q + 1], cp[3 * q + 2]));
+                    Vector3f h0 = labHang[sc].transformPosition(new Vector3f(rig.chains[sc].joints[0]));
+                    sb.append(String.format(" hang*J0 (%.1f %.1f %.1f)", h0.x, h0.y, h0.z));
+                    say(sb.toString());
+                }
                 Result r = measure(pose);
                 StringBuilder bw = new StringBuilder();
                 r.bend = bend(st, bw);
