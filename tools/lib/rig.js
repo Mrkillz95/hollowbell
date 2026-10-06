@@ -259,11 +259,13 @@ function buildRig(M, C) {
 
   // arms: split by height into segments, hung from the rim sector they come out under
   const armDefs = [];
+  const armSegOf = [];
   for (let a = 0; a < 8; a++) {
     const ks = []; for (let k = 0; k < n; k++) if (label[k] === null && lab[k] === a && !gone[k]) ks.push(k);
     let y0 = 1e9, y1 = -1e9; for (const k of ks) { y0 = Math.min(y0, Y[k]); y1 = Math.max(y1, Y[k]); }
     const cuts = []; for (let s = 0; s <= ARM_SEGS; s++) cuts.push(y1 + 1 - (y1 + 1 - y0) * s / ARM_SEGS);
     const segOf = k => { for (let s = 0; s < ARM_SEGS; s++) if (Y[k] >= cuts[s + 1]) return s; return ARM_SEGS - 1; };
+    armSegOf[a] = segOf;
     const joints = [];
     const names = [];
     for (let s = 0; s < ARM_SEGS; s++) {
@@ -372,6 +374,93 @@ function buildRig(M, C) {
   hang(pods, 'pod', podDefs);
   hang(eggs, 'egg', eggDefs);
 
+  // ---------------- 1.9.3: every part in one piece. A bit of a strand (or a pod, an egg clump, an arm) that only
+  // touches the rest of him through some other part goes with that part: on its own it would float off when its
+  // strand swings away. Repeated until every part is one piece.
+  const groupOfBone = bones.map(b => {
+    const w = b.name.split('_');
+    return w[0] === 'strand' || w[0] === 'arm' ? w[0] + '_' + w[1] : w[0] === 'pod' || w[0] === 'egg' ? b.name : 'body';
+  });
+  const boneIn = (group, k, near) => {
+    const w = group.split('_');
+    if (w[0] === 'strand') return boneIndex.get(`strand_${w[1]}_${strandInfo[+w[1]].segOf(k)}`);
+    if (w[0] === 'arm') return boneIndex.get(`arm_${w[1]}_${armSegOf[+w[1]](k)}`);
+    if (group === 'body') return near;
+    return boneIndex.get(group);
+  };
+  let movedBits = 0, movedVox = 0;
+  for (let pass = 0; pass < 20; pass++) {
+    const comp = new Int32Array(n).fill(-1);
+    const comps = [];
+    for (let s = 0; s < n; s++) {
+      if (gone[s] || boneOf[s] < 0 || comp[s] >= 0) continue;
+      const g = groupOfBone[boneOf[s]];
+      if (g === 'body') continue;
+      const id = comps.length; const ks = [s]; comp[s] = id;
+      for (let q = 0; q < ks.length; q++) {
+        const k = ks[q];
+        for (const [a, b, c] of N26) {
+          const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+          if (j !== undefined && !gone[j] && comp[j] < 0 && boneOf[j] >= 0 && groupOfBone[boneOf[j]] === g) { comp[j] = id; ks.push(j); }
+        }
+      }
+      comps.push({ g, ks });
+    }
+    const biggest = new Map();
+    comps.forEach((c, i) => { const b = biggest.get(c.g); if (b === undefined || comps[b].ks.length < c.ks.length) biggest.set(c.g, i); });
+    let changed = 0;
+    comps.forEach((c, i) => {
+      if (biggest.get(c.g) === i) return;
+      const touch = new Map(), nearBone = new Map();
+      for (const k of c.ks) for (const [a, b, d] of N26) {
+        const j = find(X[k] + a, Y[k] + b, Z[k] + d);
+        if (j === undefined || gone[j] || boneOf[j] < 0) continue;
+        const g = groupOfBone[boneOf[j]];
+        if (g === c.g) continue;
+        touch.set(g, (touch.get(g) || 0) + 1);
+        if (!nearBone.has(g)) nearBone.set(g, boneOf[j]);
+      }
+      if (!touch.size) return;
+      const into = [...touch].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0][0];
+      for (const k of c.ks) boneOf[k] = boneIn(into, k, nearBone.get(into));
+      changed++; movedVox += c.ks.length;
+    });
+    movedBits += changed;
+    if (!changed) break;
+  }
+
+  // ---------------- pods and egg clumps hang from the piece of strand or arm they touch most, held at the middle of
+  // where they touch it (so they swing and swell about that spot and never come off it). One that also lies on the
+  // next piece of the same strand or arm goes along with both, in the share it touches each.
+  const contacts = (b) => {
+    const touch = new Map(), sum = new Map();
+    for (let k = 0; k < n; k++) {
+      if (boneOf[k] !== b || gone[k]) continue;
+      for (const [a, c, d] of N26) {
+        const j = find(X[k] + a, Y[k] + c, Z[k] + d);
+        if (j === undefined || gone[j] || boneOf[j] < 0 || boneOf[j] === b) continue;
+        if (!/^(strand|arm)_/.test(bones[boneOf[j]].name)) continue;
+        const o = boneOf[j];
+        touch.set(o, (touch.get(o) || 0) + 1);
+        const m = sum.get(o) || [0, 0, 0, 0]; m[0] += X[k]; m[1] += Y[k]; m[2] += Z[k]; m[3]++; sum.set(o, m);
+      }
+    }
+    return { touch, sum };
+  };
+  for (const list of [podDefs, eggDefs]) for (const D of list) {
+    const b = D.bone;
+    const { touch, sum } = contacts(b);
+    if (!touch.size) continue;   // touches no strand or arm: keeps the nearest strand (found when it was made)
+    const order = [...touch].sort((a, c) => c[1] - a[1] || a[0] - c[0]);
+    const par = order[0][0];
+    bones[b].parent = bones[par].name;
+    const m = sum.get(par);
+    bones[b].pivot = [m[0] / m[3] + 0.5, m[1] / m[3] + 0.5, m[2] / m[3] + 0.5].map(v => Math.round(v * 100) / 100);
+    const pw = bones[par].name.split('_');
+    const other = order.slice(1).find(([o]) => { const w = bones[o].name.split('_'); return w[0] === pw[0] && w[1] === pw[1] && Math.abs(+w[2] - +pw[2]) === 1; });
+    if (other) D.blend = { bone: other[0], w: Math.round(other[1] / (other[1] + order[0][1]) * 1000) / 1000 };
+  }
+
   // anything left (should be nothing): the rim
   // anything left over (loose bits): the bone of a neighbour, else the rim
   let orphans = 0;
@@ -417,7 +506,7 @@ function buildRig(M, C) {
       dome: profile,
       bands: bandDefs, sectors: sectorDefs,
     },
-    stats: { strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
+    stats: { piecesMoved: movedBits, piecesMovedBlocks: movedVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
   };
 }
 
