@@ -265,7 +265,14 @@ public final class BellAnim {
                 // back through itself. A move may bend an arm or strand further than its own swing does
                 float bx, by, bz;
                 if (i == 1) { tv2.set(ch.joints[1]).sub(ch.joints[0]); mAnchor.transformDirection(tv2); bx = tv2.x; by = tv2.y; bz = tv2.z; }
-                else { bx = p[o - 3] - p[o - 6]; by = p[o - 2] - p[o - 5]; bz = p[o - 1] - p[o - 4]; }
+                else {
+                    // the way this piece went from the one above as built, turned the way the one above is now
+                    tv.set(ch.joints[i - 1]).sub(ch.joints[i - 2]).normalize();
+                    tv2.set(p[o - 3] - p[o - 6], p[o - 2] - p[o - 5], p[o - 1] - p[o - 4]);
+                    if (tv2.lengthSquared() > 1e-8f) qTmp.rotationTo(tv, tv2.normalize()); else qTmp.identity();
+                    qTmp.transform(tv2.set(ch.joints[i]).sub(ch.joints[i - 1]));
+                    bx = tv2.x; by = tv2.y; bz = tv2.z;
+                }
                 float lim = ch.arm ? (i == 1 ? 1.45f : 0.6f + 0.35f * hk) : (i == 1 ? 0.75f : 0.45f + 0.35f * hk);
                 float bl = (float) Math.sqrt(bx * bx + by * by + bz * bz);
                 if (bl > 1e-4f) {
