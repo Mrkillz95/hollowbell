@@ -68,3 +68,20 @@ tasks.register('groundLab', JavaExec) {
     args = (project.findProperty('lab') ?: 'all').toString().split(' ').toList()
     jvmArgs '-Xmx3g', '-Djava.awt.headless=true'
 }
+
+// Pose lab: runs his animation offline in every pose and move and measures blocks cut off or coming apart
+// (build/poselab). Development only, never in the jar: ./gradlew poseLab -Plab="idle arm_slam" -Pshots=1
+tasks.register('poseLab', JavaExec) {
+    dependsOn 'classes'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'net.jj.hollowbell.lab.PoseLab'
+    workingDir = projectDir
+    args = (project.findProperty('lab') ?: 'all').toString().split(' ').toList()
+    jvmArgs '-Xmx3g', '-Djava.awt.headless=true'
+    if (project.hasProperty('shots')) systemProperty 'lab.shots', project.property('shots')
+    if (project.hasProperty('out')) systemProperty 'lab.out', project.property('out')
+}
+tasks.register('poseLabClasspath') {
+    dependsOn 'classes'
+    doLast { new File(buildDir, 'poselab-cp.txt').text = sourceSets.main.runtimeClasspath.asPath }
+}

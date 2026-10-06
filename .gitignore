@@ -7,3 +7,4 @@ out/
 .vscode/
 reference/*_vox.bin
 reference/*_names.json
+logs/
