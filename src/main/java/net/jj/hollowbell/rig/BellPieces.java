@@ -1,18 +1,17 @@
 package net.jj.hollowbell.rig;
 
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 
 /**
  * His arms and strands drawn so they bend smoothly. Each piece of an arm or strand (a bone) is a straight, stiff
- * length between two joints of its chain, and on its own it would bend only at the joints, opening a gap on the
+ * length between two joints of its chain, and drawn like that it would bend only at the joints, opening a gap on the
  * outside of every bend and folding in on the inside. So for drawing, each piece is cut across into a few slices
- * along its length. The middle slice goes exactly with its piece; the slices toward a joint go more and more with the
- * piece on the other side of that joint (and the first slices of a strand or arm with what it hangs from: its rim
- * sector, the vase, a pod, the arm or strand it grows from). The bend is shared out over all the slices, so it reads as
- * one smooth curve with no gap, and the root stays on what it hangs from.
+ * along its length, and each slice is laid along one smooth curve through the chain's joints (see
+ * {@link BellRig#frame}): the bend is spread over the slices, so it reads as one smooth curve with no gaps, and the
+ * root comes smoothly out of what it hangs from.
  *
- * The blocks are the same as the bone's (see {@link BellModel}); hits still use the bones (the slices never move more
- * than a block or two off them).
+ * The blocks are the same as the bone's (see {@link BellModel}); the slices only say which of them go together.
  */
 public final class BellPieces {
     private static BellPieces instance;
@@ -23,16 +22,13 @@ public final class BellPieces {
     }
 
     /** slices per piece of an arm and of a strand */
-    public static final int ARM_SLICES = Integer.getInteger("hollowbell.armSlices", 6);
+    public static final int ARM_SLICES = Integer.getInteger("hollowbell.armSlices", 8);
     public static final int STRAND_SLICES = Integer.getInteger("hollowbell.strandSlices", 3);
 
     public final int count;
-    /**
-     * per slice: its bone, the bones it leans toward (-1 none; for the first piece of a chain, prevBone is -2: what
-     * the chain hangs from) and how much, and its chain (-1 none)
-     */
-    public final int[] bone, prevBone, nextBone, chain;
-    public final float[] wPrev, wNext;
+    /** per slice: its bone, its chain (-1 none), and how far along its piece its middle is (0 top joint, 1 bottom) */
+    public final int[] bone, chain;
+    public final float[] u;
     /** per bone: its first slice and how many; per bone, per block: which slice the block is in */
     public final int[] first, num;
     public final int[][] sliceOf;
@@ -51,44 +47,29 @@ public final class BellPieces {
             total += num[b];
         }
         count = total;
-        bone = new int[total]; prevBone = new int[total]; nextBone = new int[total]; chain = new int[total];
-        wPrev = new float[total]; wNext = new float[total];
+        bone = new int[total];
+        chain = new int[total];
+        u = new float[total];
         bounds = new float[total][];
-        java.util.Arrays.fill(prevBone, -1);
-        java.util.Arrays.fill(nextBone, -1);
-        java.util.Arrays.fill(chain, -1);
         for (int b = 0; b < nb; b++) {
             int P = num[b];
-            int c = rig.chainOf[b];
-            int prev = -1, next = -1;
-            boolean root = false;
-            if (c >= 0) {
-                BellRig.Chain ch = rig.chains[c];
-                int i = rig.seg[b];
-                root = i == 0;
-                prev = i > 0 ? ch.bones[i - 1] : ch.parentBone >= 0 ? -2 : -1;
-                next = i + 1 < ch.bones.length ? ch.bones[i + 1] : -1;
-            }
             for (int k = 0; k < P; k++) {
                 int s = first[b] + k;
                 bone[s] = b;
-                chain[s] = c;
-                if (P == 1) continue;
-                float u = (k + 0.5f) / P;
-                if (prev != -1) { prevBone[s] = prev; wPrev[s] = BellRig.wPrev(u, root); }
-                if (next >= 0) { nextBone[s] = next; wNext[s] = BellRig.wNext(u); }
+                chain[s] = rig.chainOf[b];
+                u[s] = (k + 0.5f) / P;
             }
             int n = model.count(b);
             int[] of = new int[n];
             if (P > 1) {
-                BellRig.Chain ch = rig.chains[c];
+                BellRig.Chain ch = rig.chains[rig.chainOf[b]];
                 int i = rig.seg[b];
                 float ax = ch.joints[i].x, ay = ch.joints[i].y, az = ch.joints[i].z;
                 float dx = ch.joints[i + 1].x - ax, dy = ch.joints[i + 1].y - ay, dz = ch.joints[i + 1].z - az;
                 float l2 = Math.max(1e-4f, dx * dx + dy * dy + dz * dz);
                 for (int v = 0; v < n; v++) {
-                    float u = ((model.x[b][v] + 0.5f - ax) * dx + (model.y[b][v] + 0.5f - ay) * dy + (model.z[b][v] + 0.5f - az) * dz) / l2;
-                    of[v] = first[b] + Math.max(0, Math.min(P - 1, (int) Math.floor(u * P)));
+                    float t = ((model.x[b][v] + 0.5f - ax) * dx + (model.y[b][v] + 0.5f - ay) * dy + (model.z[b][v] + 0.5f - az) * dz) / l2;
+                    of[v] = first[b] + Math.max(0, Math.min(P - 1, (int) Math.floor(t * P)));
                 }
             } else java.util.Arrays.fill(of, first[b]);
             sliceOf[b] = of;
@@ -104,15 +85,17 @@ public final class BellPieces {
 
     public Matrix4f[] newPose() { Matrix4f[] m = new Matrix4f[count]; for (int i = 0; i < count; i++) m[i] = new Matrix4f(); return m; }
 
-    /** each slice's transform, from the bones' and what each chain hangs from (see {@link BellRig#computePose}) */
-    public void pose(Matrix4f[] bones, Matrix4f[] hang, Matrix4f[] out) {
+    public Matrix4f[] newHang() { Matrix4f[] m = new Matrix4f[BellRig.get().chains.length]; for (int i = 0; i < m.length; i++) m[i] = new Matrix4f(); return m; }
+
+    /** each slice's transform, from the bones' and what each chain hangs from (both from {@link BellRig#computePose}) */
+    public void pose(BellState st, Matrix4f[] bones, Matrix4f[] hang, Matrix4f[] out) {
+        BellRig rig = BellRig.get();
+        Quaternionf brot = rig.bodyRotation(st, new Quaternionf());
         for (int s = 0; s < count; s++) {
-            Matrix4f prev = prevBone[s] == -2 ? hang[chain[s]] : prevBone[s] >= 0 ? bones[prevBone[s]] : null;
-            Matrix4f next = nextBone[s] >= 0 ? bones[nextBone[s]] : null;
-            // every piece on either side of a joint maps that joint to the same spot, so the mix keeps it there too
-            BellRig.mix(bones[bone[s]], prev, wPrev[s], next, wNext[s], out[s]);
+            int b = bone[s];
+            if (num[b] == 1) { out[s].set(bones[b]); continue; }
+            int c = chain[s];
+            rig.frame(st, b, u[s], rig.seg[b] == 0 && rig.chains[c].parentBone >= 0 ? hang[c] : null, brot, out[s]);
         }
     }
-
-    public Matrix4f[] newHang() { Matrix4f[] m = new Matrix4f[BellRig.get().chains.length]; for (int i = 0; i < m.length; i++) m[i] = new Matrix4f(); return m; }
 }

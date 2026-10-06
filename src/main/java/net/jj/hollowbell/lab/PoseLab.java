@@ -277,6 +277,7 @@ public final class PoseLab {
             if (t == s.samples[si]) {
                 anim.fill(st, 1f);
                 rig.computePose(st, pose, labHang);
+                curState = st;
                 Result r = measure(pose);
                 StringBuilder bw = new StringBuilder();
                 r.bend = bend(st, bw);
@@ -320,6 +321,7 @@ public final class PoseLab {
         }
         anim.fill(st, 1f);
         rig.computePose(st, pose, labHang);
+        curState = st;
         picture(s.name + "_worst_" + (tt - SETTLE), pose, measure(pose), st);
     }
 
@@ -357,10 +359,14 @@ public final class PoseLab {
                 || c.matches("(bell|rim|crown|spot)-(bell|rim|crown|spot)");
     }
 
+    static BellState curState;
+    static final boolean DEBUG = Boolean.getBoolean("lab.debug");
+    static int dbg;
+
     static Result measure(Matrix4f[] pose) {
         Result r = new Result();
         Matrix4f[] sp = pose;
-        if (!rigid) { sp = pieces.newPose(); pieces.pose(pose, labHang, sp); }
+        if (!rigid) { sp = pieces.newPose(); pieces.pose(curState, pose, labHang, sp); }
         int nb = sp.length;
         r.scale = new float[nb];
         Vector3f v = new Vector3f();
@@ -387,6 +393,9 @@ public final class PoseLab {
             if (g <= 1f) continue;
             String c = cat(vb[a], vb[b]);
             if (!own(c)) { r.touchApart++; continue; }
+            if (DEBUG && c.equals("strand joint") && dbg++ < 6)
+                say(String.format("      dbg %s v%d(%s slice %d) %.0f,%.0f,%.0f -> %.1f,%.1f,%.1f | %s v%d(slice %d) %.0f,%.0f,%.0f -> %.1f,%.1f,%.1f gap %.1f",
+                        rig.boneNames[vb[a]], a, "", vs[a], rx[a], ry[a], rz[a], px[a], py[a], pz[a], rig.boneNames[vb[b]], b, vs[b], rx[b], ry[b], rz[b], px[b], py[b], pz[b], g));
             r.gapPairs++;
             r.gapped[a] = true; r.gapped[b] = true;
             r.byCat.merge(c, 1, Integer::sum);
@@ -438,6 +447,23 @@ public final class PoseLab {
             bitBones.computeIfAbsent(root, k -> new HashMap<>()).merge(vb[i], 1, Integer::sum);
         }
         r.bits = size.size() - 1;
+        if (DEBUG) {
+            // for the biggest cut-off pieces: the links to the rest of him that broke, and by how much (closest pair)
+            Map<String, Float> links = new HashMap<>();
+            for (int k = 0; k < pa.length; k++) {
+                int a = pa[k], b = pb[k];
+                int ra = find(parent, a), rb = find(parent, b);
+                if (ra == rb || (ra != big && rb != big)) continue;
+                int in = ra == big ? b : a;
+                if (size.get(find(parent, in)) < 200) continue;
+                float dx = px[a] - px[b], dy = py[a] - py[b], dz = pz[a] - pz[b];
+                float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                String key = rig.boneNames[vb[a]] + "~" + rig.boneNames[vb[b]];
+                links.merge(key, d, Math::min);
+            }
+            links.entrySet().stream().sorted(Map.Entry.comparingByValue()).limit(12)
+                    .forEach(e -> say(String.format("      link %s closest %.1f", e.getKey(), e.getValue())));
+        }
         bitBones.values().stream().sorted((x, y) -> sum(y) - sum(x)).limit(6).forEach(m -> {
             StringBuilder sb = new StringBuilder();
             m.entrySet().stream().sorted((x, y) -> y.getValue() - x.getValue()).limit(4)
@@ -485,20 +511,31 @@ public final class PoseLab {
         float[][] views = {{0f, 0.15f}, {(float) Math.PI / 2, 0.15f}, {0.6f, 1.2f}, {0.3f, -0.5f}};
         int S = 3, W = 300 * S, H = 300 * S;
         BufferedImage img = new BufferedImage(W * 2, H * 2, BufferedImage.TYPE_INT_RGB);
-        for (int v = 0; v < views.length; v++) draw(img, (v % 2) * W, (v / 2) * H, W, H, S, views[v][0], views[v][1], r, 0, 110, 0, null);
+        for (int v = 0; v < views.length; v++) draw(img, (v % 2) * W, (v / 2) * H, W, H, S, views[v][0], views[v][1], r, 0, 110, 0, null, true);
         Graphics2D g = img.createGraphics();
         g.setColor(Color.YELLOW);
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
         g.drawString(name + "   cut off: " + r.floating + "   apart: " + r.gapPairs, 10, 26);
         g.dispose();
         ImageIO.write(img, "png", new File(out, name + ".png"));
+        // close-ups of the arms and strands, in their own colours (no marks), from the front and the side
+        int cw = 900, chh = 900;
+        BufferedImage close = new BufferedImage(cw * 2, chh, BufferedImage.TYPE_INT_RGB);
+        draw(close, 0, 0, cw, chh, 6f, 0.4f, 0.1f, r, 0, 75 - st.lower, 0, null, false);
+        draw(close, cw, 0, cw, chh, 6f, 0.4f + (float) Math.PI / 2, 0.1f, r, 0, 75 - st.lower, 0, null, false);
+        g = close.createGraphics();
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+        g.drawString(name + " (close)", 10, 26);
+        g.dispose();
+        ImageIO.write(close, "png", new File(out, name + "_close.png"));
     }
 
     /**
      * Draws the posed blocks into img (x0, y0, w, h) looking from yaw/pitch, centred on (cx, cy, cz), S pixels a block.
      * only: if not null, just these bones.
      */
-    static void draw(BufferedImage img, int x0, int y0, int w, int h, float S, float yaw, float pitch, Result r, float cx, float cy, float cz, boolean[] only) {
+    static void draw(BufferedImage img, int x0, int y0, int w, int h, float S, float yaw, float pitch, Result r, float cx, float cy, float cz, boolean[] only, boolean marks) {
         float cyaw = (float) Math.cos(yaw), syaw = (float) Math.sin(yaw), cp = (float) Math.cos(pitch), sp = (float) Math.sin(pitch);
         float[] zb = new float[w * h];
         Arrays.fill(zb, Float.MAX_VALUE);
@@ -513,9 +550,9 @@ public final class PoseLab {
             float u = w / 2f + x1 * S, vv = h / 2f - y2 * S;
             float depth = z2;
             int sz = (int) Math.ceil(S * Math.max(1f, r.scale[vs[i]])) + 1;
-            int col = r.cut[i] ? 0xff00ff : r.gapped[i] ? 0xff2020 : vcol[i];
+            int col = marks && r.cut[i] ? 0xff00ff : marks && r.gapped[i] ? 0xff2020 : vcol[i];
             float shade = Math.max(0.45f, Math.min(1.1f, 0.8f - depth / 400f));
-            if (glow[i] && !r.cut[i] && !r.gapped[i]) shade = 1.1f;
+            if (glow[i] && (!marks || (!r.cut[i] && !r.gapped[i]))) shade = 1.1f;
             int cr = Math.min(255, (int) (((col >> 16) & 255) * shade)), cg = Math.min(255, (int) (((col >> 8) & 255) * shade)), cb = Math.min(255, (int) ((col & 255) * shade));
             int c = (cr << 16) | (cg << 8) | cb;
             int ui = (int) (u - sz / 2f), vi = (int) (vv - sz / 2f);
