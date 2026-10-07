@@ -1,5 +1,5 @@
-# Installs the newest all-in-one giants jar (all six bosses in one jar) into Minecraft.
-# It takes out the six single jars, because the all-in-one jar has them inside.
+# Installs the newest all-in-one giants jar (all seven bosses in one jar) into Minecraft.
+# It takes out the seven single jars, because the all-in-one jar has them inside.
 # Run it from anywhere: powershell -ExecutionPolicy Bypass -File C:\Users\jeria\Hollowbell\install-all.ps1
 $ErrorActionPreference = 'Stop'
 $repo = $PSScriptRoot
@@ -15,7 +15,7 @@ $jar = Get-ChildItem (Join-Path $repo 'release') -Filter 'giants-all-*.jar' -Err
     Sort-Object { [version]($_.BaseName -replace '^giants-all-', '') } | Select-Object -Last 1
 if (-not $jar) { Write-Host 'No all-in-one jar in release\ yet.'; exit 1 }
 
-$singles = @('pitchgut-*.jar', 'furrowmaw-*.jar', 'fire-ice-cerberus-*.jar', 'hollowbell-*.jar', 'lanternwillow-*.jar', 'wreckback-*.jar')
+$singles = @('pitchgut-*.jar', 'furrowmaw-*.jar', 'fire-ice-cerberus-*.jar', 'hollowbell-*.jar', 'lanternwillow-*.jar', 'wreckback-*.jar', 'swarmforge-*.jar')
 foreach ($t in $targets) {
     if (-not (Test-Path $t)) { continue }
     foreach ($f in $singles) { Get-ChildItem $t -Filter $f | Remove-Item -Confirm:$false }
