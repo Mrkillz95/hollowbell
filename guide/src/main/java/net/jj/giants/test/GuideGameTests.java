@@ -40,7 +40,7 @@ import java.util.UUID;
 /** The guide's game tests: the recipe, the book on first join, /giantsguide, its data and its lines, the live news. */
 public class GuideGameTests implements FabricGameTest {
     /** every giant mod there is: the guide must have a page for each */
-    private static final Set<String> GIANT_MODS = Set.of("mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback");
+    private static final Set<String> GIANT_MODS = Set.of("mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge");
 
     @SuppressWarnings("deprecation")
     private static ServerPlayer player(GameTestHelper h, UUID id) {
@@ -154,7 +154,7 @@ public class GuideGameTests implements FabricGameTest {
         for (Giant g : Giants.ALL) {
             for (String k : new String[]{g.nameKey(), g.roleKey(), g.sizeKey(), "guide.jj_giants." + g.key() + ".short"})
                 if (!text(l, k)) wrong.add("missing " + k);
-            for (String page : Giants.PAGES)
+            for (String page : Giants.pages(g))
                 if (!page.equals("moves") && !text(l, g.lineKey(page, 1))) wrong.add("no " + page + " page for " + g.key());
             // (light, medium and heavy: every giant has them; only Wreckback has sea moves)
             for (int t = 0; t < 3; t++) {
@@ -174,7 +174,7 @@ public class GuideGameTests implements FabricGameTest {
                 }
             }
             // every page line: items and recipes it names are real when his mod is here
-            for (String page : Giants.PAGES)
+            for (String page : Giants.pages(g))
                 for (int n = 1; n <= Giants.MAX_LINES && l.has(g.lineKey(page, n)); n++) {
                     String s = l.get(g.lineKey(page, n)).getAsString();
                     checkLine(h, s, g.key() + "." + page + "." + n, wrong);
@@ -215,10 +215,11 @@ public class GuideGameTests implements FabricGameTest {
         // the table every giant's own mod has (and its README): only these pairs fight
         String[][] fights = {{"pitchgut", "furrowmaw"}, {"pitchgut", "cerberus"}, {"furrowmaw", "cerberus"}, {"furrowmaw", "lanternwillow"},
                 {"cerberus", "hollowbell"}, {"cerberus", "lanternwillow"},
-                {"pitchgut", "wreckback"}, {"furrowmaw", "wreckback"}, {"cerberus", "wreckback"}};
+                {"pitchgut", "wreckback"}, {"furrowmaw", "wreckback"}, {"cerberus", "wreckback"},
+                {"pitchgut", "swarmforge"}, {"furrowmaw", "swarmforge"}, {"cerberus", "swarmforge"}, {"lanternwillow", "swarmforge"}};
         int n = 0;
         for (Giant a : Giants.ALL) for (Giant b : Giants.ALL) if (a.key().compareTo(b.key()) < 0 && Giants.fight(a, b)) n++;
-        h.assertTrue(n == fights.length, "nine pairs fight (" + n + ")");
+        h.assertTrue(n == fights.length, "thirteen pairs fight (" + n + ")");
         for (String[] f : fights) h.assertTrue(Giants.fight(Giants.byKey(f[0]), Giants.byKey(f[1])), f[0] + " fights " + f[1]);
         h.succeed();
     }

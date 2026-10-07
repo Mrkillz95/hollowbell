@@ -6,7 +6,7 @@ import json, os, re, collections
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 lang_path = os.path.join(here, 'src/main/resources/assets/jj_giants/lang/en_us.json')
 src = open(os.path.join(here, 'src/main/java/net/jj/giants/Giants.java')).read()
-REPO = {'pitchgut': 'pitchgut', 'furrowmaw': 'furrowmaw', 'cerberus': 'cerberus', 'hollowbell': 'hollowbell', 'lanternwillow': 'lanternwillow'}
+REPO = {'pitchgut': 'pitchgut', 'furrowmaw': 'furrowmaw', 'cerberus': 'cerberus', 'hollowbell': 'hollowbell', 'lanternwillow': 'lanternwillow', 'wreckback': 'wreckback', 'swarmforge': 'swarmforge'}
 lang = json.load(open(lang_path), object_pairs_hook=collections.OrderedDict)
 # each entry: new Giant("key", "modid", ... moves("namePrefix", "whatPrefix", {light}, {medium}, {heavy})
 for m in re.finditer(r'new Giant\("(\w+)", "(\w+)".*?moves\("([\w.]+)", "([\w.]+)",(.*?)\}\),\s*Set\.of', src, re.S):
