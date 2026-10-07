@@ -11,14 +11,14 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.3 |
+| Giants Guide | 1.4.4 |
 | Pitchgut | 1.32.6 |
 | Furrowmaw | 1.14.6 |
 | Fire & Ice Cerberus | 2.14.7 |
 | Hollowbell | 1.9.6 |
 | Lantern Willow | 1.7.7 |
 | Wreckback | 1.0.3 |
-| The Swarmforge | 1.0.3 |
+| The Swarmforge | 1.1.2 |
 
 ## Install
 
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.3.jar` in. Keep Fabric API in there.
+`giants-all-1.4.4.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -61,6 +61,15 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.4
+
+- **The Swarmforge 1.1.2: Commander Mode.** Leave your body (it stays safe) and command his army from a flying
+  camera, up to 750 blocks from him: select robots with the mouse, give them orders, build more, or take control of
+  one robot and fight as it. From his book's Army tab, P in his cab, or `/swarmforge commander`. The Guide's
+  Swarmforge pages say how.
+- `/giants tp swarmforge` puts you on safe ground beside him (before, it could put you on his roof, a long way to
+  fall if he drove off, or under him at his Scrapyard).
 
 ## New in 1.4.3
 
