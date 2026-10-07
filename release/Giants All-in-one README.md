@@ -11,14 +11,14 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.4 |
+| Giants Guide | 1.4.5 |
 | Pitchgut | 1.32.6 |
 | Furrowmaw | 1.14.6 |
 | Fire & Ice Cerberus | 2.14.7 |
 | Hollowbell | 1.9.6 |
 | Lantern Willow | 1.7.7 |
 | Wreckback | 1.0.3 |
-| The Swarmforge | 1.1.2 |
+| The Swarmforge | 1.2.0 |
 
 ## Install
 
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.4.jar` in. Keep Fabric API in there.
+`giants-all-1.4.5.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -61,6 +61,14 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.5
+
+- **The Swarmforge 1.2.0**: army points instead of a robot count (each type costs points, 150 in all, freed when a
+  robot goes), recycling up his stow ramp, nobody gets stuck inside him, Commander Mode like a strategy game (move,
+  attack-move, patrol, formations, groups, build keys, pings, a unit card, alerts, a camera that doesn't go through
+  blocks), an icon and a button for every robot type and unit move, a glow outline only you see, and his book fits at
+  every GUI size. The Guide's Swarmforge pages say so.
 
 ## New in 1.4.4
 
