@@ -232,9 +232,9 @@ public class MoreGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "meet_table")
     public void theMeetingTable(GameTestHelper h) {
-        String[] k = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback"};
-        String[] want = {"-ffaaf", "f-faff", "ff-fff", "aaf-aa", "affa-a", "fffaa-"};
-        for (int a = 0; a < 6; a++) for (int b = 0; b < 6; b++) {
+        String[] k = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge"};
+        String[] want = {"-ffaaff", "f-fafff", "ff-ffff", "aaf-aaa", "affa-af", "fffaa-a", "fffafa-"};
+        for (int a = 0; a < 7; a++) for (int b = 0; b < 7; b++) {
             var w = net.jj.hollowbell.entity.Meetings.way(k[a], k[b]);
             char c = want[a].charAt(b);
             var expect = c == 'f' ? net.jj.hollowbell.entity.Meetings.Way.FIGHT : c == 'a' ? net.jj.hollowbell.entity.Meetings.Way.AVOID : net.jj.hollowbell.entity.Meetings.Way.NONE;
@@ -243,6 +243,7 @@ public class MoreGameTests implements FabricGameTest {
         }
         h.assertTrue(net.jj.hollowbell.entity.Meetings.way("hollowbell", "minecraft") == net.jj.hollowbell.entity.Meetings.Way.NONE, "an unknown kind");
         h.assertTrue(net.jj.hollowbell.entity.Meetings.name("fire_ice_cerberus", false).equals("the Cerberus"), "names");
+        h.assertTrue(net.jj.hollowbell.entity.Meetings.name("swarmforge", true).equals("The Swarmforge"), "his name: " + net.jj.hollowbell.entity.Meetings.name("swarmforge", true));
         h.assertTrue(net.jj.hollowbell.entity.Meetings.range(1f) == 160 && net.jj.hollowbell.entity.Meetings.range(0.1f) == 48
                 && net.jj.hollowbell.entity.Meetings.range(2f) == 320, "the range");
         h.succeed();

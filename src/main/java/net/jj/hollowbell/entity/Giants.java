@@ -10,18 +10,18 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 
 /**
- * The giants: JJ's six bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow and Wreckback). They
- * all follow the same rules with each other: a blow from one giant lands on another by the other's own armour
- * against giants, and none of them ever picks another up, swallows it or drags it about. Each one tags itself
- * {@link #TAG}; the ids below catch the others even from older versions that don't.
+ * The giants: JJ's seven bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback
+ * and the Swarmforge). They all follow the same rules with each other: a blow from one giant lands on another by the
+ * other's own armour against giants, and none of them ever picks another up, swallows it or drags it about. Each one
+ * tags itself {@link #TAG}; the ids below catch the others even from older versions that don't.
  */
 public final class Giants {
     private Giants() {}
 
     /** the scoreboard tag every giant (and each part of one) carries */
     public static final String TAG = "jj_giant";
-    /** the tag a giant's small helpers carry (the Hollowbell's bellings, the Willow's mudlings, ...): their blows
-     *  count as their giant's */
+    /** the tag a giant's small helpers carry (the Hollowbell's bellings, the Willow's mudlings, the Swarmforge's
+     *  robots, ...): their blows count as their giant's */
     public static final String KIN = "jj_giant_kin";
 
     private static final Set<String> IDS = Set.of(
@@ -29,7 +29,7 @@ public final class Giants {
             "furrowmaw:furrowmaw", "furrowmaw:furrowmaw_part",
             "fire_ice_cerberus:cerberus", "fire_ice_cerberus:cerberus_part",
             "hollowbell:hollowbell", "lanternwillow:lanternwillow",
-            "wreckback:wreckback");
+            "wreckback:wreckback", "swarmforge:swarmforge");
 
     /** one of the giants, or a part of one */
     public static boolean isGiant(@Nullable Entity e) {

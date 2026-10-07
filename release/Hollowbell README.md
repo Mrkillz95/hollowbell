@@ -1,10 +1,16 @@
-# Hollowbell (Java mod) — version 1.9.4
+# Hollowbell (Java mod) — version 1.9.5
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.9.4
+## What's new in 1.9.5
+
+- **He knows the Swarmforge**, the seventh giant (the rusted war factory on tank treads). He counts him as one of
+  the giants, keeps away from him when they meet, and `/giants` reaches him too.
+- The Swarmforge's robots count as a giant's helpers: their blows land on him like a giant's.
+
+## What was new in 1.9.4
 
 - **His big moves look a lot bigger.** When he drops onto the ground or lands from the sky dive, chunks of the real ground fly up, tumble and fade, dust rolls out in a ring and a shockwave runs out along the ground with cracks behind it. On water it splashes and a wave rolls out. His arms slam down with chunks and dust. The pulse wave and the deep toll flash his green light and push a ring of dust out, and the big toll's shock ring shows running out with the real one. The whirlpool and the undertow pull the dust round in a swirl. Sun lances scorch the ground with embers and smoke, spores hang as a real cloud, pods burst in green sparks, eggs thump when they land, and his death ends in one last slam.
 - **The screen shakes** near his slams, less the further off you are. **The sound comes late from far off**, like thunder.
@@ -283,6 +289,8 @@ When he drifts near another of JJ's giants (160 blocks at full size), he fights 
 | Furrowmaw | keeps away |
 | The Cerberus | fights |
 | The Lantern Willow | keeps away |
+| Wreckback | keeps away |
+| The Swarmforge | keeps away |
 
 - Only when he's free: awake, not under an order, not after anybody, not ridden and not told to stay.
 - A fight ends when one of them drops under a quarter of its health. That one backs down: it runs off for a minute and leaves every giant alone for two minutes. The winner tolls loud and goes back to drifting.
