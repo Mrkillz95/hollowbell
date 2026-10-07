@@ -20,8 +20,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * /giants: one command for all of JJ's bosses at once. Every one of the six mods carries this class, but only
- * one registers it: the first of the six bridges (in this fixed, sorted order) that is actually loaded. This
+ * /giants: one command for all of JJ's bosses at once. Every one of the seven mods carries this class, but only
+ * one registers it: the first of the seven bridges (in this fixed order) that is actually loaded. This
  * mod's bridge sorts first, so with the Cerberus installed it is this class that answers.
  *
  * The command asks every loaded bridge in turn, by name. Each one is asked on its own, and whatever goes wrong
@@ -32,14 +32,16 @@ public final class GiantsCommand {
     private GiantsCommand() {
     }
 
-    /** the six bridges, sorted; the same list in every mod */
+    /** the seven bridges, in the order every copy elects them; the same list in every mod. (The Swarmforge came
+     *  seventh, so he goes on the end, not in his sorted place: the election doesn't change.) */
     public static final String[] BRIDGES = {
         "net.jj.cerberus.GiantsBridge",
         "net.jj.furrowmaw.GiantsBridge",
         "net.jj.hollowbell.GiantsBridge",
         "net.jj.lanternwillow.GiantsBridge",
         "net.jj.mountain.GiantsBridge",
-        "net.jj.wreckback.GiantsBridge"};
+        "net.jj.wreckback.GiantsBridge",
+        "net.jj.swarmforge.GiantsBridge"};
 
     private static final String MINE = net.jj.hollowbell.GiantsBridge.class.getName();
 
@@ -90,7 +92,7 @@ public final class GiantsCommand {
     }
 
     /** the name /giants tp takes for each bridge, in the same order as BRIDGES */
-    public static final String[] TP_NAMES = {"cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback"};
+    public static final String[] TP_NAMES = {"cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback", "swarmforge"};
 
     /** every loaded bridge's answer, in order */
     public static List<String> ask(MinecraftServer server, String action, String arg) {
@@ -203,7 +205,8 @@ public final class GiantsCommand {
         "hollowbell:hollowbell",
         "lanternwillow:lanternwillow",
         "mountain_breathes:mountain",
-        "wreckback:wreckback"};
+        "wreckback:wreckback",
+        "swarmforge:swarmforge"};
 
     /** which bridge (index into BRIDGES) owns this entity as a giant's main body, or -1 */
     public static int bridgeOf(net.minecraft.world.entity.Entity e) {

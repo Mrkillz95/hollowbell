@@ -20,17 +20,18 @@ public final class Meetings {
     public static final String KIND = "jj_giant_kind:";
     public static final String ME = "hollowbell";
 
-    /** the six, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback */
-    static final String[] KINDS = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback"};
+    /** the seven, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback, Swarmforge */
+    static final String[] KINDS = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge"};
     /** f fight, a avoid (the same table in all six mods) */
     private static final String[] TABLE = {
             // P    F    C    H    W    WB
-            "-ffaaf",   // Pitchgut
-            "f-faff",   // Furrowmaw
-            "ff-fff",   // Cerberus
-            "aaf-aa",   // Hollowbell
-            "affa-a",   // Willow
-            "fffaa-"};  // Wreckback
+            "-ffaaff",   // Pitchgut
+            "f-fafff",   // Furrowmaw
+            "ff-ffff",   // Cerberus
+            "aaf-aaa",   // Hollowbell
+            "affa-af",   // Willow
+            "fffaa-a",   // Wreckback
+            "fffafa-"};  // Swarmforge
 
     private static int index(@Nullable String kind) {
         if (kind == null) return -1;
@@ -81,6 +82,7 @@ public final class Meetings {
             case "hollowbell" -> the + "Hollowbell";
             case "lanternwillow" -> the + "Lantern Willow";
             case "wreckback" -> "Wreckback";
+            case "swarmforge" -> the + "Swarmforge";
             default -> the + "giant";
         };
     }
