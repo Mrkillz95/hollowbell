@@ -1,9 +1,9 @@
-# Makes the all-in-one jar: the Giants Guide mod (jj_giants, built in guide/) with all six of JJ's boss mods
+# Makes the all-in-one jar: the Giants Guide mod (jj_giants, built in guide/) with all seven of JJ's boss mods
 # nested inside it (Fabric jar-in-jar). Each giant keeps its own id inside, so old worlds keep working.
 # usage: python3 make_bundle.py <bundle-version> <out-dir> [--guide <guide jar>] [giant jar ...]
 #   default guide jar: the newest guide/build/libs/jj_giants-<ver>.jar; default giants: newest jar in each repo's release/
 import zipfile, json, glob, re, sys, os
-REPOS = ['pitchgut', 'furrowmaw', 'cerberus', 'hollowbell', 'lanternwillow', 'wreckback']
+REPOS = ['pitchgut', 'furrowmaw', 'cerberus', 'hollowbell', 'lanternwillow', 'wreckback', 'swarmforge']
 HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def ver(p):
     m = re.search(r'-(\d+(?:\.\d+)*)\.jar$', p)
@@ -28,8 +28,8 @@ with zipfile.ZipFile(guide) as gz:
     fmj = json.loads(gz.read('fabric.mod.json'))
     if fmj.get('id') != 'jj_giants': raise SystemExit(f'{guide} is not the Giants Guide')
     fmj['version'] = bver
-    fmj['name'] = "JJ's Giants (all six)"
-    fmj['description'] = ('All six giants in one jar, and the Giants Guide: ' + ', '.join(f'{n} {v}' for _, v, n in ids) + '.')
+    fmj['name'] = "JJ's Giants (all seven)"
+    fmj['description'] = ('All seven giants in one jar, and the Giants Guide: ' + ', '.join(f'{n} {v}' for _, v, n in ids) + '.')
     fmj.get('entrypoints', {}).pop('fabric-gametest', None)  # the guide's own tests stay out of the jar people play with
     fmj['jars'] = [{'file': 'META-INF/jars/' + os.path.basename(p)} for p in jars]
     os.makedirs(out, exist_ok=True)

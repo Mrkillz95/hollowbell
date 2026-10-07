@@ -1,7 +1,8 @@
-# JJ's Giants: all six in one jar
+# JJ's Giants: all seven in one jar
 
-One jar with all six giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
-Willow and Wreckback, and the **Giants Guide**, a book about all of them. It works the same as having the six jars.
+One jar with all seven giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
+Willow, Wreckback and the Swarmforge, and the **Giants Guide**, a book about all of them. It works the same as having
+the seven jars.
 Each giant keeps its own name inside, so your worlds keep working.
 
 Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reserved.
@@ -10,21 +11,23 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.3.2 |
-| Pitchgut | 1.32.4 |
-| Furrowmaw | 1.14.4 |
-| Fire & Ice Cerberus | 2.14.4 |
-| Hollowbell | 1.9.4 |
-| Lantern Willow | 1.7.5 |
-| Wreckback | 1.0.1 |
+| Giants Guide | 1.4.0 |
+| Pitchgut | 1.32.5 |
+| Furrowmaw | 1.14.5 |
+| Fire & Ice Cerberus | 2.14.5 |
+| Hollowbell | 1.9.5 |
+| Lantern Willow | 1.7.6 |
+| Wreckback | 1.0.2 |
+| The Swarmforge | 1.0.1 |
 
 ## Install
 
-Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the six single jars out of your mods folder
+Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the seven single jars out of your mods folder
 and puts this one in.
 
-By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…` and
-`wreckback-…` out of your mods folder, and the old `giants-all-…` jar too, then put `giants-all-1.3.2.jar` in. Keep Fabric API in there.
+By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
+`wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
+`giants-all-1.4.0.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -43,9 +46,10 @@ A book about every giant you have. Right-click it to open it.
 
 | Tab | What's on it |
 |---|---|
-| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial, fortress or warship), his moods |
+| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial, fortress, warship or factory), his moods |
 | Where | his ground and what it looks like, how to find him (the finder and its recipe), whether the world keeps one of him out there and how many at once. On a server it also says where he is right now. |
 | Moves | every move, light, medium and heavy (and Wreckback's sea moves), with what it does (the same words as his own book) |
+| Army | the Swarmforge only: every robot and unit he sends out, and the army orders in his book |
 | Fighting | where to hit him, what hurts him most, and tips |
 | Drops | his weapon, his armour and its Armour power (R), his ward, the rest of his loot and his book, with pictures of the real items and their recipes |
 | Commands | the commands anyone can use, and the ones that need cheats |
@@ -57,6 +61,16 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.0
+
+- **The Swarmforge is in**: JJ's seventh giant, a huge rusted war factory on four tank treads that keeps sending out
+  robots. He has his own README (`Swarmforge README.md` in the Swarmforge folder) and his own pages in the Giants
+  Guide, with an Army tab for his robots and units.
+- The other six know him: Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow fight him when they meet; the
+  Hollowbell and Wreckback keep away from him. `/giants` reaches him too, and his robots' blows land on the other
+  giants like a giant's helpers'.
+- Every giant is at its newest version (see the table).
 
 ## New in 1.3.2
 
