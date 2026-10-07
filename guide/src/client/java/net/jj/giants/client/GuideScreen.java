@@ -65,7 +65,7 @@ public class GuideScreen extends Screen {
 
     private boolean together() { return pick >= giants.size(); }
     private @Nullable Giant giant() { return together() ? null : giants.get(pick); }
-    private String[] pages() { return together() ? TOGETHER_PAGES : Giants.PAGES; }
+    private String[] pages() { return together() ? TOGETHER_PAGES : Giants.pages(giant()); }
     private int entries() { return giants.isEmpty() ? 0 : giants.size() + 1; }
 
     @Override
@@ -134,7 +134,7 @@ public class GuideScreen extends Screen {
             lines("guide.jj_giants.together." + TOGETHER_PAGES[tab] + ".");
         } else {
             Giant g = giant();
-            String page = Giants.PAGES[tab];
+            String page = Giants.pages(g)[tab];
             if (page.equals("moves")) movesPage(g);
             else lines("guide.jj_giants." + g.key() + "." + page + ".");
             if (page.equals("where")) { Live.ask(g.key()); shownNews = Live.news(g.key()); }
@@ -453,7 +453,7 @@ public class GuideScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mx, int my, float partial) {
         // the live news came in (or changed): lay the page out again where it is
-        if (!together() && !giants.isEmpty() && Giants.PAGES[tab].equals("where")) {
+        if (!together() && !giants.isEmpty() && Giants.pages(giant())[tab].equals("where")) {
             Live.News n = Live.news(giant().key());
             if (n != shownNews) {
                 boolean atEnd = contentH > ch && scroll >= contentH - ch - 1;

@@ -1,0 +1,35 @@
+# The Swarmforge's pages in the guide (with the giants loaded): copy this over tools/autotest.txt, run ./gradlew runAutotest -Pgiants
+# guide <giant> <tab> [scroll]: tabs are about 0, where 1, moves 2, army 3, fighting 4, drops 5, commands 6
+wait 60
+guide swarmforge 0
+wait 20
+shot swarmforge_1_about
+guide swarmforge 1
+wait 20
+shot swarmforge_2_where
+guide swarmforge 2
+wait 20
+shot swarmforge_3_moves
+guide swarmforge 3
+wait 20
+shot swarmforge_4_army
+guide swarmforge 3 400
+wait 20
+shot swarmforge_4_army_mid
+guide swarmforge 3 2000
+wait 20
+shot swarmforge_4_army_end
+guide swarmforge 4
+wait 20
+shot swarmforge_5_fighting
+guide swarmforge 5
+wait 20
+shot swarmforge_6_drops
+guide swarmforge 6
+wait 20
+shot swarmforge_7_commands
+guide together 0
+wait 20
+shot together_1_meetings
+close
+quit
