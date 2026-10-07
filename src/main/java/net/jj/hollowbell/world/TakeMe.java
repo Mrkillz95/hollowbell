@@ -67,9 +67,29 @@ public final class TakeMe {
             Vec3 s = r.spot(l.getGameTime());
             return land(p, l, s.x, s.z, r.scale);
         }
+        // one put away with his chunk where nobody was near (not loaded, not out of the world): beside him, he loads round you
+        if (which <= 0) {
+            java.util.Map.Entry<java.util.UUID, Away.Parked> lay = null;
+            double bd = Double.MAX_VALUE;
+            for (var e : Away.get(server).parked().entrySet()) {
+                ServerLevel l = level(server, e.getValue().dim());
+                if (l.getEntity(e.getKey()) != null) continue;
+                double d = (l == p.level() ? 0 : 1e12) + Mth.square(e.getValue().x() - p.getX()) + Mth.square(e.getValue().z() - p.getZ());
+                if (d < bd) { bd = d; lay = e; }
+            }
+            if (lay != null) {
+                Away.Parked k = lay.getValue();
+                land(p, level(server, k.dim()), k.x(), k.z(), net.jj.hollowbell.HollowbellConfig.V.worldScale);
+                return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.x()), Mth.floor(k.z()));
+            }
+        }
         // none standing: where the next one comes down
         WorldOne w = WorldOne.get(server);
         BlockPos at = w.where();
+        if (at != null && w.aliveNow()) {
+            land(p, server.overworld(), at.getX() + 0.5, at.getZ() + 0.5, net.jj.hollowbell.HollowbellConfig.V.worldScale);
+            return Component.translatable("command.hollowbell.tp_waiting", at.getX(), at.getZ());
+        }
         if (at != null) {
             ServerLevel over = server.overworld();
             BlockPos safe = safeNear(over, at.getX(), at.getZ(), 48);

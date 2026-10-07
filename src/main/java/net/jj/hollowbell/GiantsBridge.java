@@ -115,10 +115,19 @@ public final class GiantsBridge {
                     Vec3 s = r.spot(now);
                     out.add(WHO + "out of the world near " + (int) s.x + " " + (int) s.z + " (" + r.dim + ").");
                 }
+                // put away with his chunk where nobody was near (not loaded, not out of the world)
+                for (var e : Away.get(server).parked().entrySet()) {
+                    var key = net.minecraft.resources.ResourceLocation.tryParse(e.getValue().dim());
+                    ServerLevel pl = key == null ? null : server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, key));
+                    if (pl != null && pl.getEntity(e.getKey()) != null) continue;
+                    out.add(WHO + "lying still near " + (int) Math.floor(e.getValue().x()) + " " + (int) Math.floor(e.getValue().z()) + " (" + e.getValue().dim() + "), not loaded.");
+                }
                 if (out.isEmpty()) {
                     WorldOne w = WorldOne.get(server);
                     int days = w.daysLeft(server.overworld());
-                    if (V.oneInTheWorld && w.where() != null && days > 0)
+                    if (w.aliveNow() && w.where() != null)
+                        out.add(WHO + "lying still near " + w.where().getX() + " " + w.where().getZ() + " (minecraft:overworld), not loaded.");
+                    else if (V.oneInTheWorld && w.where() != null && days > 0)
                         out.add(WHO + "none standing. The next comes down near " + w.where().getX() + " " + w.where().getZ() + " in about " + days + " days.");
                     else out.add(WHO + "none standing.");
                 }
