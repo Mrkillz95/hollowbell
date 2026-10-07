@@ -412,6 +412,7 @@
   "command.hollowbell.tp": "Took you to the Hollowbell, %s blocks from him.",
   "command.hollowbell.tp_rise": "The Hollowbell hasn't come down yet. Took you to where he will, in the Bell Hollows.",
   "command.hollowbell.tp_none": "There is no Hollowbell to take you to.",
+  "command.hollowbell.tp_waiting": "The Hollowbell is resting at %s %s, where nobody was near, so he wasn't loaded. Took you there.",
   "command.hollowbell.tp_bad": "There's no Hollowbell number %s. /hollowbell list shows them.",
   "command.hollowbell.no_player": "Nobody called that is here.",
   "command.hollowbell.paint_full": "Painting the Bell Hollows %s blocks round you, land and biome, %s blocks deep (%s chunks). It can't be undone.",

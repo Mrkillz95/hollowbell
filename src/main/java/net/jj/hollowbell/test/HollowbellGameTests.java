@@ -3682,6 +3682,36 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
+    /** put away with his chunk where nobody was near: /giants where and tp still find him */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "tp_parked")
+    public void tpAndWhereFindOneLyingUnloaded(GameTestHelper h) {
+        clearAll(h);
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 362);
+        h.runAfterDelay(20, () -> {
+            var server = h.getLevel().getServer();
+            var a = net.jj.hollowbell.world.Away.get(server);
+            java.util.UUID id = e.getUUID();
+            int lx = e.getBlockX(), lz = e.getBlockZ();
+            ServerPlayer p = player(h, Vec3.atCenterOf(h.absolutePos(new BlockPos(1, 2, 1))));
+            try {
+                release(h, e);
+                a.noteParked(e);                                   // as his chunk saving him away does
+                var where = net.jj.hollowbell.GiantsBridge.giants(server, "where", "");
+                h.assertTrue(where != null && where.stream().anyMatch(x -> x.contains("lying still near " + lx)), "/giants where said " + where);
+                var said = net.jj.hollowbell.world.TakeMe.tp(p, 0);
+                h.assertTrue(key(said).equals("command.hollowbell.tp_waiting"), "tp said " + key(said));
+                double d = Math.hypot(p.getX() - lx, p.getZ() - lz);
+                h.assertTrue(d > 4 && d < 88 * 1.05 + 20 + 3 + 40, "landed " + (int) d + " blocks from where he lies");
+                var lines = net.jj.hollowbell.command.GiantsCommand.ask(server, "tp", p.getUUID().toString(), "net.jj.hollowbell.GiantsBridge");
+                h.assertTrue(lines.stream().anyMatch(x -> x.startsWith("Hollowbell") && x.contains("Took you")), "/giants tp: " + lines);
+            } finally {
+                a.unpark(id);
+                drop(p);
+            }
+            h.succeed();
+        });
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "tp_away")
     public void tpTakesYouToOneOutOfTheWorld(GameTestHelper h) {
         clearAll(h);
