@@ -289,4 +289,30 @@ public class FarFindTests implements FabricGameTest {
             else h.succeed();
         });
     }
+
+    /** a tp whose land still isn't there when the wait runs out: you stay where you are (going anyway put you in land
+     * that wasn't made, and the server stopped while it was made round you) */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "far_find_late")
+    public void aTripThatRunsOutOfTimeLeavesYouWhereYouAre(GameTestHelper h) {
+        ServerLevel l = h.getLevel();
+        BlockPos o = h.absolutePos(BlockPos.ZERO);
+        ServerPlayer p = player(h, Vec3.atBottomCenterOf(o.above(2)));
+        int x = o.getX() - 6000, z = o.getZ() + 5000;
+        if (NoWait.loaded(l, x, z)) { drop(p); h.fail("the land 6000 blocks out was loaded already"); return; }
+        Vec3 was = p.position();
+        boolean[] went = {false};
+        NoWait.go(p, l, x, z, q -> { went[0] = true; q.teleportTo(l, x + 0.5, 100, z + 0.5, 0f, 0f); return Component.literal("There."); });
+        h.assertTrue(NoWait.onTheWay(p), "not on the way");
+        NoWait.runOutForTests();
+        h.runAfterDelay(3, () -> {
+            try {
+                h.assertFalse(went[0], "it went anyway, into land that wasn't made");
+                h.assertFalse(NoWait.onTheWay(p), "still waiting after the wait ran out");
+                h.assertTrue(p.position().distanceTo(was) < 0.01, "you were moved");
+            } finally {
+                drop(p);
+            }
+            h.succeed();
+        });
+    }
 }
