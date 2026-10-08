@@ -2518,6 +2518,9 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
 
     /** the pose as of this tick, in slices (his own copy: the renderer fills his state in between ticks) */
     @Override public Matrix4f[] solidPose() {
+        // (the server's own pose of the tick, in slices, already worked out for hits; the client draws from its state
+        // between ticks, so it keeps its own)
+        if (!level().isClientSide) return slicesNow();
         if (solidSlices == null) {
             net.jj.hollowbell.rig.BellPieces pc = net.jj.hollowbell.rig.BellPieces.get();
             solidSt = new BellState(rig); solidBones = rig.newPose(); solidHangs = pc.newHang(); solidSlices = pc.newPose();
@@ -2561,7 +2564,16 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     /** his seats, shots, hooks and Bellings, whoever he holds or is closing on, and the other giants (see jjHull) */
     @Override public boolean solidIgnores(Entity e) {
         return e instanceof Seat || e instanceof Shot || e instanceof StingerHook || e instanceof Belling || e == rider || Giants.isGiant(e)
-                || (!level().isClientSide && (moves.caught(e) || moves.closingOn(e)));
+                || (!level().isClientSide && (moves.caught(e) || moves.closingOn(e) || huntedInTheAir(e)));
+    }
+
+    /**
+     * A creature up in the air that he's after (not a player: their own game bumps into him): he rises up round it
+     * and takes it in among his strands, so his bell doesn't knock it up ahead of him (it would ride up on him, and
+     * he would climb after it for ever).
+     */
+    private boolean huntedInTheAir(Entity e) {
+        return e == getTarget() && !(e instanceof Player) && !e.onGround() && e.getY() > groundAt(e.getX(), e.getZ()) + 3;
     }
 
     /**

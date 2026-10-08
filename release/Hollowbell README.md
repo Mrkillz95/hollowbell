@@ -1,10 +1,21 @@
-# Hollowbell (Java mod) — version 1.9.8
+# Hollowbell (Java mod) — version 1.10.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.9.8
+## What's new in 1.10.0
+
+- **He's solid.** His dome, rim, crown, the glowing spots inside, his pods, his egg clumps and the thick part of his arms are solid now. You bump into them, and you can stand on any top of them: the crown, the dome, a big pod, a glowing spot inside the dome.
+- **You ride along.** Standing on him, you move with the part under your feet as he drifts, pulses and turns, at every size. No sliding off, no shaking, no "kicked for flying".
+- **Never stuck inside him.** If you end up inside a solid part (he drifts into you, a tp, a reload), you're moved to the nearest free spot at once, unhurt.
+- **His strands push you aside.** They're soft: walk into them and they nudge you out of the way. They never hold you and you can't stand on them. The far half of each arm is the same.
+- **The inside of the dome stays open.** You can still be in there, under the glass.
+- **His parts don't pass through each other as much.** Arms, strands, pods and egg clumps now keep out of each other (about 40% less overlap over all his moves), and his arms stay out of his dome when he dives.
+- **Giants don't go inside each other.** When he meets another giant, his body stops at its body and he steps back out if they meet. He comes at another giant from above, his strands hanging down on it, and his blows aim at its body, not its feet.
+- **Bellings** have a box that matches how big they look.
+
+## What was new in 1.9.8
 
 - **Every Hollowbell can be found, wherever he is.** One summoned far from everyone, from an egg, or left lying where nobody is near is written down where he lies, also when the server stops. `/giants where`, `list`, `tp`, the finder and `/hollowbell where` and `list` find him there, also after a restart. A summon far out now lets him take his first steps before his land is put away. The tp to one lying still sets you down at a distance that suits his size.
 - **No more whip-crack when a move is cut off.** When one move broke off another halfway (a drop cut short as he landed, say), his bell jumped straight to the new shape and flung his strands like whips. Now it eases over.
@@ -257,7 +268,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.9.8.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.10.0.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
