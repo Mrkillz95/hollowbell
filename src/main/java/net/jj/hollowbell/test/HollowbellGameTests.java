@@ -3683,33 +3683,48 @@ public class HollowbellGameTests implements FabricGameTest {
     }
 
     /** put away with his chunk where nobody was near: /giants where and tp still find him */
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "tp_parked")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1400, batch = "tp_parked")
     public void tpAndWhereFindOneLyingUnloaded(GameTestHelper h) {
         clearAll(h);
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 362);
+        ServerPlayer[] pp = new ServerPlayer[1];
+        int[] at = new int[2];
+        java.util.UUID[] ids = new java.util.UUID[1];
         h.runAfterDelay(20, () -> {
             var server = h.getLevel().getServer();
             var a = net.jj.hollowbell.world.Away.get(server);
-            java.util.UUID id = e.getUUID();
+            ids[0] = e.getUUID();
             int lx = e.getBlockX(), lz = e.getBlockZ();
+            at[0] = lx; at[1] = lz;
             ServerPlayer p = player(h, Vec3.atCenterOf(h.absolutePos(new BlockPos(1, 2, 1))));
-            try {
-                release(h, e);
-                a.noteParked(e);                                   // as his chunk saving him away does
-                var where = net.jj.hollowbell.GiantsBridge.giants(server, "where", "");
-                h.assertTrue(where != null && where.stream().anyMatch(x -> x.contains("lying still near " + lx)), "/giants where said " + where);
-                var said = net.jj.hollowbell.world.TakeMe.tp(p, 0);
-                h.assertTrue(key(said).equals("command.hollowbell.tp_waiting"), "tp said " + key(said));
-                double d = Math.hypot(p.getX() - lx, p.getZ() - lz);
-                h.assertTrue(d > 4 && d < 88 * 1.05 + 20 + 3 + 40, "landed " + (int) d + " blocks from where he lies");
-                var lines = net.jj.hollowbell.command.GiantsCommand.ask(server, "tp", p.getUUID().toString(), "net.jj.hollowbell.GiantsBridge");
-                h.assertTrue(lines.stream().anyMatch(x -> x.startsWith("Hollowbell") && x.contains("Took you")), "/giants tp: " + lines);
-            } finally {
-                a.unpark(id);
-                drop(p);
-            }
-            h.succeed();
+            pp[0] = p;
+            release(h, e);
+            a.noteParked(e);                                   // as his chunk saving him away does
+            var where = net.jj.hollowbell.GiantsBridge.giants(server, "where", "");
+            h.assertTrue(where != null && where.stream().anyMatch(x -> x.contains("lying still near " + lx)), "/giants where said " + where);
+            var said = net.jj.hollowbell.world.TakeMe.tp(p, 0);
+            // (if the land beside him isn't loaded, you go the moment it is: the server never waits for it)
+            h.assertTrue(key(said).equals("command.hollowbell.tp_waiting") || key(said).equals("command.hollowbell.tp_soon"), "tp said " + key(said));
         });
+        boolean[] done = {false};
+        for (int t = 25; t < 1350; t += 5) {
+            h.runAfterDelay(t, () -> {
+                ServerPlayer p = pp[0];
+                if (done[0] || p == null || net.jj.hollowbell.world.NoWait.onTheWay(p)) return;
+                done[0] = true;
+                var server = h.getLevel().getServer();
+                try {
+                    double d = Math.hypot(p.getX() - at[0], p.getZ() - at[1]);
+                    h.assertTrue(d > 4 && d < 88 * 1.05 + 20 + 3 + 40, "landed " + (int) d + " blocks from where he lies");
+                    var lines = net.jj.hollowbell.command.GiantsCommand.ask(server, "tp", p.getUUID().toString(), "net.jj.hollowbell.GiantsBridge");
+                    h.assertTrue(lines.stream().anyMatch(x -> x.startsWith("Hollowbell") && (x.contains("Took you") || x.contains("in a moment"))), "/giants tp: " + lines);
+                } finally {
+                    net.jj.hollowbell.world.Away.get(server).unpark(ids[0]);
+                    drop(p);
+                }
+                h.succeed();
+            });
+        }
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "tp_away")
