@@ -266,11 +266,26 @@ public class SolidTests implements FabricGameTest {
             ServerPlayer noClient = player(h, spots.get(spots.size() - 1).subtract(0, 0.4, 0));
             h.assertTrue(Solid.inside(e, client, 0.08) && Solid.inside(e, noClient, 0.08), "the players were put inside him");
             h.assertTrue(Solid.unstick(e, client, 0.08) && !Solid.inside(e, client, 0.08), "a player's own game moves them out at once: " + client.position());
-            after(h, 2, () -> {
+            // (out within two ticks, and never in again for more than two ticks running: he moves, and nothing carries
+            // a thing that floats beside him, so his next pulse or step may come into it and shove it out again)
+            boolean[] wasOut = new boolean[things.size()];
+            int[] run = new int[things.size()], worstRun = new int[things.size()];
+            for (int k = 1; k <= 12; k++) {
+                int kk = k;
+                after(h, k, () -> {
+                    for (int i = 0; i < things.size(); i++) {
+                        boolean in = Solid.inside(e, things.get(i), 0.08);
+                        if (!in && kk <= 2) wasOut[i] = true;
+                        run[i] = in ? run[i] + 1 : 0;
+                        worstRun[i] = Math.max(worstRun[i], run[i]);
+                    }
+                });
+            }
+            after(h, 13, () -> {
                 for (int i = 0; i < things.size(); i++) {
                     Entity x = things.get(i);
-                    h.assertTrue(!x.isRemoved() && !Solid.inside(e, x, 0.08), "out of him within two ticks: " + x + " " + x.position() + " depth " + Solid.depthIn(e, x.getBoundingBox(), 0.08, null, true)
-                            + " " + runs(e, x.getX(), x.getZ(), x.getY() - 2, x.getY() + 2) + " unstuck " + Solid.unstuckServer);
+                    h.assertTrue(!x.isRemoved() && wasOut[i] && worstRun[i] <= 2, "out of him within two ticks: " + x + " " + x.position() + " (out by tick 2 " + wasOut[i] + ", inside at most "
+                            + worstRun[i] + " ticks running) " + runs(e, x.getX(), x.getZ(), x.getY() - 2, x.getY() + 2));
                     if (x instanceof LivingEntity le) h.assertTrue(le.getHealth() >= hp[i], "and unhurt: " + x + " " + le.getHealth() + " of " + hp[i]);
                 }
             });
