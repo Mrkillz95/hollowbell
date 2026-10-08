@@ -11,14 +11,14 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.7 |
-| Pitchgut | 1.32.7 |
-| Furrowmaw | 1.14.7 |
-| Fire & Ice Cerberus | 2.14.8 |
-| Hollowbell | 1.9.7 |
-| Lantern Willow | 1.7.8 |
-| Wreckback | 1.0.4 |
-| The Swarmforge | 1.2.2 |
+| Giants Guide | 1.4.8 |
+| Pitchgut | 1.32.8 |
+| Furrowmaw | 1.14.8 |
+| Fire & Ice Cerberus | 2.14.9 |
+| Hollowbell | 1.9.8 |
+| Lantern Willow | 1.7.9 |
+| Wreckback | 1.0.5 |
+| The Swarmforge | 1.3.1 |
 
 ## Install
 
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.7.jar` in. Keep Fabric API in there.
+`giants-all-1.4.8.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -61,6 +61,21 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.8
+
+- **Every giant can be found, wherever he is.** One summoned far from everyone, hatched from an egg, or left where
+  nobody is near is written down where he lies when his land is put away, and also when the server stops. `/giants
+  where`, `list`, `tp`, the finders and each giant's own where and list find him there, also after a restart.
+- **A summon far out works.** His land is held until it's made, and a few seconds more, so he takes his first steps
+  there. Before, most giants summoned far out were never found again (only the Hollowbell was).
+- **No more freeze or crash on a tp to land that isn't made yet.** Every tp, `/giants tp` and each giant's own (the
+  Willow's rise spot too), says "Getting the land ready…" and takes you there once it's ready. If it still isn't
+  ready after a minute (a very busy server), you stay where you are and the chat says so. Before, a tp there could
+  stop the server for 15 seconds or more, and the Swarmforge's could crash it.
+- **The Hollowbell's strands don't whip when a move is cut off** halfway by another one.
+- **The Swarmforge 1.3.0 and 1.3.1** are in: he and his big robots are solid, giants don't walk into each other, "go
+  after what I look at" from anywhere, and a slow heal.
 
 ## New in 1.4.7
 
