@@ -35,10 +35,11 @@ public class FreezeTests implements FabricGameTest {
         h.runAfterDelay(5, () -> {
             NoWait.ask(l, far.getX(), far.getZ(), 2);
             h.assertTrue(!NoWait.loaded(l, far.getX(), far.getZ()), "that land was loaded already");
+            double under = e.groundAt(e.getX(), e.getZ());                 // (loaded: the last ground he saw)
             long t0 = System.nanoTime();
             double g = e.groundAt(far.getX() + 0.5, far.getZ() + 0.5);
             long ms = (System.nanoTime() - t0) / 1_000_000;
-            h.assertTrue(Math.abs(g - e.getY()) < 1e-6, "the ground of land not made yet should be unknown (his own height), not " + g);
+            h.assertTrue(Math.abs(g - under) < 1e-6, "the ground of land not made yet should be taken as the last he saw (" + under + "), not " + g);
             h.assertTrue(ms < 50, "asking the ground of land not made yet took " + ms + " ms");
         });
         boolean[] done = {false};
