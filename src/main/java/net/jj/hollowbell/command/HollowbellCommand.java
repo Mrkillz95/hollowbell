@@ -133,8 +133,14 @@ public final class HollowbellCommand {
                                 .executes(c -> near(c, h -> h.setCustomName(Component.literal(StringArgumentType.getString(c, "name"))), "set"))))
                         .then(Commands.literal("target").then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.entity())
                                 .executes(c -> { var t = net.minecraft.commands.arguments.EntityArgument.getEntity(c, "target");
-                                    if (!(t instanceof LivingEntity le)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.not_alive")); return 0; }
+                                    // (a part of another giant stands for its giant)
+                                    if (!(net.jj.hollowbell.net.LookTrace.ownerOf(t) instanceof LivingEntity le)) { c.getSource().sendFailure(Component.translatable("command.hollowbell.not_alive")); return 0; }
                                     return near(c, h -> h.sendAfter(le), "set"); }))
+                                // what the player giving it is looking at, by the book's rules
+                                .then(Commands.literal("look").executes(c -> {
+                                    String said = net.jj.hollowbell.net.CodexOrders.attackLooked(c.getSource().getPlayerOrException(),
+                                            new net.jj.hollowbell.net.CodexPayload(net.jj.hollowbell.net.CodexPayload.ATTACK_THAT, 0), true);
+                                    return said.startsWith("look_going") ? 1 : 0; }))
                                 .then(Commands.literal("none").executes(c -> near(c, HollowbellEntity::clearHitList, "set"))))
                         .then(Commands.literal("wind").then(Commands.argument("wind", FloatArgumentType.floatArg(0f, 1f))
                                 .executes(c -> near(c, h -> h.mood().setWind(FloatArgumentType.getFloat(c, "wind")), "set"))))

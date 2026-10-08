@@ -115,6 +115,59 @@ public final class FarOrders {
         return null;
     }
 
+    /**
+     * "Go after what I look at" for one out of the world, or in land nobody has loaded: his trip is aimed at it and
+     * he takes it up as soon as he is back in the world (it goes in the body he carries). Null: nobody to send.
+     */
+    public static @Nullable Component hunt(ServerLevel l, Target t, net.minecraft.world.entity.LivingEntity target, float windCost) {
+        Away a = Away.get(l.getServer());
+        Vec3 to = target.position();
+        switch (t.kind()) {
+            case LOADED -> { return null; }
+            case AWAY -> {
+                Away.Rec r = a.get(t.id());
+                if (r == null) return null;
+                if (!spendInBody(r.body, windCost)) return Component.translatable("message.hollowbell.codex_winded");
+                if (!a.send(l, t.id(), to)) return null;
+                r.follow = null; r.hold = false; r.stay = false;
+                huntInBody(r.body, target);
+                a.setDirty();
+                return going(Math.hypot(r.toX - r.fromX, r.toZ - r.fromZ), r.speed, target);
+            }
+            case PARKED -> {
+                var p = a.parked().get(t.id());
+                if (p == null) return null;
+                fetches.add(new Fetch(t.id(), l.dimension().location().toString(), p.x(), p.z(), to, null, l.getGameTime() + 20 * 20, windCost));
+                huntAfter.put(t.id(), target);
+                a.setDirty();
+                ChunkPos cp = new ChunkPos(Mth.floor(p.x()) >> 4, Mth.floor(p.z()) >> 4);
+                l.getChunkSource().addRegionTicket(FETCH, cp, 2, cp);
+                return going(Math.hypot(to.x - p.x(), to.z - p.z()), p.speed() > 0 ? p.speed() : 0.2, target);
+            }
+        }
+        return null;
+    }
+
+    /** the ones fetched out of unloaded land to go after something: who they go after */
+    private static final java.util.Map<UUID, net.minecraft.world.entity.LivingEntity> huntAfter = new java.util.HashMap<>();
+
+    /** written into a body out of the world: he goes after it when he's back (see HollowbellEntity's load) */
+    private static void huntInBody(net.minecraft.nbt.CompoundTag body, net.minecraft.world.entity.LivingEntity target) {
+        body.putUUID("Hunted", target.getUUID());
+        body.putBoolean("HuntOrdered", true);
+        body.putDouble("HuntX", target.getX()); body.putDouble("HuntY", target.getY()); body.putDouble("HuntZ", target.getZ());
+        body.putBoolean("Stay", false);
+        body.putBoolean("HoldThere", false);
+        body.remove("ComeTo");
+        body.putBoolean("Asleep", false);
+    }
+
+    private static Component going(double dist, double speed, net.minecraft.world.entity.LivingEntity target) {
+        int n = net.jj.hollowbell.item.FinderItem.tens(dist);
+        int mins = (int) Math.max(1, Math.ceil(dist / Math.max(0.01, speed) / 1200.0));
+        return Component.translatable("message.hollowbell.look_going_away", target.getDisplayName().getString(), n, mins);
+    }
+
     /** "The Hollowbell is coming. About N blocks, M minutes away." */
     public static Component coming(double dist, double speed, boolean toYou) {
         int n = net.jj.hollowbell.item.FinderItem.tens(dist);
@@ -160,7 +213,9 @@ public final class FarOrders {
             ChunkPos cp = new ChunkPos(Mth.floor(f.x()) >> 4, Mth.floor(f.z()) >> 4);
             Away a = Away.get(server);
             if (a.get(f.id()) != null) {                        // already out as a sum (something else did it)
-                a.order(l, f.id(), f.to(), f.follow());
+                var hunt = huntAfter.remove(f.id());
+                if (hunt != null) { a.send(l, f.id(), f.to()); huntInBody(a.get(f.id()).body, hunt); a.setDirty(); }
+                else a.order(l, f.id(), f.to(), f.follow());
                 it.remove();
                 continue;
             }
@@ -173,7 +228,9 @@ public final class FarOrders {
             if (l.getEntity(f.id()) instanceof HollowbellEntity h && !h.isRemoved()) {
                 Player who = f.follow() == null ? null : server.getPlayerList().getPlayer(f.follow());
                 h.mood().spendWind(f.cost());
-                h.orderTo(new Vec3(f.to().x, h.groundAt(f.to().x, f.to().z), f.to().z), who);
+                var hunt = huntAfter.remove(f.id());
+                if (hunt != null && hunt.isAlive()) h.sendAfter(hunt);
+                else h.orderTo(new Vec3(f.to().x, h.groundAt(f.to().x, f.to().z), f.to().z), who);
                 // nobody near him: out of the world he goes, with the order, in this same tick
                 if (!someoneNear(l, h)) h.stepAside();
                 a.unpark(f.id());
@@ -183,6 +240,7 @@ public final class FarOrders {
             if (l.getGameTime() > f.until()) {
                 HollowbellMod.LOG.info("Couldn't find the Hollowbell last seen at {}, {}; forgetting that spot", Mth.floor(f.x()), Mth.floor(f.z()));
                 a.unpark(f.id());
+                huntAfter.remove(f.id());
                 it.remove();
                 continue;
             }
@@ -197,7 +255,7 @@ public final class FarOrders {
         return false;
     }
 
-    public static void forget() { fetches.clear(); }
+    public static void forget() { fetches.clear(); huntAfter.clear(); }
 
     /** the fetches under way, for the save (see Away): a restart carries them on */
     static net.minecraft.nbt.ListTag saveFetches() {
