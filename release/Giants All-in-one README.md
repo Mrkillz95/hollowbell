@@ -11,14 +11,14 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.5 |
+| Giants Guide | 1.4.6 |
 | Pitchgut | 1.32.6 |
 | Furrowmaw | 1.14.6 |
 | Fire & Ice Cerberus | 2.14.7 |
 | Hollowbell | 1.9.6 |
 | Lantern Willow | 1.7.7 |
 | Wreckback | 1.0.3 |
-| The Swarmforge | 1.2.0 |
+| The Swarmforge | 1.2.2 |
 
 ## Install
 
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.5.jar` in. Keep Fabric API in there.
+`giants-all-1.4.6.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -61,6 +61,15 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.6
+
+- **The Swarmforge 1.2.1 and 1.2.2**: no more server freeze when you go to his Scrapyard; his robots don't vanish
+  any more when you use Commander Mode or he steps out of the world; auto-stow is off unless you turn it on; a build
+  queue (click a type as often as you like, he builds six at once, only that bay's door opens); robots never stuck in
+  the ground and they walk round him; Commander Mode turns the view with the cursor at the screen's edge, Q/E and more,
+  goes anywhere he's loaded (no 750 block limit) and only ends for a real reason; driving a robot has its own screen
+  and F5 for its eyes or behind it; and a simpler book with a Build grid. The Guide's Swarmforge pages say so.
 
 ## New in 1.4.5
 
