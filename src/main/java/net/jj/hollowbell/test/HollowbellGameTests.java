@@ -43,7 +43,9 @@ public class HollowbellGameTests implements FabricGameTest {
     static HollowbellEntity spawnAway(GameTestHelper h, float scale, int variant, int slot) {
         BlockPos o = h.absolutePos(BlockPos.ZERO);
         int x = o.getX() + 20000 + slot * 400, z = o.getZ() + 5000;
-        for (int cx = (x >> 4) - 3; cx <= (x >> 4) + 3; cx++) for (int cz = (z >> 4) - 3; cz <= (z >> 4) + 3; cz++) {
+        // (the land all round him, as round a player: the bigger he is, the further; nothing he reads is still being made)
+        int rc = 3 + Math.round(3 * scale);
+        for (int cx = (x >> 4) - rc; cx <= (x >> 4) + rc; cx++) for (int cz = (z >> 4) - rc; cz <= (z >> 4) + rc; cz++) {
             h.getLevel().setChunkForced(cx, cz, true);
             h.getLevel().getChunk(cx, cz);
         }
@@ -61,7 +63,8 @@ public class HollowbellGameTests implements FabricGameTest {
     static void release(GameTestHelper h, HollowbellEntity e) {
         int x = e.getBlockX(), z = e.getBlockZ();
         e.discard();
-        for (int cx = (x >> 4) - 4; cx <= (x >> 4) + 4; cx++) for (int cz = (z >> 4) - 4; cz <= (z >> 4) + 4; cz++) h.getLevel().setChunkForced(cx, cz, false);
+        int rc = 4 + Math.round(3 * e.bellScale());
+        for (int cx = (x >> 4) - rc; cx <= (x >> 4) + rc; cx++) for (int cz = (z >> 4) - rc; cz <= (z >> 4) + rc; cz++) h.getLevel().setChunkForced(cx, cz, false);
     }
 
     static Pig pig(GameTestHelper h, Vec3 at) {
