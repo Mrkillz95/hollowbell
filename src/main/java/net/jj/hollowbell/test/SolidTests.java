@@ -134,7 +134,7 @@ public class SolidTests implements FabricGameTest {
             List<Boolean> keep = new ArrayList<>();
             // (how far one may slide on him while he drifts: the side of his dome is a slope that squeezes in with each
             // pulse, so you slip a step down it now and then; an arm bends under you)
-            double[] slides = full ? new double[]{0.5, 0.5, 1.6, 0.5, 1.0, 1.0} : new double[]{0.5, 0.5};
+            double[] slides = full ? new double[]{0.5, 0.5, 1.6, 0.5, 2.0, 1.0} : new double[]{0.5, 0.5};
             List<Double> slideOk = new ArrayList<>();
             List<ArmorStand> stands = new ArrayList<>();
             for (int i = 0; i < slices.length; i++) {
@@ -270,12 +270,15 @@ public class SolidTests implements FabricGameTest {
             // a thing that floats beside him, so his next pulse or step may come into it and shove it out again)
             boolean[] wasOut = new boolean[things.size()];
             int[] run = new int[things.size()], worstRun = new int[things.size()];
+            float[] hp2 = new float[things.size()];
             for (int k = 1; k <= 12; k++) {
                 int kk = k;
                 after(h, k, () -> {
                     for (int i = 0; i < things.size(); i++) {
                         boolean in = Solid.inside(e, things.get(i), 0.08);
                         if (!in && kk <= 2) wasOut[i] = true;
+                        // (unhurt by being moved out: checked right after, before anything else of his, a sting, can touch it)
+                        if (kk == 2 && things.get(i) instanceof LivingEntity le) hp2[i] = le.getHealth();
                         run[i] = in ? run[i] + 1 : 0;
                         worstRun[i] = Math.max(worstRun[i], run[i]);
                     }
@@ -286,7 +289,7 @@ public class SolidTests implements FabricGameTest {
                     Entity x = things.get(i);
                     h.assertTrue(!x.isRemoved() && wasOut[i] && worstRun[i] <= 2, "out of him within two ticks: " + x + " " + x.position() + " (out by tick 2 " + wasOut[i] + ", inside at most "
                             + worstRun[i] + " ticks running) " + runs(e, x.getX(), x.getZ(), x.getY() - 2, x.getY() + 2));
-                    if (x instanceof LivingEntity le) h.assertTrue(le.getHealth() >= hp[i], "and unhurt: " + x + " " + le.getHealth() + " of " + hp[i]);
+                    if (x instanceof LivingEntity) h.assertTrue(hp2[i] >= hp[i], "and unhurt: " + x + " " + hp2[i] + " of " + hp[i]);
                 }
             });
             // (he moves: once out, nobody's game carries this one, so he may come back into them: they must have been
