@@ -58,7 +58,7 @@ public class FreezeTests implements FabricGameTest {
         }
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1400, batch = "freeze_trip")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100000, batch = "freeze_trip")
     public void aTripToLandNotMadeYetGoesOnceItIsReady(GameTestHelper h) {
         ServerLevel l = h.getLevel();
         BlockPos far = unmade(h, 1);
@@ -78,21 +78,23 @@ public class FreezeTests implements FabricGameTest {
             h.assertTrue(p[0].position().distanceTo(was) < 0.01, "went before the land was there");
         });
         boolean[] done = {false};
-        for (int t = 20; t < 1350; t += 10) {
-            h.runAfterDelay(t, () -> {
-                if (done[0] || NoWait.onTheWay(p[0])) return;
-                done[0] = true;
-                try {
-                    double d = Math.hypot(p[0].getX() - (far.getX() + 0.5), p[0].getZ() - (far.getZ() + 0.5));
-                    h.assertTrue(d < 10, "landed " + d + " blocks off");
-                    int g = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p[0].getBlockX(), p[0].getBlockZ());
-                    h.assertTrue(Math.abs(p[0].getY() - g) < 1.01, "landed " + (p[0].getY() - g) + " over the ground");
-                } finally {
-                    drop(p[0]);
-                }
-                h.succeed();
-            });
-        }
+        // (land is made in real time while the test server ticks as fast as it can: wait by the clock)
+        long[] until = {0};
+        h.onEachTick(() -> {
+            if (done[0] || h.getTick() < 20) return;
+            if (until[0] == 0) until[0] = System.currentTimeMillis() + 90_000;
+            if ((NoWait.onTheWay(p[0])) && System.currentTimeMillis() < until[0]) return;
+            done[0] = true;
+            try {
+                double d = Math.hypot(p[0].getX() - (far.getX() + 0.5), p[0].getZ() - (far.getZ() + 0.5));
+                h.assertTrue(d < 10, "landed " + d + " blocks off");
+                int g = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p[0].getBlockX(), p[0].getBlockZ());
+                h.assertTrue(Math.abs(p[0].getY() - g) < 1.01, "landed " + (p[0].getY() - g) + " over the ground");
+            } finally {
+                drop(p[0]);
+            }
+            h.succeed();
+        });
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1400, batch = "freeze_away")

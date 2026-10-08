@@ -77,7 +77,7 @@ public final class TakeMe {
             return land(p, l, s.x, s.z, r.scale);
         }
         if (pick instanceof Lying k) {
-            Component c = land(p, level(server, k.at().dim()), k.at().x(), k.at().z(), net.jj.hollowbell.HollowbellConfig.V.worldScale);
+            Component c = land(p, level(server, k.at().dim()), k.at().x(), k.at().z(), k.at().sizeOr(net.jj.hollowbell.HollowbellConfig.V.worldScale));
             if (NoWait.onTheWay(p)) return c;
             return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.at().x()), Mth.floor(k.at().z()));
         }
@@ -93,7 +93,7 @@ public final class TakeMe {
             }
             if (lay != null) {
                 Away.Parked k = lay.getValue();
-                Component c = land(p, level(server, k.dim()), k.x(), k.z(), net.jj.hollowbell.HollowbellConfig.V.worldScale);
+                Component c = land(p, level(server, k.dim()), k.x(), k.z(), k.sizeOr(net.jj.hollowbell.HollowbellConfig.V.worldScale));
                 if (NoWait.onTheWay(p)) return c;
                 return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.x()), Mth.floor(k.z()));
             }
