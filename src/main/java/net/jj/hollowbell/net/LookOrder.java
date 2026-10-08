@@ -67,7 +67,7 @@ public final class LookOrder {
         int c = why.indexOf(':');
         Component msg = c > 0 ? Component.translatable("message.hollowbell." + why.substring(0, c), name, why.substring(c + 1))
                 : Component.translatable("message.hollowbell." + why, name);
-        p.displayClientMessage(msg, true);
+        p.displayClientMessage(msg, false);              // (in the chat, so the reason stays readable)
     }
 
     /** the glow on it, for this player only, and a little sparkle over it */
