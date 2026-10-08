@@ -64,6 +64,10 @@ public final class BellAnim {
         /** filled by the move: how far the bell is brought down (0-1), the flip (a turn, x z), the spin, the glow... */
         public float drop, flipX, flipZ, spin, glow, podSwell, eggShake, squeezeAdd, lowerAdd;
         public boolean spinning;
+        /** the move of the moment and how far into it (Moves.pose fills them in): when the move changes or starts
+         * over, what the old one asked of his body is let go of over a moment instead of all at once */
+        public int move = -1;
+        public float moveT;
         public void clearAsks() { drop = 0; flipX = 0; flipZ = 0; spin = 0; glow = 0; podSwell = 0; eggShake = 0; squeezeAdd = 0; lowerAdd = 0; spinning = false; }
     }
 
@@ -107,6 +111,7 @@ public final class BellAnim {
         boolean first = !started;
         float shift = (float) Math.sqrt(in.shiftX * in.shiftX + in.shiftY * in.shiftY + in.shiftZ * in.shiftZ);
         if (shift > 40f) first = true;
+        letGoOfAsks(in, first);
 
         // how he's moving, smoothed a little
         spring(DX, in.vx, 0.12f, 1f, first);
@@ -129,7 +134,7 @@ public final class BellAnim {
         float ground = Float.isNaN(in.groundUnder) ? 0f : Mth.clamp(in.groundUnder, -40f, 20f);
         float sinkIn = in.dying < 0 ? 0f : Mth.clamp((in.dying - 190f) / 120f, 0f, 1f);
         sinkingIn = sinkIn;
-        float lowerT = in.hangLower + x[FOLD] * (rig.rimY - 12f - ground) + sinkIn * (rig.crownY + 10f) + in.lowerAdd + (in.tired ? 4f : 0f);
+        float lowerT = in.hangLower + x[FOLD] * (rig.rimY - 12f - ground) + sinkIn * (rig.crownY + 10f) + in.lowerAdd + 4f * x[DROOP];
         spring(LOWER, lowerT, 0.06f, 0.8f, first);
 
         // leaning into the way he's going, heavily
@@ -143,7 +148,7 @@ public final class BellAnim {
         spring(TZ, tz, flipping ? 0.05f : 0.03f, 0.6f, first);
 
         // the bell: the pulse squeezes it, climbing keeps it narrow, sinking opens it wide like a parachute
-        float sq = in.pulse + 0.35f * x[CLIMB] - 1.0f * x[SINK] - 0.45f * (in.tired ? 1f : 0f) + in.squeezeAdd - 0.3f * x[SLEEP];
+        float sq = in.pulse + 0.35f * x[CLIMB] - 1.0f * x[SINK] - 0.45f * x[DROOP] + in.squeezeAdd - 0.3f * x[SLEEP];
         spring(SQUEEZE, sq * (1f - deathK), 0.35f, 0.75f, first);
         spring(RIPPLE, (0.35f + 0.8f * Math.abs(in.pulse) + 0.5f * x[SINK]) * (1f - 0.6f * x[SLEEP]), 0.1f, 1f, first);
         spring(DEATH, deathK, 0.08f, 1f, first);
@@ -164,6 +169,36 @@ public final class BellAnim {
         started = true;
         steps++;
     }
+
+    // ------------------------------------------------------------------ a move cut off, or one following another
+
+    /** how many ticks what a move asked of his body takes to let go after it ends or is cut off */
+    static final int LET_GO = 16;
+    private static final int NA = 5;
+    private final float[] askRaw = new float[NA], askUsed = new float[NA], askOff = new float[NA];
+    private int askMove = Integer.MIN_VALUE, askAge = LET_GO;
+    private float askT;
+
+    /**
+     * The bell brought down, squeezed, lowered or turned over by a move is asked for afresh each tick, so a move cut
+     * off halfway (or one starting where another left off) would snap those asks to new values in one tick: his body
+     * springs would jump and every strand hung off it would be flung (a drop cut off as he landed threw his strands
+     * like whips). Instead, at the change what was asked is held, and eased over to the new move's asks.
+     */
+    private void letGoOfAsks(In in, boolean first) {
+        float[] raw = askRaw;
+        raw[0] = in.drop; raw[1] = in.squeezeAdd; raw[2] = in.lowerAdd; raw[3] = in.flipX; raw[4] = in.flipZ;
+        boolean changed = in.move != askMove || in.moveT < askT;
+        askMove = in.move; askT = in.moveT;
+        if (first) { java.util.Arrays.fill(askOff, 0f); askAge = LET_GO; }
+        else if (changed) { for (int k = 0; k < NA; k++) askOff[k] = askUsed[k] - raw[k]; askAge = 0; }
+        float w = askAge >= LET_GO ? 0f : 1f - smoothK(askAge / (float) LET_GO);
+        if (askAge < LET_GO) askAge++;
+        for (int k = 0; k < NA; k++) askUsed[k] = raw[k] + askOff[k] * w;
+        in.drop = Mth.clamp(askUsed[0], 0f, 1f); in.squeezeAdd = askUsed[1]; in.lowerAdd = askUsed[2]; in.flipX = askUsed[3]; in.flipZ = askUsed[4];
+    }
+
+    private static float smoothK(float k) { k = Mth.clamp(k, 0f, 1f); return k * k * (3f - 2f * k); }
 
     /** a spring toward want: k how stiff (per tick squared), z how damped (1 = no overshoot) */
     private void spring(int i, float want, float k, float z, boolean snap) {
