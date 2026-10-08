@@ -18,6 +18,10 @@ public final class HollowbellConfig {
         public float smallEggScale = 0.2f;
         /** His health at full size. Smaller ones get less. */
         public float health = 6000f;
+        /** A very slow heal of his own, the same for all of JJ's giants: on or off. */
+        public boolean passiveHeal = true;
+        /** How much of his most health that slow heal gives back a minute, in percent. It waits 15 seconds after every hurt. */
+        public float passiveHealPerMinute = 1.0f;
         /** Multiplies every hit he lands. */
         public float damageMultiplier = 1.0f;
         /** His hits on anything that isn't a player are multiplied by this. */
