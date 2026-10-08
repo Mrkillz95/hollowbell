@@ -155,6 +155,15 @@ public class HollowbellEntity extends Monster {
     private boolean stay;
     private int angerTicks;
     private @Nullable UUID hunted;
+    /** "go after what I look at": a player's order. It overrides his own picks, his wandering and his circle, and holds
+     *  until the target dies, is lost for {@link #HUNT_LOST_TICKS}, or he is given a new order */
+    private boolean huntOrdered;
+    /** where the one he's after was last seen, and since when it hasn't been (-1: it's here) */
+    private @Nullable Vec3 huntSeen;
+    private long huntLostAt = -1;
+    private java.lang.ref.WeakReference<LivingEntity> huntRef = new java.lang.ref.WeakReference<>(null);
+    /** how long he looks for the one he was sent after once it's gone from sight (30 seconds) */
+    public static final int HUNT_LOST_TICKS = 600;
     /** when he first turned up, kept through every save: it decides who is oldest when the world is full */
     private long bornAt = -1;
     /** the one the world keeps (see WorldOne); saved with him */
@@ -825,6 +834,8 @@ public class HollowbellEntity extends Monster {
 
     /** a movement order from the book or a command: go there (or come to this player), then hold still there */
     public void orderTo(Vec3 g, @Nullable Player follow) {
+        // a new order ends one to go after something
+        if (huntOrdered) { if (getTarget() != null && hunted != null && hunted.equals(getTarget().getUUID())) setTarget(null); dropHunt(); }
         setGoal(g);
         comeTo = follow == null ? null : follow.getUUID();
         holdThere = true;
@@ -909,7 +920,7 @@ public class HollowbellEntity extends Monster {
                 float yr = driveYaw * Mth.DEG_TO_RAD;
                 Vec3 fw = new Vec3(-Mth.sin(yr), 0, Mth.cos(yr)), rt = new Vec3(Mth.cos(yr), 0, Mth.sin(yr));
                 want = position().add(fw.scale(driveF * 60).add(rt.scale(driveS * 60)));
-            }
+            } else if (huntOrdered && t != null && horiz(t.position()) > 12 * s + 2) want = t.position();   // sent after something, and not steered
         } else if (!still) {
             LivingEntity f = fetchingNow();
             if (f != null) want = moves.fetchSpot(f);
@@ -923,6 +934,9 @@ public class HollowbellEntity extends Monster {
             } else if (t != null) {
                 // hunting: he hangs right over you, so the strands can reach
                 if (horiz(t.position()) > 12 * s + 2) want = t.position();
+            } else if (huntOrdered && huntSeen != null) {
+                // sent after something gone from sight: where it was last seen
+                if (horiz(huntSeen) > 8 * s + 3) want = huntSeen;
             } else if (keepAwayFrom() != null) {
                 // backing down, or keeping out of another giant's way: straight away from it
                 Vec3 o = keepAwayFrom();
@@ -946,7 +960,7 @@ public class HollowbellEntity extends Monster {
         if (rider == null) {
             // his own will keeps to his circle (a rider may drive him out), and never into a warded one
             if (want != null) {
-                want = keptIn(want);
+                if (!(huntOrdered && hunted != null)) want = keptIn(want);     // (a player's "go after that" takes him out of it)
                 if (warded(want.x, want.z)) want = wardKeepOut(want);
             } else if (bound() && !still && Math.hypot(getX() - boundX, getZ() - boundZ) > boundR) {
                 want = keptIn(position());          // drifted out somehow: he walks back in
@@ -1190,8 +1204,23 @@ public class HollowbellEntity extends Monster {
                 && t.position().distanceTo(home) > guardRange() * 1.3 && angerTicks <= 0))) { setTarget(null); t = null; }
         if (hunted != null && level() instanceof ServerLevel sl) {
             Entity h = sl.getEntity(hunted);
-            if (h instanceof LivingEntity le && fairGame(le)) { setTarget(le); return; }
-            if (h == null || !h.isAlive()) hunted = null;
+            long now = sl.getGameTime();
+            LivingEntity was = huntRef.get();
+            if (h == null && was != null && was.isDeadOrDying()) { dropHunt(); }
+            else if (h instanceof LivingEntity le && le.isAlive()) {
+                huntRef = new java.lang.ref.WeakReference<>(le);
+                huntSeen = le.position();
+                huntLostAt = -1;
+                // put on the safe list since, or a giant that has backed down: let go for good
+                if (spares(le) || (Giants.isGiant(le) && (Meetings.yielding(le) || yielding()))) { if (getTarget() == le) setTarget(null); dropHunt(); }
+                else if (fairGame(le)) { setTarget(le); return; }
+            } else if (h != null) dropHunt();                       // dead
+            else if (!huntOrdered) hunted = null;
+            else {
+                // out of sight (gone from the loaded world, or to another one): he looks for it a while, where it was
+                if (huntLostAt < 0) huntLostAt = now;
+                else if (now - huntLostAt > HUNT_LOST_TICKS) dropHunt();
+            }
         }
         if (tickCount % 20 != 0 || t != null) return;
         if (variant() == CALM && angerTicks <= 0) return;
@@ -1220,8 +1249,45 @@ public class HollowbellEntity extends Monster {
     }
 
     /** the book: go and get these */
-    public void sendAfter(LivingEntity e) { wakeUp(); hunted = e.getUUID(); setTarget(e); angerTicks = 1200; setStay(false); }
-    public void clearHitList() { hunted = null; setTarget(null); angerTicks = 0; }
+    public void sendAfter(LivingEntity e) {
+        wakeUp();
+        // it overrides what he was doing: his own target, wandering, holding still, an order to go somewhere
+        goal = null; wanderTo = null; comeTo = null; holdThere = false; comeLostAt = 0;
+        setStay(false);
+        hunted = e.getUUID(); huntOrdered = true; huntSeen = e.position(); huntLostAt = -1;
+        huntRef = new java.lang.ref.WeakReference<>(e);
+        setTarget(e);
+        angerTicks = 1200;
+        // another giant: a giants' fight, by their rules (who backs down, who won, the wait before the next)
+        if (Giants.isGiant(e) && meetFoe == null) {
+            LivingEntity g = giantOf(e);
+            if (g != null && g != this) startMeeting(g);
+        }
+    }
+    /** a hunt the book could still give (the reason it can't, as a message key, or null) */
+    public @Nullable String huntRefusal(LivingEntity e) {
+        if (e == this) return "look_him";
+        if (e instanceof Belling) return "look_his_own";
+        if (e instanceof HollowbellEntity) return "look_kin";
+        if (e instanceof Player p && (p.isCreative() || p.isSpectator())) return "look_creative";
+        if (Giants.isGiant(e)) {
+            if (!HollowbellConfig.V.fightGiants) return "look_giants_off";
+            if (yielding()) return "look_he_backed_down";
+            if (Meetings.yielding(e)) return "look_it_backed_down";
+            if (meetFoe == null || !meetFoe.equals(e.getUUID())) {
+                long left = meetCooldownLeft(e.getUUID());
+                if (left > 0) return "look_cooldown:" + Math.max(1, (left + 1199) / 1200);
+            }
+        }
+        if (warded(e.getX(), e.getZ())) return "look_warded";
+        return null;
+    }
+    /** the one a player sent him after, while he still is */
+    public @Nullable UUID huntedByOrder() { return huntOrdered ? hunted : null; }
+    private void dropHunt() { hunted = null; huntOrdered = false; huntSeen = null; huntLostAt = -1; huntRef = new java.lang.ref.WeakReference<>(null); }
+    public void clearHitList() { dropHunt(); setTarget(null); angerTicks = 0; }
+    /** a new order (stay, come, go there) ends the one to go after something */
+    public void endOrderedHunt() { if (huntOrdered) { if (getTarget() != null && hunted != null && hunted.equals(getTarget().getUUID())) setTarget(null); dropHunt(); } }
     public void forgiveAll() { mood.settle(null); clearHitList(); }
 
     // ------------------------------------------------------------------ being hit
@@ -2259,6 +2325,8 @@ public class HollowbellEntity extends Monster {
         tag.putBoolean("Stay", stay);
         tag.putBoolean("Settled", settled);
         if (hunted != null) tag.putUUID("Hunted", hunted);
+        if (huntOrdered) tag.putBoolean("HuntOrdered", true);
+        if (huntSeen != null) { tag.putDouble("HuntX", huntSeen.x); tag.putDouble("HuntY", huntSeen.y); tag.putDouble("HuntZ", huntSeen.z); }
         if (bornAt >= 0) tag.putLong("BornAt", bornAt);
         if (worldOne) tag.putBoolean("WorldOne", true);
         if (meetFoe != null) tag.putUUID("MeetFoe", meetFoe);
@@ -2326,6 +2394,9 @@ public class HollowbellEntity extends Monster {
         // once he has lived a tick, and older saves without it never carry the egg's tag)
         loadedFromSave = tag.contains("BornAt") || (tag.contains("BellHpMax") && !tag.contains("HollowbellEgg"));
         hunted = tag.hasUUID("Hunted") ? tag.getUUID("Hunted") : null;
+        huntOrdered = hunted != null && tag.getBoolean("HuntOrdered");
+        huntSeen = tag.contains("HuntX") ? new Vec3(tag.getDouble("HuntX"), tag.getDouble("HuntY"), tag.getDouble("HuntZ")) : null;
+        huntLostAt = -1;
         // one from before ages were kept counts as the oldest there is
         bornAt = tag.contains("BornAt") ? tag.getLong("BornAt") : loadedFromSave ? 0 : -1;
         worldOne = tag.getBoolean("WorldOne");
