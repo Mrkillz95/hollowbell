@@ -1,0 +1,42 @@
+Hollowbell 1.10.0: his parts inside each other (solid lab, model cells right inside another part, away from where
+they join), over every key pose of each scene (pose lab scenes: every move's key moments, drifting, climbing, sinking,
+turning, asleep, sunk, dying). Before: 1.9.8 (no keep-apart pass). After: 1.10.0. Counted in model blocks, so the same at
+every size.
+
+scene             all before -> after   solid parts before -> after   worst pose before -> after
+rest                1061 ->    1061         178 ->    178               1061 ->  1061
+idle                9613 ->    5210        1753 ->   1320               1289 ->   757
+drift               5394 ->    3519         943 ->    572                647 ->   419
+turn                5974 ->    3410        1152 ->    891                710 ->   571
+stop                8964 ->    4606        1863 ->   1093               1271 ->   661
+climb              48627 ->   28052       18276 ->  11191               6314 ->  3763
+sink                1030 ->    1027         257 ->    453                146 ->   121
+sleep               5297 ->    2600        1054 ->    593                809 ->   409
+sunk               28832 ->   22864        6152 ->   5881               3896 ->  2972
+dying               6514 ->    4376         894 ->   1053                884 ->   715
+tired               3152 ->    1733         194 ->    430                797 ->   522
+grab               15129 ->    5005        4571 ->   1364               1798 ->   729
+harvest            15129 ->    5005        4571 ->   1364               1798 ->   729
+sting_volley        7308 ->    4154         920 ->    909               1172 ->   603
+strand_lash        11410 ->    5941        1428 ->   1023               1452 ->   755
+glow_flash          8002 ->    4614         721 ->   1008               1172 ->   603
+curtain            35703 ->   21216        3940 ->   2983               6446 ->  4134
+sweep              13963 ->    6767        1909 ->    841               2152 ->  1183
+arm_slam           10337 ->    5811        1788 ->   1234               1173 ->   715
+arm_wrap           11896 ->    7253        3101 ->   2151               1393 ->   822
+pulse_wave          8627 ->    4778         843 ->   1018               1172 ->   623
+shed                7403 ->    4138         738 ->    842               1194 ->   629
+spore_cloud         7620 ->    4743        1179 ->   1060               1197 ->   702
+pod_burst           6862 ->    4597         694 ->    998               1191 ->   687
+egg_rain            6001 ->    3238         710 ->    742               1033 ->   516
+drop               16328 ->   12301        3618 ->   2925               3659 ->  2715
+whirlpool          15839 ->   12460        2250 ->   1969               3269 ->  2665
+sky_dive            9628 ->    6312        3204 ->   2764               3359 ->  2637
+deep_toll           5931 ->    3295         745 ->    731               1037 ->   562
+arm_storm           8971 ->    5538        1608 ->   1488               1608 ->   909
+stinger_storm       3971 ->    2412         363 ->    561               1100 ->   605
+sun_lances          3764 ->    2340         254 ->    494               1039 ->   565
+undertow           12054 ->    7387        1808 ->   1189               2670 ->  1785
+blend               7166 ->    3519         848 ->    471               6065 ->  3026
+carry              15769 ->    8142        4408 ->   2848               2169 ->  1042
+ALL               389269 ->  229424 (-41%)    78935 ->  56632 (-28%)
