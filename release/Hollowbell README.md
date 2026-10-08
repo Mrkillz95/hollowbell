@@ -1,10 +1,17 @@
-# Hollowbell (Java mod) — version 1.9.6
+# Hollowbell (Java mod) — version 1.9.7
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.9.6
+## What's new in 1.9.7
+
+- **"Go after what I'm looking at" really works now, from any distance.** The book's order picks what's under your crosshair (out to 512 blocks or as far as you can see, through grass, in F5, riding him or being him), and a part of another giant counts as that giant. He wakes up if he's asleep and goes after it even far away or out of the world, and keeps at it until it dies, it's lost for 30 seconds, or you give him a new order. If he can't, the chat says why (it's on your safe list, it's one of his own, it's a giant he fought not long ago...). What he goes after glows for a moment, and only you see it. `/hollowbell set target look` does the same.
+- **A very slow heal.** He gets back 1% of his health a minute on his own, and nothing for 15 seconds after any hurt, so in a fight it hardly counts. Parts that grow back give him no health. Settings `passiveHeal` (on) and `passiveHealPerMinute` (1.0).
+- More players joining a fight raises his most health but doesn't heal him any more.
+- **No more server freezes from land still being made.** Reading the ground there, coming back into the world there, or a tp there could stop a server for up to 30 seconds. Now he only reads land that's loaded, and waits for the rest without stopping the server.
+
+## What was new in 1.9.6
 
 - **`/giants where` and `list` find him when he rests where nobody is near** (his piece of the world not loaded). They used to say "none standing". `/giants tp hollowbell` and `/hollowbell tp` take you to him there and say so.
 
@@ -244,7 +251,7 @@ A balance round across all five bosses, so they're fair against each other and f
 ## Installing
 
 1. You already have Fabric for 1.21.1 and Fabric API from the Mountain.
-2. Put `hollowbell-1.9.6.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
+2. Put `hollowbell-1.9.7.jar` in `.minecraft\mods`. Take the old Hollowbell jar out first. It sits fine next to Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow.
 3. For your server, put the same jar in `mountain-server\mods` too. Anyone joining needs it in their own mods folder as well.
 
 ## Getting him
