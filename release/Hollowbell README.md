@@ -490,6 +490,7 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell set glow on/off` | the nearest one glows through walls |
 | `/hollowbell set name <name>` | names the nearest one |
 | `/hollowbell set target <who>` / `set target none` | sends the nearest one after somebody, or calls him off |
+| `/hollowbell set target look` | sends him after what you're looking at, by the book's rules |
 | `/hollowbell set wind <0-1>` | the nearest one's wind (how much the book can still ask of him) |
 | `/hollowbell set grudge <player> <0-1>` | how much he holds against that player |
 | `/hollowbell set home` | the nearest one's home is where you stand |
@@ -558,6 +559,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 - `chunkLoading`: keeps the ground under him loaded and him moving while a player is near him
 - `simpleFarAway` / `simpleFarAwayAt`: far away he's drawn with bigger blocks so he runs faster (`/hollowbell detail` changes the first one)
 - `farSightBlocks` (1024): how far off you can see him coming, in the world or stepped out of it (0 = off, up to 4096)
+- `passiveHeal` (on) and `passiveHealPerMinute` (1.0): he heals 1% of his health a minute on his own, and not for 15 seconds after any hurt
 
 ## Tips
 
