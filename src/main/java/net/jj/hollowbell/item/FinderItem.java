@@ -89,6 +89,9 @@ public class FinderItem extends Item {
             Vec3 s = r.spot(sl.getGameTime());
             return found(sl, from, s.x, s.z);
         }
+        // one put away with his chunk where nobody was near: written down where he lies
+        var lay = Away.get(sl.getServer()).nearestLying(sl, from);
+        if (lay != null) return found(sl, from, lay.getValue().x(), lay.getValue().z());
         // the world's notes are about the overworld: from the nether or the end they would mean nothing
         if (sl.dimension() != Level.OVERWORLD) return Component.translatable("message.hollowbell.finder_wrong_world");
         WorldOne w = WorldOne.get(sl.getServer());

@@ -459,6 +459,9 @@ public final class HollowbellCommand {
         l.addFreshEntity(h);
         // (far in front of a big one the land may not be there yet: it's held until it is, so he gets going)
         net.jj.hollowbell.world.NoWait.hold(l, (int) Math.floor(at.x), (int) Math.floor(at.z), 1200);
+        // and kept running a few seconds once it is, so he takes his first ticks there even far from everybody (he
+        // steps out of the world, or is written down where he lies); a ticket that only loads the land never ticks him
+        net.jj.hollowbell.world.NoWait.settle(l, (int) Math.floor(at.x), (int) Math.floor(at.z), 200);
         src.sendSuccess(() -> Component.translatable("command.hollowbell.summoned", Component.translatable("mode.hollowbell." + mood), String.format("%.2f", size)), true);
         return 1;
     }
@@ -482,7 +485,8 @@ public final class HollowbellCommand {
     private static int list(CommandContext<CommandSourceStack> c) {
         List<HollowbellEntity> all = allOf(c.getSource());
         List<Away.Rec> out = Away.get(c.getSource().getServer()).all();
-        if (all.isEmpty() && out.isEmpty()) return none(c);
+        var lying = Away.get(c.getSource().getServer()).lying(c.getSource().getServer());
+        if (all.isEmpty() && out.isEmpty() && lying.isEmpty()) return none(c);
         int[] k = {0};
         for (HollowbellEntity h : all) {
             int num = ++k[0];
@@ -492,7 +496,14 @@ public final class HollowbellCommand {
         }
         long now = c.getSource().getLevel().getGameTime();
         for (Away.Rec r : out) awayLine(c, r, now, ++k[0]);
-        return all.size() + out.size();
+        for (Away.Parked pk : lying.values()) lyingLine(c, pk, ++k[0]);
+        return all.size() + out.size() + lying.size();
+    }
+
+    /** one put away with his chunk where nobody was near: still out there, just not loaded */
+    private static void lyingLine(CommandContext<CommandSourceStack> c, Away.Parked k, int num) {
+        Component line = Component.translatable("command.hollowbell.where_lying", (int) Math.floor(k.x()), (int) Math.floor(k.z()), k.dim());
+        c.getSource().sendSuccess(() -> num > 0 ? Component.literal(num + ". ").append(line) : line, false);
     }
 
     private static void awayLine(CommandContext<CommandSourceStack> c, Away.Rec r, long now) { awayLine(c, r, now, 0); }
@@ -510,13 +521,15 @@ public final class HollowbellCommand {
     private static int where(CommandContext<CommandSourceStack> c) {
         List<HollowbellEntity> all = allOf(c.getSource());
         List<Away.Rec> out = Away.get(c.getSource().getServer()).all();
-        if (all.isEmpty() && out.isEmpty()) return none(c);
+        var lying = Away.get(c.getSource().getServer()).lying(c.getSource().getServer());
+        if (all.isEmpty() && out.isEmpty() && lying.isEmpty()) return none(c);
         for (HollowbellEntity h : all)
             c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.where_in", (int) h.getX(), (int) h.getY(), (int) h.getZ(),
                     h.level().dimension().location().toString(), (int) h.healthNow(), (int) h.healthMax()), false);
         long now = c.getSource().getLevel().getGameTime();
         for (Away.Rec r : out) awayLine(c, r, now);
-        return all.size() + out.size();
+        for (Away.Parked pk : lying.values()) lyingLine(c, pk, 0);
+        return all.size() + out.size() + lying.size();
     }
 
     private static int awaySay(CommandContext<CommandSourceStack> c) {
