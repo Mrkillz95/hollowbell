@@ -636,7 +636,7 @@ public class HollowbellEntity extends Monster {
         if (ghost) return Float.NaN;
         Vec3 w = toWorld(new Vector3f(mx, 0, mz));
         BlockPos p = BlockPos.containing(w.x, getY(), w.z);
-        if (!level().hasChunkAt(p)) return Float.NaN;
+        if (!net.jj.hollowbell.world.NoWait.loaded(level(), p)) return Float.NaN;
         return (float) ((level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) - getY()) / bellScale());
     }
 
@@ -1110,8 +1110,10 @@ public class HollowbellEntity extends Monster {
     public double groundAt(double x, double z) {
         if (ghost) return getY() - 60 * bellScale();
         BlockPos p = BlockPos.containing(x, getY(), z);
-        if (!level().hasChunkAt(p)) return getY();
-        return level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
+        // (only land loaded right now: hasChunk also said yes for land still being made, and asking its height made the
+        // whole server wait until it was made, up to 30 seconds on a real server)
+        int y = net.jj.hollowbell.world.NoWait.height(level(), Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
+        return y == net.jj.hollowbell.world.NoWait.NOT_YET ? getY() : y;
     }
 
     /** a pulse of the bell: it squeezes in, and a strong one is the pulse wave */
@@ -1790,7 +1792,7 @@ public class HollowbellEntity extends Monster {
                 double dx = out.x * Math.cos(a) - out.z * Math.sin(a), dz = out.x * Math.sin(a) + out.z * Math.cos(a);
                 double x = getX() + dx * r, z = getZ() + dz * r;
                 BlockPos col = BlockPos.containing(x, getY(), z);
-                if (!level().hasChunkAt(col)) continue;
+                if (!net.jj.hollowbell.world.NoWait.loaded(level(), col)) continue;
                 int top = level().getHeight(Heightmap.Types.MOTION_BLOCKING, col.getX(), col.getZ());
                 for (int up = 0; up < 6; up++) {
                     AABB box = who.getDimensions(net.minecraft.world.entity.Pose.STANDING).makeBoundingBox(x, top + up, z);

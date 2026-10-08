@@ -106,6 +106,7 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarSight::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.LootBeams::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.FarOrders::tick);
+        ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.NoWait::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.Painter::tick);
         ServerTickEvents.END_SERVER_TICK.register(net.jj.hollowbell.world.GroundCheck::tick);
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);

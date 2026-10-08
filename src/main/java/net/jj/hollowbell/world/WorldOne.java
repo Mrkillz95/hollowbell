@@ -704,9 +704,17 @@ public class WorldOne extends SavedData {
      * ground, the claim came first). He comes down out of the sky.
      */
     private void put(ServerLevel level) {
+        avoidWard();
+        // (his land is never loaded here and now: that made the server wait until it was made, up to 30 seconds. It's
+        // asked for and made on the world's own threads, and he comes down on a later try once it's there)
+        if (!NoWait.loaded(level, x, z)) {
+            if (!homeClaimed) claimFresh(level);
+            level.getChunkSource().addRegionTicket(TICKET, new ChunkPos(new BlockPos(x, 64, z)), 3, 0);
+            cooldown = 20;
+            return;
+        }
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
         if (e == null) return;
-        avoidWard();
         e.setBellScale(Mth.clamp(HollowbellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
         e.setVariant(HollowbellEntity.CALM);
         e.markWorldOne();
@@ -714,8 +722,7 @@ public class WorldOne extends SavedData {
         // his ground was claimed long before, so the land here is made as his as this chunk is made
         if (!homeClaimed) claimFresh(level);
         level.getChunkSource().addRegionTicket(TICKET, new ChunkPos(new BlockPos(x, 64, z)), 3, e.getId());
-        level.getChunk(x >> 4, z >> 4);
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        int y = NoWait.heightOrGuess(level, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         e.moveTo(x + 0.5, Math.max(y, level.getMinBuildHeight() + 1), z + 0.5, level.random.nextFloat() * 360f, 0f);
         e.setHome(e.position());
         level.addFreshEntityWithPassengers(e);

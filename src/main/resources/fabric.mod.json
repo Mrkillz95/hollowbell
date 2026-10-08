@@ -21,7 +21,8 @@
       "net.jj.hollowbell.test.MoreGameTests",
       "net.jj.hollowbell.test.PaintDepthTests",
       "net.jj.hollowbell.test.LookOrderTests",
-      "net.jj.hollowbell.test.HealTests"
+      "net.jj.hollowbell.test.HealTests",
+      "net.jj.hollowbell.test.FreezeTests"
     ]
   },
   "depends": {

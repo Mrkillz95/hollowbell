@@ -79,7 +79,8 @@ public final class TakeMe {
             }
             if (lay != null) {
                 Away.Parked k = lay.getValue();
-                land(p, level(server, k.dim()), k.x(), k.z(), net.jj.hollowbell.HollowbellConfig.V.worldScale);
+                Component c = land(p, level(server, k.dim()), k.x(), k.z(), net.jj.hollowbell.HollowbellConfig.V.worldScale);
+                if (NoWait.onTheWay(p)) return c;
                 return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.x()), Mth.floor(k.z()));
             }
         }
@@ -87,14 +88,22 @@ public final class TakeMe {
         WorldOne w = WorldOne.get(server);
         BlockPos at = w.where();
         if (at != null && w.aliveNow()) {
-            land(p, server.overworld(), at.getX() + 0.5, at.getZ() + 0.5, net.jj.hollowbell.HollowbellConfig.V.worldScale);
+            Component c = land(p, server.overworld(), at.getX() + 0.5, at.getZ() + 0.5, net.jj.hollowbell.HollowbellConfig.V.worldScale);
+            if (NoWait.onTheWay(p)) return c;
             return Component.translatable("command.hollowbell.tp_waiting", at.getX(), at.getZ());
         }
         if (at != null) {
             ServerLevel over = server.overworld();
-            BlockPos safe = safeNear(over, at.getX(), at.getZ(), 48);
-            p.teleportTo(over, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, p.getYRot(), 0f);
-            return Component.translatable("command.hollowbell.tp_rise");
+            java.util.function.Function<ServerPlayer, Component> go = q -> {
+                BlockPos safe = safeNear(over, at.getX(), at.getZ(), 48);
+                q.teleportTo(over, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, q.getYRot(), 0f);
+                return Component.translatable("command.hollowbell.tp_rise");
+            };
+            if (!NoWait.loadedAround(over, at.getX(), at.getZ())) {
+                NoWait.go(p, over, at.getX(), at.getZ(), go);
+                return Component.translatable("command.hollowbell.tp_soon");
+            }
+            return go.apply(p);
         }
         return Component.translatable("command.hollowbell.tp_none");
     }
@@ -106,6 +115,15 @@ public final class TakeMe {
         if (len < 1e-3) { dx = 1; dz = 0; len = 1; }
         double out = 88 * scale * 1.05 + 20 * scale + 3;
         int tx = Mth.floor(hx + dx / len * out), tz = Mth.floor(hz + dz / len * out);
+        if (!NoWait.loadedAround(l, tx, tz)) {
+            // (the land there isn't loaded: you go the moment it is, without the server waiting while it's made)
+            NoWait.go(p, l, tx, tz, q -> landAt(q, l, hx, hz, tx, tz));
+            return Component.translatable("command.hollowbell.tp_soon");
+        }
+        return landAt(p, l, hx, hz, tx, tz);
+    }
+
+    private static Component landAt(ServerPlayer p, ServerLevel l, double hx, double hz, int tx, int tz) {
         BlockPos safe = safeNear(l, tx, tz, 32);
         double fx = hx - (safe.getX() + 0.5), fz = hz - (safe.getZ() + 0.5);
         float yaw = (float) Math.toDegrees(Math.atan2(-fx, fz));
@@ -121,7 +139,8 @@ public final class TakeMe {
             for (int k = 0; k < steps; k++) {
                 double a = k * Math.PI * 2 / steps;
                 int px = x + (int) Math.round(Math.cos(a) * r), pz = z + (int) Math.round(Math.sin(a) * r);
-                l.getChunk(px >> 4, pz >> 4);
+                // (land not loaded right now is passed over: loading it here made the server wait while it was made)
+                if (!NoWait.loadedAround(l, px, pz)) continue;
                 int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, px, pz);
                 BlockPos feet = new BlockPos(px, y, pz);
                 BlockState under = l.getBlockState(feet.below());
@@ -131,7 +150,7 @@ public final class TakeMe {
                 return feet;
             }
         }
-        int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+        int y = NoWait.heightOrGuess(l, Heightmap.Types.MOTION_BLOCKING, x, z);
         return new BlockPos(x, y + 1, z);
     }
 

@@ -451,7 +451,7 @@ public final class HollowbellCommand {
             if (look.lengthSqr() < 1e-4) look = new Vec3(0, 0, 1);
             at = at.add(look.normalize().scale(100 * size + 6));
         }
-        h.moveTo(at.x, l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(at.x), (int) Math.floor(at.z)), at.z,
+        h.moveTo(at.x, net.jj.hollowbell.world.NoWait.heightOrGuess(l, net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(at.x), (int) Math.floor(at.z)), at.z,
                 l.getRandom().nextFloat() * 360f, 0f);
         h.setBellScale(size);
         h.setVariant(mood);

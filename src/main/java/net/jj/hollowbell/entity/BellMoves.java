@@ -1054,7 +1054,7 @@ public final class BellMoves {
             double a = i * 2 * Math.PI / n;
             for (double r = Math.max(0, r0); r <= r1 && broken < 300; r += 1) {
                 int x = Mth.floor(c.x + Math.cos(a) * r), z = Mth.floor(c.z + Math.sin(a) * r);
-                if (!l.hasChunkAt(new BlockPos(x, 0, z))) continue;
+                if (!net.jj.hollowbell.world.NoWait.loaded(l, new BlockPos(x, 0, z))) continue;
                 int top = l.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                 int y0 = Math.max(l.getMinBuildHeight(), top - 12), y1 = Math.min(top + 2, (int) (c.y + height));
                 for (int y = y1; y >= y0 && broken < 300; y--) {
@@ -1211,6 +1211,7 @@ public final class BellMoves {
         r = Math.min(r, 48);
         for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
             if (dx * dx + dz * dz > r * r || h.getRandom().nextInt(3) == 0) continue;
+            if (!net.jj.hollowbell.world.NoWait.loaded(l, c.offset(dx, 0, dz))) continue;     // (never waits for land being made)
             BlockPos top = l.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.offset(dx, 0, dz));
             BlockPos below = top.below();
             BlockState st = l.getBlockState(below);
@@ -1512,7 +1513,7 @@ public final class BellMoves {
             Vec3 off = h.toWorld(new Vector3f(r * (float) Math.cos(cp.theta), 0, r * (float) Math.sin(cp.theta))).subtract(h.position());
             double x = h.getX() + off.x, z = h.getZ() + off.z;
             BlockPos col = BlockPos.containing(x, h.getY(), z);
-            if (!level().hasChunkAt(col)) continue;
+            if (!net.jj.hollowbell.world.NoWait.loaded(level(), col)) continue;
             double y = level().getHeight(Heightmap.Types.MOTION_BLOCKING, col.getX(), col.getZ());
             AABB box = who.getDimensions(net.minecraft.world.entity.Pose.STANDING).makeBoundingBox(x, y, z);
             if (!level().noCollision(who, box) || level().containsAnyLiquid(box) || level().containsAnyLiquid(box.move(0, -1, 0))) continue;
@@ -1847,11 +1848,13 @@ public final class BellMoves {
         double r = h.bellRadius();
         for (int tries = 0; tries < 40; tries++) {
             double a = h.getRandom().nextDouble() * Math.PI * 2, d = Math.sqrt(h.getRandom().nextDouble()) * r;
-            BlockPos top = l.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, BlockPos.containing(h.getX() + Math.cos(a) * d, h.getY(), h.getZ() + Math.sin(a) * d));
+            BlockPos col = BlockPos.containing(h.getX() + Math.cos(a) * d, h.getY(), h.getZ() + Math.sin(a) * d);
+            if (!net.jj.hollowbell.world.NoWait.loaded(l, col)) continue;        // (never waits for land being made)
+            BlockPos top = l.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, col);
             // look down through the leaves for a trunk
             for (int dy = 0; dy < 12; dy++) {
                 BlockPos p = top.below(dy);
-                if (!l.hasChunkAt(p)) break;
+                if (!net.jj.hollowbell.world.NoWait.loaded(l, p)) break;
                 BlockState st = l.getBlockState(p);
                 if (st.is(BlockTags.LOGS)) {
                     BlockPos base = p;
@@ -1943,7 +1946,7 @@ public final class BellMoves {
             BlockPos p = BlockPos.containing(tip);
             for (int dy = -1; dy <= 1; dy++) {
                 BlockPos q = p.above(dy);
-                if (!l.hasChunkAt(q)) continue;
+                if (!net.jj.hollowbell.world.NoWait.loaded(l, q)) continue;
                 BlockState st = l.getBlockState(q);
                 if (!st.isAir() && st.canBeReplaced() && st.getFluidState().isEmpty()) l.destroyBlock(q, false);
             }
