@@ -300,7 +300,7 @@ public final class Away extends SavedData {
             double back = backRange(server, r.scale);
             for (ServerPlayer p : l.players()) {
                 if (p.isSpectator()) continue;
-                if (Mth.square(p.getX() - s.x) + Mth.square(p.getZ() - s.z) < back * back) { bringBack(l, r); break; }
+                if (Mth.square(p.getX() - s.x) + Mth.square(p.getZ() - s.z) < back * back) { bringBackWhenLoaded(l, r); break; }
             }
         }
     }
@@ -309,8 +309,20 @@ public final class Away extends SavedData {
     private void bringBackAll(MinecraftServer server) {
         for (Rec r : new ArrayList<>(recs.values())) {
             ServerLevel l = level(server, r.dim);
-            if (l != null) bringBack(l, r);
+            if (l != null) bringBackWhenLoaded(l, r);
         }
+    }
+
+    /**
+     * He comes back only once the land where he is has been loaded: it's asked for, made by the world on its own
+     * threads, and he's put back on a later sweep. (Loading it there and then made the server wait until it was made.)
+     * Null while waiting.
+     */
+    public @Nullable HollowbellEntity bringBackWhenLoaded(ServerLevel l, Rec r) {
+        Vec3 s = r.spot(l.getGameTime());
+        int bx = Mth.floor(s.x), bz = Mth.floor(s.z);
+        if (!NoWait.loaded(l, bx, bz)) { NoWait.ask(l, bx, bz, 1); return null; }
+        return bringBack(l, r);
     }
 
     private static @Nullable ServerLevel level(MinecraftServer server, String dim) {
@@ -328,7 +340,9 @@ public final class Away extends SavedData {
         if (h == null) return null;
         Vec3 s = r.spot(l.getGameTime());
         int bx = Mth.floor(s.x), bz = Mth.floor(s.z);
-        l.getChunk(bx >> 4, bz >> 4);
+        // (never loads the land there and then: that made the server wait until it was made. Unloaded, he goes in
+        // at the generator's guess of the ground and his land is asked for; he sets himself right once it's there)
+        NoWait.ask(l, bx, bz, 1);
         if (r.followLostAt != 0) r.body.putLong("ComeLostAt", r.followLostAt);
         h.load(r.body);
         if (l.getEntity(h.getUUID()) != null) {                             // never two of the same
@@ -336,7 +350,7 @@ public final class Away extends SavedData {
             h.setUUID(UUID.randomUUID());
             WorldOne.get(l.getServer()).renamed(was, h.getUUID());
         }
-        int ground = l.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
+        int ground = NoWait.heightOrGuess(l, Heightmap.Types.MOTION_BLOCKING, bx, bz);
         double y = Mth.clamp(ground + r.lift, l.getMinBuildHeight() + 1, l.getMaxBuildHeight() - 1);
         h.moveTo(s.x, y, s.z, h.getYRot(), 0f);
         h.backFromAway(r.going ? new Vec3(r.toX, ground, r.toZ) : null, r.stay);

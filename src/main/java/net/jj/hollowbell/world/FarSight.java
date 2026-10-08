@@ -80,7 +80,7 @@ public final class FarSight {
     /** the ground under a spot: the loaded world if it's there, otherwise what the generator would make (nothing loads) */
     public static int groundUnder(ServerLevel l, double x, double z) {
         int bx = Mth.floor(x), bz = Mth.floor(z);
-        if (l.hasChunkAt(new BlockPos(bx, 0, bz))) return l.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
+        if (net.jj.hollowbell.world.NoWait.loaded(l, new BlockPos(bx, 0, bz))) return l.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
         var src = l.getChunkSource();
         return src.getGenerator().getBaseHeight(bx, bz, Heightmap.Types.MOTION_BLOCKING, l, src.randomState());
     }
