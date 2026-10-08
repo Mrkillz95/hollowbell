@@ -7,6 +7,7 @@ He's made from your build block for block. Every block wears its real texture, a
 ## What's new in 1.9.8
 
 - **Every Hollowbell can be found, wherever he is.** One summoned far from everyone, from an egg, or left lying where nobody is near is written down where he lies, also when the server stops. `/giants where`, `list`, `tp`, the finder and `/hollowbell where` and `list` find him there, also after a restart. A summon far out now lets him take his first steps before his land is put away. The tp to one lying still sets you down at a distance that suits his size.
+- **No more whip-crack when a move is cut off.** When one move broke off another halfway (a drop cut short as he landed, say), his bell jumped straight to the new shape and flung his strands like whips. Now it eases over.
 - **No more freeze on a tp to land that isn't made yet.** `/giants tp` and `/hollowbell tp` say "Getting the land ready… you'll be taken there in a moment." and take you there once it's ready. Before, the server could stop for many seconds while that land was made.
 
 ## What was new in 1.9.7

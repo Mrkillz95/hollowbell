@@ -137,6 +137,8 @@ public final class Moves {
                             float carryD, float carryEnd) {
         st.clearMoves();
         in.clearAsks();
+        in.move = move;
+        in.moveT = t;
         int len = length(move);
         switch (move) {
             case GRAB, HARVEST -> {
