@@ -1,0 +1,13 @@
+autotest standon crown: at (10.733595602915296, 3.1432282003611434, 78.12021712060877)
+autotest ridelog: riding true frame crown air 0 at (10.734234620107749, 3.1944496845297934, 78.11587839245051) frame fix at most 0.000 unstuck 0 onGround true
+autotest ridelog: riding true frame crown air 0 at (18.544808885853726, 3.031309053442626, 72.06793702379856) frame fix at most 0.000 unstuck 0 onGround false
+autotest standon dome: at (16.410006217299234, 0.8154858529354811, 83.76679587163746)
+autotest ridelog: riding true frame bell_2 air 0 at (27.68245346084946, 1.1587079115326084, 75.03547320494613) frame fix at most 0.000 unstuck 0 onGround false
+autotest standon side: at (8.744520876909942, -4.535319748438539, 63.187852438362185)
+autotest ridelog: riding true frame bell_5 air 0 at (11.333412447995045, -6.968791956561525, 57.975219328833) frame fix at most 0.000 unstuck 0 onGround true
+autotest standon spot: at (27.60370684593742, 0.4102280493228818, 67.13325097364506)
+autotest ridelog: riding true frame spot_0 air 0 at (20.07688569733771, 0.2438244420125949, 59.04545350574471) frame fix at most 0.000 unstuck 0 onGround false
+autotest standon pod: at (25.631292997259838, -35.5402341820781, 58.48555093030634)
+autotest ridelog: riding false frame - air 0 at (18.380451008019023, -60.0, 53.6382443768685) frame fix at most 0.002 unstuck 1 onGround true
+autotest standon arm: at (41.133223223149784, -15.352680681945792, 48.03970639320967)
+autotest ridelog: riding true frame arm_2_0 air 0 at (31.715059690780077, -15.162831505688771, 37.79486842605213) frame fix at most 0.001 unstuck 1 onGround false
