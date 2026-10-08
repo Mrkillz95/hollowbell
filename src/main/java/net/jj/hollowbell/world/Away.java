@@ -342,7 +342,7 @@ public final class Away extends SavedData {
         int bx = Mth.floor(s.x), bz = Mth.floor(s.z);
         // (never loads the land there and then: that made the server wait until it was made. Unloaded, he goes in
         // at the generator's guess of the ground and his land is asked for; he sets himself right once it's there)
-        NoWait.ask(l, bx, bz, 1);
+        NoWait.hold(l, bx, bz, 1200);
         if (r.followLostAt != 0) r.body.putLong("ComeLostAt", r.followLostAt);
         h.load(r.body);
         if (l.getEntity(h.getUUID()) != null) {                             // never two of the same

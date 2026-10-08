@@ -457,6 +457,8 @@ public final class HollowbellCommand {
         h.setVariant(mood);
         h.setHome(h.position());
         l.addFreshEntity(h);
+        // (far in front of a big one the land may not be there yet: it's held until it is, so he gets going)
+        net.jj.hollowbell.world.NoWait.hold(l, (int) Math.floor(at.x), (int) Math.floor(at.z), 1200);
         src.sendSuccess(() -> Component.translatable("command.hollowbell.summoned", Component.translatable("mode.hollowbell." + mood), String.format("%.2f", size)), true);
         return 1;
     }
