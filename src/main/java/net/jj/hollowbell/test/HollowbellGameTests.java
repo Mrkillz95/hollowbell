@@ -936,8 +936,10 @@ public class HollowbellGameTests implements FabricGameTest {
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "no_snap")
-    public void movesBlendInAndOutEvenCutOffHalfway(GameTestHelper h) {
-        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 81);
+    public void movesBlendInAndOutEvenCutOffHalfway(GameTestHelper h) { blendCheck(h, 81); }
+
+    static void blendCheck(GameTestHelper h, int slot) {
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, slot);
         Pig[] p = new Pig[1];
         PoseWatch w = new PoseWatch();
         h.runAfterDelay(20, () -> {
@@ -953,6 +955,7 @@ public class HollowbellGameTests implements FabricGameTest {
         h.runAfterDelay(170, () -> e.moves().stopNow());
         for (int t = 21; t < 400; t++) { int tt = t; h.runAfterDelay(t, () -> w.see(e, "tick " + tt)); }
         h.runAfterDelay(400, () -> {
+            net.jj.hollowbell.HollowbellMod.LOG.info("blend check: worst jerk {} ({}), worst step {}", w.worstJerk, w.where, w.worstStep);
             h.assertTrue(w.worstJerk < 7f, "a part of him lurched: its speed changed by " + w.worstJerk + " model blocks a tick in one tick (" + w.where + ")" + w.trail());
             h.assertTrue(w.worstStep < 30f, "a part of him jumped " + w.worstStep + " model blocks in one tick (" + w.whereStep + ")");
             p[0].discard();
