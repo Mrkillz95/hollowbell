@@ -33,7 +33,15 @@ public final class TakeMe {
         List<Object> out = new ArrayList<>();
         for (ServerLevel l : server.getAllLevels()) out.addAll(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved()));
         out.addAll(Away.get(server).all());
+        for (var e : Away.get(server).lying(server).entrySet()) out.add(new Lying(e.getKey(), e.getValue()));
         return out;
+    }
+
+    /** one written down as lying still where nobody was near: not loaded, not out of the world */
+    public record Lying(java.util.UUID id, Away.Parked at) {}
+
+    /** is this player waiting to be taken somewhere (the tests ask) */
+    public static boolean onTheWay(ServerPlayer p) { return NoWait.onTheWay(p);
     }
 
     /** which = 0: the nearest (this dimension first); 1, 2...: that one on /hollowbell list */
@@ -48,6 +56,7 @@ public final class TakeMe {
             double bd = Double.MAX_VALUE;
             for (Object o : listed(server)) {
                 double d;
+                if (o instanceof Lying) continue;                    // (looked at below, when there's nobody else)
                 if (o instanceof HollowbellEntity h) d = h.level() == p.level() ? h.distanceToSqr(p) : 1e18;
                 else {
                     Away.Rec r = (Away.Rec) o;
@@ -66,6 +75,11 @@ public final class TakeMe {
             ServerLevel l = level(server, r.dim);
             Vec3 s = r.spot(l.getGameTime());
             return land(p, l, s.x, s.z, r.scale);
+        }
+        if (pick instanceof Lying k) {
+            Component c = land(p, level(server, k.at().dim()), k.at().x(), k.at().z(), net.jj.hollowbell.HollowbellConfig.V.worldScale);
+            if (NoWait.onTheWay(p)) return c;
+            return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.at().x()), Mth.floor(k.at().z()));
         }
         // one put away with his chunk where nobody was near (not loaded, not out of the world): beside him, he loads round you
         if (which <= 0) {

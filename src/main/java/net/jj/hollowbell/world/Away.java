@@ -240,6 +240,49 @@ public final class Away extends SavedData {
     public void unpark(UUID id) { if (parked.remove(id) != null) setDirty(); }
     public Map<UUID, Parked> parked() { return java.util.Collections.unmodifiableMap(parked); }
 
+    /** for the tests: one written down as lying at this spot */
+    public void noteParked(UUID id, String dim, double x, double z, double speed) { parked.put(id, new Parked(dim, x, z, speed)); setDirty(); }
+
+    public void forgetParked() { if (!parked.isEmpty()) { parked.clear(); setDirty(); } }
+
+    /** every one written down as lying still where nobody was near, that isn't loaded now or out of the world */
+    public Map<UUID, Parked> lying(MinecraftServer server) {
+        Map<UUID, Parked> out = new LinkedHashMap<>();
+        for (var e : parked.entrySet()) {
+            var key = net.minecraft.resources.ResourceLocation.tryParse(e.getValue().dim());
+            ServerLevel l = key == null ? null : server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, key));
+            if (l == null || recs.containsKey(e.getKey()) || l.getEntity(e.getKey()) != null) continue;
+            out.put(e.getKey(), e.getValue());
+        }
+        return out;
+    }
+
+    /** the nearest one lying still in this dimension, from this spot */
+    public @Nullable Map.Entry<UUID, Parked> nearestLying(ServerLevel l, Vec3 from) {
+        String dim = l.dimension().location().toString();
+        Map.Entry<UUID, Parked> best = null; double bd = Double.MAX_VALUE;
+        for (var e : lying(l.getServer()).entrySet()) {
+            if (!e.getValue().dim().equals(dim)) continue;
+            double d = Mth.square(e.getValue().x() - from.x) + Mth.square(e.getValue().z() - from.z);
+            if (d < bd) { bd = d; best = e; }
+        }
+        return best;
+    }
+
+    /** as the server stops: every one loaded right now is written down where he is (he's saved with his chunk without
+     * being put away, and after a restart nothing may load that chunk again) */
+    public static void noteAllLoaded(MinecraftServer server) {
+        Away a = get(server);
+        for (ServerLevel l : server.getAllLevels())
+            for (HollowbellEntity h : l.getEntities(net.jj.hollowbell.ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying() && !e.steppedOut()))
+                a.noteParked(h);
+    }
+
+    /** for the tests: the world's copy swapped for one read back from a save */
+    public static void reloadForTests(MinecraftServer server) {
+        server.overworld().getDataStorage().set("hollowbell_away", load(get(server).save(new CompoundTag(), server.registryAccess()), server.registryAccess()));
+    }
+
     /** stop where you are: the sum stops and he's left out there (or, again, let him go on his way) */
     public boolean stay(ServerLevel l, UUID id, boolean on) {
         Rec r = recs.get(id);

@@ -94,14 +94,14 @@ public final class NoWait {
      * Instead the land is asked for and the player goes the moment it's there (or after a minute, onto a guess).
      * `arrive` sets the player down and gives what to tell them.
      */
-    private record Trip(ResourceKey<Level> dim, int x, int z, Function<ServerPlayer, Component> arrive, long until) {}
+    private record Trip(ResourceKey<Level> dim, int x, int z, Function<ServerPlayer, Component> arrive, long until /* clock ms */) {}
     private static final Map<UUID, Trip> TRIPS = new HashMap<>();
-    /** how long a trip waits for its land at most (60 seconds) */
+    /** how long a trip waits for its land at most (60 seconds, by the clock: land is made in real time, whatever the ticks do) */
     static final int TRIP_WAIT = 1200;
 
     public static void go(ServerPlayer p, ServerLevel l, int x, int z, Function<ServerPlayer, Component> arrive) {
         ask(l, x, z, 2);
-        TRIPS.put(p.getUUID(), new Trip(l.dimension(), x, z, arrive, l.getGameTime() + TRIP_WAIT));
+        TRIPS.put(p.getUUID(), new Trip(l.dimension(), x, z, arrive, System.currentTimeMillis() + TRIP_WAIT * 50L));
     }
 
     /** is this player waiting on a trip? (the tests ask) */
@@ -110,13 +110,13 @@ public final class NoWait {
     // ------------------------------------------------------------------ land held until it's there
 
     /** land asked for until it's loaded (a single ask runs out after five seconds, and new land can take longer) */
-    private record Hold(ResourceKey<Level> dim, int x, int z, long until) {}
+    private record Hold(ResourceKey<Level> dim, int x, int z, long until /* clock ms */) {}
     private static final java.util.List<Hold> HOLDS = new java.util.ArrayList<>();
 
     /** ask for the land here and keep asking until it's loaded (at most `ticks`): something was put there that has to run */
     public static void hold(ServerLevel l, int x, int z, int ticks) {
         ask(l, x, z, 1);
-        HOLDS.add(new Hold(l.dimension(), x, z, l.getGameTime() + ticks));
+        HOLDS.add(new Hold(l.dimension(), x, z, System.currentTimeMillis() + ticks * 50L));
     }
 
     private static void holds(MinecraftServer server) {
@@ -125,13 +125,54 @@ public final class NoWait {
         while (it.hasNext()) {
             Hold h = it.next();
             ServerLevel l = server.getLevel(h.dim());
-            if (l == null || l.getGameTime() > h.until()) { it.remove(); continue; }
+            if (l == null || System.currentTimeMillis() > h.until()) { it.remove(); continue; }
             if (loaded(l, h.x(), h.z())) { ask(l, h.x(), h.z(), 1); it.remove(); continue; }   // (one more ask: it runs a while longer)
             if (l.getGameTime() % 40 == 0) ask(l, h.x(), h.z(), 1);
         }
     }
 
+    // ------------------------------------------------------------------ one just put down, held running a while
+
+    /** held round one just put down far from everybody, at the level where things there take their ticks */
+    public static final TicketType<ChunkPos> SETTLE = TicketType.create("hollowbell_settle", Comparator.comparingLong(ChunkPos::toLong), 100);
+    private record Settle(ResourceKey<Level> dim, int x, int z, long giveUp /* clock ms */, int ticks, long[] loadedAt) {}
+    private static final java.util.List<Settle> SETTLES = new java.util.ArrayList<>();
+
+    /**
+     * One was put down here, maybe far from everybody (a summon): his land is asked for without waiting, and once it's
+     * loaded it's kept running for `ticks` more, so he takes his first ticks there (he can step out of the world or
+     * write down where he is). A ticket that only loads the land isn't enough: nothing in it ever takes a tick.
+     */
+    public static void settle(ServerLevel l, int x, int z, int ticks) {
+        ChunkPos cp = new ChunkPos(x >> 4, z >> 4);
+        l.getChunkSource().addRegionTicket(SETTLE, cp, 3, cp);
+        SETTLES.add(new Settle(l.dimension(), x, z, System.currentTimeMillis() + 60_000L, ticks, new long[] {-1}));
+    }
+
+    /** is anything still being held running? (the tests ask) */
+    public static boolean settling() { return !SETTLES.isEmpty(); }
+
+    private static void settles(MinecraftServer server) {
+        if (SETTLES.isEmpty()) return;
+        var it = SETTLES.iterator();
+        while (it.hasNext()) {
+            Settle s = it.next();
+            ServerLevel l = server.getLevel(s.dim());
+            if (l == null) { it.remove(); continue; }
+            long now = l.getGameTime();
+            if (s.loadedAt()[0] < 0) {
+                if (loaded(l, s.x(), s.z())) s.loadedAt()[0] = now;
+                else if (System.currentTimeMillis() > s.giveUp()) { it.remove(); continue; }
+            } else if (now - s.loadedAt()[0] > s.ticks()) { it.remove(); continue; }   // (the ticket runs out on its own)
+            if (now % 40 == 0) {
+                ChunkPos cp = new ChunkPos(s.x() >> 4, s.z() >> 4);
+                l.getChunkSource().addRegionTicket(SETTLE, cp, 3, cp);
+            }
+        }
+    }
+
     public static void tick(MinecraftServer server) {
+        settles(server);
         holds(server);
         if (TRIPS.isEmpty()) return;
         var it = TRIPS.entrySet().iterator();
@@ -142,7 +183,7 @@ public final class NoWait {
             ServerLevel l = server.getLevel(t.dim());
             if (p == null || l == null || p.isRemoved()) { it.remove(); continue; }
             boolean ready = loadedAround(l, t.x(), t.z());
-            if (!ready && l.getGameTime() <= t.until()) {
+            if (!ready && System.currentTimeMillis() <= t.until()) {
                 // (the ask runs out after a few seconds: asked again while the land is still being made)
                 if (l.getGameTime() % 40 == 0) ask(l, t.x(), t.z(), 2);
                 continue;
@@ -154,5 +195,5 @@ public final class NoWait {
         }
     }
 
-    public static void forget() { TRIPS.clear(); HOLDS.clear(); }
+    public static void forget() { TRIPS.clear(); HOLDS.clear(); SETTLES.clear(); }
 }

@@ -123,6 +123,9 @@ public class HollowbellMod implements ModInitializer {
                 away.noteParked(h);
             else away.unpark(h.getUUID());
         });
+        // every one still loaded is written down where he is as the server stops: the game saves him with his chunk
+        // without putting him away, and after a restart nothing may load that chunk again
+        ServerLifecycleEvents.SERVER_STOPPING.register(net.jj.hollowbell.world.Away::noteAllLoaded);
         // the cap: only for freshly made ones. A saved one loading with its chunk is nobody arriving.
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
             if (entity instanceof HollowbellEntity h) {
