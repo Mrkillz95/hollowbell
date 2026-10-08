@@ -230,18 +230,22 @@ public final class Away extends SavedData {
     // ------------------------------------------------------------------ where the ones in unloaded land are
 
     /** one of him left in the world when his chunk was put away: where, so an order can reach him */
-    public record Parked(String dim, double x, double z, double speed) {}
+    public record Parked(String dim, double x, double z, double speed, float scale) {
+        public Parked(String dim, double x, double z, double speed) { this(dim, x, z, speed, 0f); }
+        /** his own size, or the world's for a note from before sizes were written down */
+        public float sizeOr(float world) { return scale > 0 ? scale : world; }
+    }
     private final Map<UUID, Parked> parked = new LinkedHashMap<>();
 
     public void noteParked(HollowbellEntity h) {
-        parked.put(h.getUUID(), new Parked(h.level().dimension().location().toString(), h.getX(), h.getZ(), h.travelSpeed()));
+        parked.put(h.getUUID(), new Parked(h.level().dimension().location().toString(), h.getX(), h.getZ(), h.travelSpeed(), h.bellScale()));
         setDirty();
     }
     public void unpark(UUID id) { if (parked.remove(id) != null) setDirty(); }
     public Map<UUID, Parked> parked() { return java.util.Collections.unmodifiableMap(parked); }
 
     /** for the tests: one written down as lying at this spot */
-    public void noteParked(UUID id, String dim, double x, double z, double speed) { parked.put(id, new Parked(dim, x, z, speed)); setDirty(); }
+    public void noteParked(UUID id, String dim, double x, double z, float scale) { parked.put(id, new Parked(dim, x, z, 0, scale)); setDirty(); }
 
     public void forgetParked() { if (!parked.isEmpty()) { parked.clear(); setDirty(); } }
 
@@ -414,7 +418,7 @@ public final class Away extends SavedData {
         ListTag pk = tag.getList("Parked", Tag.TAG_COMPOUND);
         for (int i = 0; i < pk.size(); i++) {
             CompoundTag c = pk.getCompound(i);
-            a.parked.put(c.getUUID("Id"), new Parked(c.getString("Dim"), c.getDouble("X"), c.getDouble("Z"), c.getDouble("Speed")));
+            a.parked.put(c.getUUID("Id"), new Parked(c.getString("Dim"), c.getDouble("X"), c.getDouble("Z"), c.getDouble("Speed"), c.getFloat("Scale")));
         }
         // orders on their way to one in land nobody has loaded: carried on after a restart
         FarOrders.loadFetches(tag.getList("Fetches", Tag.TAG_COMPOUND));
@@ -430,7 +434,7 @@ public final class Away extends SavedData {
         for (var e : parked.entrySet()) {
             CompoundTag c = new CompoundTag();
             c.putUUID("Id", e.getKey()); c.putString("Dim", e.getValue().dim());
-            c.putDouble("X", e.getValue().x()); c.putDouble("Z", e.getValue().z()); c.putDouble("Speed", e.getValue().speed());
+            c.putDouble("X", e.getValue().x()); c.putDouble("Z", e.getValue().z()); c.putDouble("Speed", e.getValue().speed()); c.putFloat("Scale", e.getValue().scale());
             pk.add(c);
         }
         tag.put("Parked", pk);
