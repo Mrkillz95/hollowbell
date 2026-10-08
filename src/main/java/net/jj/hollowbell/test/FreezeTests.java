@@ -122,8 +122,12 @@ public class FreezeTests implements FabricGameTest {
             h.assertTrue(ms < 50, "asking took " + ms + " ms");
         });
         for (int t = 40; t < 1350; t += 10) {
+            final int at = t;
             h.runAfterDelay(t, () -> {
                 if (done[0] || rec[0] == null) return;
+                // (a busy test server can leave that land waiting a long time behind the rest: after a while it's
+                // forced, as somebody standing there would; what's tested is that he comes back once it's loaded)
+                if (at == 400) l.setChunkForced(far.getX() >> 4, far.getZ() >> 4, true);
                 net.jj.hollowbell.world.Away.Rec r = (net.jj.hollowbell.world.Away.Rec) rec[0];
                 NoWait.ask(l, far.getX(), far.getZ(), 1);
                 HollowbellEntity back = a.bringBackWhenLoaded(l, r);
@@ -131,6 +135,7 @@ public class FreezeTests implements FabricGameTest {
                 done[0] = true;
                 h.assertTrue(Math.hypot(back.getX() - (far.getX() + 0.5), back.getZ() - (far.getZ() + 0.5)) < 2, "he came back somewhere else");
                 back.discard();
+                l.setChunkForced(far.getX() >> 4, far.getZ() >> 4, false);
                 release(h, e);
                 h.succeed();
             });

@@ -1106,6 +1106,9 @@ public class HollowbellEntity extends Monster {
     private double wanderRange() { return (isGuardian() ? 80 : 150) * bellScale() + 30; }
     public double horiz(Vec3 p) { double dx = p.x - getX(), dz = p.z - getZ(); return Math.sqrt(dx * dx + dz * dz); }
 
+    /** the last ground he saw that was loaded (for land that isn't yet) */
+    private double groundSeen = Double.NaN;
+
     /** the top of the ground (or water, or treetops) at a spot */
     public double groundAt(double x, double z) {
         if (ghost) return getY() - 60 * bellScale();
@@ -1113,7 +1116,11 @@ public class HollowbellEntity extends Monster {
         // (only land loaded right now: hasChunk also said yes for land still being made, and asking its height made the
         // whole server wait until it was made, up to 30 seconds on a real server)
         int y = net.jj.hollowbell.world.NoWait.height(level(), Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
-        return y == net.jj.hollowbell.world.NoWait.NOT_YET ? getY() : y;
+        // (land not loaded yet: taken as level with the last ground he did see, not as high as he is, which lifted him
+        // up with a jolt whenever he looked ahead over land still being made)
+        if (y == net.jj.hollowbell.world.NoWait.NOT_YET) return Double.isNaN(groundSeen) ? getY() - 30 * bellScale() : groundSeen;
+        groundSeen = y;
+        return y;
     }
 
     /** a pulse of the bell: it squeezes in, and a strong one is the pulse wave */
