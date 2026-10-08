@@ -421,7 +421,20 @@ public final class BellAnim {
             if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
         }
         if (st.carryStrand < 0) { carryChain = -1; carryP0 = null; }
+        // his arms, strands and pods kept from passing through each other (see BellApart)
+        if (!first && APART) {
+            long t0 = System.nanoTime();
+            if (apart == null) apart = new BellApart(rig);
+            apart.apply(st, st.chain, prev, held, mBody);
+            apartNanos += System.nanoTime() - t0;
+        }
     }
+
+    /** off only for the lab's before-and-after count (-Dhollowbell.noApart=true) and the cost test */
+    /** what keeping his parts apart has cost in all, both sides (the cost test) */
+    public static long apartNanos;
+    public static boolean APART = !Boolean.getBoolean("hollowbell.noApart");
+    private BellApart apart;
 
     // ------------------------------------------------------------------ carrying somebody up onto his crown
 

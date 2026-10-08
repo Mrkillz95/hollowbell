@@ -58,7 +58,7 @@ import java.util.UUID;
  * the client draws, so a hit lands on exactly the block you swung at: see {@link #hitBy}. His own health is kept
  * here rather than in the game's (which can't go past 1024).
  */
-public class HollowbellEntity extends Monster {
+public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid.SolidBody {
     public static final int CALM = 0, HUNTER = 1, GUARDIAN = 2;
     public static final float MIN_SCALE = 0.03f, MAX_SCALE = 2f;
 
@@ -368,6 +368,8 @@ public class HollowbellEntity extends Monster {
     void setLift(float l) { entityData.set(DATA_LIFT, l); }
     void setCarry(float d, float end) { entityData.set(DATA_CARRY, new Vector3f(d, end, 0f)); }
     Vector3f aim() { return entityData.get(DATA_AIM); }
+    /** where the move of the moment is aimed, in the world (the tests) */
+    public Vec3 aimWorld() { return toWorld(aim()); }
 
     public int podsLeft() { int n = 0; for (int i = 0; i < rig.pods.length; i++) if (!state.podPopped[i]) n++; return n; }
     public int eggsLeft() { int n = 0; for (int i = 0; i < rig.eggs.length; i++) if (!state.eggGone[i]) n++; return n; }
@@ -629,6 +631,8 @@ public class HollowbellEntity extends Monster {
         Moves.pose(rig, anim.now(), in, move, moveT(0f), moveArg(), aim.x, aim.y, aim.z, entityData.get(DATA_LIFT), carry.x, carry.y);
         anim.step(in);
         poseTick = Long.MIN_VALUE;
+        solidVer++;
+        solidCache.touch();
     }
 
     /** the ground under a point of him, in his own model heights (NaN if that ground isn't loaded) */
@@ -684,6 +688,7 @@ public class HollowbellEntity extends Monster {
     public void tick() {
         if (hp < 0 && !level().isClientSide) setBellScale(bellScale());
         super.tick();
+        if (!isRemoved() && !ghost) net.jj.hollowbell.solid.Solid.track(this);
         if (level().isClientSide) { clientTick(); return; }
         if (isDeadOrDying()) return;
         serverTick();
@@ -751,9 +756,11 @@ public class HollowbellEntity extends Monster {
         if (comeTo != null && !frozen) comeTick();
         if (!frozen) moves.tick();
         if (frozen) { vel = Vec3.ZERO; entityData.set(DATA_VEL, new Vector3f()); } else fly(now);
+        giantsApart();
         animTick();
         ensurePose();
         moves.afterPose();
+        net.jj.hollowbell.solid.Solid.serverTick(this);
         stingTick();
         arrowsTick();
         barsTick();
@@ -911,6 +918,8 @@ public class HollowbellEntity extends Monster {
         boolean dying = isDeadOrDying();
         boolean down = resting() || dying || asleep;
         LivingEntity t = getTarget();
+        // going for another giant: his body stays out of its body (over it, or at its side)
+        double[] giantPlan = t != null && !dying ? giantTargetPlan(t) : null;
         Vec3 want = null;
         boolean still = stay || moves.holdsStill() || dying || asleep || (goal == null && waitingForSomebody());
         // a woken crown's circle: a goal in there is dropped, and standing in there he makes for the way out
@@ -933,8 +942,10 @@ public class HollowbellEntity extends Monster {
                     if (holdThere && !waitingForSomebody()) { holdThere = false; comeTo = null; setStay(true); }
                 }
             } else if (t != null) {
-                // hunting: he hangs right over you, so the strands can reach
-                if (horiz(t.position()) > 12 * s + 2) want = t.position();
+                // hunting: he hangs right over you, so the strands can reach (another giant: he stops where his body
+                // meets its body across, and goes over it only once he's up over its top)
+                if (giantPlan != null && giantPlan[1] < contactGap()) want = null;
+                else if (horiz(t.position()) > 12 * s + 2) want = t.position();
             } else if (huntOrdered && huntSeen != null) {
                 // sent after something gone from sight: where it was last seen
                 if (horiz(huntSeen) > 8 * s + 3) want = huntSeen;
@@ -1014,6 +1025,7 @@ public class HollowbellEntity extends Monster {
             else wy = t.getY() - 1.5 * s;                      // over it, the strand ends at its feet
         } else if (stay) { if (Double.isNaN(wantY)) wantY = getY(); wy = Math.max(wantY, gAvg); }
         else wy = gAvg + cruise;
+        if (giantPlan != null && !down && !Double.isNaN(giantPlan[0])) wy = Math.max(wy, giantPlan[0]);
         wy = Math.max(wy, hardMin);
         double top = level().getMaxBuildHeight() + 40 - (rig.crownY + 20) * s;
         wy = Math.min(wy, Math.min(top, gC + 220 * s + 90));
@@ -1618,6 +1630,8 @@ public class HollowbellEntity extends Monster {
         if (!level().isClientSide && !steppedOut && why != RemovalReason.UNLOADED_TO_CHUNK && why != RemovalReason.UNLOADED_WITH_PLAYER)
             HollowbellMod.LOG.info("Hollowbell removed at {} ({})", position(), why);
         clearBars();
+        if (!level().isClientSide && (why == RemovalReason.KILLED || why == RemovalReason.DISCARDED)) lowerWhoeverStandsOnHim();
+        net.jj.hollowbell.solid.Solid.untrack(this);
         if (!level().isClientSide) { dropRider(); moves.letGoOfEverything(why == RemovalReason.KILLED || why == RemovalReason.DISCARDED); }
         super.remove(why);
     }
@@ -1890,6 +1904,8 @@ public class HollowbellEntity extends Monster {
 
     @Override
     public void die(DamageSource src) {
+        // (whoever stands on him floats down: he won't hold them up once he's dying)
+        if (!level().isClientSide && !dead) lowerWhoeverStandsOnHim();
         if (!level().isClientSide && !dead && level() instanceof ServerLevel sl) {
             // the world's own one dying sets the next one going; another one only if the world has none and
             // isn't already counting down to one
@@ -1987,6 +2003,7 @@ public class HollowbellEntity extends Monster {
 
     // ------------------------------------------------------------------ the game's own habits, none of which fit him
 
+    @Override public void onClientRemoval() { super.onClientRemoval(); net.jj.hollowbell.solid.Solid.untrack(this); }
     @Override public boolean isPushable() { return false; }
     @Override protected void pushEntities() {}
     @Override public void push(Entity e) {}
@@ -2475,4 +2492,234 @@ public class HollowbellEntity extends Monster {
     }
     /** for the tests: ticks since he was last hurt, as the slow heal sees it */
     public long sinceHurtForHeal() { return level().getGameTime() - healHurtAt; }
+
+    // ------------------------------------------------------------------ solid (the solid kit's adapter)
+
+    /** his frames for the solid kit, this tick */
+    final net.jj.hollowbell.solid.SolidCache solidCache = new net.jj.hollowbell.solid.SolidCache();
+    /** bumped each step of his animation: the pose the kit reads is worked out again */
+    private long solidVer, solidPoseVer = Long.MIN_VALUE;
+    private BellState solidSt, solidDrawSt;
+    private Matrix4f[] solidBones, solidHangs, solidSlices, solidDrawBones, solidDrawHangs;
+
+    @Override public Entity solidSelf() { return this; }
+    @Override public net.jj.hollowbell.solid.SolidShape solidShape() { return HollowSolid.shape(); }
+    @Override public net.jj.hollowbell.solid.SolidCache solidCache() { return solidCache; }
+    /** the tests only: the solid kit off, to measure what it costs */
+    public static boolean solidOff;
+
+    @Override public boolean solidReady() {
+        return !solidOff && !isRemoved() && !ghost && !isDeadOrDying() && solidVer > 0 && bellScale() >= 0.02f && HollowSolid.ready()
+                && (!level().isClientSide || tickCount > 1);
+    }
+    @Override public AABB solidBox() { return bodyBox(); }
+
+    /** the pose as of this tick, in slices (his own copy: the renderer fills his state in between ticks) */
+    @Override public Matrix4f[] solidPose() {
+        if (solidSlices == null) {
+            net.jj.hollowbell.rig.BellPieces pc = net.jj.hollowbell.rig.BellPieces.get();
+            solidSt = new BellState(rig); solidBones = rig.newPose(); solidHangs = pc.newHang(); solidSlices = pc.newPose();
+        }
+        if (solidPoseVer != solidVer) {
+            solidPoseVer = solidVer;
+            if (level().isClientSide) readParts();
+            anim.fill(solidSt, 1f);
+            rig.computePose(solidSt, solidBones, solidHangs);
+            net.jj.hollowbell.rig.BellPieces.get().pose(solidSt, solidBones, solidHangs, solidSlices);
+        }
+        return solidSlices;
+    }
+
+    /** the pose as drawn between ticks (the renderer's way: BellRenderer) */
+    @Override public void solidPoseAt(float partial, Matrix4f[] out) {
+        if (solidDrawSt == null) { solidDrawSt = new BellState(rig); solidDrawBones = rig.newPose(); solidDrawHangs = net.jj.hollowbell.rig.BellPieces.get().newHang(); }
+        anim.fill(solidDrawSt, partial);
+        rig.computePose(solidDrawSt, solidDrawBones, solidDrawHangs);
+        net.jj.hollowbell.rig.BellPieces.get().pose(solidDrawSt, solidDrawBones, solidDrawHangs, out);
+    }
+
+    /** turned and sized just as he's drawn (modelToWorld; his yaw is fixed for his life) */
+    @Override public Matrix4f solidRoot(float partial, Matrix4f out) {
+        return out.identity().rotateY(-getYRot() * Mth.DEG_TO_RAD).scale(bellScale());
+    }
+
+    /** a popped pod (or one still growing back) and an egg clump that's gone aren't there to bump into */
+    @Override public boolean solidBoneOn(int slice) {
+        int b = net.jj.hollowbell.rig.BellPieces.get().bone[slice];
+        BellState st = anim.now();
+        return switch (rig.kind[b]) {
+            case EGG -> !st.eggGone[rig.part[b]];
+            case POD -> !st.podPopped[rig.part[b]] && st.podGrowth[rig.part[b]] >= 0.98f;
+            default -> true;
+        };
+    }
+
+    @Override public float solidScale() { return bellScale(); }
+
+    /** his seats, shots, hooks and Bellings, whoever he holds or is closing on, and the other giants (see jjHull) */
+    @Override public boolean solidIgnores(Entity e) {
+        return e instanceof Seat || e instanceof Shot || e instanceof StingerHook || e instanceof Belling || e == rider || Giants.isGiant(e)
+                || (!level().isClientSide && (moves.caught(e) || moves.closingOn(e)));
+    }
+
+    /**
+     * A spot on the top of one of his slices (for the tests and the autotest): over where the middle of its blocks is
+     * now, the highest top of it there with room to stand over it; or null.
+     */
+    public @Nullable Vec3 topOfSlice(int slice) {
+        net.jj.hollowbell.solid.SolidShape sh = solidShape();
+        int f = sh.frameOfBone[slice];
+        if (f < 0) return null;
+        float[] bb = sh.bounds[f];
+        net.jj.hollowbell.solid.SolidCache c = net.jj.hollowbell.solid.Solid.frames(this);
+        for (float[] at : new float[][]{{0.5f, 0.5f}, {0.4f, 0.6f}, {0.6f, 0.4f}, {0.3f, 0.3f}, {0.7f, 0.7f}, {0.5f, 0.25f}, {0.5f, 0.75f}, {0.25f, 0.5f}, {0.75f, 0.5f}}) {
+            Vector3f rest = new Vector3f(bb[0] + (bb[3] - bb[0]) * at[0], (bb[1] + bb[4]) / 2, bb[2] + (bb[5] - bb[2]) * at[1]);
+            Vec3 w = net.jj.hollowbell.solid.Solid.toWorld(c, f, rest);
+            float s = bellScale();
+            net.jj.hollowbell.solid.Solid.Runs r = net.jj.hollowbell.solid.Solid.column(this, w.x, w.z, w.y - 120 * s - 2, w.y + 120 * s + 2, false, new net.jj.hollowbell.solid.Solid.Runs());
+            double best = Double.NaN;
+            for (int j = 0; j < r.n; j++) if (r.frame[j] == f && (Double.isNaN(best) || r.top[j] > best)) best = r.top[j];
+            if (Double.isNaN(best)) continue;
+            boolean room = true;
+            for (int j = 0; j < r.n; j++) if (r.bot[j] > best && r.bot[j] < best + 2.2) room = false;
+            if (room) return new Vec3(w.x, best, w.z);
+        }
+        return null;
+    }
+
+    /** whoever stands on him now, anywhere on him (players too, or not) */
+    public List<Entity> standingOnHim(boolean players) {
+        List<Entity> out = new ArrayList<>();
+        for (Entity e : net.jj.hollowbell.solid.Solid.standingOn(this, players)) if (!Giants.isGiant(e)) out.add(e);
+        return out;
+    }
+
+    /** he is dying or going away: whoever stands on him floats down slowly instead of falling */
+    private void lowerWhoeverStandsOnHim() {
+        if (!solidReady()) return;
+        for (Entity e : standingOnHim(true)) {
+            if (e instanceof LivingEntity le) {
+                le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOW_FALLING, 20 * 30, 0, false, false));
+                le.resetFallDistance();
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ giant against giant (see GiantHull)
+
+    /** his hull's frames: the dome, rim, crown and the spots inside as body; his arms as limbs (not his strands) */
+    private static double[] hullKinds;
+    private static boolean[] hullUse;
+    private double[] hullNow;
+    private long hullTick = Long.MIN_VALUE;
+    private final List<LivingEntity> giantsNear = new ArrayList<>();
+    /** the tests: how far other giants' bodies have pushed him in all */
+    public double giantPushed;
+
+    /**
+     * His rough body for the other giants (every giant of JJ's has this, found by name): 6 numbers a column, x, z,
+     * radius, bottom y, top y, kind (0 body, 1 limb), in the world. Worked out at most once a tick, when asked.
+     */
+    public double[] jjHull() {
+        long now = level().getGameTime();
+        if (hullNow != null && hullTick == now) return hullNow;
+        if (!HollowSolid.ready() || isRemoved() || ghost || solidVer == 0) return new double[0];
+        net.jj.hollowbell.solid.SolidShape sh = HollowSolid.shape();
+        if (hullUse == null) {
+            net.jj.hollowbell.rig.BellPieces pc = net.jj.hollowbell.rig.BellPieces.get();
+            boolean[] use = new boolean[sh.frames()];
+            double[] kind = new double[sh.frames()];
+            for (int f = 0; f < sh.frames(); f++) {
+                switch (rig.kind[pc.bone[sh.bone[f]]]) {
+                    case BELL, RIM, CROWN, SPOT -> { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.BODY; }
+                    // (the arms where they leave the rim, the solid part of them: their soft ends may brush another giant)
+                    case ARM -> { if (rig.seg[pc.bone[sh.bone[f]]] <= 1) { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.LIMB; } }
+                    default -> {}
+                }
+            }
+            hullKinds = kind; hullUse = use;
+        }
+        hullNow = net.jj.hollowbell.solid.GiantHull.fromBody(this, net.jj.hollowbell.solid.GiantHull.balls(sh, hullUse), hullKinds);
+        hullTick = now;
+        return hullNow;
+    }
+
+    /** how near another giant his body comes (the gap between their bodies): close enough for his arms and strands */
+    public double contactGap() { return 1 + 2 * bellScale(); }
+
+    /** the gap between his body and this giant's (below 0: in each other), or null if either has no hull */
+    public @Nullable Double hullGapTo(Entity giant) {
+        double[] me = jjHull(), them = net.jj.hollowbell.solid.GiantHull.of(giant, Giants.TAG);
+        if (me.length == 0 || them.length == 0) return null;
+        return net.jj.hollowbell.solid.GiantHull.gap(me, them);
+    }
+
+    /** the other giants near him (looked for every 5 ticks) */
+    public List<LivingEntity> giantsNear() { return giantsNear; }
+
+    /**
+     * Each tick: out of any other giant he's got into, the shortest way across, his share by weight (all of it if the
+     * other doesn't move itself out). Never through each other, whoever drifted into whom.
+     */
+    private void giantsApart() {
+        if (!(level() instanceof ServerLevel sl) || isDeadOrDying() || frozen || !HollowSolid.ready() || solidVer == 0) return;
+        if (tickCount % 5 == 0) {
+            giantsNear.clear();
+            for (Entity x : sl.getEntities(this, bodyBox().inflate(160), Giants::isGiant)) {
+                LivingEntity o = Giants.ownerOf(x);
+                if (o != null && o != this && o.isAlive() && !giantsNear.contains(o)) giantsNear.add(o);
+            }
+        }
+        if (giantsNear.isEmpty()) return;
+        hullNow = null;
+        double[] me = jjHull();
+        if (me.length == 0) return;
+        double cap = 1 + 4 * bellScale();
+        for (LivingEntity o : giantsNear) {
+            if (o.isRemoved() || o.level() != level()) continue;
+            double[] them = net.jj.hollowbell.solid.GiantHull.of(o, Giants.TAG);
+            if (them.length == 0) continue;
+            double[] p = net.jj.hollowbell.solid.GiantHull.pushOut(me, them);
+            if (p[2] <= 1e-3) continue;
+            double share = 1;
+            if (net.jj.hollowbell.solid.GiantHull.shows(o)) {
+                double a = net.jj.hollowbell.solid.GiantHull.mass(me), b = net.jj.hollowbell.solid.GiantHull.mass(them);
+                share = a + b > 0 ? b / (a + b) : 0.5;
+            }
+            double step = Math.min(cap, p[2] * share + 0.02);
+            setPos(getX() + p[0] * step, getY(), getZ() + p[1] * step);
+            // (and his drift that way stops: no going straight back in)
+            double into = -(vel.x * p[0] + vel.z * p[1]);
+            if (into > 0) vel = vel.add(p[0] * into, 0, p[1] * into);
+            giantPushed += step;
+            hullNow = null;
+            me = jjHull();      // (moved: worked out again)
+        }
+    }
+
+    /**
+     * Going for another giant: where its body is, from his. Null when it isn't a giant. The height (world y) his body
+     * must keep over it so his dome and arms stay out of it (his strands may hang over it), and whether he is already
+     * in reach across (so he stops drifting in).
+     */
+    private @Nullable double[] giantTargetPlan(LivingEntity t) {
+        if (!Giants.isGiant(t)) return null;
+        LivingEntity o = Giants.ownerOf(t);
+        if (o == null) o = t;
+        double[] me = jjHull(), them = net.jj.hollowbell.solid.GiantHull.of(o, Giants.TAG);
+        if (me.length == 0 || them.length == 0) return null;
+        float s = bellScale();
+        // the lowest of his body and arms, over his own spot
+        double myBottom = Double.MAX_VALUE;
+        for (int i = 0; i < me.length; i += net.jj.hollowbell.solid.GiantHull.STRIDE) myBottom = Math.min(myBottom, me[i + 3]);
+        double under = myBottom - getY();
+        // the top of its body anywhere under all of him
+        double reach = bellRadius() + 4 * s;
+        double top = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < them.length; i += net.jj.hollowbell.solid.GiantHull.STRIDE)
+            if (Math.hypot(them[i] - getX(), them[i + 1] - getZ()) < reach + them[i + 2]) top = Math.max(top, them[i + 4]);
+        double keepY = top == Double.NEGATIVE_INFINITY ? Double.NaN : top + contactGap() - under;
+        double gap = net.jj.hollowbell.solid.GiantHull.gap(me, them);
+        return new double[]{keepY, gap};
+    }
 }

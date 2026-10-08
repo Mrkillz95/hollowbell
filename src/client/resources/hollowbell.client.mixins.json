@@ -11,7 +11,8 @@
     "PickMixin",
     "VisibleMixin",
     "QuietMusicMixin",
-    "LookGlowMixin"
+    "LookGlowMixin",
+    "SolidFrameMixin"
   ],
   "injectors": {
     "defaultRequire": 1

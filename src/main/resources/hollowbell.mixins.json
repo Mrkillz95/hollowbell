@@ -14,7 +14,9 @@
     "StructureStartMixin",
     "TrackedEntityAccess",
     "TrackingMixin",
-    "UnloadSpinMixin"
+    "UnloadSpinMixin",
+    "SolidCollideMixin",
+    "SolidFloatingMixin"
   ],
   "injectors": {
     "defaultRequire": 1

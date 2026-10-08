@@ -84,6 +84,18 @@ tasks.register('poseLab', JavaExec) {
     if (project.hasProperty('shots')) systemProperty 'lab.shots', project.property('shots')
     if (project.hasProperty('out')) systemProperty 'lab.out', project.property('out')
 }
+// Solid lab: his solid shape (what's filled in, the dome still hollow) and how much his parts pass into each other in
+// every move (build/solidlab). Development only: ./gradlew solidLab -Plab="solid overlap" -Pshots=1
+tasks.register('solidLab', JavaExec) {
+    dependsOn 'classes'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'net.jj.hollowbell.lab.SolidLab'
+    workingDir = projectDir
+    args = (project.findProperty('lab') ?: 'solid overlap').toString().split(' ').toList()
+    jvmArgs '-Xmx3g', '-Djava.awt.headless=true'
+    if (project.hasProperty('shots')) systemProperty 'lab.shots', 'true'
+    if (project.hasProperty('out')) systemProperty 'lab.out', project.property('out')
+}
 tasks.register('poseLabClasspath') {
     dependsOn 'classes'
     doLast { new File(buildDir, 'poselab-cp.txt').text = sourceSets.main.runtimeClasspath.asPath }

@@ -23,7 +23,9 @@
       "net.jj.hollowbell.test.LookOrderTests",
       "net.jj.hollowbell.test.HealTests",
       "net.jj.hollowbell.test.FreezeTests",
-      "net.jj.hollowbell.test.FarFindTests"
+      "net.jj.hollowbell.test.FarFindTests",
+      "net.jj.hollowbell.test.SolidTests",
+      "net.jj.hollowbell.test.GiantHullTests"
     ]
   },
   "depends": {
