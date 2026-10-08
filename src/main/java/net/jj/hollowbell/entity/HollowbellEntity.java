@@ -741,6 +741,7 @@ public class HollowbellEntity extends Monster {
         long now = level().getGameTime();
         // the game's own health never moves: his is kept apart
         if (getHealth() < getMaxHealth()) setHealth(getMaxHealth());
+        passiveHeal();
 
         partsTick(now);
         riderTick();
@@ -1447,7 +1448,12 @@ public class HollowbellEntity extends Monster {
         if (att instanceof Player p && !p.isCreative()) {
             boolean had = fighters.containsKey(p.getUUID());
             fighters.put(p.getUUID(), level().getGameTime());
-            if (!had && fighters.size() > 1) setMax(baseMax * playerBoost(), healthNow() / Math.max(1f, healthMax()));
+            // (more of them raise his most health, not his health: that would be a heal. Untouched, he stays full.)
+            if (!had && fighters.size() > 1) {
+                boolean full = healthNow() >= healthMax() - 0.01f;
+                float max = baseMax * playerBoost();
+                setMax(max, full ? 1f : Math.min(1f, healthNow() / Math.max(1f, max)));
+            }
             setLastHurtByPlayer(p);
             if (spares(p) && !p.isSpectator()) {
                 if (mood.struck(p.getUUID())) {
@@ -2434,4 +2440,30 @@ public class HollowbellEntity extends Monster {
     public BellMoves moves() { return moves; }
 
     public static void logOnce(String s) { HollowbellMod.LOG.info(s); }
+
+    // ------------------------------------------------------------------ the slow heal (the same for all of JJ's giants)
+    /** his health last tick (to see a hurt by), and when he was last hurt */
+    private float healSeen = -1f;
+    private long healHurtAt = Long.MIN_VALUE / 4;
+    /** after any hurt the slow heal waits this long (15 seconds) */
+    public static final int HEAL_PAUSE = 300;
+
+    /**
+     * A very slow heal: passiveHealPerMinute percent of his most health a minute (1 by default), given a little each
+     * second, never past his most and never while he's dying. Any hurt (from anything at all) stops it for 15
+     * seconds, so in a real fight it barely counts. Broken parts keep their own rules and are not mended by it.
+     */
+    private void passiveHeal() {
+        long now = level().getGameTime();
+        float hpNow = healthNow(), max = healthMax();
+        if (healSeen >= 0f && hpNow < healSeen - 0.001f) healHurtAt = now;
+        if (HollowbellConfig.V.passiveHeal && tickCount % 20 == 0 && !(isDeadOrDying()) && hpNow > 0f && hpNow < max && now - healHurtAt >= HEAL_PAUSE) {
+            float v = Math.min(max, hpNow + max * net.minecraft.util.Mth.clamp(HollowbellConfig.V.passiveHealPerMinute, 0f, 100f) / 100f / 60f);
+            hp = v; entityData.set(DATA_HP, v);
+            hpNow = v;
+        }
+        healSeen = hpNow;
+    }
+    /** for the tests: ticks since he was last hurt, as the slow heal sees it */
+    public long sinceHurtForHeal() { return level().getGameTime() - healHurtAt; }
 }

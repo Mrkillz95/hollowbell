@@ -20,7 +20,8 @@
       "net.jj.hollowbell.test.HollowbellGameTests",
       "net.jj.hollowbell.test.MoreGameTests",
       "net.jj.hollowbell.test.PaintDepthTests",
-      "net.jj.hollowbell.test.LookOrderTests"
+      "net.jj.hollowbell.test.LookOrderTests",
+      "net.jj.hollowbell.test.HealTests"
     ]
   },
   "depends": {
