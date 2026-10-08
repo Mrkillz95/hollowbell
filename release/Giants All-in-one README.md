@@ -11,13 +11,13 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.6 |
-| Pitchgut | 1.32.6 |
-| Furrowmaw | 1.14.6 |
-| Fire & Ice Cerberus | 2.14.7 |
-| Hollowbell | 1.9.6 |
-| Lantern Willow | 1.7.7 |
-| Wreckback | 1.0.3 |
+| Giants Guide | 1.4.7 |
+| Pitchgut | 1.32.7 |
+| Furrowmaw | 1.14.7 |
+| Fire & Ice Cerberus | 2.14.8 |
+| Hollowbell | 1.9.7 |
+| Lantern Willow | 1.7.8 |
+| Wreckback | 1.0.4 |
 | The Swarmforge | 1.2.2 |
 
 ## Install
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.6.jar` in. Keep Fabric API in there.
+`giants-all-1.4.7.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -61,6 +61,24 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.7
+
+- **"Go after what I look at" works from far off.** Pitchgut, Furrowmaw, the Cerberus, the Hollowbell and the Lantern
+  Willow (and Wreckback): look at something up to 512 blocks away and press that order in his book. He goes after it
+  even if he is far away, asleep or out of the world, and keeps at it until it dies, it's lost for 30 seconds or you
+  give a new order. A part of another giant counts as that giant. It glows for a moment, only for you, and the chat
+  says why when he can't.
+- **A very slow heal.** Those six heal 1% of their health a minute on their own, and nothing for 15 seconds after any
+  hurt, so in a fight it hardly counts (Wreckback 2% a minute in deep water). Settings `passiveHeal` and
+  `passiveHealPerMinute`.
+- **The Willow's Drink the land doesn't heal him any more** (and grows no lures back). It's just an attack now.
+- **Wreckback is solid all over.** You can stand on any part of him and ride it, nobody ends up inside him, and
+  giants don't go through him when they fight or walk into him.
+- **Fewer server freezes.** A giant comes back into the world only once his land is loaded, a tp to land not made yet
+  takes you there the moment it's ready, and summoning one far out no longer stops the server.
+- **The Willow's left eye is whole again**, with no see-through hole when he blinks.
+- The Giants Guide says all this on each giant's pages.
 
 ## New in 1.4.6
 
