@@ -189,6 +189,12 @@ public final class NoWait {
                 continue;
             }
             it.remove();
+            if (!ready) {
+                // a minute and the land still isn't there (a very busy server): you stay where you are. Going anyway
+                // put you in land that wasn't made, and the server stopped and waited for it while you stood there
+                p.displayClientMessage(Component.translatable("command.hollowbell.tp_not_ready"), false);
+                continue;
+            }
             Component said = t.arrive().apply(p);
             p.fallDistance = 0;
             if (said != null) p.displayClientMessage(said, false);

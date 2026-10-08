@@ -475,5 +475,6 @@
   "message.hollowbell.look_going": "The Hollowbell is going after %s.",
   "message.hollowbell.look_going_far": "The Hollowbell is going after %s. It's about %s blocks from him; he's on his way.",
   "message.hollowbell.look_going_away": "The Hollowbell is out of the world. He's on his way to %s (about %s blocks, %s min) and goes for it when he's back.",
-  "command.hollowbell.where_lying": "Lying still at about %s %s (%s), not loaded because nobody is near him."
+  "command.hollowbell.where_lying": "Lying still at about %s %s (%s), not loaded because nobody is near him.",
+  "command.hollowbell.tp_not_ready": "The land there still isn't ready, so you stayed where you are. Try again in a moment."
 }
