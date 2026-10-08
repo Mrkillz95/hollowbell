@@ -45,6 +45,7 @@ public class HollowbellClient implements ClientModInitializer {
         CodexItem.openPages = () -> { var mc = Minecraft.getInstance(); if (mc.screen == null) mc.setScreen(new CodexScreen()); };
 
         ClientPlayNetworking.registerGlobalReceiver(SafeListPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> CodexScreen.safeList(p)));
+        ClientPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.LookMarkPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> LookAim.mark(p.entityId())));
         ClientPlayNetworking.registerGlobalReceiver(MoodPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> CodexScreen.mood(p)));
         ClientPlayNetworking.registerGlobalReceiver(BeingHimPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> BeingHim.set(p.bellId(), p.on())));
         ClientPlayNetworking.registerGlobalReceiver(ThumpPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> {

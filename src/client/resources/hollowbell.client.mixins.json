@@ -10,7 +10,8 @@
     "FrozenBodyMixin",
     "PickMixin",
     "VisibleMixin",
-    "QuietMusicMixin"
+    "QuietMusicMixin",
+    "LookGlowMixin"
   ],
   "injectors": {
     "defaultRequire": 1

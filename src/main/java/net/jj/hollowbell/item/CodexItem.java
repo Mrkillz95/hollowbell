@@ -51,10 +51,10 @@ public class CodexItem extends Item {
     @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (!(player.level() instanceof ServerLevel sl) || target instanceof HollowbellEntity) return InteractionResult.PASS;
-        HollowbellEntity m = net.jj.hollowbell.net.CodexOrders.his(player);
-        if (m == null) { player.displayClientMessage(Component.translatable("message.hollowbell.codex_none"), true); return InteractionResult.FAIL; }
-        m.sendAfter(target);
-        player.displayClientMessage(Component.translatable("message.hollowbell.codex_kill", target.getDisplayName().getString()), true);
+        // the same as "go after what I look at", with the book held right on it
+        String said = net.jj.hollowbell.net.CodexOrders.attackLooked((net.minecraft.server.level.ServerPlayer) player,
+                new net.jj.hollowbell.net.CodexPayload(net.jj.hollowbell.net.CodexPayload.ATTACK_THAT, target.getId()), true);
+        if (!said.startsWith("look_going")) return InteractionResult.FAIL;
         sl.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1f, 0.6f);
         return InteractionResult.SUCCESS;
     }

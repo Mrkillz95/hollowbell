@@ -235,6 +235,8 @@ public final class CodexOrders {
             case CodexPayload.SPARE_NEAR -> { spareNear(p); return; }
             case CodexPayload.SAFE_GET -> { sendSafeList(p); return; }
             case CodexPayload.WHERE -> { if (m != null) where(p, m); else awayOrder(p, pay); return; }
+            // "go after what I look at": at any distance, out of the world too
+            case CodexPayload.ATTACK_THAT -> { attackLooked(p, pay, already); return; }
             default -> {}
         }
         if (m == null) {
@@ -293,14 +295,7 @@ public final class CodexOrders {
                 m.orderTo(at, null);
                 say(p, "codex_goto", net.minecraft.util.Mth.floor(at.x), net.minecraft.util.Mth.floor(at.z));
             }
-            case CodexPayload.ATTACK_THAT -> {
-                HitResult h = looking(p, 320);
-                if (h instanceof EntityHitResult eh && eh.getEntity() instanceof LivingEntity le) {
-                    if (mind >= Mood.WILFUL) { m.clearHitList(); say(p, "codex_own_target"); }
-                    else { m.sendAfter(le); say(p, "codex_kill", le.getDisplayName().getString()); }
-                } else say(p, "codex_nothing_there");
-            }
-            case CodexPayload.STAY -> { m.setStay(!m.staying()); say(p, m.staying() ? "codex_stay" : "codex_free"); }
+            case CodexPayload.STAY -> { m.setStay(!m.staying()); if (m.staying()) m.endOrderedHunt(); say(p, m.staying() ? "codex_stay" : "codex_free"); }
             case CodexPayload.CALM, CodexPayload.HUNTER, CodexPayload.GUARDIAN -> {
                 int v = action == CodexPayload.CALM ? HollowbellEntity.CALM : action == CodexPayload.HUNTER ? HollowbellEntity.HUNTER : HollowbellEntity.GUARDIAN;
                 m.setVariant(v);
@@ -322,6 +317,42 @@ public final class CodexOrders {
             case CodexPayload.FREE_ROAM -> { m.unbind(); say(p, "codex_roam"); }
             default -> {}
         }
+    }
+
+    /**
+     * "Go after what I look at". pay.arg() is the creature the player's screen found (its id; 0 or less: the server
+     * looks itself). He goes after it from any distance, asleep (he wakes), out of the world (his trip is aimed at it
+     * and he takes it up when he's back), ridden or not. What it said, as a message key (for the tests).
+     */
+    public static String attackLooked(ServerPlayer p, CodexPayload pay, boolean already) {
+        LookOrder.Found f = LookOrder.find(p, pay.arg());
+        LivingEntity t = f.target();
+        if (t == null) { LookOrder.refuse(p, f.why(), null); return f.why(); }
+        ServerLevel sl = p.serverLevel();
+        HollowbellEntity m = his(p);
+        var far = m == null ? net.jj.hollowbell.world.FarOrders.nearest(sl, p.position()) : null;
+        if (m == null && far != null && far.kind() == net.jj.hollowbell.world.FarOrders.Kind.LOADED) m = far.entity();
+        if (m == null && far == null) { say(p, "codex_none"); return "codex_none"; }
+        if (m == null) {
+            // out of the world, or in land nobody has loaded
+            if (t instanceof HollowbellEntity) { LookOrder.refuse(p, "look_kin", t); return "look_kin"; }
+            if (t instanceof net.jj.hollowbell.entity.Belling) { LookOrder.refuse(p, "look_his_own", t); return "look_his_own"; }
+            Component said = net.jj.hollowbell.world.FarOrders.hunt(sl, far, t, windCost(CodexPayload.ATTACK_THAT, 0));
+            if (said == null) { say(p, "codex_none"); return "codex_none"; }
+            p.displayClientMessage(said, true);
+            LookOrder.mark(p, t);
+            return "look_going_away";
+        }
+        String why = m.huntRefusal(t);
+        if (why != null) { LookOrder.refuse(p, why, t); return why; }
+        if (!already && !gate(p, m, pay)) return "gate";
+        if (m.mood().stage(p.getUUID()) >= Mood.WILFUL) { m.clearHitList(); say(p, "codex_own_target"); return "codex_own_target"; }
+        m.sendAfter(t);
+        LookOrder.mark(p, t);
+        double d = Math.hypot(t.getX() - m.getX(), t.getZ() - m.getZ());
+        if (d > 64 + 40 * m.bellScale()) say(p, "look_going_far", t.getDisplayName().getString(), net.jj.hollowbell.item.FinderItem.tens(d));
+        else say(p, "look_going", t.getDisplayName().getString());
+        return "look_going";
     }
 
     /** a movement order to one out of reach of the book: at any distance, the same as near */

@@ -93,6 +93,8 @@ public class CodexScreen extends Screen {
     }
 
     private void send(CodexPayload p) {
+        // what you are looking at is found here, on your screen, and its id goes with the order
+        if (p.action() == CodexPayload.ATTACK_THAT) p = new CodexPayload(CodexPayload.ATTACK_THAT, LookAim.pick());
         ClientPlayNetworking.send(p);
         int a = p.action();
         if (a == CodexPayload.ATTACK_MOVE) { used[p.arg()] = now(); used[0] = now(); }
