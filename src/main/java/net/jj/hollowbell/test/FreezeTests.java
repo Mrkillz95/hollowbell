@@ -101,12 +101,15 @@ public class FreezeTests implements FabricGameTest {
         BlockPos far = unmade(h, 2);
         net.jj.hollowbell.world.Away a = net.jj.hollowbell.world.Away.get(l.getServer());
         java.util.UUID[] id = {null};
+        // (kept here too: other tests may clear the shared list of those out of the world while this one waits)
+        Object[] rec = {null};
         boolean[] done = {false};
         h.runAfterDelay(20, () -> {
             id[0] = e.getUUID();
             h.assertTrue(e.stepAside(), "out of the world he goes");
             net.jj.hollowbell.world.Away.Rec r = a.get(id[0]);
             h.assertTrue(r != null, "and is written down");
+            rec[0] = r;
             // (his sum moved out to land nobody has made yet)
             r.going = false; r.fromX = far.getX() + 0.5; r.fromZ = far.getZ() + 0.5;
             NoWait.ask(l, far.getX(), far.getZ(), 1);
@@ -120,9 +123,9 @@ public class FreezeTests implements FabricGameTest {
         });
         for (int t = 40; t < 1350; t += 10) {
             h.runAfterDelay(t, () -> {
-                if (done[0]) return;
-                net.jj.hollowbell.world.Away.Rec r = a.get(id[0]);
-                if (r == null) return;
+                if (done[0] || rec[0] == null) return;
+                net.jj.hollowbell.world.Away.Rec r = (net.jj.hollowbell.world.Away.Rec) rec[0];
+                NoWait.ask(l, far.getX(), far.getZ(), 1);
                 HollowbellEntity back = a.bringBackWhenLoaded(l, r);
                 if (back == null) return;
                 done[0] = true;
