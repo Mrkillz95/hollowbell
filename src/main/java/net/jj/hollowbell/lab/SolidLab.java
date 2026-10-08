@@ -301,6 +301,8 @@ public final class SolidLab {
     /** a pose of the scene at its sample ticks: (tick, slices, state) for each */
     interface PoseVisitor { void at(int t, Matrix4f[] slices, BellState st) throws Exception; }
 
+    static long steps;
+
     static void runScene(PoseLab.Scene s, PoseVisitor v) throws Exception {
         BellAnim anim = new BellAnim(rig);
         BellAnim.In in = new BellAnim.In();
@@ -319,6 +321,7 @@ public final class SolidLab {
             in.clearAsks();
             s.d().tick(t, in, anim.now());
             anim.step(in);
+            steps++;
             if (t == s.samples()[si]) {
                 anim.fill(st, 1f);
                 rig.computePose(st, pose, hang);
@@ -368,6 +371,7 @@ public final class SolidLab {
             if (Boolean.getBoolean("lab.shots") && sceneWorst[0] > 0) picture(s, sceneT[0]);
         }
         say(log, String.format("ALL: %d cells over every key pose (%s); worst pose %d (%s)", total, kindTot, worstN, worstAt));
+        say(log, String.format("keeping his parts apart: %.3f ms a tick on average (%d ticks)", net.jj.hollowbell.rig.BellAnim.apartNanos / 1e6 / Math.max(1, steps), steps));
     }
 
     static int sum(Map<Integer, Integer> m) { int t = 0; for (int v : m.values()) t += v; return t; }

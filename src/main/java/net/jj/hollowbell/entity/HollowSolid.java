@@ -136,6 +136,51 @@ public final class HollowSolid {
         return s;
     }
 
+    private static volatile float[][] hullBalls;
+
+    /**
+     * The balls his hull is made of (see GiantHull.balls; the same format, x y z r per ball, by frame): each used frame's
+     * cells cut into cubes about 9 to his longest side, a ball over each cube well filled for the part of the cube
+     * the frame reaches into. (GiantHull.balls asks each cube to be well filled as a whole: his arms are cut into thin
+     * slices, so most of their cubes were left out, and his hull had holes where his arms are.)
+     */
+    public static float[][] hullBalls(boolean[] use) {
+        float[][] b = hullBalls;
+        if (b != null) return b;
+        SolidShape sh = shape();
+        float lo = Float.MAX_VALUE, hi = -Float.MAX_VALUE;
+        for (int f = 0; f < sh.frames(); f++) if (use[f]) for (int a = 0; a < 3; a++) { lo = Math.min(lo, sh.bounds[f][a]); hi = Math.max(hi, sh.bounds[f][a + 3]); }
+        final int C = Math.max(3, (int) Math.ceil((hi - lo) / 9f));
+        float[][] out = new float[sh.frames()][];
+        for (int f = 0; f < sh.frames(); f++) {
+            if (!use[f]) continue;
+            float[] fb = sh.bounds[f];
+            it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<float[]> cubes = new it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<>();
+            sh.cells(f, (x, y, z) -> {
+                long k = (((long) Math.floorDiv(x, C) + 0x10000) << 40) | (((long) Math.floorDiv(y, C) + 0x10000) << 20) | ((long) Math.floorDiv(z, C) + 0x10000);
+                float[] a = cubes.computeIfAbsent(k, q -> new float[]{0, 0, 0, 0, Math.floorDiv(x, C), Math.floorDiv(y, C), Math.floorDiv(z, C)});
+                a[0] += x + 0.5f; a[1] += y + 0.5f; a[2] += z + 0.5f; a[3]++;
+            });
+            java.util.List<float[]> keep = new java.util.ArrayList<>();
+            for (float[] a : cubes.values()) {
+                // (the part of this cube inside the frame's own box)
+                float vol = 1f;
+                for (int k = 0; k < 3; k++) {
+                    float c0 = a[4 + k] * C, c1 = c0 + C;
+                    vol *= Math.max(0f, Math.min(c1, fb[k + 3]) - Math.max(c0, fb[k]));
+                }
+                float n = a[3];
+                if (n < Math.max(2f, vol * 0.12f)) continue;
+                float r = Math.min(C * 0.87f, 0.72f * C * (float) Math.cbrt(n / (C * C * C)) + 0.3f + 0.25f * C);
+                keep.add(new float[]{a[0] / n, a[1] / n, a[2] / n, r});
+            }
+            float[] flat = new float[keep.size() * 4];
+            for (int i = 0; i < keep.size(); i++) System.arraycopy(keep.get(i), 0, flat, i * 4, 4);
+            out[f] = flat;
+        }
+        return hullBalls = out;
+    }
+
     /** works it out off the main thread at start, so the first one seen doesn't stall the server */
     public static void preload() {
         Thread t = new Thread(() -> {
