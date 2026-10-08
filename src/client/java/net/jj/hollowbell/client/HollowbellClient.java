@@ -55,9 +55,9 @@ public class HollowbellClient implements ClientModInitializer {
         // the big moments: dust and chunks of ground, splashes and waves, flashes, clouds, shake and late sound
         net.jj.hollowbell.fx.client.BigFxClient.init(() -> net.jj.hollowbell.HollowbellConfig.V.screenShake, () -> net.jj.hollowbell.HollowbellConfig.V.soundVolume,
                 () -> net.jj.hollowbell.HollowbellConfig.V.simpleFarAway, () -> net.jj.hollowbell.HollowbellConfig.V.bigEffects);
-        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); FightMusic.clear(); });
+        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); FightMusic.clear(); net.jj.hollowbell.solid.Solid.forgetAll(true); net.jj.hollowbell.solid.client.SolidClient.clear(); });
         ArmourPowerKey.init();
-        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); ArmourPowerKey.tick(c); FightMusic.tick(c); });
+        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); ArmourPowerKey.tick(c); FightMusic.tick(c); net.jj.hollowbell.solid.client.SolidClient.tick(c); });
         // he's ticked even when the game would skip him for having his middle too far off (see tickIfSkipped)
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(level -> {
             for (var e : level.entitiesForRendering()) if (e instanceof net.jj.hollowbell.entity.HollowbellEntity h) h.tickIfSkipped();

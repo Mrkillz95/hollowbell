@@ -23,7 +23,7 @@ public final class ModEntities {
             EntityType.Builder.<net.jj.hollowbell.entity.StingerHook>of(net.jj.hollowbell.entity.StingerHook::new, MobCategory.MISC)
                     .sized(0.4f, 0.4f).noSave().noSummon().clientTrackingRange(10).updateInterval(1));
     public static final EntityType<Belling> BELLING = register("belling",
-            EntityType.Builder.of(Belling::new, MobCategory.MONSTER).sized(1.2f, 1.6f).fireImmune()
+            EntityType.Builder.of(Belling::new, MobCategory.MONSTER).sized(1.5f, 1.75f).fireImmune()
                     .clientTrackingRange(10).updateInterval(2));
 
     private static <T extends net.minecraft.world.entity.Entity> EntityType<T> register(String name, EntityType.Builder<T> b) {

@@ -222,6 +222,11 @@ public final class BellMoves {
         return false;
     }
 
+    /** a strand or arm is closing on it (the grab, the wrap, the harvest): his body doesn't shove it out of the way first */
+    public boolean closingOn(@Nullable Entity e) {
+        return e != null && e == target && (move == Moves.GRAB || move == Moves.WRAP || move == Moves.HARVEST);
+    }
+
     public boolean isInside(Entity e) { for (Inside i : inside) if (i.e == e) return true; return false; }
 
     public boolean usesSeat(Seat s) {
@@ -258,7 +263,7 @@ public final class BellMoves {
         struckThisMove.clear();
         hitAt.clear();
         slapped.clear();
-        Vector3f aim = at != null ? h.toModel(at.position()) : forcedSpot != null ? h.toModel(forcedSpot) : new Vector3f(0, 0, 40);
+        Vector3f aim = at != null ? h.toModel(aimAt(at)) : forcedSpot != null ? h.toModel(forcedSpot) : new Vector3f(0, 0, 40);
         int a = -1;
         float s = s();
         switch (which) {
@@ -285,7 +290,7 @@ public final class BellMoves {
             }
             case Moves.SLAM, Moves.WRAP -> {
                 if (which == Moves.WRAP && (at == null || wrapped != null || !HollowbellEntity.canCarry(at))) return false;
-                a = at != null ? nearestArm(at.position()) : h.getRandom().nextInt(rig.arms.length);
+                a = at != null ? nearestArm(aimAt(at)) : h.getRandom().nextInt(rig.arms.length);
                 armHits = 0f;
             }
             case Moves.ARM_STORM -> a = at != null ? nearestArm(at.position()) : h.getRandom().nextInt(rig.arms.length);
@@ -533,7 +538,7 @@ public final class BellMoves {
             case Moves.GRAB, Moves.HARVEST -> runGrab();
             case Moves.CURTAIN -> {
                 // it follows you while it closes, then it has you
-                if (target != null && t < Moves.CURTAIN_CLOSE && target.isAlive()) h.setAim(h.toModel(target.position()));
+                if (target != null && t < Moves.CURTAIN_CLOSE && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
                 if (t >= Moves.CURTAIN_CLOSE - 6 && t < Moves.CURTAIN_CLOSE + Moves.CURTAIN_HOLD && t % 5 == 0) {
                     Vec3 c = h.toWorld(h.aim());
                     double r = 16 * s + 4;
@@ -568,7 +573,7 @@ public final class BellMoves {
             case Moves.SLAM -> {
                 int hit = Math.round(BellRig.SLAM_HIT * Moves.length(Moves.SLAM));
                 // it follows you while the arm is up, then it's coming down where you were
-                if (target != null && target.isAlive() && t < hit - 10) h.setAim(h.toModel(target.position()));
+                if (target != null && target.isAlive() && t < hit - 10) h.setAim(h.toModel(aimAt(target)));
                 // the arm has weight: it lands when its tip really comes down, a moment after it's swung
                 Vec3 tipNow = h.armTipWorld(arg);
                 double gy = h.groundAt(tipNow.x, tipNow.z);
@@ -760,7 +765,7 @@ public final class BellMoves {
     /** the sting volley: the strand ends nearest you flick stingers at you */
     private void volley() {
         float s = s();
-        Vec3 aimAt = target != null && target.isAlive() ? target.position().add(0, target.getBbHeight() * 0.5, 0) : h.toWorld(h.aim());
+        Vec3 aimAt = target != null && target.isAlive() ? (Giants.isGiant(target) ? aimAt(target) : target.position().add(0, target.getBbHeight() * 0.5, 0)) : h.toWorld(h.aim());
         List<Integer> ends = nearestStrands(aimAt, 5);
         for (int k : ends) {
             Vec3 from = h.strandTipWorld(k).add(0, 1 + 2 * s, 0);
@@ -964,7 +969,7 @@ public final class BellMoves {
         float s = s();
         int turn = Moves.DIVE_CLIMB, fall = Moves.DIVE_CLIMB + Moves.DIVE_TURN, back = fall + Moves.DIVE_FALL;
         // follow it while he climbs
-        if (t < fall && target != null && target.isAlive()) h.setAim(h.toModel(target.position()));
+        if (t < fall && target != null && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
         if (t == turn - 10) h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.WARN_DIVE, 5f, 0.9f);
         if (t >= turn && t < fall) diveOver = Moves.smooth((t - turn) / (float) Moves.DIVE_TURN);
         if (t == fall) h.sound(h.position(), ModSounds.SWOOP, 5f, 0.6f);
@@ -1257,7 +1262,7 @@ public final class BellMoves {
         Vec3 tip = h.strandTipWorld(arg);
         if (t < Moves.REACH) {
             // it follows what it's reaching for
-            if (target != null && target.isAlive()) h.setAim(h.toModel(target.position()));
+            if (target != null && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
             if (target == null && treeAt == null) { end(); return; }
             return;
         }
@@ -1674,7 +1679,7 @@ public final class BellMoves {
     private void runWrap() {
         Vec3 tip = h.armTipWorld(arg);
         if (t < Moves.WRAP_REACH) {
-            if (target != null && target.isAlive()) h.setAim(h.toModel(target.position()));
+            if (target != null && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
             return;
         }
         if (t == Moves.WRAP_REACH) {
@@ -2010,7 +2015,31 @@ public final class BellMoves {
             if (q.distanceToSqr(mid) < at(o).distanceToSqr(mid)) giantAt.put(o, q);
             if (!out.contains(o)) out.add(o);
         }
+        // a giant made of one creature with a small box (or any that shows its body, see GiantHull): hit where its body is
+        for (LivingEntity o : h.giantsNear()) {
+            if (o.isRemoved() || o == h || out.contains(o) || !h.fairGame(o)) continue;
+            double[] th = net.jj.hollowbell.solid.GiantHull.of(o, Giants.TAG);
+            if (th.length == 0) continue;
+            Vec3 q = net.jj.hollowbell.solid.GiantHull.nearest(th, mid);
+            if (q == null || !box.inflate(0.5).contains(q)) continue;
+            giantAt.put(o, q);
+            out.add(o);
+        }
         return out;
+    }
+
+    /**
+     * Where a blow at it is aimed: its own spot, or for another giant the nearest point of its body (its hull, see
+     * GiantHull) to the middle of his bell, so he strikes its side and not its middle.
+     */
+    Vec3 aimAt(LivingEntity e) {
+        if (!Giants.isGiant(e)) return e.position();
+        LivingEntity o = Giants.ownerOf(e);
+        if (o == null) o = e;
+        double[] th = net.jj.hollowbell.solid.GiantHull.of(o, Giants.TAG);
+        Vec3 from = h.toWorld(new org.joml.Vector3f(0, rig.rimY - 20, 0));
+        Vec3 p = th.length == 0 ? null : net.jj.hollowbell.solid.GiantHull.nearest(th, from);
+        return p != null ? p : e.position();
     }
 
     /** where the nearest bit of it is: its own spot, or for another giant, the nearest of its part boxes found this tick */
