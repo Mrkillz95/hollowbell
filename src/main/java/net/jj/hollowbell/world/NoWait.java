@@ -107,7 +107,32 @@ public final class NoWait {
     /** is this player waiting on a trip? (the tests ask) */
     public static boolean onTheWay(ServerPlayer p) { return TRIPS.containsKey(p.getUUID()); }
 
+    // ------------------------------------------------------------------ land held until it's there
+
+    /** land asked for until it's loaded (a single ask runs out after five seconds, and new land can take longer) */
+    private record Hold(ResourceKey<Level> dim, int x, int z, long until) {}
+    private static final java.util.List<Hold> HOLDS = new java.util.ArrayList<>();
+
+    /** ask for the land here and keep asking until it's loaded (at most `ticks`): something was put there that has to run */
+    public static void hold(ServerLevel l, int x, int z, int ticks) {
+        ask(l, x, z, 1);
+        HOLDS.add(new Hold(l.dimension(), x, z, l.getGameTime() + ticks));
+    }
+
+    private static void holds(MinecraftServer server) {
+        if (HOLDS.isEmpty()) return;
+        var it = HOLDS.iterator();
+        while (it.hasNext()) {
+            Hold h = it.next();
+            ServerLevel l = server.getLevel(h.dim());
+            if (l == null || l.getGameTime() > h.until()) { it.remove(); continue; }
+            if (loaded(l, h.x(), h.z())) { ask(l, h.x(), h.z(), 1); it.remove(); continue; }   // (one more ask: it runs a while longer)
+            if (l.getGameTime() % 40 == 0) ask(l, h.x(), h.z(), 1);
+        }
+    }
+
     public static void tick(MinecraftServer server) {
+        holds(server);
         if (TRIPS.isEmpty()) return;
         var it = TRIPS.entrySet().iterator();
         while (it.hasNext()) {
@@ -129,5 +154,5 @@ public final class NoWait {
         }
     }
 
-    public static void forget() { TRIPS.clear(); }
+    public static void forget() { TRIPS.clear(); HOLDS.clear(); }
 }
