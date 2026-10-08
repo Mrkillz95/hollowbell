@@ -21,6 +21,7 @@ public class HealTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1800, batch = "heal_slow")
     public void leftAloneHeHealsAboutOnePercentAMinute(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 351);
+        e.setStay(true);                       // (held still: wandering off the loaded ground would stop his clock)
         float[] start = new float[1];
         h.runAfterDelay(20, () -> e.setHealthTo(e.healthMax() * 0.5f));
         // (the heal waits 15 seconds after a hurt; measured over the next whole minute)
@@ -37,6 +38,7 @@ public class HealTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "heal_hit")
     public void hitEveryTenSecondsHeGainsNothing(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 352);
+        e.setStay(true);                       // (held still: wandering off the loaded ground would stop his clock)
         float[] start = new float[1];
         h.runAfterDelay(20, () -> { e.setHealthTo(e.healthMax() * 0.5f); start[0] = e.healthNow(); });
         for (int k = 1; k <= 6; k++) h.runAfterDelay(20 + k * 200, () -> hit(e, Math.max(0.5f, e.healthMax() * 0.0005f)));
@@ -54,6 +56,7 @@ public class HealTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "heal_full")
     public void theSlowHealNeverGoesPastHisMost(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 353);
+        e.setStay(true);                       // (held still: wandering off the loaded ground would stop his clock)
         h.runAfterDelay(20, () -> e.setHealthTo(e.healthMax() - 0.01f));
         h.runAfterDelay(20 + 20, () -> {
             h.assertTrue(e.healthNow() <= e.healthMax() + 0.001f, "past his most: " + e.healthNow() + " of " + e.healthMax());
