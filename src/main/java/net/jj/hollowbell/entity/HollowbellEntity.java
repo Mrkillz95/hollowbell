@@ -919,7 +919,9 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         boolean down = resting() || dying || asleep;
         LivingEntity t = getTarget();
         // going for another giant: his body stays out of its body (over it, or at its side)
-        double[] giantPlan = t != null && !dying ? giantTargetPlan(t) : null;
+        // (worked out every few ticks: it looks at every column of both bodies)
+        if (t == null || dying) giantPlan = null;
+        else if (tickCount % 4 == 0 || giantPlanFor != t) { giantPlan = giantTargetPlan(t); giantPlanFor = t; }
         Vec3 want = null;
         boolean still = stay || moves.holdsStill() || dying || asleep || (goal == null && waitingForSomebody());
         // a woken crown's circle: a goal in there is dropped, and standing in there he makes for the way out
@@ -2570,18 +2572,24 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         net.jj.hollowbell.solid.SolidShape sh = solidShape();
         int f = sh.frameOfBone[slice];
         if (f < 0) return null;
-        float[] bb = sh.bounds[f];
+        // the cells of it with nothing of it over them, highest first, a few spread round it
+        List<int[]> tops = new ArrayList<>();
+        sh.cells(f, (x, y, z) -> { if (!sh.has(f, x, y + 1, z) && !sh.has(f, x, y + 2, z)) tops.add(new int[]{x, y, z}); });
+        if (tops.isEmpty()) return null;
+        tops.sort((p, q) -> q[1] - p[1]);
         net.jj.hollowbell.solid.SolidCache c = net.jj.hollowbell.solid.Solid.frames(this);
-        for (float[] at : new float[][]{{0.5f, 0.5f}, {0.4f, 0.6f}, {0.6f, 0.4f}, {0.3f, 0.3f}, {0.7f, 0.7f}, {0.5f, 0.25f}, {0.5f, 0.75f}, {0.25f, 0.5f}, {0.75f, 0.5f}}) {
-            Vector3f rest = new Vector3f(bb[0] + (bb[3] - bb[0]) * at[0], (bb[1] + bb[4]) / 2, bb[2] + (bb[5] - bb[2]) * at[1]);
-            Vec3 w = net.jj.hollowbell.solid.Solid.toWorld(c, f, rest);
-            float s = bellScale();
-            net.jj.hollowbell.solid.Solid.Runs r = net.jj.hollowbell.solid.Solid.column(this, w.x, w.z, w.y - 120 * s - 2, w.y + 120 * s + 2, false, new net.jj.hollowbell.solid.Solid.Runs());
+        float s = bellScale();
+        int step = Math.max(1, tops.size() / 40);
+        for (int i = 0; i < tops.size(); i += step) {
+            int[] t = tops.get(i);
+            Vec3 w = net.jj.hollowbell.solid.Solid.toWorld(c, f, new Vector3f(t[0] + 0.5f, t[1] + 0.5f, t[2] + 0.5f));
+            net.jj.hollowbell.solid.Solid.Runs r = net.jj.hollowbell.solid.Solid.column(this, w.x, w.z, w.y - 4 * s - 2, w.y + 120 * s + 4, false, new net.jj.hollowbell.solid.Solid.Runs());
             double best = Double.NaN;
             for (int j = 0; j < r.n; j++) if (r.frame[j] == f && (Double.isNaN(best) || r.top[j] > best)) best = r.top[j];
             if (Double.isNaN(best)) continue;
             boolean room = true;
-            for (int j = 0; j < r.n; j++) if (r.bot[j] > best && r.bot[j] < best + 2.2) room = false;
+            for (int j = 0; j < r.n; j++) if (r.bot[j] > best - 0.01 && r.bot[j] < best + 2.2 && r.frame[j] != f) room = false;
+            for (int j = 0; j < r.n; j++) if (r.frame[j] != f && r.bot[j] <= best && r.top[j] > best + 0.05) room = false;
             if (room) return new Vec3(w.x, best, w.z);
         }
         return null;
@@ -2632,6 +2640,8 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             for (int f = 0; f < sh.frames(); f++) {
                 switch (rig.kind[pc.bone[sh.bone[f]]]) {
                     case BELL, RIM, CROWN, SPOT -> { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.BODY; }
+                    // (his pods and egg clumps: solid, hung from his strands, so like limbs)
+                    case POD, EGG -> { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.LIMB; }
                     // (the arms where they leave the rim, the solid part of them: their soft ends may brush another giant)
                     case ARM -> { if (rig.seg[pc.bone[sh.bone[f]]] <= 1) { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.LIMB; } }
                     default -> {}
@@ -2639,7 +2649,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             }
             hullKinds = kind; hullUse = use;
         }
-        hullNow = net.jj.hollowbell.solid.GiantHull.fromBody(this, net.jj.hollowbell.solid.GiantHull.balls(sh, hullUse), hullKinds);
+        hullNow = net.jj.hollowbell.solid.GiantHull.fromBody(this, HollowSolid.hullBalls(hullUse), hullKinds);
         hullTick = now;
         return hullNow;
     }
@@ -2702,6 +2712,9 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
      * must keep over it so his dome and arms stay out of it (his strands may hang over it), and whether he is already
      * in reach across (so he stops drifting in).
      */
+    private @Nullable double[] giantPlan;
+    private @Nullable LivingEntity giantPlanFor;
+
     private @Nullable double[] giantTargetPlan(LivingEntity t) {
         if (!Giants.isGiant(t)) return null;
         LivingEntity o = Giants.ownerOf(t);

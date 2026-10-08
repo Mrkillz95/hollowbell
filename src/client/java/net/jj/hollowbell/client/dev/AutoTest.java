@@ -172,8 +172,57 @@ public final class AutoTest {
             if (s.startsWith("cmdlog ")) { cmdLog(mc, s.substring(7).trim()); continue; }
             // groundcheck: the biome where you stand, and what the land round you is made of, to the log
             if (s.equals("groundcheck")) { groundCheck(mc); continue; }
+            // standon <crown|dome|side|spot|pod|arm>: the player (walking, not flying) set down on the top of that part of him
+            if (s.startsWith("standon ")) { standOn(mc, s.substring(8).trim()); follow = null; continue; }
+            // third on|off: the camera behind the player (to see them standing on him)
+            if (s.startsWith("third ")) {
+                mc.options.setCameraType(s.endsWith("on") ? net.minecraft.client.CameraType.THIRD_PERSON_BACK : net.minecraft.client.CameraType.FIRST_PERSON);
+                continue;
+            }
+            // ridelog: is the player being carried on him, how far a frame set them from where the tick had them, how
+            // often they were moved out of him
+            if (s.equals("ridelog")) {
+                var c = net.jj.hollowbell.solid.client.SolidClient.CARRY;
+                HollowbellMod.LOG.info("autotest ridelog: riding {} frame {} air {} at {} frame fix at most {} unstuck {} onGround {}", c.riding(),
+                        c.on == null ? "-" : ((HollowbellEntity) c.on).rig.boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[c.on.solidShape().bone[c.frame]]], c.air,
+                        mc.player.position(), String.format("%.3f", net.jj.hollowbell.solid.client.SolidClient.frameFix), net.jj.hollowbell.solid.client.SolidClient.unstuck, mc.player.onGround());
+                net.jj.hollowbell.solid.client.SolidClient.frameFix = 0;
+                continue;
+            }
             if (s.equals("quit")) { HollowbellMod.LOG.info("autotest done"); mc.stop(); return; }
         }
+    }
+
+    private static void standOn(Minecraft mc, String part) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null) return;
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var pl = srv.getPlayerList().getPlayers().get(0);
+            var l = pl.serverLevel().getEntitiesOfClass(HollowbellEntity.class, pl.getBoundingBox().inflate(3000));
+            if (l.isEmpty()) return;
+            HollowbellEntity m = l.get(0);
+            var rig = m.rig;
+            var pc = net.jj.hollowbell.rig.BellPieces.get();
+            int[] slices = switch (part) {
+                case "crown" -> new int[]{pc.first[rig.crownBone]};
+                case "side" -> new int[]{pc.first[rig.index.get("bell_6")], pc.first[rig.index.get("bell_7")]};
+                case "spot" -> new int[]{pc.first[rig.index.get("spot_0")], pc.first[rig.index.get("spot_1")]};
+                case "pod" -> new int[]{pc.first[rig.pods[11].bone()], pc.first[rig.pods[0].bone()]};
+                case "arm" -> new int[]{pc.first[rig.arms[2].bones()[0]] + 2, pc.first[rig.arms[2].bones()[0]] + 4};
+                default -> new int[]{pc.first[rig.index.get("bell_2")], pc.first[rig.index.get("bell_3")]};
+            };
+            net.minecraft.world.phys.Vec3 at = null;
+            for (int b : slices) { at = m.topOfSlice(b); if (at != null) break; }
+            if (at == null) { HollowbellMod.LOG.warn("autotest standon {}: no spot", part); return; }
+            pl.getAbilities().flying = false;
+            pl.onUpdateAbilities();
+            var look = m.position().add(0, 150 * m.bellScale(), 0).subtract(at);
+            float yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
+            pl.teleportTo(pl.serverLevel(), at.x, at.y + 0.02, at.z, yaw + 150f, 35f);
+            pl.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            HollowbellMod.LOG.info("autotest standon {}: at {}", part, at);
+        });
     }
 
     private static void view(Minecraft mc, String args) {

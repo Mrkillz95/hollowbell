@@ -27,6 +27,7 @@ import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
  */
 public class GiantHullTests implements FabricGameTest {
     static final float SZ = 0.12f;
+    static final java.util.Map<String, Integer> HIT = new java.util.TreeMap<>();
 
     static void after(GameTestHelper h, int t, Runnable r) { h.runAfterDelay(t, r); }
 
@@ -39,7 +40,7 @@ public class GiantHullTests implements FabricGameTest {
             if (hh[i + 5] != GiantHull.BODY) continue;
             double y = (hh[i + 3] + hh[i + 4]) / 2;
             Solid.column(b, hh[i], hh[i + 1], y - 0.05, y + 0.05, false, r);
-            if (r.n > 0) n++;
+            if (r.n > 0) { n++; HIT.merge(b.rig.boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[b.solidShape().bone[r.frame[0]]]].replaceAll("_[0-9]+$", ""), 1, Integer::sum); }
         }
         return n;
     }
@@ -80,7 +81,7 @@ public class GiantHullTests implements FabricGameTest {
         after(h, 60 + 1220, () -> {
             String what = String.format("deepest overlap %.2f / %.2f blocks, body bits inside the other %d / %d, nearest gap %.2f, pushed %.1f / %.1f; %d / %d columns",
                     worst[0], worst[1], in[0], in[1], least[0], a.giantPushed, b.giantPushed, a.jjHull().length / 6, b.jjHull().length / 6);
-            HollowbellMod.LOG.info("Giant against giant (two of him): {}", what);
+            HollowbellMod.LOG.info("Giant against giant (two of him): {}; inside what: {}", what, HIT);
             HollowbellConfig.V.meetings = meet;
             h.assertTrue(worst[0] < 1.0 && worst[1] < 1.0, "they went into each other: " + what);
             h.assertTrue(in[0] + in[1] <= 2, "bits of one were inside the other's real body: " + what);

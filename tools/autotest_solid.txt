@@ -1,0 +1,70 @@
+# 1.10: standing on him. The player set down on his crown, the top and the side of his dome, a glowing spot inside the
+# dome, a big pod and the root of an arm while he drifts and pulses, seen from behind the player. The solid kit carries
+# them every frame. Run with: HB_SCRIPT=$PWD/tools/autotest_solid.txt xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runAutotest
+world flat
+gui off
+render 12
+sim 12
+cmd time set 6000
+cmd gamerule doMobSpawning false
+cmd tp @p 0 -60 0 0 0
+wait 20
+cmd gamemode survival @p
+cmd effect give @p resistance 99999 4 true
+cmd effect give @p regeneration 99999 4 true
+cmd hollowbell summon calm 0.3
+waitmodel
+wait 200
+cmd hollowbell stay on
+wait 60
+third on
+# ---- on his crown, still, then drifting
+standon crown
+wait 30
+ridelog
+shot ride_crown_1_still
+cmd hollowbell stay off
+cmd hollowbell goto 60 40
+wait 40
+shot ride_crown_2_drift
+wait 40
+shot ride_crown_3_drift
+ridelog
+# ---- the top of his dome, drifting
+standon dome
+wait 30
+shot ride_dome_1
+wait 40
+shot ride_dome_2_drift
+ridelog
+# ---- the side of his dome, drifting
+cmd hollowbell goto -40 50
+standon side
+wait 30
+shot ride_side_1
+wait 40
+shot ride_side_2_drift
+ridelog
+# ---- a glowing spot inside the dome
+cmd hollowbell goto -50 -30
+standon spot
+wait 30
+shot ride_spot_1_inside
+wait 40
+shot ride_spot_2_inside
+ridelog
+# ---- a big pod
+standon pod
+wait 30
+shot ride_pod_1
+wait 40
+shot ride_pod_2
+ridelog
+# ---- the root of an arm
+standon arm
+wait 30
+shot ride_arm_1
+wait 40
+shot ride_arm_2
+ridelog
+quit

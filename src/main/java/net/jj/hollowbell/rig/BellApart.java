@@ -13,7 +13,7 @@ import java.util.Arrays;
  * half the way a tick: the strands give way most, an arm less, and nothing a move is swinging (a slam landing where it's
  * aimed, the strand carrying somebody up) is moved at all. Moved with its speed kept (both the joint and where it was a
  * tick ago), so nothing is flung, and only sideways, so nothing is pushed into the ground or up into his bell.
- * Cheap: the rods are sorted along x and only those whose boxes meet are looked at.
+ * Cheap: the rods are put in a grid across x z and only those whose boxes meet are looked at.
  */
 final class BellApart {
     private final BellRig rig;
@@ -27,7 +27,6 @@ final class BellApart {
     private int n;
     private int[] rc, rs;
     private float[] bx0, bx1, by0, by1, bz0, bz1;
-    private Integer[] order;
     private final float[][] podAt;
     /** the pods, then the egg clumps */
     private final BellRig.BlobDef[] blobs;
@@ -85,7 +84,6 @@ final class BellApart {
         cap += np + 1;
         rc = new int[cap]; rs = new int[cap];
         bx0 = new float[cap]; bx1 = new float[cap]; by0 = new float[cap]; by1 = new float[cap]; bz0 = new float[cap]; bz1 = new float[cap];
-        order = new Integer[cap];
     }
 
     /** how freely each chain gives way this tick (0: not at all) */
@@ -105,7 +103,9 @@ final class BellApart {
             want = new float[nc][]; given = new float[nc][];
             for (int c = 0; c < nc; c++) { want[c] = new float[p[c].length]; given[c] = new float[p[c].length]; }
         }
-        for (int c = 0; c < nc; c++) Arrays.fill(want[c], 0f);
+        // (what's in what is looked for every other tick; between, the last ask holds)
+        boolean look = (++ticks & 1) == 0 || ticks < 3;
+        if (look) for (int c = 0; c < nc; c++) Arrays.fill(want[c], 0f);
         for (int c = 0; c < nc; c++) {
             BellRig.Chain ch = rig.chains[c];
             float g = (ch.arm ? 0.25f : 1f) * (1f - Math.min(1f, held[c] * 1.4f));
@@ -113,6 +113,7 @@ final class BellApart {
             give[c] = Math.max(0f, g);
         }
         moved = 0f;
+        if (!look) { give(p, qq); return; }
         // the rods: every piece of every chain
         n = 0;
         for (int c = 0; c < nc; c++) {
@@ -164,19 +165,41 @@ final class BellApart {
             }
         }
 
-        for (int i = 0; i < n; i++) order[i] = i;
-        Arrays.sort(order, 0, n, (a, b) -> Float.compare(bx0[a], bx0[b]));
-        for (int ii = 0; ii < n; ii++) {
-            int a = order[ii];
-            for (int jj = ii + 1; jj < n; jj++) {
-                int b = order[jj];
-                if (bx0[b] > bx1[a]) break;
-                if (by0[b] > by1[a] || by1[b] < by0[a] || bz0[b] > bz1[a] || bz1[b] < bz0[a]) continue;
-                pair(st, p, qq, a, b, vx0, vy0, vz0, vx1, vy1, vz1);
+        // (only those whose boxes meet: each box put in the squares of a grid across x z it reaches over, and a pair looked
+        // at only in the square where both their boxes start)
+        for (int g = 0; g < G * G; g++) cellN[g] = 0;
+        for (int i = 0; i < n; i++) {
+            int x0 = cell(bx0[i]), x1 = cell(bx1[i]), z0 = cell(bz0[i]), z1 = cell(bz1[i]);
+            for (int gx = x0; gx <= x1; gx++) for (int gz = z0; gz <= z1; gz++) {
+                int g = gx * G + gz;
+                if (cellN[g] == cells[g].length) cells[g] = Arrays.copyOf(cells[g], cells[g].length * 2);
+                cells[g][cellN[g]++] = i;
             }
         }
-        // what was asked, eased from last tick's push (each joint's push changes by at most EASE a tick), and given
-        // to joint and its place a tick ago alike
+        for (int g = 0; g < G * G; g++) {
+            int[] l = cells[g];
+            int m = cellN[g], gx = g / G, gz = g % G;
+            for (int ii = 0; ii < m; ii++) {
+                int a = l[ii];
+                for (int jj = ii + 1; jj < m; jj++) {
+                    int b = l[jj];
+                    if (by0[b] > by1[a] || by1[b] < by0[a] || bx0[b] > bx1[a] || bx1[b] < bx0[a] || bz0[b] > bz1[a] || bz1[b] < bz0[a]) continue;
+                    if (cell(Math.max(bx0[a], bx0[b])) != gx || cell(Math.max(bz0[a], bz0[b])) != gz) continue;
+                    pair(st, p, qq, a, b, vx0, vy0, vz0, vx1, vy1, vz1);
+                }
+            }
+        }
+        give(p, qq);
+    }
+
+    private long ticks;
+
+    /**
+     * What was asked, eased from last tick's push (each joint's push changes by at most EASE a tick), and given to
+     * joint and its place a tick ago alike.
+     */
+    private void give(float[][] p, float[][] qq) {
+        int nc = rig.chains.length;
         for (int c = 0; c < nc; c++) {
             float[] wa = want[c], gv = given[c], pt = p[c], pq = qq[c];
             for (int o = 3; o < wa.length; o += 3) {
@@ -199,6 +222,14 @@ final class BellApart {
     static final float EASE = Float.parseFloat(System.getProperty("hollowbell.apartEase", "0.5"));
 
     static final float VASE_R = 19f;
+    /** the grid the boxes are sorted into: G squares of CELL model blocks a side, about his middle */
+    static final int G = 24;
+    static final float CELL = 20f;
+    private final int[][] cells = new int[G * G][];
+    private final int[] cellN = new int[G * G];
+    { for (int g = 0; g < G * G; g++) cells[g] = new int[16]; }
+
+    private static int cell(float v) { int c = (int) Math.floor(v / CELL) + G / 2; return c < 0 ? 0 : c >= G ? G - 1 : c; }
 
     private boolean gone(BellState st, int k) {
         int np = rig.pods.length;
