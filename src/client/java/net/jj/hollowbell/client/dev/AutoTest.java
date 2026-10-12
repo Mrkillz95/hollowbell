@@ -47,6 +47,15 @@ public final class AutoTest {
         try { script = new ArrayList<>(Files.readAllLines(Path.of(f))); }
         catch (Exception e) { HollowbellMod.LOG.error("autotest: cannot read {}", f, e); return; }
         ClientTickEvents.END_CLIENT_TICK.register(AutoTest::tick);
+        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DAMAGE.register((en, src, amt) -> {
+            if (SolidClient.traceTicks > 0 && en instanceof net.minecraft.world.entity.player.Player)
+                HollowbellMod.LOG.info("trace SERVER DAMAGE {} {} from {} fall {}", src.getMsgId(), amt, src.getEntity(), en.fallDistance);
+            return true;
+        });
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(w -> {
+            if (SolidClient.traceTicks > 0) for (var pl : w.players())
+                HollowbellMod.LOG.info("trace server v {} hurtMarked {} fall {} og {}", pl.getDeltaMovement(), pl.hurtMarked, pl.fallDistance, pl.onGround());
+        });
         ClientTickEvents.START_CLIENT_TICK.register(c -> {
             if (SolidClient.traceTicks > 0 && c.player != null)
                 HollowbellMod.LOG.info("trace pre pos {} v {}", c.player.position(), c.player.getDeltaMovement());
