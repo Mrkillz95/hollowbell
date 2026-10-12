@@ -1603,7 +1603,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             }
             // a pod hangs from its strand right where you stand on it: you're stung there, but not knocked off
             Solid.Anchor on = Solid.anchorUnder(this, e, 1.5, 1.5);
-            if (!hit && on != null) hit = onStrandPod(BellPieces.get().bone[on.frame()]);
+            if (!hit && on != null) hit = onStrandPod(BellPieces.get().bone[solidShape().bone[on.frame()]]);
             if (hit) moves.sting(e, on == null);
         }
     }
