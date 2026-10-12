@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 /** A Belling is a tiny copy of him, drawn from the smallest version of his meshes, pulsing as it drifts. */
 public class BellingRenderer extends EntityRenderer<Belling> {
@@ -54,6 +55,12 @@ public class BellingRenderer extends EntityRenderer<Belling> {
             if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(kk, kk * (1 - hurt), kk * (1 - hurt), 1f); shader.COLOR_MODULATOR.upload(); }
             mv.set(view).mul(base);
             if (shader.MODEL_VIEW_MATRIX != null) { shader.MODEL_VIEW_MATRIX.set(mv); shader.MODEL_VIEW_MATRIX.upload(); }
+            if (pass == 1) {
+                Vector3f l0 = new Vector3f(), l1 = new Vector3f();
+                BellRenderer.glowLight(l0, l1);
+                if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
+                if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
+            }
             for (int b = 0; b < rig.boneCount(); b++) {
                 BellMeshes.Mesh m = meshes.mesh(BellMeshes.TINY, kind, b);
                 if (m == null) continue;
