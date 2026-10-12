@@ -55,6 +55,9 @@ public final class OpsCommand {
 
     /** adds every state command to /hollowbell */
     public static <T extends ArgumentBuilder<CommandSourceStack, T>> T addTo(T root) {
+        // (bare, or "help": the main commands, so nobody is left with "Unknown or incomplete command")
+        root.executes(OpsCommand::help);
+        root.then(Commands.literal("help").executes(OpsCommand::help));
         root.then(Commands.literal("target").requires(s -> s.hasPermission(2))
                 .then(Commands.literal("none").executes(on((c, h) -> { h.clearHitList(); return say(c, t("target_none")); })))
                 // what the player giving it is looking at, by the book's rules
@@ -139,6 +142,11 @@ public final class OpsCommand {
         root.then(Commands.literal("wake").requires(s -> s.hasPermission(2))
                 .executes(on((c, h) -> { h.wakeUp(); return say(c, t("awake")); })));
         return root;
+    }
+
+    private static int help(CommandContext<CommandSourceStack> c) {
+        c.getSource().sendSuccess(() -> t("help"), false);
+        return 1;
     }
 
     private static int powersReset(CommandContext<CommandSourceStack> c, Collection<ServerPlayer> who) {

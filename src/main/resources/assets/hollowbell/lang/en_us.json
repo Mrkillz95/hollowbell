@@ -181,6 +181,7 @@
   "command.hollowbell.done_sleep": "Done.",
   "command.hollowbell.wind_on": "His wind: %s%%. The book tires him: he gets all his wind back in %s seconds, and he resents being pushed at %s times the usual rate.",
   "command.hollowbell.wind_off": "His wind: %s%%. The book doesn't tire him (%s seconds to get it all back, grudge rate %s when it's on).",
+  "command.hollowbell.help": "/hollowbell where and /hollowbell detail work for anyone. With cheats: summon, kill, remove, list, tp, goto, come, stay, sleep, wake, ride, spare, config, heavydelay. The README has the rest.",
   "command.hollowbell.heavydelay": "Heavy moves wait %s seconds into a fight.",
   "command.hollowbell.none": "No Hollowbell here.",
   "command.hollowbell.reloaded": "Settings read again.",
