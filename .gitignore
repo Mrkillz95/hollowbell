@@ -13,3 +13,4 @@ autotest/
 autotest*.txt
 watch-release.sh
 watch-all.sh
+run-mods/

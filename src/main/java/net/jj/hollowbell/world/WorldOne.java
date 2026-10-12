@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -87,7 +87,7 @@ public class WorldOne extends SavedData {
 
     /** how far a new ground reaches, from the settings */
     public static int configRadius() {
-        return Mth.clamp(HollowbellConfig.V.homeRadius, 200, 2000);
+        return Mth.clamp(BellConfig.V.homeRadius, 200, 2000);
     }
 
     /**
@@ -275,7 +275,7 @@ public class WorldOne extends SavedData {
             w.setDirty();
             BellGen.publish(w);
         }
-        if (!IN_TESTS && HollowbellConfig.V.oneInTheWorld && !w.homeClaimed) {
+        if (!IN_TESTS && BellConfig.V.oneInTheWorld && !w.homeClaimed) {
             if (!w.placed) w.pickFirstSpot(over);
             w.claimFresh(over);
             w.placed = true;
@@ -323,7 +323,7 @@ public class WorldOne extends SavedData {
     }
 
     public static double wardRange() {
-        return Math.max(48, HollowbellConfig.V.wardBlocks);
+        return Math.max(48, BellConfig.V.wardBlocks);
     }
 
     /** the crown is woken: he will not come near this place until it is spent */
@@ -362,7 +362,7 @@ public class WorldOne extends SavedData {
 
     /** is this spot inside the circle he will not enter? */
     public boolean warded(Level l, double x, double z) {
-        if (wardUntil <= 0 || HollowbellConfig.V.wardBlocks <= 0 || !(l instanceof ServerLevel sl) || !warding(sl))
+        if (wardUntil <= 0 || BellConfig.V.wardBlocks <= 0 || !(l instanceof ServerLevel sl) || !warding(sl))
             return false;
         if (!sl.dimension().location().toString().equals(wardDim)) return false;
         double dx = x - (wardX + 0.5), dz = z - (wardZ + 0.5);
@@ -375,7 +375,7 @@ public class WorldOne extends SavedData {
      * edge where it would go in (a spot already inside is left for the ward's own push to deal with).
      */
     public Vec3 wardStop(Level l, Vec3 from, Vec3 to) {
-        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl) || HollowbellConfig.V.wardBlocks <= 0)
+        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl) || BellConfig.V.wardBlocks <= 0)
             return to;
         if (!sl.dimension().location().toString().equals(wardDim)) return to;
         double cx = wardX + 0.5, cz = wardZ + 0.5, r = wardRange() + 16;
@@ -549,7 +549,7 @@ public class WorldOne extends SavedData {
     public void died(ServerLevel level, HollowbellEntity h) {
         alive = false;
         oneId = null;
-        double far = Math.max(600, HollowbellConfig.V.respawnBlocks);
+        double far = Math.max(600, BellConfig.V.respawnBlocks);
         double a = level.random.nextDouble() * Math.PI * 2;
         double d = Math.max(clearOfGround(), far * 0.25 + level.random.nextDouble() * far * 0.75);
         // measured from where he fell if that was the overworld, otherwise from where he was last seen in it
@@ -562,7 +562,7 @@ public class WorldOne extends SavedData {
         // his new ground is claimed now, in land not made yet, so it is ready when he comes down
         if (!IN_TESTS) claimFresh(level);
         placed = true;
-        dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
+        dueAt = level.getGameTime() + Math.max(1200L, BellConfig.V.worldRespawnDays * 24000L);
         setDirty();
         HollowbellMod.LOG.info("The Hollowbell has fallen; the next comes down near {}, {}", x, z);
     }
@@ -580,7 +580,7 @@ public class WorldOne extends SavedData {
         if (!alive) return;
         alive = false;
         oneId = null;
-        dueAt = level.getGameTime() + Math.max(1200L, HollowbellConfig.V.worldRespawnDays * 24000L);
+        dueAt = level.getGameTime() + Math.max(1200L, BellConfig.V.worldRespawnDays * 24000L);
         setDirty();
     }
 
@@ -663,7 +663,7 @@ public class WorldOne extends SavedData {
      */
     public static boolean limitNow(@Nullable HollowbellEntity joining, ServerLevel world) {
         if (joining != null && joining.isRemoved()) return false;
-        int max = Math.max(0, HollowbellConfig.V.maxInWorld);
+        int max = Math.max(0, BellConfig.V.maxInWorld);
         if (max <= 0) return false; // as many as you like
         MinecraftServer server = world.getServer();
         if (server == null) return false;
@@ -718,7 +718,7 @@ public class WorldOne extends SavedData {
     private int cooldown;
 
     public void tick(ServerLevel level) {
-        if (!HollowbellConfig.V.oneInTheWorld) return;
+        if (!BellConfig.V.oneInTheWorld) return;
         if (level.dimension() != Level.OVERWORLD) return;
         if (--cooldown > 0) return;
         cooldown = 100;
@@ -751,7 +751,7 @@ public class WorldOne extends SavedData {
         }
         if (dueAt < 0 || level.getGameTime() < dueAt) return;
         // and the spawner never pushes anybody out to make room
-        int max = HollowbellConfig.V.maxInWorld;
+        int max = BellConfig.V.maxInWorld;
         if (max > 0 && away.count() >= max) return;
         put(level);
     }
@@ -890,7 +890,7 @@ public class WorldOne extends SavedData {
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
         if (e == null) return;
         e.setBellScale(
-                Mth.clamp(HollowbellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+                Mth.clamp(BellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
         e.setVariant(HollowbellEntity.CALM);
         e.markWorldOne();
         oneId = e.getUUID(); // named first, so his arrival never meets the cap

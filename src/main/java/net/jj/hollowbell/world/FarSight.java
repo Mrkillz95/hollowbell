@@ -3,11 +3,11 @@ package net.jj.hollowbell.world;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.mixin.ChunkMapAccess;
-import net.jj.hollowbell.mixin.TrackedEntityAccess;
+import net.jj.hollowbell.mixin.TrackedAccess;
 import net.jj.hollowbell.net.FarSightPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.ListTag;
@@ -46,13 +46,13 @@ public final class FarSight {
         Object te = ((ChunkMapAccess) sl.getChunkSource().chunkMap)
                 .hollowbell$entityMap()
                 .get(h.getId());
-        return te != null && ((TrackedEntityAccess) te).hollowbell$seenBy().contains(p.connection);
+        return te != null && ((TrackedAccess) te).hollowbell$seenBy().contains(p.connection);
     }
 
     /** every one this player should see on the horizon but isn't sent: in the world, or out of it */
     public static List<FarSightPayload.Far> listFor(ServerPlayer p) {
         List<FarSightPayload.Far> out = new ArrayList<>();
-        int range = Mth.clamp(HollowbellConfig.V.farSightBlocks, 0, 4096);
+        int range = Mth.clamp(BellConfig.V.farSightBlocks, 0, 4096);
         if (range <= 0 || p.isRemoved()) return out;
         ServerLevel l = p.serverLevel();
         double r2 = (double) range * range;

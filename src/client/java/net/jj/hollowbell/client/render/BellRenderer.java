@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.jj.hollowbell.Detail;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
@@ -205,10 +205,10 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             rt.clearRenderState();
             return;
         }
-        float wantFog = Math.min(HollowbellConfig.V.renderDistance * 1.2f, 420f * Math.max(0.2f, s) + 220f);
+        float wantFog = Math.min(BellConfig.V.renderDistance * 1.2f, 420f * Math.max(0.2f, s) + 220f);
         float fogStart0 = RenderSystem.getShaderFogStart(), fogEnd0 = RenderSystem.getShaderFogEnd();
         // far sight: he stays in the fog as a pale shape out to farSightBlocks and a bit past it, never gone before
-        float farSight = Math.max(0, Math.min(4096, HollowbellConfig.V.farSightBlocks));
+        float farSight = Math.max(0, Math.min(4096, BellConfig.V.farSightBlocks));
         float fe = Math.max(fogEnd0, Math.max(wantFog, farSight * 1.25f));
         float fs = Math.max(fogStart0, Math.min(wantFog * 0.85f, fe * 0.45f));
         // drawn shrunk, the fog is measured the same shrunk way; a stand-in coming or going fades into the fog

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -38,14 +38,14 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-/** What the buttons in the book actually do, once the press reaches the server. Laid out like the Mountain's. */
+/** What the buttons in the book actually do, once the press reaches the server. */
 public final class CodexOrders {
     private CodexOrders() {}
 
     /** the Hollowbell the book reaches: the nearest one, within the book's range */
     public static @Nullable HollowbellEntity his(Player p) {
         HollowbellEntity best = null;
-        double bd = Math.pow(HollowbellConfig.V.bookRange, 2);
+        double bd = Math.pow(BellConfig.V.bookRange, 2);
         if (!(p.level() instanceof ServerLevel sl)) return null;
         for (HollowbellEntity m : sl.getEntities(ModEntities.HOLLOWBELL, m -> !m.isDeadOrDying())) {
             double d = m.distanceToSqr(p);
@@ -111,7 +111,7 @@ public final class CodexOrders {
 
     /** what each move takes out of him, 1 being all his wind */
     /**
-     * What each move takes out of him, 1 being all his wind. Like the Mountain's: the light ones are cheap, the heavy
+     * What each move takes out of him, 1 being all his wind: the light ones are cheap, the heavy
      * ones take nearly half of him each.
      */
     private static final float[] MOVE_WIND = new float[Moves.NAMES.length];
@@ -244,8 +244,8 @@ public final class CodexOrders {
         int stage = m == null ? 0 : m.mood().stage(p.getUUID());
         int days = m == null ? 0 : m.mood().huntDaysLeft(p.getUUID());
         int flags = (m != null ? MoodPayload.IN_REACH : 0)
-                | (HollowbellConfig.V.griefing ? MoodPayload.GRIEF : 0)
-                | (HollowbellConfig.V.harvest ? MoodPayload.HARVEST : 0)
+                | (BellConfig.V.griefing ? MoodPayload.GRIEF : 0)
+                | (BellConfig.V.harvest ? MoodPayload.HARVEST : 0)
                 | (m != null && m.asleep() ? MoodPayload.ASLEEP : 0);
         ServerPlayNetworking.send(p, new MoodPayload(wind, sour, stage, days, flags));
     }
@@ -404,9 +404,9 @@ public final class CodexOrders {
                     return;
                 }
                 boolean on = pay.arg() != 0;
-                if (HollowbellConfig.V.griefing != on) {
-                    HollowbellConfig.V.griefing = on;
-                    HollowbellConfig.save();
+                if (BellConfig.V.griefing != on) {
+                    BellConfig.V.griefing = on;
+                    BellConfig.save();
                 }
                 say(p, on ? "codex_break_on" : "codex_break_off");
             }
@@ -416,9 +416,9 @@ public final class CodexOrders {
                     return;
                 }
                 boolean on = pay.arg() != 0;
-                if (HollowbellConfig.V.harvest != on) {
-                    HollowbellConfig.V.harvest = on;
-                    HollowbellConfig.save();
+                if (BellConfig.V.harvest != on) {
+                    BellConfig.V.harvest = on;
+                    BellConfig.save();
                 }
                 say(p, on ? "codex_harvest_on" : "codex_harvest_off");
             }
@@ -768,7 +768,8 @@ public final class CodexOrders {
                 UUID who = UUID.fromString(id.substring(4));
                 w.dropFriend(p.getUUID(), who);
                 say(p, "codex_unspared", w.nameOf(who));
-            } catch (IllegalArgumentException ignored) {
+            } catch (IllegalArgumentException badId) {
+                // not a player id: nothing to take off the list
             }
         } else if (id.startsWith("kind:")) {
             String kind = id.substring(5);

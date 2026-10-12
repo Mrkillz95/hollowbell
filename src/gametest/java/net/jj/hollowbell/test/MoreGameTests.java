@@ -15,19 +15,19 @@ import java.util.Set;
 import java.util.UUID;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.GiantsBridge;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.HollowbellEntity;
-import net.jj.hollowbell.entity.Meetings;
+import net.jj.hollowbell.entity.Meeting;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.entity.Shot;
 import net.jj.hollowbell.entity.StingerHook;
-import net.jj.hollowbell.item.BellPower;
+import net.jj.hollowbell.item.Powers;
 import net.jj.hollowbell.item.StingerItem;
-import net.jj.hollowbell.sound.MusicBoard;
+import net.jj.hollowbell.MusicBoard;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.FarOrders;
 import net.minecraft.core.BlockPos;
@@ -278,7 +278,7 @@ public class MoreGameTests implements FabricGameTest {
     /** a stand-in for another giant, of that mod's kind */
     static Zombie giantOfKind(GameTestHelper h, Vec3 at, String kind) {
         var z = fakeGiant(h, at);
-        z.addTag(Meetings.KIND + kind);
+        z.addTag(Meeting.KIND + kind);
         z.setInvulnerable(true);
         return z;
     }
@@ -297,19 +297,19 @@ public class MoreGameTests implements FabricGameTest {
         String[] want = {"-ffaaff", "f-fafff", "ff-ffff", "aaf-aaa", "affa-af", "fffaa-a", "fffafa-"};
         for (int a = 0; a < 7; a++)
             for (int b = 0; b < 7; b++) {
-                var w = Meetings.way(k[a], k[b]);
+                var w = Meeting.way(k[a], k[b]);
                 char c = want[a].charAt(b);
-                var expect = c == 'f' ? Meetings.Way.FIGHT : c == 'a' ? Meetings.Way.AVOID : Meetings.Way.NONE;
+                var expect = c == 'f' ? Meeting.Way.FIGHT : c == 'a' ? Meeting.Way.AVOID : Meeting.Way.NONE;
                 h.assertTrue(w == expect, k[a] + " meeting " + k[b] + ": " + w);
                 h.assertTrue(
-                        w == Meetings.way(k[b], k[a]), "the table isn't the same both ways for " + k[a] + ", " + k[b]);
+                        w == Meeting.way(k[b], k[a]), "the table isn't the same both ways for " + k[a] + ", " + k[b]);
             }
-        h.assertTrue(Meetings.way("hollowbell", "minecraft") == Meetings.Way.NONE, "an unknown kind");
-        h.assertTrue(Meetings.name("fire_ice_cerberus", false).equals("the Cerberus"), "names");
+        h.assertTrue(Meeting.way("hollowbell", "minecraft") == Meeting.Way.NONE, "an unknown kind");
+        h.assertTrue(Meeting.name("fire_ice_cerberus", false).equals("the Cerberus"), "names");
         h.assertTrue(
-                Meetings.name("swarmforge", true).equals("The Swarmforge"),
-                "his name: " + Meetings.name("swarmforge", true));
-        h.assertTrue(Meetings.range(1f) == 160 && Meetings.range(0.1f) == 48 && Meetings.range(2f) == 320, "the range");
+                Meeting.name("swarmforge", true).equals("The Swarmforge"),
+                "his name: " + Meeting.name("swarmforge", true));
+        h.assertTrue(Meeting.range(1f) == 160 && Meeting.range(0.1f) == 48 && Meeting.range(2f) == 320, "the range");
         h.succeed();
     }
 
@@ -317,10 +317,10 @@ public class MoreGameTests implements FabricGameTest {
     public void theFightLineIsSaidOnce(GameTestHelper h) {
         UUID a = UUID.randomUUID(), b = UUID.randomUUID();
         long t = 1_000_000L + h.getLevel().getGameTime();
-        h.assertTrue(Meetings.claimMeetingLine(a, b, t), "the first claim didn't win");
-        h.assertFalse(Meetings.claimMeetingLine(b, a, t), "the other one said it too");
-        h.assertFalse(Meetings.claimMeetingLine(a, b, t + 6000), "said again too soon");
-        h.assertTrue(Meetings.claimMeetingLine(b, a, t + 6001), "not said again after 6001 ticks");
+        h.assertTrue(Meeting.claimMeetingLine(a, b, t), "the first claim didn't win");
+        h.assertFalse(Meeting.claimMeetingLine(b, a, t), "the other one said it too");
+        h.assertFalse(Meeting.claimMeetingLine(a, b, t + 6000), "said again too soon");
+        h.assertTrue(Meeting.claimMeetingLine(b, a, t + 6001), "not said again after 6001 ticks");
         h.succeed();
     }
 
@@ -328,7 +328,7 @@ public class MoreGameTests implements FabricGameTest {
     public void heFightsAGiantTheTableSaysToFight(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 326);
         h.runAfterDelay(20, () -> {
-            h.assertTrue(e.getTags().contains(Meetings.KIND + "hollowbell"), "he has no kind tag");
+            h.assertTrue(e.getTags().contains(Meeting.KIND + "hollowbell"), "he has no kind tag");
             var z = giantOfKind(h, under(e).add(20, 0, 0), "fire_ice_cerberus");
             h.runAfterDelay(60, () -> {
                 h.assertTrue(e.getTarget() == z, "he didn't go for the Cerberus: " + e.getTarget());
@@ -350,7 +350,7 @@ public class MoreGameTests implements FabricGameTest {
             h.runAfterDelay(160, () -> {
                 h.assertTrue(e.getTarget() != z, "he went for Pitchgut");
                 h.assertTrue(
-                        z.getUUID().equals(e.avoiding()) || e.horiz(z.position()) > Meetings.range(0.3f) * 1.5,
+                        z.getUUID().equals(e.avoiding()) || e.horiz(z.position()) > Meeting.range(0.3f) * 1.5,
                         "he isn't keeping away");
                 h.assertTrue(
                         e.horiz(z.position()) > d0 + 3, "he didn't move away: " + d0 + " -> " + e.horiz(z.position()));
@@ -467,7 +467,7 @@ public class MoreGameTests implements FabricGameTest {
         h.runAfterDelay(25, () -> {
             h.assertTrue(done(p, "bell_glass_set"), "wearing the set didn't give it");
             p.setOnGround(true);
-            BellPower.use(p);
+            Powers.use(p);
             h.assertTrue(done(p, "bell_toll"), "the armour power didn't give it");
             var st = new ItemStack(ModItems.STINGER);
             p.setItemInHand(InteractionHand.MAIN_HAND, st);
@@ -620,11 +620,11 @@ public class MoreGameTests implements FabricGameTest {
         h.runAfterDelay(20, () -> {
             var src = server.createCommandSourceStack().withPermission(4).withSuppressedOutput();
             server.getCommands().performPrefixedCommand(src, "hollowbell meetings off");
-            h.assertTrue(!HollowbellConfig.V.meetings, "/hollowbell meetings off didn't");
+            h.assertTrue(!BellConfig.V.meetings, "/hollowbell meetings off didn't");
             server.getCommands().performPrefixedCommand(src, "giants meetings on");
-            h.assertTrue(HollowbellConfig.V.meetings, "/giants meetings on didn't");
+            h.assertTrue(BellConfig.V.meetings, "/giants meetings on didn't");
             server.getCommands().performPrefixedCommand(src, "hollowbell config meetRange 200");
-            h.assertTrue(HollowbellConfig.V.meetRange == 200, "meetRange can't be set");
+            h.assertTrue(BellConfig.V.meetRange == 200, "meetRange can't be set");
             server.getCommands().performPrefixedCommand(src, "hollowbell config meetRange 160");
             // /giants meet asks each giant's mod with the other's id (and its own)
             var z = giantOfKind(h, under(e).add(10, 0, 0), "furrowmaw");
@@ -645,7 +645,7 @@ public class MoreGameTests implements FabricGameTest {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 361);
         h.runAfterDelay(10, () -> {
             var z = fakeGiant(h, e.position().add(20, 0, 0));
-            z.addTag(Meetings.KIND + "lanternwillow");
+            z.addTag(Meeting.KIND + "lanternwillow");
             float was = z.getHealth();
             h.assertFalse(e.fightingGiant(z), "a giant drifting past counts as one he's fighting");
             e.moves().sting(z);

@@ -5,7 +5,7 @@ import static net.jj.hollowbell.test.HollowbellGameTests.player;
 import static net.jj.hollowbell.test.HollowbellGameTests.release;
 
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -36,14 +36,14 @@ public class SpawnEggTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "egg_health")
     public void aSmallEggOneHasHealthForHisSizeAndLivesThroughASecondPlayer(GameTestHelper h) {
-        float scale = HollowbellConfig.V.smallEggScale;
+        float scale = BellConfig.V.smallEggScale;
         BlockPos at = farGround(h, 601, scale);
         HollowbellEntity e = ModEntities.HOLLOWBELL.spawn(
                 h.getLevel(), new ItemStack(ModItems.SMALL_EGG), null, at, MobSpawnType.SPAWN_EGG, true, false);
         h.assertTrue(e != null, "the egg made nothing");
         e.setMoveCooldown(100000);
         h.runAfterDelay(5, () -> {
-            float want = Math.max(40f, HollowbellConfig.V.health * scale);
+            float want = Math.max(40f, BellConfig.V.health * scale);
             h.assertTrue(Math.abs(e.bellScale() - scale) < 1e-4, "the small egg made size " + e.bellScale());
             h.assertTrue(
                     Math.abs(e.healthMax() - want) < 1f,

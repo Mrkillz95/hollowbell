@@ -2,7 +2,7 @@ package net.jj.hollowbell.client;
 
 import java.util.HashMap;
 import java.util.Map;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Seat;
@@ -54,7 +54,7 @@ public final class BellSounds {
 
         @Override
         public void tick() {
-            if (h.isRemoved() || !HollowbellConfig.V.ambientSounds) {
+            if (h.isRemoved() || !BellConfig.V.ambientSounds) {
                 stop();
                 return;
             }
@@ -66,7 +66,7 @@ public final class BellSounds {
                 want = (float) (0.15 + 0.85 * Mth.clamp(sp, 0, 1)) * size;
             } else want = 0.9f * size;
             if (h.isDeadOrDying()) want *= Math.max(0f, 1f - h.deathTime / 120f);
-            want *= HollowbellConfig.V.soundVolume;
+            want *= BellConfig.V.soundVolume;
             volume += (want - volume) * 0.08f;
             if (h.isDeadOrDying() && h.deathTime > 130) stop();
         }
@@ -82,7 +82,7 @@ public final class BellSounds {
             super(ModSounds.HEARTBEAT, SoundSource.HOSTILE, RandomSource.create());
             this.looping = true;
             this.delay = 0;
-            this.volume = 0.9f * HollowbellConfig.V.soundVolume;
+            this.volume = 0.9f * BellConfig.V.soundVolume;
             this.relative = true;
             this.attenuation = SoundInstance.Attenuation.NONE;
         }
@@ -145,7 +145,7 @@ public final class BellSounds {
                 echoIn = 60 + mc.level.random.nextInt(100);
                 mc.player.playSound(
                         ModSounds.ECHO,
-                        0.7f * HollowbellConfig.V.soundVolume,
+                        0.7f * BellConfig.V.soundVolume,
                         0.8f + mc.level.random.nextFloat() * 0.4f);
             }
         } else if (heartbeat != null) {

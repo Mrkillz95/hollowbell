@@ -1,6 +1,6 @@
 package net.jj.hollowbell.client;
 
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 
@@ -13,7 +13,7 @@ public final class Shake {
 
     /** a foot has come down: how hard you feel it falls off with distance */
     public static void thump(double dist, float scale) {
-        if (!HollowbellConfig.V.screenShake) return;
+        if (!BellConfig.V.screenShake) return;
         double reach = 60 + 340 * scale;
         if (dist > reach) return;
         float near = (float) (1.0 - dist / reach);
@@ -22,7 +22,7 @@ public final class Shake {
 
     /** he has come down: one long shove instead of a footfall */
     public static void crash(double dist, float scale) {
-        if (!HollowbellConfig.V.screenShake) return;
+        if (!BellConfig.V.screenShake) return;
         double reach = 140 + 600 * scale;
         if (dist > reach) return;
         float near = (float) (1.0 - dist / reach);
@@ -37,7 +37,7 @@ public final class Shake {
 
     /** sideways, up-down and forward-back wobble for the camera this frame */
     public static float[] offset(float partial) {
-        if (amount <= 0f || !HollowbellConfig.V.screenShake) return null;
+        if (amount <= 0f || !BellConfig.V.screenShake) return null;
         float a = Mth.lerp(partial, last, amount);
         if (a <= 0.002f) return null;
         Minecraft mc = Minecraft.getInstance();

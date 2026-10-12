@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
@@ -59,7 +59,7 @@ public final class Mood {
     }
 
     public boolean costsAnything() {
-        return HollowbellConfig.V.bookCosts;
+        return BellConfig.V.bookCosts;
     }
 
     public boolean hasWind(float cost) {
@@ -78,7 +78,7 @@ public final class Mood {
 
     /** every tick: his wind coming back, and whatever he is holding against people easing off */
     public void tick() {
-        int secs = Math.max(5, HollowbellConfig.V.windSeconds);
+        int secs = Math.max(5, BellConfig.V.windSeconds);
         float back = 1f / (secs * 20f);
         boolean resting = m.resting() || m.asleep();
         if (resting) back *= 2.5f;
@@ -109,7 +109,7 @@ public final class Mood {
     /** pushing him: the number is before his temper is taken into account */
     public void sour(UUID who, float amount) {
         if (who == null || amount <= 0f || !costsAnything()) return;
-        float rate = Math.max(0f, HollowbellConfig.V.grudgeRate);
+        float rate = Math.max(0f, BellConfig.V.grudgeRate);
         if (rate <= 0f) return;
         sour.merge(who, Mth.clamp(amount * rate, 0f, 1f), (a, b) -> Math.min(1f, a + b));
     }
@@ -144,7 +144,7 @@ public final class Mood {
      * coming from them: returns true on the hit that finishes his patience.
      */
     public boolean struck(UUID who) {
-        int most = HollowbellConfig.V.freeHits;
+        int most = BellConfig.V.freeHits;
         if (who == null || most <= 0 || !costsAnything()) return false;
         int n = struck.merge(who, 1, Integer::sum);
         if (n < most) return false;
@@ -155,7 +155,7 @@ public final class Mood {
 
     /** how many he has left in him for this one before the book stops meaning anything */
     public int strikesLeft(UUID who) {
-        int most = HollowbellConfig.V.freeHits;
+        int most = BellConfig.V.freeHits;
         if (who == null || most <= 0) return Integer.MAX_VALUE;
         return Math.max(0, most - struck.getOrDefault(who, 0));
     }

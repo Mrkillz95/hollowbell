@@ -1,5 +1,7 @@
 package net.jj.hollowbell.block;
 
+import net.jj.hollowbell.Adv;
+
 import com.mojang.serialization.MapCodec;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.world.LootBeams;
@@ -70,7 +72,7 @@ public class LootCacheBlock extends BaseEntityBlock {
         if (l.isClientSide) return InteractionResult.SUCCESS;
         if (l.getBlockEntity(pos) instanceof LootCacheBlockEntity be) {
             p.openMenu(be);
-            if (p instanceof ServerPlayer sp) HollowbellMod.award(sp, "loot_cache");
+            if (p instanceof ServerPlayer sp) Adv.grant(sp, "loot_cache");
         }
         return InteractionResult.CONSUME;
     }

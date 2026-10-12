@@ -1,6 +1,6 @@
 package net.jj.hollowbell.block;
 
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.world.WorldOne;
@@ -47,7 +47,7 @@ public class CrownBlock extends Block {
 
     /** wakes the crown at p: he is held off round it for a while, unless one is awake already or it is still resting */
     public static Woken wake(ServerLevel lvl, BlockPos crown) {
-        if (HollowbellConfig.V.wardBlocks <= 0)
+        if (BellConfig.V.wardBlocks <= 0)
             return new Woken(false, Component.translatable("command.hollowbell.ward_no_blocks"));
         WorldOne w = WorldOne.get(lvl.getServer());
         ServerLevel over = lvl.getServer().overworld();
@@ -64,8 +64,8 @@ public class CrownBlock extends Block {
         w.startWard(
                 lvl,
                 crown,
-                Math.max(20, HollowbellConfig.V.wardSeconds * 20),
-                Math.max(0, HollowbellConfig.V.wardRestSeconds * 20));
+                Math.max(20, BellConfig.V.wardSeconds * 20),
+                Math.max(0, BellConfig.V.wardRestSeconds * 20));
         for (HollowbellEntity e : lvl.getEntities(ModEntities.HOLLOWBELL, x -> !x.isRemoved()))
             if (e.warded(e.getX(), e.getZ())) e.pushedBackByWard();
         return new Woken(true, Component.translatable("command.hollowbell.ward_wakes", crown.getX(), crown.getZ(), (int)

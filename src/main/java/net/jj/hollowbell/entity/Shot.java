@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
@@ -218,7 +218,7 @@ public class Shot extends ThrowableItemProjectile {
                         getZ(),
                         SoundEvents.SNIFFER_EGG_CRACK,
                         SoundSource.HOSTILE,
-                        1.2f * HollowbellConfig.V.soundVolume,
+                        1.2f * BellConfig.V.soundVolume,
                         1.1f + random.nextFloat() * 0.3f);
             }
             if (age >= HATCH_TICKS) {
@@ -239,7 +239,7 @@ public class Shot extends ThrowableItemProjectile {
                 c.z,
                 ModSounds.EGG_HATCH,
                 SoundSource.HOSTILE,
-                1.6f * HollowbellConfig.V.soundVolume,
+                1.6f * BellConfig.V.soundVolume,
                 0.9f + random.nextFloat() * 0.2f);
         sl.sendParticles(
                 new BlockParticleOption(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.defaultBlockState()),
@@ -329,7 +329,7 @@ public class Shot extends ThrowableItemProjectile {
         int gy = sl.getHeight(Heightmap.Types.MOTION_BLOCKING, getBlockX(), getBlockZ());
         if (gy > getY() - 6 && gy <= getY() + 2) setPos(getX(), gy, getZ());
         Vec3 c = position();
-        float vol = HollowbellConfig.V.soundVolume;
+        float vol = BellConfig.V.soundVolume;
         sl.playSound(
                 null,
                 c.x,
@@ -380,7 +380,7 @@ public class Shot extends ThrowableItemProjectile {
             sl.sendParticles(p, ParticleTypes.EXPLOSION, true, c.x, c.y + 0.5, c.z, 1, 0, 0, 0, 0);
             // a thump underfoot for anyone close
             double d = Math.sqrt(p.distanceToSqr(c));
-            if (d < radius * 4 + 8 && HollowbellConfig.V.screenShake)
+            if (d < radius * 4 + 8 && BellConfig.V.screenShake)
                 ServerPlayNetworking.send(p, new ThumpPayload(c.x, c.y, c.z, 0.25f));
         }
         // (the egg bursting on the ground: a little ring of dirt and chunks, or a splash on the water)

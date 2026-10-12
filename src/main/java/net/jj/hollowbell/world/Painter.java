@@ -162,7 +162,8 @@ public final class Painter {
     private static @Nullable Holder<Biome> biome(ServerLevel l) {
         try {
             return l.registryAccess().registryOrThrow(Registries.BIOME).getHolderOrThrow(HomeGround.BELL_HOLLOWS);
-        } catch (Exception e) {
+        } catch (IllegalStateException e) {
+            HollowbellMod.LOG.warn("The bell_hollows biome is missing: {}", e.toString());
             return null;
         }
     }

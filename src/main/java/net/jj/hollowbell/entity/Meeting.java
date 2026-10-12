@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
@@ -14,8 +14,8 @@ import org.jetbrains.annotations.Nullable;
  * same table and rules in every giant mod, keyed by the other's mod id (read from its {@link #KIND} tag first, then
  * from its entity type).
  */
-public final class Meetings {
-    private Meetings() {}
+public final class Meeting {
+    private Meeting() {}
 
     public enum Way {
         FIGHT,
@@ -119,6 +119,6 @@ public final class Meetings {
 
     /** how far off he notices another giant: 160 blocks at full size by default, kept between 48 and 320 */
     public static double range(float size) {
-        return Math.max(48, Math.min(320, HollowbellConfig.V.meetRange * size));
+        return Math.max(48, Math.min(320, BellConfig.V.meetRange * size));
     }
 }

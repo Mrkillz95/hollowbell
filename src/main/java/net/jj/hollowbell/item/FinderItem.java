@@ -1,7 +1,7 @@
 package net.jj.hollowbell.item;
 
 import java.util.List;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.world.Away;
@@ -51,7 +51,7 @@ public class FinderItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         if (lvl instanceof ServerLevel sl) {
             answer(sl, player);
-            float vol = HollowbellConfig.V.soundVolume;
+            float vol = BellConfig.V.soundVolume;
             if (vol > 0)
                 lvl.playSound(
                         null, player.blockPosition(), SoundEvents.LODESTONE_COMPASS_LOCK, SoundSource.PLAYERS, vol, 1f);
@@ -120,7 +120,7 @@ public class FinderItem extends Item {
         BlockPos at = w.where();
         if (at != null && w.aliveNow()) return found(sl, from, at.getX() + 0.5, at.getZ() + 0.5);
         int days = w.daysLeft(sl);
-        if (at != null && HollowbellConfig.V.oneInTheWorld && days >= 0) {
+        if (at != null && BellConfig.V.oneInTheWorld && days >= 0) {
             // where the next one comes down: the middle of his ground
             double dx = at.getX() + 0.5 - from.x, dz = at.getZ() + 0.5 - from.z;
             int n = tens(Math.sqrt(dx * dx + dz * dz));

@@ -18,8 +18,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
  * cache in the middle holding everything he dropped. The beam stands up out of the cache until it's emptied; the
  * pedestal stays as a trophy.
  */
-public final class LootShrine {
-    private LootShrine() {}
+public final class Shrine {
+    private Shrine() {}
 
     /**
      * Builds it on the ground under where he fell (y) and puts the loot in; returns the cache's spot. With griefing

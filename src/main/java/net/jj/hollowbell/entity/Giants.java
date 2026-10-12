@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -76,6 +77,7 @@ public final class Giants {
                 mm.setAccessible(true);
                 return Optional.of(mm);
             } catch (Exception x) {
+                // meant to fail: most entities have no owner()
                 return Optional.empty();
             }
         });
@@ -83,6 +85,7 @@ public final class Giants {
         try {
             return m.get().invoke(e) instanceof LivingEntity le ? le : null;
         } catch (Exception x) {
+            HollowbellMod.LOG.debug("owner of {} failed", e, x);
             return null;
         }
     }
@@ -107,6 +110,7 @@ public final class Giants {
         try {
             return Boolean.TRUE.equals(m.get().invoke(e));
         } catch (ReflectiveOperationException x) {
+            HollowbellMod.LOG.debug("jjRidden of {} failed", e, x);
             return false;
         }
     }

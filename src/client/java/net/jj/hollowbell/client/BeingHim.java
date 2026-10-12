@@ -19,7 +19,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Being him, from his crown. The view swings out behind him and the keys drive him about: W pushes him on, A/D
  * and S steer, the number keys set off his moves, and G gets you off. The list of what each key does sits down
- * the left of the screen with its own clock on each line. Copied from the Mountain's so the two work the same.
+ * the left of the screen with its own clock on each line.
  */
 public final class BeingHim {
     private BeingHim() {}
@@ -209,7 +209,7 @@ public final class BeingHim {
     }
 
     /**
-     * The riding screen, top left, the same as the other giants': his health and what he's doing, his wind and
+     * The riding screen, top left: his health and what he's doing, his wind and
      * grudge bars, then his moves in three columns (light, medium, heavy) with a clock on each, and the keys. Hidden
      * with F1; drawn under his boss bars when it would run into them, and smaller if the window is short.
      */

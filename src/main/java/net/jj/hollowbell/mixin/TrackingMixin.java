@@ -2,7 +2,7 @@ package net.jj.hollowbell.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +26,7 @@ public class TrackingMixin {
     private static double hollowbell$range(Entity e) {
         if (!(e instanceof HollowbellEntity h)) return -1;
         return Math.max(
-                160.0, Math.min(HollowbellConfig.V.renderDistance, 300.0 * Math.max(0.15f, h.bellScale()) + 140.0));
+                160.0, Math.min(BellConfig.V.renderDistance, 300.0 * Math.max(0.15f, h.bellScale()) + 140.0));
     }
 
     @WrapOperation(

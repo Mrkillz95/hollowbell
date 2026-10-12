@@ -40,7 +40,7 @@ public class GiantsGuideMod implements ModInitializer {
                 })));
         LiveNews.register();
         LOG.info(
-                "Giants Guide ready: {} of {} giants installed",
+                "Giants Guide loaded: {} of {} giants installed",
                 Giants.installed().size(),
                 Giants.ALL.size());
     }

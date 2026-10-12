@@ -53,7 +53,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 /**
- * Development only (-Dhollowbell.autotest=<script>), the same idea as the Mountain's: makes a creative world, runs
+ * Development only (-Dhollowbell.autotest=<script>): makes a creative world, runs
  * a list of lines with waits between them, takes screenshots, then quits. Never runs in a normal game.
  * Lines: world flat|normal, gui on|off, render N, cmd ..., wait N, waitmodel, shot name,
  * view mx my mz tx ty tz (camera in his own model space), book, page N, quit.

@@ -184,7 +184,7 @@ public final class BellGen {
         Holder<Biome> biome;
         try {
             biome = over.registryAccess().registryOrThrow(Registries.BIOME).getHolderOrThrow(HomeGround.BELL_HOLLOWS);
-        } catch (Exception e) {
+        } catch (IllegalStateException e) {
             HollowbellMod.LOG.error("The bell_hollows biome is missing from the data pack: {}", e.toString());
             SNAP = null;
             return;

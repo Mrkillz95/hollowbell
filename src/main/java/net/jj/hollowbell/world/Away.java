@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -27,7 +27,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Out of the world, like the Mountain. When nobody is anywhere near him, he's written down in full (health, pods,
+ * Out of the world. When nobody is anywhere near him, he's written down in full (health, pods,
  * mood, the lot) and taken out of the game. From then on he's a line on a map: where he set off from, where he's
  * going, when he left and how fast he drifts. The book and /hollowbell where work out where he ought to be from
  * that, and the moment anybody comes near that spot he's put back there, whole, still going the same way.
@@ -168,7 +168,7 @@ public final class Away extends SavedData {
      * keeps running, and never while you could still see his boss bars. A number in the settings wins.
      */
     public static double awayRange(@Nullable MinecraftServer server, float scale) {
-        int set = HollowbellConfig.V.awayBlocks;
+        int set = BellConfig.V.awayBlocks;
         if (set > 0) return Math.max(96, set);
         int sim = server == null ? 10 : Math.max(2, server.getPlayerList().getSimulationDistance());
         return Math.max(
@@ -428,7 +428,7 @@ public final class Away extends SavedData {
             get(server).bringBackNear(server);
             return;
         }
-        if (!HollowbellConfig.V.offscreenTravel) {
+        if (!BellConfig.V.offscreenTravel) {
             get(server).bringBackAll(server);
             return;
         }

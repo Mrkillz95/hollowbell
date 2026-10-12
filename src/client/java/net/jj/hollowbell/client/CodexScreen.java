@@ -24,7 +24,7 @@ import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The Hollowbell Codex, open. The same frame as the other giants' books: the title and a close button, a status
+ * The Hollowbell Codex, open: the title and a close button, a status
  * line, his health and pods, his wind and grudge, and four pages (orders, moves, him, and the safe list).
  */
 public class CodexScreen extends Screen {

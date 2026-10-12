@@ -1,5 +1,11 @@
 package net.jj.hollowbell.client.render;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+
+import java.util.concurrent.CompletionException;
+
+import java.util.concurrent.CancellationException;
+
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
@@ -98,7 +104,7 @@ public final class BellMeshes {
         try {
             b = building.join();
         } catch (Exception e) {
-            HollowbellMod.LOG.error("Hollowbell mesh build failed", e);
+            HollowbellMod.LOG.error("Mesh build failed", e);
             building = null;
             return false;
         }
@@ -123,7 +129,7 @@ public final class BellMeshes {
         quadCount = q;
         farQuadCount = fq;
         ready = true;
-        HollowbellMod.LOG.info("Hollowbell on the GPU: {} faces in {} bones ({} faces far away)", q, nb, fq);
+        HollowbellMod.LOG.info("On the GPU: {} faces in {} bones ({} faces far away)", q, nb, fq);
         return true;
     }
 
@@ -147,7 +153,8 @@ public final class BellMeshes {
             SortJob j;
             try {
                 j = m.sorting.join();
-            } catch (Exception e) {
+            } catch (CompletionException | CancellationException e) {
+                HollowbellMod.LOG.debug("Glass sort failed", e);
                 m.sorting = null;
                 return;
             }
@@ -190,7 +197,7 @@ public final class BellMeshes {
             try {
                 st = BlockStateParser.parseForBlock(lookup, model.palette[i], false)
                         .blockState();
-            } catch (Exception e) {
+            } catch (CommandSyntaxException e) {
                 throw new IllegalStateException("Hollowbell: unknown block " + model.palette[i], e);
             }
             states[i] = st;

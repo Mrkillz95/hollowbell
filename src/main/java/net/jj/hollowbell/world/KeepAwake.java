@@ -1,6 +1,6 @@
 package net.jj.hollowbell.world;
 
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.minecraft.server.level.ServerLevel;
@@ -20,7 +20,7 @@ public final class KeepAwake {
     private static final TicketType<Integer> HOLLOWBELL = TicketType.create("hollowbell", Integer::compare, 100);
 
     public static void tick(ServerLevel level) {
-        if (!HollowbellConfig.V.chunkLoading || level.getGameTime() % 20 != 0) return;
+        if (!BellConfig.V.chunkLoading || level.getGameTime() % 20 != 0) return;
         for (HollowbellEntity h : level.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved())) {
             // out to where he'd step out of the world, so he's never left frozen short of it
             double r = Math.max(

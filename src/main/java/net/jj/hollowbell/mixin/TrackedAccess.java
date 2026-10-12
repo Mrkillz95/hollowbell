@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 /** who is being sent an entity right now: far sight leaves those out, they already see the real one */
 @Mixin(targets = "net.minecraft.server.level.ChunkMap$TrackedEntity")
-public interface TrackedEntityAccess {
+public interface TrackedAccess {
     @Accessor("seenBy")
     Set<ServerPlayerConnection> hollowbell$seenBy();
 }

@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * His slams shove the view about a little, and while you ride his crown the view swings out behind and above him,
- * far enough back that you can see the whole of what you are driving (the same as the Mountain's).
+ * far enough back that you can see the whole of what you are driving.
  */
 @Mixin(Camera.class)
 public abstract class CameraMixin {

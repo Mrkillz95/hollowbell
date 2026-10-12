@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.item.FinderItem;
@@ -93,7 +93,7 @@ public final class TakeMe {
                     level(server, k.at().dim()),
                     k.at().x(),
                     k.at().z(),
-                    k.at().sizeOr(HollowbellConfig.V.worldScale));
+                    k.at().sizeOr(BellConfig.V.worldScale));
             if (NoWait.onTheWay(p)) return c;
             return Component.translatable(
                     "command.hollowbell.tp_waiting", Mth.floor(k.at().x()), Mth.floor(k.at().z()));
@@ -116,7 +116,7 @@ public final class TakeMe {
             }
             if (lay != null) {
                 Away.Parked k = lay.getValue();
-                Component c = land(p, level(server, k.dim()), k.x(), k.z(), k.sizeOr(HollowbellConfig.V.worldScale));
+                Component c = land(p, level(server, k.dim()), k.x(), k.z(), k.sizeOr(BellConfig.V.worldScale));
                 if (NoWait.onTheWay(p)) return c;
                 return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.x()), Mth.floor(k.z()));
             }
@@ -125,7 +125,7 @@ public final class TakeMe {
         WorldOne w = WorldOne.get(server);
         BlockPos at = w.where();
         if (at != null && w.aliveNow()) {
-            Component c = land(p, server.overworld(), at.getX() + 0.5, at.getZ() + 0.5, HollowbellConfig.V.worldScale);
+            Component c = land(p, server.overworld(), at.getX() + 0.5, at.getZ() + 0.5, BellConfig.V.worldScale);
             if (NoWait.onTheWay(p)) return c;
             return Component.translatable("command.hollowbell.tp_waiting", at.getX(), at.getZ());
         }
@@ -183,7 +183,7 @@ public final class TakeMe {
             for (int k = 0; k < steps; k++) {
                 double a = k * Math.PI * 2 / steps;
                 int px = x + (int) Math.round(Math.cos(a) * r), pz = z + (int) Math.round(Math.sin(a) * r);
-                // (land not loaded right now is passed over: loading it here made the server wait while it was made)
+                // unloaded land is passed over: loading it here would make the server wait
                 if (!NoWait.loadedAround(l, px, pz)) continue;
                 int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, px, pz);
                 BlockPos feet = new BlockPos(px, y, pz);
