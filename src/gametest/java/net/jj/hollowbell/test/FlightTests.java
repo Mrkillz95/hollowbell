@@ -83,6 +83,9 @@ public class FlightTests implements FabricGameTest {
         float[][] last, last2;
         Vector3f lastCrown, lastCrown2;
         float worstJerk, worstStep;
+        /** the drop landing: it's meant to stop him dead, as a knock does */
+        boolean landing;
+
         String where = "", whereStep = "";
         final List<float[][]> hist = new ArrayList<>();
         int wc = -1, wi, wt, tick;
@@ -115,7 +118,7 @@ public class FlightTests implements FabricGameTest {
                         float j = (float) Math.sqrt(jx * jx + jy * jy + jz * jz);
                         // (hitting the ground, or his bell coming down on it, stops a part short: a knock, not a jump)
                         if (e.chainKnocked(c)) continue;
-                        if (j > worstJerk) {
+                        if (!landing && j > worstJerk) {
                             worstJerk = j;
                             wc = c;
                             wi = i;
@@ -166,10 +169,14 @@ public class FlightTests implements FabricGameTest {
         h.runAfterDelay(52, () -> h.assertTrue(e.forceMove(Moves.SWEEP, p[0]), "no sweep"));
         h.runAfterDelay(80, () -> h.assertTrue(e.forceMove(Moves.DROP, p[0]), "no drop"));
         h.runAfterDelay(140, () -> e.forceMove(Moves.CURTAIN, p[0]));
+        int land = 80 + Moves.DROP_WIND + Moves.DROP_FALL;
         h.runAfterDelay(170, () -> e.moves().stopNow());
         for (int t = 21; t < 400; t++) {
             int tt = t;
-            h.runAfterDelay(t, () -> w.see(e, "tick " + tt));
+            h.runAfterDelay(t, () -> {
+                w.landing = tt == land || tt == land + 1;
+                w.see(e, "tick " + tt);
+            });
         }
         h.runAfterDelay(400, () -> {
             HollowbellMod.LOG.info("blend check: worst jerk {} ({}), worst step {}", w.worstJerk, w.where, w.worstStep);
