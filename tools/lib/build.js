@@ -1,6 +1,5 @@
 // Reads the KillzAI Hollowbell build (34 Bedrock .mcstructure pieces placed by the
-// offsets in hollowbell.mcfunction) into one voxel grid, the same way
-// reference/read.js does it.
+// offsets in hollowbell.mcfunction) into one voxel grid.
 const fs = require('fs');
 const path = require('path');
 

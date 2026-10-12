@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Before / after pictures of a change to the model:  node tools/compare.js <old model.bin> <name>
-// Writes reference/converted/<name>_before.png and <name>_after.png (the current model), from the same angle,
+// Writes build/converted/<name>_before.png and <name>_after.png (the current model), from the same angle,
 // plus a close look at the arms and strands (<name>_before_close.png / _after_close.png).
 const path = require('path');
 const { readModel, draw, PROJ, OUT } = require('./render');
