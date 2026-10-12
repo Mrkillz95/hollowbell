@@ -48,8 +48,9 @@ function main() {
   console.log(`egg clumps left off: ${eggBlocks} blocks, and ${eggBits} stray egg clump blocks in the strands and arms`
     + ' turned into the blocks round them');
   const strands = rebuildStrands(vox, R.rig, R.bones, pal);
-  console.log(`strands drawn again, all alike: ${strands.before} blocks before, ${strands.after} now (${strands.joined} tops`
-    + ` joined on, ${strands.stalks} pod stalks, ${strands.moved} points moved round arms and pods, ${strands.shortened} cut short)`);
+  const st = strands;
+  console.log(`strands drawn again, all alike: ${st.before} blocks before, ${st.after} now (${st.joined} tops joined on,`
+    + ` ${st.stalks} pod stalks, ${st.moved} points moved round arms and pods, ${st.shortened} cut short)`);
   console.log(`tidied: ${R.stats.eggsTakenOff} egg clumps and ${R.stats.floatingTakenOff + floating} floating blocks taken off, ${thinned.arm} arm speckles and ${thinned.strand} strand dots thinned out`);
   const occupied = new Map();
   const key = (x, y, z) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
