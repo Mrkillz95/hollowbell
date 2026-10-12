@@ -661,6 +661,7 @@ public final class BellMoves {
                     h.sound(c, ModSounds.SLAM, 4f, 0.5f);
                     h.sound(c, ModSounds.SPLASH, 3f, 0.6f);
                     h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 200, bell, 0.15);
+                    thump(c, 1f);
                     // (the whole bell down on the ground: chunks, dust and a ring; on water a splash and a wave)
                     fx(heavy(bell * 1.2 + px(0, 6)), under(), bell * 1.2 + px(0, 6));
                     fx(BigFx.SHOCKWAVE, under(), bell * 2.4 + px(0, 10));
@@ -760,6 +761,7 @@ public final class BellMoves {
         h.particles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.WEATHERED_COPPER.defaultBlockState()), c, 80, 6 * s + 1, 0.2);
         h.particles(ParticleTypes.EXPLOSION, c, 6, 4 * s + 1, 0);
         fx(heavy(px(14, 4)), c, px(14, 4));
+        thump(c, 0.8f);
         if (griefing()) crack(BlockPos.containing(c), (int) Math.ceil(8 * s + 1));
     }
 
@@ -993,6 +995,7 @@ public final class BellMoves {
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);
             h.sound(c, ModSounds.SPLASH, 4f, 0.5f);
             ring(new Vec3(c.x, groundUnder() + 1, c.z), r);
+            thump(c, 0.9f);
             fx(BigFx.SLAM, under(), r);
         }
     }
@@ -1025,6 +1028,7 @@ public final class BellMoves {
                 h.sound(c, ModSounds.SPLASH, 4f, 0.5f);
                 h.particles(ParticleTypes.EXPLOSION_EMITTER, c.add(0, 1, 0), 3, 6 * s, 0);
                 h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 250, R * 0.5, 0.25);
+                thump(c, 1.3f);
                 fx(heavy(px(45, 12)), c, px(45, 12));
                 fx(BigFx.SHOCKWAVE, c, R * 1.2, Vec3.ZERO, 22);
                 fx(BigFx.FLASH, c.add(0, 4 * s, 0), px(30, 8), Vec3.ZERO, GLOW);
@@ -1048,6 +1052,7 @@ public final class BellMoves {
             h.sound(mid, ModSounds.TOLL, 3f + 1.5f * k, 0.8f);
             ring(h.position().add(0, (rig.rimY - 10) * s, 0), h.bellRadius() * (1.0 + 0.15 * k));
             for (LivingEntity e : near(h.bodyBox().inflate(40 * s + 20))) e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80 + 40 * k, 0));
+            thump(h.position(), 0.2f + 0.15f * k);
             fx(BigFx.DUST_RING, under(), h.bellRadius() * (1.2 + 0.3 * k));
             fx(BigFx.SHAKE, h.position(), px(20 + 10 * k, 8));
         }
@@ -1056,6 +1061,7 @@ public final class BellMoves {
             h.pulse(1.8f);
             h.sound(mid, ModSounds.TOLL_BIG, 6f, 1f);
             h.sound(mid, ModSounds.SHOCK, 5f, 0.4f);
+            thump(h.position(), 1.2f);
             // (the big toll: a flash of his light and the ring the players see, running out with the real one)
             fx(BigFx.FLASH, mid, px(60, 16), Vec3.ZERO, GLOW);
             fx(BigFx.SHOCKWAVE, under(), px(120, 40), Vec3.ZERO, 25);
@@ -1229,6 +1235,7 @@ public final class BellMoves {
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);
             h.sound(c, ModSounds.SPLASH, 4f, 0.6f);
             h.particles(ParticleTypes.CLOUD, new Vec3(c.x, groundUnder() + 1, c.z), 150, r * 0.5, 0.1);
+            thump(c, 1f);
             fx(BigFx.SLAM, under(), r);
         }
     }
@@ -1282,11 +1289,11 @@ public final class BellMoves {
     /** his glow, for the flashes */
     private static final int GLOW = 0xBFFFD8;
 
-    /** an instant kick of the camera, for a blow the kit's own shake (SLAM, SHOCKWAVE, SHAKE) doesn't cover */
     private void thump(Vec3 c, float k) {
+        if (!HollowbellConfig.V.screenShake) return;
         for (ServerPlayer p : level().players()) {
             if (p.distanceToSqr(c) > Mth.square(200 * s() + 80)) continue;
-            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new net.jj.hollowbell.net.ThumpPayload(c.x, c.y, c.z, k * Math.min(1.5f, 1.2f * s())));
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new net.jj.hollowbell.net.ThumpPayload(c.x, c.y, c.z, k * Math.min(1.5f, 0.4f + s())));
         }
     }
 
