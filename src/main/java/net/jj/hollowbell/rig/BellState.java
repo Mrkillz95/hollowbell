@@ -40,6 +40,8 @@ public final class BellState {
     public boolean[] podPopped;
     public float[] podGrowth;
     public boolean[] eggGone;
+    /** per pod: ticks since this side saw it pop (large when it never has) */
+    public float[] podPopAge;
 
     /** the arms and strands: per chain, its joint points x y z (tip last), in model space */
     public final float[][] chain;
@@ -77,6 +79,8 @@ public final class BellState {
     public float lashT, lashDir;
     /** every strand flicked up and back (sting volley, stinger storm), 0-1 */
     public float flick;
+    /** the five strands nearest model x z flicked this much instead (the sting volley's shooters) */
+    public float flickNear, flickX, flickZ;
     /** the strands swirled round (whirlpool), 0-1 */
     public float swirl;
     /** per arm: raised up (1) or slammed down past its rest (below 0), for the arm storm */
@@ -88,6 +92,8 @@ public final class BellState {
         podPopped = new boolean[rig.pods.length];
         podGrowth = new float[rig.pods.length];
         java.util.Arrays.fill(podGrowth, 1f);
+        podPopAge = new float[rig.pods.length];
+        java.util.Arrays.fill(podPopAge, 1000f);
         eggGone = new boolean[rig.eggs.length];
         chain = new float[rig.chains.length][];
         for (int c = 0; c < chain.length; c++) {
@@ -101,7 +107,7 @@ public final class BellState {
     /** clears what the moves ask for, before the move of the moment fills it in again */
     public void clearMoves() {
         sweep = 0f; curtain = 0f; slamArm = -1; wrapArm = -1; grabStrand = -1; lashStrand = -1; carryStrand = -1;
-        flick = 0f; swirl = 0f; spread = 0f;
+        flick = 0f; flickNear = 0f; swirl = 0f; spread = 0f;
         java.util.Arrays.fill(armRaise, 0f);
     }
 }

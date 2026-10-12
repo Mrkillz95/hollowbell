@@ -519,6 +519,11 @@ public final class BellRig {
         if (pod) {
             grow = 0.3f + 0.7f * st.podGrowth[k];
             if (!st.podPopped[k]) grow *= 1f + 0.03f * (float) Math.sin(st.time * 0.13f + ph) + 0.28f * st.podSwell;
+            else if (st.podPopAge[k] < 8f) {
+                // just popped: it bursts out, then shrinks away to what's left
+                float a = st.podPopAge[k];
+                grow = a < 4f ? 1f + 0.35f * Mth.sin((float) Math.PI * a / 4f) : Mth.lerp(smooth((a - 4f) / 4f), 1f, 0.3f);
+            }
         } else grow = 1f + 0.12f * st.eggShake * (float) Math.max(0, Math.sin(st.time * 0.9f + ph));
         out.set(base).translate(pv).rotate(local);
         if (grow != 1f) out.scale(grow);
@@ -603,13 +608,22 @@ public final class BellRig {
         return at(pose, A.bones()[A.bones().length - 1], A.tip());
     }
 
-    /** the slam: up and out, a long hold at the top, then down hard and back */
+    /**
+     * The slam (t 0-1 over its 76 ticks): drawn in, up and out, held at the top shivering (the lower pieces cocked
+     * back), then down hard, still speeding up when it lands, and springing back past rest.
+     */
     public static float slam(float t, int seg) {
         float up = seg == 0 ? 1.25f : seg == 1 ? 0.35f : 0.25f;
         float down = seg == 0 ? -0.08f : seg == 1 ? -0.25f : -0.2f;
-        if (t < 0.5f) return up * smooth(t / 0.5f);
-        if (t < 0.62f) return Mth.lerp(smooth((t - 0.5f) / 0.12f), up, down);
-        return down * (1f - smooth((t - 0.62f) / 0.38f));
+        float T = t * 76f, late = 3f * seg, hit = 47f;
+        float past = seg == 0 ? 0.12f : 0.15f;
+        if (T < 6f + late) return seg == 0 ? -0.15f * smooth(T / 6f) : 0f;
+        if (T < 34f) return Mth.lerp(smooth((T - 6f - late) / (28f - late)), seg == 0 ? -0.15f : 0f, up);
+        if (T < 41f) return up + (seg == 0 ? 0.03f * Mth.sin(T * 2.2f) : 0.10f * smooth((T - 34f) / 5f));
+        float top = seg == 0 ? up : up + 0.10f;
+        if (T < hit) { float k = (T - 41f) / 6f; return Mth.lerp(k * k, top, down - past); }
+        float u = (T - hit) / 30f;
+        return down * (1f - smooth((T - hit) / 29f)) - past * (float) (Math.exp(-4 * u) * Math.cos(9 * u));
     }
 
     /** the moment in the slam when the arm hits the ground */
