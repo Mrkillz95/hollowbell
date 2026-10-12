@@ -1446,7 +1446,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             dealt = onceATick(Giants.behind(src), dealt);
             if (dealt <= 0f) return false;
         } else if (src.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) {
-            dealt = amount * 0.35f;                           // any other blast: the same for all the giants
+            dealt = amount * HollowbellConfig.V.explosionArmor;       // any other blast: the same for all the giants
         } else if (bone < 0 && !(att instanceof Player)) {
             // the weak-spot rule is for players with a sword: the Unmake's burning, a creature's blow that isn't
             // aimed at any one block of him lands in full

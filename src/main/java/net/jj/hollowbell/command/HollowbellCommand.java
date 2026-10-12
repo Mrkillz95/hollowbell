@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.jj.hollowbell.HollowbellConfig;
@@ -67,6 +68,8 @@ public final class HollowbellCommand {
     private static final String[] MOODS = {"calm", "hunting", "guardian"};
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
+        // (the same shape as the other giants' for his state: added to the same /hollowbell)
+        d.register(OpsCommand.addTo(Commands.literal("hollowbell")).then(windCommand()));
         d.register(Commands.literal("hollowbell")
                 // detail: anyone, cheats or not (it only changes how their own game draws him)
                 .then(Commands.literal("detail").executes(c -> detail(c, net.jj.hollowbell.net.DetailPayload.ASK))
@@ -77,7 +80,7 @@ public final class HollowbellCommand {
                                         .executes(c -> farSet(c, IntegerArgumentType.getInteger(c, "blocks"))))))
                 .then(Commands.literal("summon").requires(OP).executes(c -> summon(c, HollowbellEntity.HUNTER, eggSize()))
                         .then(Commands.argument("mood", StringArgumentType.word()).suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
-                                .executes(c -> summon(c, mood(c), eggSize()))
+                                .executes(HollowbellCommand::summonMoodOrSize)
                                 .then(Commands.argument("size", FloatArgumentType.floatArg(HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
                                         .executes(c -> summon(c, mood(c), FloatArgumentType.getFloat(c, "size"))))))
                 .then(Commands.literal("do").requires(OP).then(Commands.argument("move", StringArgumentType.word())
@@ -161,7 +164,9 @@ public final class HollowbellCommand {
                 // paint: the land round you becomes the Bell Hollows (admins; the same as /giants paint hollowbell)
                 .then(Commands.literal("paint").requires(OP).executes(c -> paint(c, 64, true))
                         .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512)).executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
-                                .then(Commands.literal("full").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true)))
+                                .then(Commands.literal("full").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
+                                        .then(Commands.literal("depth").then(Commands.argument("depth", IntegerArgumentType.integer(1, 64))
+                                                .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true, IntegerArgumentType.getInteger(c, "depth"))))))
                                 .then(Commands.literal("biome").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), false)))))
                 // tp: take me to him (never in the book)
                 .then(Commands.literal("tp").requires(OP).executes(c -> tp(c, 0))
@@ -178,7 +183,9 @@ public final class HollowbellCommand {
                         .then(Commands.argument("value", BoolArgumentType.bool())
                                 .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "value")), "stay"))))
                 // sleep: he drifts down and sleeps, or wakes up (a toggle)
-                .then(Commands.literal("sleep").requires(OP).executes(HollowbellCommand::sleepToggle))
+                .then(Commands.literal("sleep").requires(OP).executes(HollowbellCommand::sleepToggle)
+                        .then(Commands.literal("on").executes(c -> near(c, HollowbellEntity::goToSleep, "sleep")))
+                        .then(Commands.literal("off").executes(c -> near(c, HollowbellEntity::wakeUp, "sleep"))))
                 // the safe list of whoever runs it: players, single creatures, or whole kinds
                 .then(Commands.literal("spare").requires(OP).executes(HollowbellCommand::spareList)
                         .then(Commands.literal("add")
@@ -304,6 +311,37 @@ public final class HollowbellCommand {
                     c.getSource().sendSuccess(() -> Component.translatable(ok ? "command.hollowbell.reloaded" : "command.hollowbell.reload_bad"), true);
                     return ok ? 1 : 0;
                 })));
+    }
+
+    /** how the book tires him: on or off, how long to get all his wind back, how fast pushing him sours him */
+    private static LiteralArgumentBuilder<CommandSourceStack> windCommand() {
+        return Commands.literal("wind").requires(OP)
+                .executes(HollowbellCommand::windSay)
+                .then(Commands.literal("on").executes(c -> set(c, () -> HollowbellConfig.V.bookCosts = true, "bookCosts", "on")))
+                .then(Commands.literal("off").executes(c -> set(c, () -> HollowbellConfig.V.bookCosts = false, "bookCosts", "off")))
+                .then(Commands.literal("seconds").then(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600))
+                        .executes(c -> set(c, () -> HollowbellConfig.V.windSeconds = IntegerArgumentType.getInteger(c, "seconds"),
+                                "windSeconds", IntegerArgumentType.getInteger(c, "seconds")))))
+                .then(Commands.literal("grudge").then(Commands.argument("rate", FloatArgumentType.floatArg(0f, 10f))
+                        .executes(c -> set(c, () -> HollowbellConfig.V.grudgeRate = FloatArgumentType.getFloat(c, "rate"),
+                                "grudgeRate", FloatArgumentType.getFloat(c, "rate")))))
+                .then(Commands.argument("share", FloatArgumentType.floatArg(0f, 1f)).executes(c -> {
+                    HollowbellEntity h = nearest(c.getSource());
+                    if (h == null) return none(c);
+                    h.mood().setWind(FloatArgumentType.getFloat(c, "share"));
+                    int now = Math.round(h.mood().wind() * 100);
+                    c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.windnow_is", now), true);
+                    return 1;
+                }));
+    }
+
+    private static int windSay(CommandContext<CommandSourceStack> c) {
+        HollowbellEntity h = nearest(c.getSource());
+        int now = h == null ? 100 : Math.round(h.mood().wind() * 100);
+        String key = HollowbellConfig.V.bookCosts ? "command.hollowbell.wind_on" : "command.hollowbell.wind_off";
+        c.getSource().sendSuccess(() -> Component.translatable(key, now, HollowbellConfig.V.windSeconds,
+                String.valueOf(HollowbellConfig.V.grudgeRate)), false);
+        return 1;
     }
 
     /** how long into a fight before his first heavy move: said, or set (seconds >= 0) */
@@ -437,9 +475,13 @@ public final class HollowbellCommand {
     }
 
     private static int paint(CommandContext<CommandSourceStack> c, int radius, boolean full) throws CommandSyntaxException {
+        return paint(c, radius, full, net.jj.hollowbell.world.Painter.DEPTH);
+    }
+
+    private static int paint(CommandContext<CommandSourceStack> c, int radius, boolean full, int depth) throws CommandSyntaxException {
         ServerPlayer p = c.getSource().getPlayerOrException();
-        int n = net.jj.hollowbell.world.Painter.start(p, radius, full);
-        c.getSource().sendSuccess(() -> full ? Component.translatable("command.hollowbell.paint_full", radius, net.jj.hollowbell.world.Painter.DEPTH, n)
+        int n = net.jj.hollowbell.world.Painter.start(p, radius, full, depth);
+        c.getSource().sendSuccess(() -> full ? Component.translatable("command.hollowbell.paint_full", radius, depth, n)
                 : Component.translatable("command.hollowbell.paint_biome", radius, n), true);
         return n;
     }
@@ -451,8 +493,21 @@ public final class HollowbellCommand {
         return 1;
     }
 
+    /** /hollowbell summon hunting, or /hollowbell summon 0.3 (a hunting one that size) */
+    private static int summonMoodOrSize(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        String m = StringArgumentType.getString(c, "mood");
+        try {
+            float size = Float.parseFloat(m);
+            if (Float.isFinite(size)) return summon(c, HollowbellEntity.HUNTER, Mth.clamp(size, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+        } catch (NumberFormatException notASize) {
+            // a mood, then
+        }
+        return summon(c, mood(c), eggSize());
+    }
+
     private static int mood(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         String m = StringArgumentType.getString(c, "mood");
+        if (m.equals("hunter")) return HollowbellEntity.HUNTER;
         for (int i = 0; i < MOODS.length; i++) if (MOODS[i].equals(m)) return i;
         throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Component.translatable("command.hollowbell.bad_mood")).create();
     }
