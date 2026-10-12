@@ -183,9 +183,9 @@ public final class AutoTest {
             // often they were moved out of him
             if (s.equals("ridelog")) {
                 var c = net.jj.hollowbell.solid.client.SolidClient.CARRY;
-                HollowbellMod.LOG.info("autotest ridelog: riding {} frame {} air {} at {} frame fix at most {} unstuck {} onGround {}", c.riding(),
+                HollowbellMod.LOG.info("autotest ridelog: riding {} frame {} air {} at {} frame fix at most {} unstuck {} by server {} soft pushes {} onGround {}", c.riding(),
                         c.on == null ? "-" : ((HollowbellEntity) c.on).rig.boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[c.on.solidShape().bone[c.frame]]], c.air,
-                        mc.player.position(), String.format("%.3f", net.jj.hollowbell.solid.client.SolidClient.frameFix), net.jj.hollowbell.solid.client.SolidClient.unstuck, mc.player.onGround());
+                        mc.player.position(), String.format("%.3f", net.jj.hollowbell.solid.client.SolidClient.frameFix), net.jj.hollowbell.solid.client.SolidClient.unstuck, net.jj.hollowbell.solid.Solid.unstuckServer, net.jj.hollowbell.solid.client.SolidClient.softPushed, mc.player.onGround());
                 net.jj.hollowbell.solid.client.SolidClient.frameFix = 0;
                 continue;
             }
@@ -194,12 +194,12 @@ public final class AutoTest {
     }
 
     private static void standOn(Minecraft mc, String part) {
+        // (the spot is found on your own game, as you see him: his arms, strands and pods swing a little differently
+        // there than on the server, and you stand on what you see)
         MinecraftServer srv = mc.getSingleplayerServer();
-        if (srv == null) return;
-        srv.execute(() -> {
-            if (srv.getPlayerList().getPlayers().isEmpty()) return;
-            var pl = srv.getPlayerList().getPlayers().get(0);
-            var l = pl.serverLevel().getEntitiesOfClass(HollowbellEntity.class, pl.getBoundingBox().inflate(3000));
+        if (srv == null || mc.player == null || mc.level == null) return;
+        {
+            var l = mc.level.getEntitiesOfClass(HollowbellEntity.class, mc.player.getBoundingBox().inflate(3000));
             if (l.isEmpty()) return;
             HollowbellEntity m = l.get(0);
             var rig = m.rig;
@@ -215,14 +215,20 @@ public final class AutoTest {
             net.minecraft.world.phys.Vec3 at = null;
             for (int b : slices) { at = m.topOfSlice(b); if (at != null) break; }
             if (at == null) { HollowbellMod.LOG.warn("autotest standon {}: no spot", part); return; }
-            pl.getAbilities().flying = false;
-            pl.onUpdateAbilities();
+            final net.minecraft.world.phys.Vec3 spot = at;
             var look = m.position().add(0, 150 * m.bellScale(), 0).subtract(at);
             float yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
-            pl.teleportTo(pl.serverLevel(), at.x, at.y + 0.02, at.z, yaw + 150f, 35f);
-            pl.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            final float fy = yaw;
+            srv.execute(() -> {
+                if (srv.getPlayerList().getPlayers().isEmpty()) return;
+                var pl = srv.getPlayerList().getPlayers().get(0);
+                pl.getAbilities().flying = false;
+                pl.onUpdateAbilities();
+                pl.teleportTo(pl.serverLevel(), spot.x, spot.y + 0.05, spot.z, fy + 150f, 35f);
+                pl.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            });
             HollowbellMod.LOG.info("autotest standon {}: at {}", part, at);
-        });
+        }
     }
 
     private static void view(Minecraft mc, String args) {
