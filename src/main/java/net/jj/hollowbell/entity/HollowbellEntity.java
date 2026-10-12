@@ -5,6 +5,7 @@ import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
+import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
@@ -2026,8 +2027,11 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             particles(net.minecraft.core.particles.ParticleTypes.CLOUD, c.add(0, 2, 0), 120, 80 * s, 0.1);
             // (he comes down: the whole bell on the ground, dust or a splash and a wave, a ring running out)
             Vec3 g = new Vec3(c.x, groundAt(c.x, c.z), c.z);
-            net.jj.hollowbell.fx.BigFx.send(level(), net.jj.hollowbell.fx.BigFx.SLAM, g, 70 * s + 8);
-            net.jj.hollowbell.fx.BigFx.send(level(), net.jj.hollowbell.fx.BigFx.SHOCKWAVE, g, 140 * s + 20, Vec3.ZERO, 30);
+            // (the fixed parts shrink too for a small one: see BellMoves.px)
+            double small = Math.sqrt(Math.min(1f, s));
+            float slam = (float) (70 * s + 8 * small);
+            BigFx.send(level(), slam >= 12 ? BigFx.SLAM : BigFx.STOMP, g, slam);
+            BigFx.send(level(), BigFx.SHOCKWAVE, g, (float) (140 * s + 20 * small), Vec3.ZERO, 30);
         }
         if (deathTime > 190 && deathTime % 8 == 0)
             particles(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK,
@@ -2740,9 +2744,6 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
 
     // ------------------------------------------------------------------ giant against giant (see GiantHull)
 
-    /** his hull's frames: the dome, rim, crown and the spots inside as body; his arms as limbs (not his strands) */
-    private static double[] hullKinds;
-    private static boolean[] hullUse;
     private double[] hullNow;
     private long hullTick = Long.MIN_VALUE;
     private final List<LivingEntity> giantsNear = new ArrayList<>();
@@ -2757,24 +2758,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         long now = level().getGameTime();
         if (hullNow != null && hullTick == now) return hullNow;
         if (!HollowSolid.ready() || isRemoved() || ghost || solidVer == 0) return new double[0];
-        net.jj.hollowbell.solid.SolidShape sh = HollowSolid.shape();
-        if (hullUse == null) {
-            net.jj.hollowbell.rig.BellPieces pc = net.jj.hollowbell.rig.BellPieces.get();
-            boolean[] use = new boolean[sh.frames()];
-            double[] kind = new double[sh.frames()];
-            for (int f = 0; f < sh.frames(); f++) {
-                switch (rig.kind[pc.bone[sh.bone[f]]]) {
-                    case BELL, RIM, CROWN, SPOT -> { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.BODY; }
-                    // (his pods: solid, hung from his strands, so like limbs)
-                    case POD, EGG -> { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.LIMB; }
-                    // (the arms where they leave the rim, the solid part of them: their soft ends may brush another giant)
-                    case ARM -> { if (rig.seg[pc.bone[sh.bone[f]]] <= 1) { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.LIMB; } }
-                    default -> {}
-                }
-            }
-            hullKinds = kind; hullUse = use;
-        }
-        hullNow = net.jj.hollowbell.solid.GiantHull.fromBody(this, HollowSolid.hullBalls(hullUse), hullKinds);
+        hullNow = net.jj.hollowbell.solid.GiantHull.fromBody(this, HollowSolid.hullBalls(HollowSolid.hullUse()), HollowSolid.hullKinds());
         hullTick = now;
         return hullNow;
     }

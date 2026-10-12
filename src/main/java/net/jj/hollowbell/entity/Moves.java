@@ -202,7 +202,13 @@ public final class Moves {
                 st.lashT = Mth.clamp(t / len, 0f, 1f);
                 st.lashDir = (float) Math.atan2(tz, tx);
             }
-            case FLASH -> { in.glow = 1.8f * hump(t, 0, FLASH_AT, FLASH_AT, len); in.squeezeAdd = 0.4f * hump(t, FLASH_AT - 4, FLASH_AT, FLASH_AT + 2, FLASH_AT + 10); }
+            case FLASH -> {
+                // the glow builds, throbbing faster, the lights go out for a moment, then the flash
+                if (t < FLASH_AT - 4) in.glow = 1.4f * smooth(t / (FLASH_AT - 4f)) * (0.85f + 0.15f * Mth.sin(t * 1.6f));
+                else if (t < FLASH_AT - 1) in.glow = 0.3f;
+                else in.glow = 2.6f * (float) Math.exp(-(t - FLASH_AT + 1) / 6f);
+                in.squeezeAdd = 0.4f * hump(t, FLASH_AT - 4, FLASH_AT, FLASH_AT + 2, FLASH_AT + 10);
+            }
             case SPORES -> { in.eggShake = hump(t, 0, SPORES_AT, SPORES_AT, SPORES_AT + 20); in.squeezeAdd = 0.3f * hump(t, SPORES_AT - 3, SPORES_AT, SPORES_AT + 2, SPORES_AT + 12); }
             case POD_BURST -> {
                 // the pods swell while the bell tightens round them (the wind-up), then it all bursts: the bell
@@ -232,8 +238,9 @@ public final class Moves {
                 st.spread = hump(t, 0, WHIRL_UP, WHIRL_CRUSH - 20, WHIRL_CRUSH);
                 st.swirl = hump(t, 10, WHIRL_UP, WHIRL_CRUSH, len);
                 in.spinning = true;
-                // two whole turns, winding up and easing off, so he ends square
-                in.spin = (float) (4 * Math.PI) * smoother(Mth.clamp((t - 20f) / (WHIRL_CRUSH - 5f), 0f, 1f));
+                // one whole turn, winding up and easing off, so he ends square (his strands swirl round the rest of
+                // the way: two turns spun the rim faster than his strands can follow)
+                in.spin = (float) (2 * Math.PI) * smoother(Mth.clamp((t - 20f) / (WHIRL_CRUSH - 5f), 0f, 1f));
                 in.glow = 0.7f * hump(t, 0, WHIRL_UP, WHIRL_UP, WHIRL_UP + 20);
                 if (t > WHIRL_CRUSH - 10 && t < WHIRL_CRUSH + 20) st.curtain = hump(t, WHIRL_CRUSH - 10, WHIRL_CRUSH, WHIRL_CRUSH + 4, WHIRL_CRUSH + 20);
             }
