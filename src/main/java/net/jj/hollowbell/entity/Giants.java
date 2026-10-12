@@ -74,6 +74,25 @@ public final class Giants {
         catch (Exception x) { return null; }
     }
 
+    private static final java.util.Map<Class<?>, java.util.Optional<java.lang.reflect.Method>> RIDDEN =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * A giant somebody is riding (they sit on a seat of its own, never on the giant, so its passengers don't show
+     * it): each giant has a {@code jjRidden()}. Left out of meetings.
+     */
+    public static boolean ridden(@Nullable Entity e) {
+        if (e == null) return false;
+        var m = RIDDEN.computeIfAbsent(e.getClass(), c -> {
+            // (meant to find nothing on a giant from before this was added)
+            try { return java.util.Optional.of(c.getMethod("jjRidden")); }
+            catch (NoSuchMethodException x) { return java.util.Optional.empty(); }
+        });
+        if (m.isEmpty()) return false;
+        try { return Boolean.TRUE.equals(m.get().invoke(e)); }
+        catch (ReflectiveOperationException x) { return false; }
+    }
+
     /**
      * How much harder a blow from another giant lands on a giant of this size, so that two giants of the same size
      * take about as long to fight it out whatever their size (their health grows with size faster than their blows do).
