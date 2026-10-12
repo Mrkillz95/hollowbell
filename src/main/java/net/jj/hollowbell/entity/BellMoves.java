@@ -802,7 +802,7 @@ public final class BellMoves {
             level().addFreshEntity(c);
             clouds.add(c);
             fx(BigFx.CLOUD, new Vec3(p.x, gy, p.z), 4f + 6f * s, Vec3.ZERO, 0x7FBF3F);
-            h.particles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.GRAY_CONCRETE.defaultBlockState()), p, 30, 2 * s + 0.5, 0.2);
+            h.particles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.defaultBlockState()), p, 30, 2 * s + 0.5, 0.2);
         }
         h.sound(h.position().add(0, 50 * s, 0), ModSounds.SPORES, 3f, 0.7f);
         h.sound(h.position().add(0, 50 * s, 0), ModSounds.EGG_BURST, 3f, 0.6f);
@@ -1999,7 +1999,7 @@ public final class BellMoves {
             b.setOwner(h);
             if (target != null) b.setTarget(target);
             level().addFreshEntity(b);
-            h.particles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.GRAY_CONCRETE.defaultBlockState()), at, 20, 1.5 * s() + 0.3, 0.1);
+            h.particles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.defaultBlockState()), at, 20, 1.5 * s() + 0.3, 0.1);
             n++;
         }
         if (n > 0) h.sound(h.position().add(0, 50 * s(), 0), ModSounds.EGG_BURST, 3f, 0.8f);

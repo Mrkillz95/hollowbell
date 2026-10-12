@@ -15,6 +15,8 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -47,8 +49,16 @@ public final class Solid {
     public static void forgetAll(boolean client) { (client ? CLIENT : SERVER).clear(); }
     public static List<SolidBody> bodies(boolean client) { return client ? CLIENT : SERVER; }
 
-    /** counters for the tests and the tick-time report */
+    /** counters for the tick-time report */
     public static long nanosServer, nanosClient, queries;
+    /**
+     * While on, the counters take the thread's own CPU time, which a busy machine doesn't add to (wall time counts every
+     * moment the thread waits for a core). Off, they take wall time, which is cheaper to read.
+     */
+    public static volatile boolean cpuClock;
+    private static final ThreadMXBean THREADS = ManagementFactory.getThreadMXBean();
+
+    public static long clock() { return cpuClock ? THREADS.getCurrentThreadCpuTime() : System.nanoTime(); }
     public static int unstuckServer, unstuckClient;
 
     // ------------------------------------------------------------------ who
@@ -174,7 +184,7 @@ public final class Solid {
         List<SolidBody> bs = client ? CLIENT : SERVER;
         if (bs.isEmpty() || ignoresAll(e)) return list;
         if (!client && e instanceof ServerPlayer) return list;                    // their own game does it
-        long t0 = System.nanoTime();
+        long t0 = clock();
         double feet = e.getBoundingBox().minY, height = e.getBbHeight();
         AABB cur = e.getBoundingBox().deflate(1e-3, 0, 1e-3);
         List<VoxelShape> out = null;
@@ -223,7 +233,7 @@ public final class Solid {
         return true;
     }
 
-    static void time(boolean client, long t0) { long d = System.nanoTime() - t0; if (client) nanosClient += d; else nanosServer += d; }
+    static void time(boolean client, long t0) { long d = clock() - t0; if (client) nanosClient += d; else nanosServer += d; }
 
     /** the highest top of his, under box, that something whose feet were at feet0 should be lifted onto (or NaN) */
     static double surfaceUnder(SolidBody b, AABB box, double feet0, Runs r) {
@@ -249,7 +259,7 @@ public final class Solid {
         List<SolidBody> bs = client ? CLIENT : SERVER;
         if (bs.isEmpty() || moved.y > 0.0 || ignoresAll(e)) return moved;
         if (!client && e instanceof ServerPlayer) return moved;
-        long t0 = System.nanoTime();
+        long t0 = clock();
         double feet0 = e.getBoundingBox().minY;
         AABB nb = e.getBoundingBox().move(moved);
         double best = Double.NaN;
@@ -494,7 +504,7 @@ public final class Solid {
         Entity s = b.solidSelf();
         SolidCache c = b.solidCache();
         if (!b.solidReady()) { c.riding.clear(); c.stuck.clear(); return; }
-        long t0 = System.nanoTime();
+        long t0 = clock();
         var level = s.level();
         // carried along
         for (var en : c.riding.int2ObjectEntrySet()) {
