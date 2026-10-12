@@ -1386,6 +1386,7 @@ public final class BellMoves {
 
     /** an instant kick of the camera, for a blow the kit's own shake (SLAM, SHOCKWAVE, SHAKE) doesn't cover */
     private void thump(Vec3 c, float k) {
+        if (!HollowbellConfig.V.screenShake) return;
         for (ServerPlayer p : level().players()) {
             if (p.distanceToSqr(c) > Mth.square(200 * s() + 80)) continue;
             net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new net.jj.hollowbell.net.ThumpPayload(c.x, c.y, c.z, k * Math.min(1.5f, 1.2f * s())));
