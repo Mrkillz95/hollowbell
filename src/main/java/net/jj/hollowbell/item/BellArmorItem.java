@@ -1,14 +1,12 @@
 package net.jj.hollowbell.item;
 
-import net.jj.hollowbell.Adv;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;

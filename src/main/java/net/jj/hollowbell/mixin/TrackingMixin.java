@@ -25,8 +25,7 @@ public class TrackingMixin {
 
     private static double hollowbell$range(Entity e) {
         if (!(e instanceof HollowbellEntity h)) return -1;
-        return Math.max(
-                160.0, Math.min(BellConfig.V.renderDistance, 300.0 * Math.max(0.15f, h.bellScale()) + 140.0));
+        return Math.max(160.0, Math.min(BellConfig.V.renderDistance, 300.0 * Math.max(0.15f, h.bellScale()) + 140.0));
     }
 
     @WrapOperation(

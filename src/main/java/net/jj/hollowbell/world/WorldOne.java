@@ -375,8 +375,7 @@ public class WorldOne extends SavedData {
      * edge where it would go in (a spot already inside is left for the ward's own push to deal with).
      */
     public Vec3 wardStop(Level l, Vec3 from, Vec3 to) {
-        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl) || BellConfig.V.wardBlocks <= 0)
-            return to;
+        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl) || BellConfig.V.wardBlocks <= 0) return to;
         if (!sl.dimension().location().toString().equals(wardDim)) return to;
         double cx = wardX + 0.5, cz = wardZ + 0.5, r = wardRange() + 16;
         double fx = from.x - cx, fz = from.z - cz;
@@ -889,8 +888,7 @@ public class WorldOne extends SavedData {
         }
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
         if (e == null) return;
-        e.setBellScale(
-                Mth.clamp(BellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+        e.setBellScale(Mth.clamp(BellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
         e.setVariant(HollowbellEntity.CALM);
         e.markWorldOne();
         oneId = e.getUUID(); // named first, so his arrival never meets the cap

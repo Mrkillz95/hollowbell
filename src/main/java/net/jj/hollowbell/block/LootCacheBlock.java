@@ -1,9 +1,7 @@
 package net.jj.hollowbell.block;
 
-import net.jj.hollowbell.Adv;
-
 import com.mojang.serialization.MapCodec;
-import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.world.LootBeams;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;

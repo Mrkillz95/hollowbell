@@ -1,9 +1,7 @@
 package net.jj.hollowbell.item;
 
-import net.jj.hollowbell.Adv;
-
 import java.util.List;
-import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.entity.StingerHook;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;

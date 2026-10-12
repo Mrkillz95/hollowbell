@@ -264,7 +264,9 @@ public final class GiantsBridge {
                 }
                 if (!OpsCommand.has(kv[0])) return out;
                 String bad = kv.length > 1 ? OpsCommand.set(kv[0], kv[1]) : null;
-                out.add(WHO + kv[0] + (bad != null ? " can't be set to " + kv[1] + "." : " = " + OpsCommand.get(kv[0])));
+                out.add(WHO
+                        + kv[0]
+                        + (bad != null ? " can't be set to " + kv[1] + "." : " = " + OpsCommand.get(kv[0])));
             }
             case "paint" -> {
                 // "radius mode playerUUID depth=N" (an older /giants sends no depth: 5 then; a bare number after the
