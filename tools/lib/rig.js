@@ -742,7 +742,8 @@ function buildRig(M, C) {
       const follow = D.bones.map(() => -1);
       let all = 0, arm = null, most = 0;
       for (const [c, m] of faces[s]) { all += m; if (c.startsWith('arm_') && m > most) { arm = c; most = m; } }
-      if (arm && most >= 0.5 * all) {
+      const top = bones[D.bones[0]].parent == null ? -1 : boneIndex.get(bones[D.bones[0]].parent);
+      if (arm && most >= 0.5 * all && top >= 0 && chainOf[top] === arm) {
         D.bones.forEach((b, i) => {
           let best = -1, bm = 7;
           for (const [ab, m] of touch[s][i]) if (chainOf[ab] === arm && m > bm) { best = ab; bm = m; }
@@ -771,7 +772,7 @@ function buildRig(M, C) {
         const own = ownFaces[s][i];
         let out = 0;
         for (const m of outFaces[s][i].values()) out += m;
-        if (own >= 40 || out <= 3 * Math.max(own, 1)) return;
+        if (process.env.HB_NONECK || own >= 40 || out <= 3 * Math.max(own, 1)) return;
         let best = -1, bm = Math.max(20, own);
         for (const [ob, m] of outFaces[s][i]) if (m > bm && before(ob, D.bones[0])) { best = ob; bm = m; }
         if (best >= 0) { follow[i] = best; necks++; }
