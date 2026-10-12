@@ -3,62 +3,42 @@ package net.jj.hollowbell.entity;
 import com.mojang.math.Transformation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
-import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
-import net.jj.hollowbell.net.ThumpPayload;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.CarryPath;
-import net.jj.hollowbell.solid.GiantHull;
 import net.jj.hollowbell.world.NoWait;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.alchemy.PotionContents;
-import net.minecraft.world.item.alchemy.Potions;
-import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.IronBarsBlock;
-import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -67,7 +47,9 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-/** What his strands and arms hold: grabbing, carrying up and setting down, the wrap, the inside of his dome, and trees. */
+/**
+ * What his strands and arms hold: grabbing, carrying up and setting down, the wrap, the inside of his dome, and trees.
+ */
 final class BellHolds {
     private final BellMoves mv;
     private final HollowbellEntity h;
@@ -101,7 +83,8 @@ final class BellHolds {
                 double reach = 14 * s + 4;
                 if (!mv.target.isAlive()
                         || !HollowbellEntity.canCarry(mv.target)
-                        || (mv.target.position().distanceTo(tip) > reach && h.horiz(mv.target.position()) > h.bellRadius())) {
+                        || (mv.target.position().distanceTo(tip) > reach
+                                && h.horiz(mv.target.position()) > h.bellRadius())) {
                     mv.end();
                     return;
                 }
@@ -134,7 +117,10 @@ final class BellHolds {
             mv.lift = Mth.clamp((mv.t - Moves.REACH) / (float) Moves.LIFT, 0f, 1f);
             h.setLift(mv.lift);
             // everything is carried after the pose (afterPose); here only the sting of being held
-            if (mv.grabbed != null && !mv.gentle && mv.t % 30 == 0 && !(mv.grabbed instanceof Player p && p.isCreative())) {
+            if (mv.grabbed != null
+                    && !mv.gentle
+                    && mv.t % 30 == 0
+                    && !(mv.grabbed instanceof Player p && p.isCreative())) {
                 if (mv.grabbed instanceof Player) {
                     mv.blow(mv.grabbed, 4f, tip, 0, 0);
                     mv.sting(mv.grabbed);
@@ -358,7 +344,9 @@ final class BellHolds {
             // how long the way up takes: about a block a tick at his full size, slower when he's small
             var cp = mv.carryPath(mv.arg, who);
             h.ensurePose();
-            float len = cp.new Run(h.restOf(h.toModel(BellMoves.middle(who))), rig.crownY + 1 + mv.carryEnd(who)).length() * s;
+            float len =
+                    cp.new Run(h.restOf(h.toModel(BellMoves.middle(who))), rig.crownY + 1 + mv.carryEnd(who)).length()
+                            * s;
             mv.carryLen = Mth.clamp(Mth.ceil(len / (0.12f + 1.0f * s)), 60, 20 * 30);
             mv.carryT = 0;
             mv.carryU = 0f;
@@ -749,9 +737,11 @@ final class BellHolds {
         mv.inside.clear();
     }
 
-    @Nullable LivingEntity findHarvestMob() {
+    @Nullable
+    LivingEntity findHarvestMob() {
         double r = h.bellRadius() * 1.1;
-        List<LivingEntity> l = mv.level().getEntitiesOfClass(
+        List<LivingEntity> l = mv.level()
+                .getEntitiesOfClass(
                         LivingEntity.class,
                         h.bodyBox().setMaxY(h.getY() + 20 * mv.s() + 4),
                         e -> (e instanceof Animal
@@ -767,7 +757,8 @@ final class BellHolds {
         return l.get(h.getRandom().nextInt(l.size()));
     }
 
-    @Nullable BlockPos findTree() {
+    @Nullable
+    BlockPos findTree() {
         if (!mv.griefing()) return null;
         ServerLevel l = mv.level();
         double r = h.bellRadius();
@@ -795,7 +786,8 @@ final class BellHolds {
     }
 
     /** takes the tree out of the ground as a set of block displays, at most 96 blocks of it */
-    @Nullable BellMoves.Tree pullUpTree(BlockPos base, Vec3 at) {
+    @Nullable
+    BellMoves.Tree pullUpTree(BlockPos base, Vec3 at) {
         ServerLevel l = mv.level();
         if (!l.getBlockState(base).is(BlockTags.LOGS)) return null;
         List<BlockPos> found = new ArrayList<>();
@@ -886,7 +878,9 @@ final class BellHolds {
 
     /** a block of a tree he held, loaded with its chunk after he was put away: it drops where it hangs */
     public static void loadedTree(Entity e, ServerLevel l) {
-        if (!(e instanceof Display.BlockDisplay d) || !d.getTags().contains(BellMoves.TREE_TAG) || BellMoves.LIVE_TREES.contains(d)) return;
+        if (!(e instanceof Display.BlockDisplay d)
+                || !d.getTags().contains(BellMoves.TREE_TAG)
+                || BellMoves.LIVE_TREES.contains(d)) return;
         BlockState st = d.getBlockState();
         // (not while the chunk is still being put in place)
         l.getServer().tell(new TickTask(l.getServer().getTickCount(), () -> {
