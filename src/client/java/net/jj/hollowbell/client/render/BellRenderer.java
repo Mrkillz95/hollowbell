@@ -30,8 +30,8 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.WeakHashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Draws Hollowbell from his baked meshes. The solid and glowing blocks are drawn straight away; the glass is kept
