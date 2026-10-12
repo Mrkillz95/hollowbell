@@ -1,10 +1,21 @@
-# Hollowbell (Java mod) — version 1.11.1
+# Hollowbell (Java mod) — version 1.12.0
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.11.1
+## What's new in 1.12.0
+
+- **He moves with more weight.** Each swim beat shuts the bell fast, then it opens a little wider than it hangs and slowly fills again. His lights brighten a little with every beat.
+- **Big blows land hard.** On a drop, an arm slam, the arm storm, the whirlpool crush, the undertow and the sky dive his body follows the blow tightly, hits the ground and springs back, instead of drifting down softly. The big moves get a short wind-up you can see coming.
+- **One shake per blow.** The screen shakes once for each hit, not twice, and a tiny Hollowbell shakes it less.
+- **Strands.** A strand that lifted something lets out again slowly, like a heavy rope. The lash runs down the strand like a whip, and in the sting volley the strands that shoot snap back hardest.
+- **Glow flash.** His light builds up, goes dark for a moment, then flashes.
+- **Whirlpool.** He turns once instead of twice, so his strands can keep up.
+- **Hits you can see.** Dust where strands drag, sparks where his copper hits stone, his glass ringing when his bell hits the ground, and the sweep and the rings of the sky dive and deep toll hit you when they reach you.
+- **Pods and death.** A pod bursts out before it shrinks away. When he dies his lights flicker out, the bell gives two weak beats, then he sinks and falls the last bit hard.
+
+## What was new in 1.11.1
 
 - **Clean arm ends.** The bits of strand that stuck out of the ends and sides of his big arms are gone, and no small tentacles hang off his arms any more. The arms move just as before.
 - **No height limit.** Ride him, send him or tell him with `/hollowbell height` and he goes as high as you like. In the Nether he stays under the roof.
