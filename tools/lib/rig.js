@@ -596,208 +596,25 @@ function buildRig(M, C) {
     if (!gone[k] && boneOf[k] >= 0 && bones[boneOf[k]].name.startsWith('egg_')) { gone[k] = 1; eggBlocks++; }
   }
 
-  // a light set into an arm's skin lights the arm, not the strand that runs past it, or it swings off the arm with
-  // the strand: one with three or more blocks of an arm round it goes to that arm, again and again until none is left
-  // (inside a patch of lights a light only has the patch round it until the edge has gone), but only near the arm's
-  // own copper or lime, so a strand's own stripe of lights that just touches a loop stays with the strand
+  // a light set into an arm's skin (three or more blocks of one arm round it) lights the arm, not the strand that
+  // runs past it, or it swings off the arm with the strand
   let armLights = 0;
-  const chainOf = bones.map(b => b.name.split('_').slice(0, 2).join('_'));
-  const isArmBone = bones.map(b => b.name.startsWith('arm_'));
-  const isStrandBone = bones.map(b => b.name.startsWith('strand_'));
-  const nearSkin = (k, chain) => {
-    for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) for (let c = -2; c <= 2; c++) {
-      const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
-      if (j === undefined || gone[j] || boneOf[j] < 0 || chainOf[boneOf[j]] !== chain) continue;
-      if (ARM_SKIN.test(C.P[C.PAL[j]])) return true;
-    }
-    return false;
-  };
-  const loopEdge = (k, chain) => {
-    for (const [a, b, c] of N26) {
-      const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
-      if (j === undefined || gone[j] || boneOf[j] < 0 || chainOf[boneOf[j]] !== chain) continue;
-      if (C.P[C.PAL[j]] === 'lime_stained_glass') return true;
-    }
-    return false;
-  };
-  for (let pass = 0; pass < 40; pass++) {
+  {
     const moveTo = [];
     for (let k = 0; k < n; k++) {
-      if (gone[k] || boneOf[k] < 0 || !isStrandBone[boneOf[k]] || !LIGHT.test(C.P[C.PAL[k]])) continue;
+      if (gone[k] || boneOf[k] < 0 || !bones[boneOf[k]].name.startsWith('strand_')) continue;
+      if (!LIGHT.test(C.P[C.PAL[k]])) continue;
       const by = new Map();
       for (const [a, b, c] of N26) {
         const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
-        if (j === undefined || gone[j] || boneOf[j] < 0 || !isArmBone[boneOf[j]]) continue;
+        if (j === undefined || gone[j] || boneOf[j] < 0 || !bones[boneOf[j]].name.startsWith('arm_')) continue;
         by.set(boneOf[j], (by.get(boneOf[j]) || 0) + 1);
       }
-      let best = -1, most = 0;
+      let best = -1, most = 2;
       for (const [b, m] of by) if (m > most) { best = b; most = m; }
-      // (right against a loop's lime, one block of the arm is enough: the light fills the loop)
-      if (best >= 0 && (most >= 3 || loopEdge(k, chainOf[best])) && nearSkin(k, chainOf[best])) moveTo.push([k, best]);
+      if (best >= 0) moveTo.push([k, best]);
     }
     for (const [k, b] of moveTo) { boneOf[k] = b; armLights++; }
-    if (!moveTo.length) break;
-  }
-
-  // every strand in one piece again: a bit of a strand that only touched the rest of it through lights that went to
-  // an arm goes with what it touches most (left as it was, it would float off on its own)
-  let strandBitsMoved = 0;
-  {
-    const seen = new Uint8Array(n);
-    const byChain = new Map();
-    for (let k = 0; k < n; k++) {
-      if (gone[k] || boneOf[k] < 0 || !isStrandBone[boneOf[k]]) continue;
-      const c = chainOf[boneOf[k]];
-      if (!byChain.has(c)) byChain.set(c, []);
-      byChain.get(c).push(k);
-    }
-    for (const [c, ks] of byChain) {
-      const pieces = [];
-      for (const k0 of ks) {
-        if (seen[k0]) continue;
-        const piece = [k0];
-        seen[k0] = 1;
-        for (let q = 0; q < piece.length; q++) {
-          const k = piece[q];
-          for (const [a, b, cc] of N26) {
-            const j = C.find(X[k] + a, Y[k] + b, Z[k] + cc);
-            if (j === undefined || seen[j] || gone[j] || boneOf[j] < 0 || chainOf[boneOf[j]] !== c) continue;
-            seen[j] = 1;
-            piece.push(j);
-          }
-        }
-        pieces.push(piece);
-      }
-      if (pieces.length < 2) continue;
-      pieces.sort((p, q) => q.length - p.length);
-      for (const piece of pieces.slice(1)) {
-        const by = new Map();
-        for (const k of piece) for (const [a, b, cc] of N26) {
-          const j = C.find(X[k] + a, Y[k] + b, Z[k] + cc);
-          if (j === undefined || gone[j] || boneOf[j] < 0 || chainOf[boneOf[j]] === c) continue;
-          by.set(boneOf[j], (by.get(boneOf[j]) || 0) + 1);
-        }
-        let best = -1, most = 0;
-        for (const [b, m] of by) if (m > most && !bones[b].name.startsWith('egg_')) { best = b; most = m; }
-        if (best < 0) continue;
-        for (const k of piece) boneOf[k] = best;
-        strandBitsMoved += piece.length;
-      }
-    }
-  }
-
-  // a strand lying along an arm (most of what it touches outside itself is that arm) moves with the arm: each of its
-  // pieces that lies against the arm follows the piece of the arm it touches most; the rest hang from those as
-  // before. Hung from the arm's root only, it was left hanging when the arm lifted. And a piece held to its own strand
-  // only by a thin neck, but grown on to a pod or another strand all down its side, moves with that (hung from its
-  // own strand it swung away from it and tore the sheet). Only something hung before it can carry it, so no two
-  // pieces ever carry each other
-  let followers = 0, necks = 0;
-  {
-    const F6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
-    const faces = strandDefs.map(() => new Map());
-    const touch = strandDefs.map(D => D.bones.map(() => new Map()));
-    // (and where: the middle of the blocks that touch it)
-    const touchAt = strandDefs.map(D => D.bones.map(() => new Map()));
-    const addAt = (m, b, k) => {
-      const a = m.get(b) || [0, 0, 0, 0];
-      a[0] += X[k]; a[1] += Y[k]; a[2] += Z[k]; a[3]++;
-      m.set(b, a);
-    };
-    const strandOfBone = new Map();
-    strandDefs.forEach((D, s) => D.bones.forEach((b, i) => strandOfBone.set(b, [s, i])));
-    for (let k = 0; k < n; k++) {
-      if (gone[k] || boneOf[k] < 0 || !strandOfBone.has(boneOf[k])) continue;
-      const [s, i] = strandOfBone.get(boneOf[k]);
-      const own = chainOf[boneOf[k]];
-      for (const [a, b, c] of F6) {
-        const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
-        if (j === undefined || gone[j] || boneOf[j] < 0 || chainOf[boneOf[j]] === own) continue;
-        faces[s].set(chainOf[boneOf[j]], (faces[s].get(chainOf[boneOf[j]]) || 0) + 1);
-      }
-      for (const [a, b, c] of N26) {
-        const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
-        if (j === undefined || gone[j] || boneOf[j] < 0 || !isArmBone[boneOf[j]]) continue;
-        touch[s][i].set(boneOf[j], (touch[s][i].get(boneOf[j]) || 0) + 1);
-        addAt(touchAt[s][i], boneOf[j], k);
-      }
-    }
-    // per piece: faces against the rest of its own strand, and against each bone outside it
-    const ownFaces = strandDefs.map(D => D.bones.map(() => 0));
-    const outFaces = strandDefs.map(D => D.bones.map(() => new Map()));
-    for (let k = 0; k < n; k++) {
-      if (gone[k] || boneOf[k] < 0 || !strandOfBone.has(boneOf[k])) continue;
-      const [s, i] = strandOfBone.get(boneOf[k]);
-      for (const [a, b, c] of F6) {
-        const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
-        if (j === undefined || gone[j] || boneOf[j] < 0 || boneOf[j] === boneOf[k]) continue;
-        if (chainOf[boneOf[j]] === chainOf[boneOf[k]]) ownFaces[s][i]++;
-        else {
-          outFaces[s][i].set(boneOf[j], (outFaces[s][i].get(boneOf[j]) || 0) + 1);
-          addAt(touchAt[s][i], boneOf[j], k);
-        }
-      }
-    }
-    // a chain is worked out after every chain whose first bone comes before its own
-    const firstOf = new Map();
-    for (const D of [...armDefs, ...strandDefs]) firstOf.set(chainOf[D.bones[0]], D.bones[0]);
-    const before = (b, first) => {
-      const name = bones[b].name;
-      if (name.startsWith('egg_')) return false;
-      if (isArmBone[b] || isStrandBone[b]) return firstOf.get(chainOf[b]) < first;
-      if (!name.startsWith('pod_')) return true;
-      const p = bones[b].parent == null ? -1 : boneIndex.get(bones[b].parent);
-      return p < 0 || !(isArmBone[p] || isStrandBone[p]) || firstOf.get(chainOf[p]) < first;
-    };
-    strandDefs.forEach((D, s) => {
-      const follow = D.bones.map(() => -1);
-      let all = 0, arm = null, most = 0;
-      for (const [c, m] of faces[s]) { all += m; if (c.startsWith('arm_') && m > most) { arm = c; most = m; } }
-      const top = bones[D.bones[0]].parent == null ? -1 : boneIndex.get(bones[D.bones[0]].parent);
-      if (arm && most >= 0.5 * all && top >= 0 && chainOf[top] === arm) {
-        D.bones.forEach((b, i) => {
-          let best = -1, bm = 7;
-          for (const [ab, m] of touch[s][i]) if (chainOf[ab] === arm && m > bm) { best = ab; bm = m; }
-          follow[i] = best;
-        });
-        // carried all the way down to the last piece that lies on the arm (a piece in between left to hang would be
-        // pulled out long between the two when the arm lifts): one that doesn't touch it goes with the arm's
-        // nearest piece
-        const A = armDefs.find(A => chainOf[A.bones[0]] === arm);
-        const last = follow.reduce((l, f, i) => (f >= 0 ? i : l), -1);
-        const mid = (J, i, end) => J[i].map((v, a) => (v + (i + 1 < J.length ? J[i + 1] : end)[a]) / 2);
-        for (let i = 0; i < last; i++) {
-          if (follow[i] >= 0) continue;
-          const sm = mid(D.joints, i, D.bottom);
-          let best = -1, bd = Infinity;
-          A.bones.forEach((ab, g) => {
-            const am = mid(A.joints, g, A.tip);
-            const d = (am[0] - sm[0]) ** 2 + (am[1] - sm[1]) ** 2 + (am[2] - sm[2]) ** 2;
-            if (d < bd) { bd = d; best = ab; }
-          });
-          follow[i] = best;
-        }
-      }
-      D.bones.forEach((b, i) => {
-        if (i === 0 || follow[i] >= 0) return;
-        const own = ownFaces[s][i];
-        let out = 0;
-        for (const m of outFaces[s][i].values()) out += m;
-        if (process.env.HB_NONECK || own >= 40 || out <= 3 * Math.max(own, 1)) return;
-        let best = -1, bm = Math.max(20, own);
-        for (const [ob, m] of outFaces[s][i]) if (m > bm && before(ob, D.bones[0])) { best = ob; bm = m; }
-        if (best >= 0) { follow[i] = best; necks++; }
-      });
-      if (follow.some(f => f >= 0)) {
-        D.follow = follow;
-        // each carried piece goes with what carries it at the middle of where it touches it
-        D.carryAt = follow.map((f, i) => {
-          const a = f >= 0 && touchAt[s][i].get(f);
-          return a ? [a[0] / a[3], a[1] / a[3], a[2] / a[3]] : null;
-        });
-        followers++;
-      }
-    });
   }
 
   // ---------------- the dome's shape, for the inside: the inner wall's radius at each height, and its outside
@@ -831,11 +648,10 @@ function buildRig(M, C) {
       bands: bandDefs, sectors: sectorDefs,
     },
     stats: {
-      recut, podBitsBack: fixed.podBits, armBitsBack: fixed.armBits, armLights, strandBitsMoved, followers, necks, eggBlocks,
-      rehung,
+      recut, podBitsBack: fixed.podBits, armBitsBack: fixed.armBits, armLights, eggBlocks, rehung,
       piecesMoved: earlyBits, piecesMovedBlocks: earlyVox, strands: strandDefs.length, pods: podDefs.length,
-      eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans,
-      loosePods: pods.loose, looseEggs: eggs.loose,
+      eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose,
+      looseEggs: eggs.loose,
     },
   };
 }
