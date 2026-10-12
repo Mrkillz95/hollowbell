@@ -69,7 +69,6 @@ public final class HollowbellCommand {
     private static final String[] MOODS = {"calm", "hunting", "guardian"};
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
-        // (the same shape as the other giants' for his state: added to the same /hollowbell)
         d.register(OpsCommand.addTo(Commands.literal("hollowbell")).then(windCommand()));
         d.register(Commands.literal("hollowbell")
                 // detail: anyone, cheats or not (it only changes how their own game draws him)
