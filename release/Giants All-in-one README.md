@@ -62,6 +62,17 @@ A book about every giant you have. Right-click it to open it.
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
 
+## New in 1.4.9
+
+- Pitchgut, the Cerberus, the Hollowbell and the Lantern Willow are solid now: you bump into them, stand on them and
+  ride along.
+- Standing on a Hollowbell pod or a Willow limb tip no longer throws you off.
+- The Willow's leaves don't go through his trunk, and you can't get stuck inside it.
+- Smaller Wreckback jar, nothing changes in game.
+
+Inside: Pitchgut 1.33.0, Furrowmaw 1.14.8, Cerberus 2.15.0, Hollowbell 1.10.1, Lantern Willow 1.8.2, Wreckback 1.0.7,
+Swarmforge 1.3.1.
+
 ## New in 1.4.8
 
 - **Every giant can be found, wherever he is.** One summoned far from everyone, hatched from an egg, or left where
