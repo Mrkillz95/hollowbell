@@ -8,6 +8,7 @@ import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
+import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.BellState;
 import net.jj.hollowbell.solid.Solid;
@@ -1569,9 +1570,17 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
                 for (int b : S.bones()) if (rig.touches(pose, slicesNow(), b, m, pad, inv)) { hit = true; break; }
                 if (hit) break;
             }
-            // (a pod hangs from its strand right where you stand on it: you're stung there, but not knocked off)
-            if (hit) moves.sting(e, !Solid.onTop(this, e, 1.5, 1.5));
+            // a pod hangs from its strand right where you stand on it: you're stung there, but not knocked off
+            Solid.Anchor on = Solid.anchorUnder(this, e, 1.5, 1.5);
+            if (!hit && on != null) hit = onStrandPod(BellPieces.get().bone[on.frame()]);
+            if (hit) moves.sting(e, on == null);
         }
+    }
+
+    /** is bone b a pod hanging from a strand */
+    private boolean onStrandPod(int b) {
+        int p = rig.parent[b];
+        return rig.kind[b] == BellRig.Kind.POD && p >= 0 && rig.kind[p] == BellRig.Kind.STRAND;
     }
 
     /** arrows and other things thrown at him: the game can't find him for them, so he looks for them himself */
