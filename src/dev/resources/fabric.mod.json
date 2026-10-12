@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "hollowbell-dev",
+  "version": "${version}",
+  "name": "Hollowbell dev tools",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.jj.hollowbell.client.dev.AutoTest"
+    ]
+  },
+  "depends": {
+    "hollowbell": "*"
+  }
+}

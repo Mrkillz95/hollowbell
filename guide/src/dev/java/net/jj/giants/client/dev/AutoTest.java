@@ -1,5 +1,6 @@
 package net.jj.giants.client.dev;
 
+import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.jj.giants.GiantsGuideMod;
 import net.jj.giants.client.GuideScreen;
@@ -27,12 +28,14 @@ import java.util.List;
  * Lines: join HOST:PORT (a real server instead), wait N, cmd ... (as an operator, own world only), chat /..., guiscale N,
  * gui on|off, guide KEY TAB [SCROLL], close, shot NAME, quit.
  */
-public final class AutoTest {
+public final class AutoTest implements ClientModInitializer {
     private static List<String> script;
     private static int line, wait, joined;
     private static boolean asked;
 
-    public static void init() {
+    @Override
+    public void onInitializeClient() {
+        if (System.getProperty("jj_giants.autotest") == null) return;
         String f = System.getProperty("jj_giants.autotest");
         if (System.getenv("GUIDE_SCRIPT") != null && !System.getenv("GUIDE_SCRIPT").isEmpty()) f = System.getenv("GUIDE_SCRIPT");
         try { script = new ArrayList<>(Files.readAllLines(Path.of(f))); }

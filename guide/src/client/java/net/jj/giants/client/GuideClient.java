@@ -13,7 +13,5 @@ public class GuideClient implements ClientModInitializer {
         GuideItem.opener = () -> Minecraft.getInstance().setScreen(new GuideScreen());
         ClientPlayNetworking.registerGlobalReceiver(ToldPayload.TYPE, (p, ctx) -> Live.told(p));
         ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> Live.forget());
-        // development only: -Djj_giants.autotest=<script> takes pictures, then quits. Never in a normal game.
-        if (System.getProperty("jj_giants.autotest") != null) net.jj.giants.client.dev.AutoTest.init();
     }
 }
