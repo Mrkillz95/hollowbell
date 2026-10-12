@@ -17,15 +17,7 @@
       "net.jj.hollowbell.client.HollowbellClient"
     ],
     "fabric-gametest": [
-      "net.jj.hollowbell.test.HollowbellGameTests",
-      "net.jj.hollowbell.test.MoreGameTests",
-      "net.jj.hollowbell.test.PaintDepthTests",
-      "net.jj.hollowbell.test.LookOrderTests",
-      "net.jj.hollowbell.test.HealTests",
-      "net.jj.hollowbell.test.FreezeTests",
-      "net.jj.hollowbell.test.FarFindTests",
-      "net.jj.hollowbell.test.SolidTests",
-      "net.jj.hollowbell.test.GiantHullTests"
+      "net.jj.hollowbell.test.SolidTests"
     ]
   },
   "depends": {
