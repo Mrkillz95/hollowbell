@@ -697,6 +697,13 @@ function buildRig(M, C) {
     const F6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
     const faces = strandDefs.map(() => new Map());
     const touch = strandDefs.map(D => D.bones.map(() => new Map()));
+    // (and where: the middle of the blocks that touch it)
+    const touchAt = strandDefs.map(D => D.bones.map(() => new Map()));
+    const addAt = (m, b, k) => {
+      const a = m.get(b) || [0, 0, 0, 0];
+      a[0] += X[k]; a[1] += Y[k]; a[2] += Z[k]; a[3]++;
+      m.set(b, a);
+    };
     const strandOfBone = new Map();
     strandDefs.forEach((D, s) => D.bones.forEach((b, i) => strandOfBone.set(b, [s, i])));
     for (let k = 0; k < n; k++) {
@@ -712,6 +719,7 @@ function buildRig(M, C) {
         const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
         if (j === undefined || gone[j] || boneOf[j] < 0 || !isArmBone[boneOf[j]]) continue;
         touch[s][i].set(boneOf[j], (touch[s][i].get(boneOf[j]) || 0) + 1);
+        addAt(touchAt[s][i], boneOf[j], k);
       }
     }
     // per piece: faces against the rest of its own strand, and against each bone outside it
@@ -724,7 +732,10 @@ function buildRig(M, C) {
         const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
         if (j === undefined || gone[j] || boneOf[j] < 0 || boneOf[j] === boneOf[k]) continue;
         if (chainOf[boneOf[j]] === chainOf[boneOf[k]]) ownFaces[s][i]++;
-        else outFaces[s][i].set(boneOf[j], (outFaces[s][i].get(boneOf[j]) || 0) + 1);
+        else {
+          outFaces[s][i].set(boneOf[j], (outFaces[s][i].get(boneOf[j]) || 0) + 1);
+          addAt(touchAt[s][i], boneOf[j], k);
+        }
       }
     }
     // a chain is worked out after every chain whose first bone comes before its own
@@ -777,7 +788,15 @@ function buildRig(M, C) {
         for (const [ob, m] of outFaces[s][i]) if (m > bm && before(ob, D.bones[0])) { best = ob; bm = m; }
         if (best >= 0) { follow[i] = best; necks++; }
       });
-      if (follow.some(f => f >= 0)) { D.follow = follow; followers++; }
+      if (follow.some(f => f >= 0)) {
+        D.follow = follow;
+        // each carried piece goes with what carries it at the middle of where it touches it
+        D.carryAt = follow.map((f, i) => {
+          const a = f >= 0 && touchAt[s][i].get(f);
+          return a ? [a[0] / a[3], a[1] / a[3], a[2] / a[3]] : null;
+        });
+        followers++;
+      }
     });
   }
 
