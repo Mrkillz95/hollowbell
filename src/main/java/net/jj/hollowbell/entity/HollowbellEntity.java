@@ -845,6 +845,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     // ------------------------------------------------------------------ where he goes
 
     public void setGoal(@Nullable Vec3 g) {
+        if (g != null && !Double.isFinite(g.x + g.y + g.z)) return;
         goal = g == null ? null : keptIn(g);
         comeTo = null; holdThere = false; comeLostAt = 0;
         if (g != null) { setStay(false); wakeUp(); }
