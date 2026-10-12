@@ -15,8 +15,8 @@ const { load } = require('./lib/load');
 const { classify } = require('./lib/classify');
 const { buildRig } = require('./lib/rig');
 const { isGlass } = require('./lib/names');
-const { thinSpeckles, dropFloating, eggBitsAway } = require('./lib/tidy');
-const { rebuildStrands } = require('./lib/strands');
+const { thinSpeckles, dropFloating, eggBitsAway, armStrays } = require('./lib/tidy');
+const { rebuildStrands, offTheArms } = require('./lib/strands');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'src', 'main', 'resources', 'hollowbell');
@@ -47,7 +47,10 @@ function main() {
   const eggBits = eggBitsAway(vox, R.bones, palette, pal);
   console.log(`egg clumps left off: ${eggBlocks} blocks, and ${eggBits} stray egg clump blocks in the strands and arms`
     + ' turned into the blocks round them');
-  const strands = rebuildStrands(vox, R.rig, R.bones, pal);
+  const strays = armStrays(vox, R.rig.bones, palette);
+  console.log(`arm ends tidied: ${strays} bits of strand sticking out of the arms taken off`);
+  const hidden = offTheArms(R.rig, R.rig.bones);
+  const strands = rebuildStrands(vox, R.rig, R.rig.bones, pal, hidden);
   const st = strands;
   console.log(`strands drawn again, all alike: ${st.before} blocks before, ${st.after} now (${st.joined} tops joined,`
     + ` ${st.stalks} pod stalks, ${st.moved} points moved round arms and pods, ${st.shortened} cut short)`);

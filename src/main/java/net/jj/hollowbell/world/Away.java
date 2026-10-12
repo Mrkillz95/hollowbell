@@ -398,7 +398,9 @@ public final class Away extends SavedData {
             WorldOne.get(l.getServer()).renamed(was, h.getUUID());
         }
         int ground = NoWait.heightOrGuess(l, Heightmap.Types.MOTION_BLOCKING, bx, bz);
-        double y = Mth.clamp(ground + r.lift, l.getMinBuildHeight() + 1, l.getMaxBuildHeight() - 1);
+        // (as high as he was, however high; under a roof, below it)
+        double y = Math.max(ground + r.lift, l.getMinBuildHeight() + 1);
+        if (l.dimensionType().hasCeiling()) y = Math.min(y, NoWait.ceiling(l) - 1);
         h.moveTo(s.x, y, s.z, h.getYRot(), 0f);
         h.backFromAway(r.going ? new Vec3(r.toX, ground, r.toZ) : null, r.stay);
         l.addFreshEntity(h);

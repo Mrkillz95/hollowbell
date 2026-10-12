@@ -1117,6 +1117,7 @@ public final class BellMoves {
         int n = 3 + (int) (3 * s);
         for (int k = 0; k < n; k++) {
             int strand = h.getRandom().nextInt(rig.strands.length);
+            if (rig.strands[strand].hidden()) continue;
             Vec3 from = h.strandTipWorld(strand).add(0, 2 + 3 * s, 0);
             Vec3 to;
             if (!near.isEmpty() && h.getRandom().nextInt(3) > 0) {
@@ -2127,7 +2128,7 @@ public final class BellMoves {
         h.ensurePose();
         int best = -1; double bd = Double.MAX_VALUE;
         for (var S : rig.strands) {
-            if (S.k() == arg && move != Moves.NONE) continue;
+            if (S.hidden() || (S.k() == arg && move != Moves.NONE)) continue;
             Vec3 tip = h.strandTipWorld(S.k());
             double d = Math.pow(tip.x - p.x, 2) + Math.pow(tip.z - p.z, 2);
             // the long ones, so it can reach down
@@ -2142,6 +2143,7 @@ public final class BellMoves {
         h.ensurePose();
         List<double[]> all = new ArrayList<>();
         for (var S : rig.strands) {
+            if (S.hidden()) continue;
             Vec3 tip = h.strandTipWorld(S.k());
             all.add(new double[]{tip.distanceToSqr(p), S.k()});
         }

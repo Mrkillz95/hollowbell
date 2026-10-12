@@ -198,7 +198,7 @@ public final class HollowbellCommand {
                                         .suggests((c, b) -> SharedSuggestionProvider.suggestResource(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.keySet(), b))
                                         .executes(c -> spareKind(c, false))))
                                 .then(Commands.argument("targets", net.minecraft.commands.arguments.EntityArgument.entities()).executes(c -> spareWho(c, false)))))
-                .then(Commands.literal("height").requires(OP).then(Commands.argument("blocks", FloatArgumentType.floatArg(0f, 400f))
+                .then(Commands.literal("height").requires(OP).then(Commands.argument("blocks", FloatArgumentType.floatArg(0f))
                         .executes(c -> near(c, h -> h.setCruise(FloatArgumentType.getFloat(c, "blocks")), "height"))))
                 .then(Commands.literal("ride").requires(OP).executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();

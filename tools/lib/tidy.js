@@ -127,4 +127,67 @@ function eggBitsAway(vox, bones, palette, pal) {
   return changes.length;
 }
 
-module.exports = { thinSpeckles, dropFloating, eggBitsAway, key, index };
+/**
+ * Bits of strands grown into the big arms (bone, calcite, a light...) that stick out of an arm's copper: off its end
+ * down to the ground, or out of its side. Each block of an arm that isn't its copper or lime glass stays only when
+ * it sits in the copper (five or more of the blocks round it are the arm's copper; a light inside a lime loop may be
+ * a little way from it). Then anything of an arm left on its own, off the arm, goes too.
+ */
+function armStrays(vox, bones, palette) {
+  const SKIN = /^(weathered_copper|oxidized_copper|lime_stained_glass)$/;
+  const LIGHT = /(froglight|sea_lantern|glowstone|shroomlight)$/;
+  const name = i => palette[vox[i][3]].replace('minecraft:', '');
+  const armOf = bones.map(b => (/^arm_(\d+)_/.exec(b.name) || [])[1]);
+  const skin = new Set();
+  for (let i = 0; i < vox.length; i++) {
+    const a = armOf[vox[i][4]];
+    if (a !== undefined && SKIN.test(name(i))) skin.add(a + ':' + key(vox[i][0], vox[i][1], vox[i][2]));
+  }
+  const around = (a, x, y, z, r) => {
+    let n = 0;
+    for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
+      if (skin.has(a + ':' + key(x + dx, y + dy, z + dz))) n++;
+    }
+    return n;
+  };
+  let kept = 0, gone = 0;
+  for (let i = 0; i < vox.length; i++) {
+    const v = vox[i], a = armOf[v[4]];
+    if (a !== undefined && !SKIN.test(name(i))) {
+      const sits = LIGHT.test(name(i)) ? around(a, v[0], v[1], v[2], 3) > 0 : around(a, v[0], v[1], v[2], 1) >= 5;
+      if (!sits) { gone++; continue; }
+    }
+    vox[kept++] = v;
+  }
+  vox.length = kept;
+  // (bits of an arm cut off from the rest of it)
+  const at = index(vox);
+  const comp = new Int32Array(vox.length).fill(-1), sizes = [], arms = [];
+  for (let s0 = 0; s0 < vox.length; s0++) {
+    const a = armOf[vox[s0][4]];
+    if (a === undefined || comp[s0] >= 0) continue;
+    const id = sizes.length, st = [s0];
+    comp[s0] = id;
+    let size = 0;
+    while (st.length) {
+      const i = st.pop(); size++;
+      const [x, y, z] = vox[i];
+      for (const [dx, dy, dz] of N26) {
+        const j = at.get(key(x + dx, y + dy, z + dz));
+        if (j !== undefined && comp[j] < 0 && armOf[vox[j][4]] === a) { comp[j] = id; st.push(j); }
+      }
+    }
+    sizes.push(size); arms.push(a);
+  }
+  const biggest = new Map();
+  sizes.forEach((sz, id) => { if (!biggest.has(arms[id]) || sizes[biggest.get(arms[id])] < sz) biggest.set(arms[id], id); });
+  kept = 0;
+  for (let i = 0; i < vox.length; i++) {
+    if (comp[i] >= 0 && biggest.get(arms[comp[i]]) !== comp[i]) { gone++; continue; }
+    vox[kept++] = vox[i];
+  }
+  vox.length = kept;
+  return gone;
+}
+
+module.exports = { thinSpeckles, dropFloating, eggBitsAway, armStrays, key, index };

@@ -26,7 +26,32 @@ function norm(a) { const l = len(a) || 1; return [a[0] / l, a[1] / l, a[2] / l];
  * pal: name to palette index. Returns how many blocks the strands had before and have now, how many were joined on
  * and held, and how many of their points were moved round things or cut short.
  */
-function rebuildStrands(vox, rig, bones, pal) {
+/**
+ * No strand hangs from an arm: one hung from an arm's root (just under the rim) hangs from the rim sector over it
+ * instead, from the rim itself, so it stays put when the arm swings; one hung low down an arm (a bit at its end)
+ * isn't drawn at all.
+ * Returns the strands not drawn.
+ */
+function offTheArms(rig, bones) {
+  const hidden = new Set();
+  rig.strands.forEach((D, si) => {
+    const top = bones[D.bones[0]];
+    if (!top.parent || !top.parent.startsWith('arm_')) return;
+    const [x, y, z] = D.joints[0];
+    if (y < rig.rimY - 40) { hidden.add(si); return; }
+    const a = Math.atan2(z, x);
+    let best = null, bd = Infinity;
+    for (const S of rig.sectors) {
+      const d = Math.abs(Math.atan2(Math.sin(S.angle - a), Math.cos(S.angle - a)));
+      if (d < bd) { bd = d; best = S; }
+    }
+    top.parent = bones[best.bone].name;
+    D.offArm = true;
+  });
+  return hidden;
+}
+
+function rebuildStrands(vox, rig, bones, pal, hidden = new Set()) {
   const isStrand = bones.map(b => b.name.startsWith('strand_'));
   const boneIndex = new Map(bones.map((b, i) => [b.name, i]));
   const before = vox.filter(v => isStrand[v[4]]).length;
@@ -118,10 +143,39 @@ function rebuildStrands(vox, rig, bones, pal) {
     return null;
   };
 
+  // a strand taken off an arm hangs from the nearest spot of the rim or the dome it can reach without going through
+  // an arm, and its top goes up to that spot, so it swings about it
+  const shell = [];
+  for (const v of vox) if (/^(rim_|bell_)/.test(bones[v[4]].name)) shell.push(v);
+  for (const D of rig.strands) {
+    if (!D.offArm) continue;
+    const p = D.joints[0];
+    const all = shell.map(v => [(v[0] - p[0]) ** 2 + (v[1] - p[1]) ** 2 + (v[2] - p[2]) ** 2, v]).sort((u, w) => u[0] - w[0]);
+    for (const [, v] of all.slice(0, 600)) {
+      const d = sub(p, v), l = len(d);
+      let clear = true;
+      for (let t = 1; t <= l && clear; t += 0.5) {
+        const q = [v[0] + d[0] * t / l, v[1] + d[1] * t / l, v[2] + d[2] * t / l];
+        for (const [a, b, c] of ball(2)) {
+          const j = taken.get(key(Math.round(q[0]) + a, Math.round(q[1]) + b, Math.round(q[2]) + c));
+          if (j !== undefined && isArm[vox[j][4]]) { clear = false; break; }
+        }
+      }
+      if (!clear) continue;
+      bones[D.bones[0]].parent = bones[v[4]].name;
+      D.joints[0] = [v[0], v[1], v[2]];
+      delete D.offArm;
+      break;
+    }
+    // (none it can reach: it's left off)
+    if (D.offArm) { hidden.add(rig.strands.indexOf(D)); delete D.offArm; }
+  }
+
   const STEP = 0.5;
   const ends = [];
   let moved = 0, shortened = 0;
   rig.strands.forEach((D, si) => {
+    if (hidden.has(si)) { D.drawn = []; D.hidden = true; return; }
     const pts = [...D.joints, D.bottom];
     const parent = bones[D.bones[0]].parent;
     const parentBone = parent == null ? -1 : boneIndex.get(parent);
@@ -235,6 +289,24 @@ function rebuildStrands(vox, rig, bones, pal) {
     }
     return best;
   };
+  // the nearest block of bone b whose straight way down to p doesn't go through an arm (or else the nearest one)
+  const clearFrom = (b, p, r) => {
+    const all = (byBone.get(b) || []).map(v => [(v[0] - p[0]) ** 2 + (v[1] - p[1]) ** 2 + (v[2] - p[2]) ** 2, v]);
+    all.sort((u, w) => u[0] - w[0]);
+    for (const [, v] of all.slice(0, 400)) {
+      const d = sub(p, v), l = len(d);
+      let clear = true;
+      for (let t = 0; t <= l && clear; t += 0.5) {
+        const q = [v[0] + d[0] * t / l, v[1] + d[1] * t / l, v[2] + d[2] * t / l];
+        for (const [a, bb, c] of ball(r)) {
+          const j = taken.get(key(Math.round(q[0]) + a, Math.round(q[1]) + bb, Math.round(q[2]) + c));
+          if (j !== undefined && isArm[vox[j][4]]) { clear = false; break; }
+        }
+      }
+      if (clear) return v;
+    }
+    return all.length ? all[0][1] : null;
+  };
   const nearestOf = (b, p) => {
     let best = null, bd = Infinity;
     for (const v of byBone.get(b) || []) {
@@ -249,7 +321,7 @@ function rebuildStrands(vox, rig, bones, pal) {
     let from;
     if (isStrand[pb]) from = onLine(pb, E.top);
     else {
-      const v = nearestOf(pb, E.top);
+      const v = clearFrom(pb, E.top, E.r);
       if (!v) continue;
       from = [v[0], v[1], v[2]];
     }
@@ -290,4 +362,4 @@ function rebuildStrands(vox, rig, bones, pal) {
   return { before, after: laid.size, joined, stalks, moved, shortened };
 }
 
-module.exports = { rebuildStrands };
+module.exports = { rebuildStrands, offTheArms };
