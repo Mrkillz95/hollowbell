@@ -1,10 +1,15 @@
-# Hollowbell (Java mod) — version 1.10.1
+# Hollowbell (Java mod) — version 1.10.2
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.10.1
+## What's new in 1.10.2
+
+- **No more grey egg clumps on him.** The dark lumpy balls of grey concrete, honeycomb and dripstone are gone. Shed, spore cloud and egg rain still work: what drops off his strands now is a pale glowing egg.
+- **His tentacles hold together.** The lights in the lime loops on his arms stay on the arm, the pods' glass heads are whole, and the strands and arms bend without gaps or blocks out of place.
+
+## What was new in 1.10.1
 
 - **Standing on a pod carries you now.** The strand a pod hangs from still stings you there, but it doesn't knock you off any more.
 
@@ -307,7 +312,7 @@ The world's own one comes down in the middle of the **Bell Hollows**, his own bi
 - **His bell pulses.** The dome squeezes in and lets go, and a ripple runs round the rim. Each pulse pushes him along. His arms swing with it.
 - **Climbing**, the bell squeezes hard and quick and shoots him up, with his arms and strands pulled in under him. **Sinking**, the bell opens wide and his strands float up and spread out.
 - **He goes after things up high.** Fly near him or build up a pillar and he'll climb until you're among his strands.
-- **His strands sway** and trail behind him when he moves, and swing back when he stops. The pods bob and the egg clumps wobble.
+- **His strands sway** and trail behind him when he moves, and swing back when he stops. The pods bob.
 - **At night** the crown, the glowing spots and the froglight in his strands glow, and the glow pulses with him.
 - **Touching a strand stings:** poison and slowness.
 
@@ -360,10 +365,10 @@ Bigger ones hit harder and wider, smaller ones less.
 | Arm slam | One of his eight arms lifts up and slaps down on the ground. Everything under the arm gets hit. |
 | Arm wrap | An arm curls round you and squeezes. Hit that arm four times and it lets go. |
 | Pulse wave | A hard pulse sends out a shock wave: knockback and nausea, and it knocks flyers out of the air. |
-| Shed | Egg clumps break off and hatch into **Bellings**, small jellies that drift after you and sting. |
-| Spore cloud | Egg clumps burst into clouds of poison that drift after you. |
+| Shed | Eggs drop off his strands and hatch into **Bellings**, small jellies that drift after you and sting. |
+| Spore cloud | The eggs in his strands burst into clouds of poison that drift after you. |
 | Pod burst | Every pod swells and sprays poison goo straight down. |
-| Egg rain | He tips toward you and glows for two seconds, then big egg clumps drop off. A ring on the ground shows where each will land. They splat hard, and most hatch into Bellings. |
+| Egg rain | He tips toward you and glows for two seconds, then big eggs drop off. A ring on the ground shows where each will land. They splat hard, and most hatch into Bellings. |
 
 ### Heavy
 
@@ -391,7 +396,6 @@ A very small Hollowbell has no room inside: he squeezes you and drops you instea
 | The crown (the pale patch right on top of his dome) | 3 times (4 from inside) |
 | The five glowing spots (the four yellow balls under the dome and the glowing vase in the middle) | 2.5 times (3.5 from inside) |
 | A pod | full, and the pod pops |
-| An egg clump | a little |
 | The copper and bone (dome, rim, arms, strands) | very little |
 
 - **Pods** hang among the strands and can be reached from the ground. Each popped pod takes 1% of his health on top of the hit, and drops a pod.
@@ -569,7 +573,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 - `podRegrowSeconds` (150): how long a popped pod takes to start growing back
 - `podPopShare` (0.01): how much of his health a popped pod takes
 - `podsToSink` (0.34): how many of his pods have to be popped before he sinks, and `sunkSeconds` (30): how long he stays down at least
-- `shedCount`: how many egg clumps he sheds at a time (0 = never)
+- `shedCount`: how many eggs he sheds at a time (0 = never)
 - `giantArmor` (0.7): how much of a blow from another boss he takes
 - `fightGiants` (on): whether he picks fights with the other bosses
 - `meetings` (on): whether he fights or keeps away from the giants he meets. `meetRange` (160): how far off he notices one, times his size (kept between 48 and 320). `yieldAt` (0.25): the share of health where a giant backs down (0 = they fight to the death). `meetCooldown` (10): minutes before the same two meet again
