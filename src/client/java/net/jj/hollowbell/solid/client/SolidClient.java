@@ -34,8 +34,22 @@ public final class SolidClient {
     private static double rx, ry, rz, rxo, ryo, rzo;
     private static Matrix4f[] scratch;
 
+    public static int traceTicks;
+    static String tr(net.minecraft.world.entity.player.Player p) {
+        String f = "-";
+        if (CARRY.on != null) {
+            var c = Solid.frames(CARRY.on);
+            var u0 = Solid.toWorld(c, CARRY.frame, new org.joml.Vector3f(0, 0, 0));
+            var up = Solid.toWorld(c, CARRY.frame, new org.joml.Vector3f(0, 1, 0)).subtract(u0).normalize();
+            f = CARRY.frame + " tilt " + String.format("%.1f", Math.toDegrees(Math.acos(Math.min(1, up.y)))) + " air " + CARRY.air;
+        }
+        return String.format("pos %.3f %.3f %.3f v %.3f %.3f %.3f og %s on %s", p.getX(), p.getY(), p.getZ(),
+                p.getDeltaMovement().x, p.getDeltaMovement().y, p.getDeltaMovement().z, p.onGround(), f);
+    }
+
     public static void tick(Minecraft mc) {
         restore();
+        if (traceTicks > 0 && mc.player != null) { traceTicks--; net.jj.hollowbell.HollowbellMod.LOG.info("trace start {}", tr(mc.player)); }
         LocalPlayer p = mc.player;
         if (p == null || mc.level == null) { clear(); return; }
         if (p.isSpectator() || p.isPassenger() || p.noPhysics) { clear(); return; }
@@ -43,9 +57,21 @@ public final class SolidClient {
         // carried first (moved with the part you stand on), then out of him if he's still into you
         if (p.getAbilities().flying || (p.isInWater() && !p.onGround())) CARRY.clear();
         else CARRY.step(p, Solid.bodies(true));
+        if (traceTicks > 0) {
+            net.jj.hollowbell.HollowbellMod.LOG.info("trace carried {}", tr(p));
+            for (SolidBody b : Solid.bodies(true)) {
+                Solid.Runs r = Solid.column(b, p.getX(), p.getZ(), p.getY() - 6, p.getY() + 3, true, new Solid.Runs());
+                StringBuilder sb = new StringBuilder();
+                for (int j = 0; j < r.n; j++) sb.append(String.format(" [f%d k%d %.2f..%.2f]", r.frame[j], r.kind[j], r.bot[j], r.top[j]));
+                net.jj.hollowbell.HollowbellMod.LOG.info("trace runs{}", sb);
+            }
+        }
         for (SolidBody b : Solid.bodies(true)) {
             if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
+            int[] tf = {-1};
+            double td = Solid.depthIn(b, p.getBoundingBox(), 0.08, tf, true);
             if (Solid.unstick(b, p, 0.08)) {
+                if (traceTicks > 0) net.jj.hollowbell.HollowbellMod.LOG.info("trace UNSTICK depth {} frame {} -> {}", td, tf[0], tr(p));
                 unstuck++; Solid.unstuckClient++;
                 // (the spot under you looked for again where you are now)
                 CARRY.clear();
@@ -57,7 +83,7 @@ public final class SolidClient {
         if (!CARRY.riding() || CARRY.air > 0) {
             for (SolidBody b : Solid.bodies(true)) {
                 if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
-                if (Solid.softPush(b, p)) softPushed++;
+                if (Solid.softPush(b, p)) { softPushed++; if (traceTicks > 0) net.jj.hollowbell.HollowbellMod.LOG.info("trace SOFT {}", tr(p)); }
             }
         }
         Solid.nanosClient += System.nanoTime() - t0;
