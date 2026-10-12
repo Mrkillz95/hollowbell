@@ -43,9 +43,10 @@ public final class SolidClient {
         // carried first (moved with the part you stand on), then out of him if he's still into you
         if (p.getAbilities().flying || (p.isInWater() && !p.onGround())) CARRY.clear();
         else CARRY.step(p, Solid.bodies(true));
+        boolean onHim = CARRY.riding() && CARRY.air == 0;
         for (SolidBody b : Solid.bodies(true)) {
             if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
-            if (Solid.unstick(b, p, 0.08)) {
+            if (Solid.unstick(b, p, 0.08, onHim && CARRY.on == b)) {
                 unstuck++; Solid.unstuckClient++;
                 // (the spot under you looked for again where you are now)
                 CARRY.clear();

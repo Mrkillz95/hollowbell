@@ -308,6 +308,14 @@ public final class Solid {
      * sideways is much nearer, so you end up standing on the part that came up under you.
      */
     public static Vec3 freeSpot(SolidBody b, Entity e, Vec3 from, Vec3 push) {
+        return freeSpot(b, e, from, push, false);
+    }
+
+    /**
+     * onHim: it stood on him, so out sideways it goes onto a top of his if there's one near (a swinging pod or a
+     * neighbour bumping a rider would otherwise push them off the edge), and it isn't shoved on.
+     */
+    public static Vec3 freeSpot(SolidBody b, Entity e, Vec3 from, Vec3 push, boolean onHim) {
         var dim = e.getDimensions(e.getPose());
         if (clear(b, e, dim.makeBoundingBox(from))) return from;
         AABB body = b.solidBox();
@@ -328,14 +336,16 @@ public final class Solid {
             for (double dd = step; dd < Math.min(bestD, far); dd += step) {
                 Vec3 c = from.add(Math.cos(ang) * dd, 0, Math.sin(ang) * dd);
                 if (!clear(b, e, dim.makeBoundingBox(c))) continue;
-                double cost = dd * (turn == 0 ? 1.0 : 1.15);
+                boolean floor = !onHim || floorUnder(b, c);
+                // (off him, for one that stood on him: only if nothing of his to stand on is near)
+                double cost = dd * (turn == 0 ? 1.0 : 1.15) * (floor ? 1.0 : 3.0);
                 if (cost < bestD) { best = c; bestD = cost; }
-                break;
+                if (floor) break;
             }
         }
         if (best != null) {
             // (shoved on a little the way the part is going, if there's room, so it isn't in its way again at once)
-            if (ph > 0.02) {
+            if (ph > 0.02 && !onHim) {
                 Vec3 on = best.add(push.x / ph * Math.min(ph, 1.0), 0, push.z / ph * Math.min(ph, 1.0));
                 if (clear(b, e, dim.makeBoundingBox(on))) return on;
             }
@@ -345,20 +355,31 @@ public final class Solid {
         return new Vec3(from.x, Math.max(body.maxY + 1, groundNow(e.level(), from.x, from.z, body.maxY + 1)), from.z);
     }
 
+    /** a top of his up to a block under a spot (something standing there would stand on him) */
+    static boolean floorUnder(SolidBody b, Vec3 at) {
+        Runs r = column(b, at.x, at.z, at.y - 1.0, at.y + 0.05, false, new Runs());
+        for (int j = 0; j < r.n; j++) if (r.top[j] >= at.y - 1.0 && r.top[j] <= at.y + 0.05) return true;
+        return false;
+    }
+
     /** moves e out of him if it's inside; true if it was */
-    public static boolean unstick(SolidBody b, Entity e, double in) {
+    public static boolean unstick(SolidBody b, Entity e, double in) { return unstick(b, e, in, false); }
+
+    /** onHim: e stood on him and is carried: kept on him where it can be, and not shoved (see freeSpot) */
+    public static boolean unstick(SolidBody b, Entity e, double in, boolean onHim) {
         int[] fr = {-1};
         if (!b.solidBox().intersects(e.getBoundingBox()) || depthIn(b, e.getBoundingBox(), in, fr, true) <= 0.02) return false;
         SolidCache c = frames(b);
         Vec3 push = fr[0] >= 0 ? motion(c, fr[0], toRest(c, fr[0], e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(), new Vector3f())) : Vec3.ZERO;
-        Vec3 to = freeSpot(b, e, e.position(), push);
+        Vec3 to = freeSpot(b, e, e.position(), push, onHim);
         if (e instanceof ServerPlayer sp) sp.teleportTo(sp.serverLevel(), to.x, to.y + 0.01, to.z, sp.getYRot(), sp.getXRot());
         else e.setPos(to.x, to.y + 0.01, to.z);
         e.resetFallDistance();
         // shoved the way the part went (a little), never flung
         Vec3 v = e.getDeltaMovement();
         double k = Math.min(1.0, 0.6 / Math.max(0.6, push.length()));
-        e.setDeltaMovement(new Vec3(push.x * k, Math.max(v.y, Math.max(0, push.y * k)), push.z * k));
+        double up = Math.max(v.y, Math.max(0, push.y * k));
+        e.setDeltaMovement(onHim ? new Vec3(0, up, 0) : new Vec3(push.x * k, up, push.z * k));
         e.hurtMarked = true;
         return true;
     }

@@ -1,6 +1,5 @@
 package net.jj.hollowbell.entity;
 
-import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
@@ -11,6 +10,7 @@ import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.BellState;
+import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.world.BellWorld;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
