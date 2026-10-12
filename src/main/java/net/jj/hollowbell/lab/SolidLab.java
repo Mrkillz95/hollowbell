@@ -371,7 +371,6 @@ public final class SolidLab {
             if (Boolean.getBoolean("lab.shots") && sceneWorst[0] > 0) picture(s, sceneT[0]);
         }
         say(log, String.format("ALL: %d cells over every key pose (%s); worst pose %d (%s)", total, kindTot, worstN, worstAt));
-        say(log, String.format("keeping his parts apart: %.3f ms a tick on average (%d ticks)", net.jj.hollowbell.rig.BellAnim.apartNanos / 1e6 / Math.max(1, steps), steps));
     }
 
     static int sum(Map<Integer, Integer> m) { int t = 0; for (int v : m.values()) t += v; return t; }

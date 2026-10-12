@@ -16,7 +16,7 @@ const { classify } = require('./lib/classify');
 const { buildRig } = require('./lib/rig');
 const { isGlass } = require('./lib/names');
 const { thinSpeckles, dropFloating, eggBitsAway } = require('./lib/tidy');
-const { cutSlices } = require('./lib/slices');
+const { rebuildStrands } = require('./lib/strands');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'src', 'main', 'resources', 'hollowbell');
@@ -38,17 +38,24 @@ function main() {
   // 1.1: a little less cluttered
   const floating = dropFloating(vox, R.bones);
   const thinned = thinSpeckles(vox, R.bones, palette, pal);
+  // the egg clumps are left off him: each keeps its place on its strand or arm (where it breaks off and falls from),
+  // but none of its blocks
+  let kept = 0;
+  for (const v of vox) if (!R.bones[v[4]].name.startsWith('egg_')) vox[kept++] = v;
+  const eggBlocks = vox.length - kept;
+  vox.length = kept;
   const eggBits = eggBitsAway(vox, R.bones, palette, pal);
-  console.log(`tidied: ${eggBits} stray egg clump blocks in the strands and arms turned into the blocks round them`);
+  console.log(`egg clumps left off: ${eggBlocks} blocks, and ${eggBits} stray egg clump blocks in the strands and arms`
+    + ' turned into the blocks round them');
+  const strands = rebuildStrands(vox, R.rig, R.bones, pal);
+  const st = strands;
+  console.log(`strands drawn again, all alike: ${st.before} blocks before, ${st.after} now (${st.joined} tops joined,`
+    + ` ${st.stalks} pod stalks, ${st.moved} points moved round arms and pods, ${st.shortened} cut short)`);
   console.log(`tidied: ${R.stats.eggsTakenOff} egg clumps and ${R.stats.floatingTakenOff + floating} floating blocks taken off, ${thinned.arm} arm speckles and ${thinned.strand} strand dots thinned out`);
   const occupied = new Map();
   const key = (x, y, z) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
   for (let i = 0; i < vox.length; i++) occupied.set(key(vox[i][0], vox[i][1], vox[i][2]), i);
   const glass = palette.map(isGlass);
-  // each piece of an arm or strand is drawn in slices along it (see BellPieces in the game): which slice each
-  // block is in
-  const { sliceOf, slices } = cutSlices(vox, R.rig);
-  console.log(`slices: ${slices.reduce((a, b) => a + b, 0)} in all`);
 
   // which faces show: a face is hidden by an opaque neighbour, or by the same glass, but only inside one bone;
   // where two bones meet, both faces stay (they can move apart). The one exception is the same glass running on
@@ -85,8 +92,7 @@ function main() {
       let show = true;
       if (j !== undefined) {
         const [, , , q, c, al2] = vox[j];
-        // (blocks of one piece in two slices can open apart when it bends: the faces between them stay)
-        const same = b === c && sliceOf[i] === sliceOf[j];
+        const same = b === c;
         if (!same && bellish[b] && bellish[c] && glass[p] && q === p) show = false;
         if (same && al === 255 && al2 === 255 && (!glass[q] || (glass[p] && q === p))) show = false;
         if (same && al < 255 && al2 < 255 && !glass[q]) show = false;
@@ -98,7 +104,7 @@ function main() {
   }
   console.log(`${vox.length} voxels, ${faceCount} faces showing`);
 
-  // write the model: gzip( "HBEL" version palette bones[ name count voxels[x y z pal faces] alpha slices ] )
+  // write the model: gzip( "HBEL" version palette bones[ name count voxels[x y z pal faces alpha] ] )
   const perBone = bones.map(() => []);
   for (let i = 0; i < vox.length; i++) if (faces[i]) perBone[vox[i][4]].push(i);
   const parts = [];
@@ -107,7 +113,7 @@ function main() {
   const i32 = v => { const b = Buffer.alloc(4); b.writeInt32BE(v); parts.push(b); };
   const utf = s => { const d = Buffer.from(s, 'utf8'); i16(d.length); parts.push(d); };
   parts.push(Buffer.from('HBEL'));
-  i32(2);
+  i32(1);
   i32(palette.length); palette.forEach(utf);
   i32(bones.length);
   bones.forEach((b, bi) => {
@@ -125,13 +131,6 @@ function main() {
     const fades = list.some(i => vox[i][5] < 255);
     u8(fades ? 1 : 0);
     if (fades) { const a = Buffer.alloc(list.length); list.forEach((i, j) => a.writeUInt8(vox[i][5], j)); parts.push(a); }
-    // version 2: how many slices the bone is drawn in, and each block's slice
-    u8(slices[bi]);
-    if (slices[bi] > 1) {
-      const a = Buffer.alloc(list.length);
-      list.forEach((i, j) => a.writeUInt8(sliceOf[i], j));
-      parts.push(a);
-    }
   });
   fs.mkdirSync(OUT, { recursive: true });
   const bin = zlib.gzipSync(Buffer.concat(parts), { level: 9 });

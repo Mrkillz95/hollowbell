@@ -1,10 +1,17 @@
-# Hollowbell (Java mod) — version 1.10.2
+# Hollowbell (Java mod) — version 1.10.3
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.10.2
+## What's new in 1.10.3
+
+- **He moves like he did in 1.9.8 again.** His big arms, his lights and the way he swims are back exactly as they were. The 1.10.0 pass that pushed his arms and strands apart is gone, so a strand can pass through an arm now and then again.
+- **His small tentacles are all alike.** Each one is a round tentacle, thick at the top and thinning to a point, in bone and calcite with copper bands and glowing dots. No ragged sheets or loose bits, and they go round his arms and pods instead of through them.
+- **His lights glow from every side.** Seen from below, the lights on his arms, strands, pods and spots were drawn dim, nearly black. Now they shine.
+- **The egg clumps stay off**, like in 1.10.2.
+
+## What was new in 1.10.2
 
 - **No more grey egg clumps on him.** The dark lumpy balls of grey concrete, honeycomb and dripstone are gone. Shed, spore cloud and egg rain still work: what drops off his strands now is a pale glowing egg.
 - **His tentacles hold together.** The lights in the lime loops on his arms stay on the arm, the pods' glass heads are whole, and the strands and arms bend without gaps or blocks out of place.
