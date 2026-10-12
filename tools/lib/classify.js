@@ -1,7 +1,7 @@
 // Sorts every voxel of the build into a part: the bell, rim, crown, the five glowing spots,
 // the 8 arms, the strands, the pods and the egg clumps.
 //
-// What the build is made of (found by looking at it, see DESIGN.md "Guesses"):
+// What the build is made of (found by looking at it):
 //  - y 132+ is the bell: a thin double dome of copper ribs and glass, the rim band at y 132-146.
 //  - Inside the dome hangs a hollow glowing vase (glowstone and yellow glass) under the crown, and four
 //    yellow glass balls around it that show through the dome as the glowing spots. The vase is the fifth spot.

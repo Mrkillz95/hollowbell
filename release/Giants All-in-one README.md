@@ -32,9 +32,6 @@ For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
 
-To get new versions on their own, run `watch-all.sh` in the Hollowbell folder. It waits for a new all-in-one jar
-and installs it.
-
 ## The Giants Guide
 
 A book about every giant you have. Right-click it to open it.
