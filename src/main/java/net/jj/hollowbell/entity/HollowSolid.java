@@ -4,6 +4,7 @@ import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
+import net.jj.hollowbell.solid.GiantHull;
 import net.jj.hollowbell.solid.SolidShape;
 
 import java.util.BitSet;
@@ -137,6 +138,40 @@ public final class HollowSolid {
     }
 
     private static volatile float[][] hullBalls;
+    /** his hull's frames: the dome, rim, crown and the spots inside as body; his arms as limbs (not his strands) */
+    private static volatile boolean[] hullUse;
+    private static volatile double[] hullKinds;
+
+    public static boolean[] hullUse() {
+        if (hullUse == null) hullFrames();
+        return hullUse;
+    }
+
+    public static double[] hullKinds() {
+        if (hullKinds == null) hullFrames();
+        return hullKinds;
+    }
+
+    private static synchronized void hullFrames() {
+        if (hullUse != null) return;
+        SolidShape sh = shape();
+        BellRig rig = BellRig.get();
+        BellPieces pc = BellPieces.get();
+        boolean[] use = new boolean[sh.frames()];
+        double[] kind = new double[sh.frames()];
+        for (int f = 0; f < sh.frames(); f++) {
+            switch (rig.kind[pc.bone[sh.bone[f]]]) {
+                case BELL, RIM, CROWN, SPOT -> { use[f] = true; kind[f] = GiantHull.BODY; }
+                // (his pods: solid, hung from his strands, so like limbs)
+                case POD, EGG -> { use[f] = true; kind[f] = GiantHull.LIMB; }
+                // (the arms where they leave the rim, the solid part of them: their soft ends may brush another giant)
+                case ARM -> { if (rig.seg[pc.bone[sh.bone[f]]] <= 1) { use[f] = true; kind[f] = GiantHull.LIMB; } }
+                default -> { }
+            }
+        }
+        hullKinds = kind;
+        hullUse = use;
+    }
 
     /**
      * The balls his hull is made of (see GiantHull.balls; the same format, x y z r per ball, by frame): each used frame's
@@ -184,7 +219,8 @@ public final class HollowSolid {
     /** works it out off the main thread at start, so the first one seen doesn't stall the server */
     public static void preload() {
         Thread t = new Thread(() -> {
-            try { shape(); } catch (Throwable e) { HollowbellMod.LOG.error("Hollowbell solid shape failed", e); }
+            // (his hull for the other giants too: built here, not on the server thread the first time one is near)
+            try { shape(); hullBalls(hullUse()); } catch (Throwable e) { HollowbellMod.LOG.error("Hollowbell solid shape failed", e); }
         }, "Hollowbell solid shape");
         t.setDaemon(true);
         t.start();

@@ -6,6 +6,8 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.Arrays;
+
 /**
  * How Hollowbell moves, with weight. Run once a tick on both sides (the server for hits and for where the things he
  * holds are, the client for drawing), and blended between the last two ticks when a frame is drawn.
@@ -27,6 +29,8 @@ public final class BellAnim {
     private final float[] groundAt;
     /** per chain: how much a move has hold of it right now, eased in quickly and let go slowly */
     private final float[] held;
+    /** each chain's length as drawn now (a strand reeled in to lift something is shorter) */
+    private final float[] stretchNow;
     /** per chain: the last step one of its joints was pushed by the ground or his bell (a knock, not a swing) */
     private final long[] knockedAt;
     private boolean started;
@@ -83,6 +87,8 @@ public final class BellAnim {
         target = new float[nc][];
         eased = new float[nc][];
         held = new float[nc];
+        stretchNow = new float[nc];
+        Arrays.fill(stretchNow, 1f);
         knockedAt = new long[nc];
         java.util.Arrays.fill(knockedAt, -100);
         groundAt = new float[nc];
@@ -154,7 +160,8 @@ public final class BellAnim {
         spring(RIPPLE, (0.35f + 0.8f * Math.abs(in.pulse) + 0.5f * x[SINK]) * (1f - 0.6f * x[SLEEP]), 0.1f, 1f, first);
         spring(DEATH, deathK, 0.08f, 1f, first);
         spring(DROOP, in.tired ? 1f : 0f, 0.05f, 1f, first);
-        spring(GLOW, in.glow, 0.22f, 1f, first);
+        // (a flash comes up at once; it fades slowly)
+        spring(GLOW, in.glow, in.glow > x[GLOW] + 0.3f ? 0.6f : 0.22f, 1f, first);
         spring(SWELL, in.podSwell, 0.15f, 0.9f, first);
         spring(SHAKE, in.eggShake, 0.2f, 1f, first);
         // turning: the whirlpool winds him round and he settles back square afterwards
@@ -231,7 +238,11 @@ public final class BellAnim {
             float[] p = st.chain[c], q = prev[c], raw = target[c], tg = eased[c];
             int m = ch.points() - 1;
             rig.anchor(st, ch, mBody, mAnchor);
-            targets(ch, st, mAnchor, raw);
+            // a strand drawn in to lift something pays out again slowly when it lets go, a heavy wet rope dropping
+            // back, not at once
+            float reel = !ch.arm && ch.index == st.grabStrand ? 1f - 0.8f * st.grabLift : 1f;
+            stretchNow[c] = first ? reel : stretchNow[c] + (reel - stretchNow[c]) * (reel > stretchNow[c] ? 0.06f : 0.3f);
+            targets(ch, st, mAnchor, raw, stretchNow[c]);
             if (first) {
                 System.arraycopy(raw, 0, tg, 0, raw.length);
                 System.arraycopy(raw, 0, p, 0, raw.length);
@@ -515,19 +526,15 @@ public final class BellAnim {
     // ------------------------------------------------------------------ the shape asked for
 
     /** the joints of a chain in the shape the moment asks for, hung from its anchor */
-    private void targets(BellRig.Chain ch, BellState st, Matrix4f anchor, float[] out) {
+    private void targets(BellRig.Chain ch, BellState st, Matrix4f anchor, float[] out, float stretch) {
         anchor.transformPosition(tv.set(ch.joints[0]));
         out[0] = tv.x; out[1] = tv.y; out[2] = tv.z;
         qRot.set(qBody);
         int m = ch.points() - 1;
         for (int i = 0; i < m; i++) {
             qLocal.identity();
-            float stretch = 1f;
             if (ch.arm) armLocal(ch, i, m, st, qLocal);
-            else {
-                strandLocal(ch, i, m, st, qLocal);
-                if (ch.index == st.grabStrand) stretch = 1f - 0.8f * st.grabLift;
-            }
+            else strandLocal(ch, i, m, st, qLocal);
             qRot.mul(qLocal);
             tv2.set(ch.joints[i + 1]).sub(ch.joints[i]).mul(stretch);
             qRot.transform(tv2);

@@ -30,6 +30,8 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.WeakHashMap;
+import java.util.Map;
 
 /**
  * Draws Hollowbell from his baked meshes. The solid and glowing blocks are drawn straight away; the glass is kept
@@ -92,13 +94,17 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         finally { ghostFade = -1; }
     }
 
+    private final Map<HollowbellEntity, Matrix4f[][]> poses = new WeakHashMap<>();
+
     @Override
     public void render(HollowbellEntity e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int packedLight) {
         BellMeshes meshes = BellMeshes.INSTANCE;
         if (!meshes.ensureReady()) return;
-        Matrix4f[] draw = rig.newPose();
         BellPieces pieces = BellPieces.get();
-        Matrix4f[] hang = pieces.newHang();
+        // (each one's own, kept from frame to frame: every matrix is written again each time, and his glass is drawn
+        // after everything else, so two of him can't share them)
+        Matrix4f[][] kept = poses.computeIfAbsent(e, x -> new Matrix4f[][]{rig.newPose(), pieces.newHang(), pieces.newPose()});
+        Matrix4f[] draw = kept[0], hang = kept[1];
         e.fillState(partial);
         rig.computePose(e.state, draw, hang);
         float s = e.bellScale();
@@ -144,7 +150,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         // with no gaps; further off a piece at a time
         boolean sliced = lod == BellMeshes.FULL;
         Matrix4f[] units = draw;
-        if (sliced) { units = pieces.newPose(); pieces.pose(e.state, draw, hang, units); }
+        if (sliced) { units = kept[2]; pieces.pose(e.state, draw, hang, units); }
         int unitCount = sliced ? pieces.count : rig.boneCount();
 
         RenderType rt = RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
@@ -234,7 +240,9 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         float sl = e.state.sleep;
         // asleep: the glow sinks to a dim, slow breathing
         float pulse = 0.88f + 0.12f * Mth.sin(t * Mth.lerp(sl, 0.045f, 0.02f) + rig.part[b] * 1.9f + rig.kind[b].ordinal());
-        float k = (pulse + 0.6f * e.state.glow) * (1f - 0.62f * sl);
+        // each squeeze of the bell brightens him a little, each refill dims him
+        float beat = Mth.clamp(e.state.squeeze, -0.4f, 1.6f);
+        float k = (pulse + 0.18f * beat + 0.6f * e.state.glow) * (1f - 0.62f * sl);
         return Mth.lerp(e.state.death, k, lit * 0.5f);
     }
 
@@ -286,6 +294,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 order.add(new float[]{c.lengthSquared(), u, redLoops && gl.lod == BellMeshes.FULL ? 1 : 0});
             }
             order.sort((a, b2) -> Float.compare(b2[0], a[0]));
+            float unit = Math.max(1e-3f, gl.entity.getScale(new Vector3f()).x);
             for (float[] o : order) {
                 int u = (int) o[1];
                 BellMeshes.Mesh m = meshes.mesh(gl.lod, o[2] > 0 ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
@@ -293,7 +302,9 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 // the camera sits at 0 0 0 here: where is that in the bone's own blocks
                 boneWorld.invert(inv);
                 inv.transformPosition(cam.set(0, 0, 0));
-                meshes.keepSorted(m, cam, 3f);
+                // (sorted again once the camera has moved 3 world blocks, more the further off it is: counted in his
+                // own blocks, a small one sorted every glass mesh many times a second)
+                meshes.keepSorted(m, cam, Math.max(3f, 0.03f * (float) Math.sqrt(o[0])) / unit);
                 mv.set(gl.view).mul(boneWorld);
                 upload(shader.MODEL_VIEW_MATRIX, mv);
                 boneWorld.get3x3(rot).normal().transpose();
