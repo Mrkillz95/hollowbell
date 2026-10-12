@@ -201,9 +201,12 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 // the light and the colour once a bone: its slices lie close enough to the same way
                 if (b != lastBone) {
                     lastBone = b;
-                    boneWorld.get3x3(rot).normal().transpose();
-                    rot.transform(l0.set(l0w)).normalize();
-                    rot.transform(l1.set(l1w)).normalize();
+                    if (kind == BellMeshes.GLOW) glowLight(l0, l1);
+                    else {
+                        boneWorld.get3x3(rot).normal().transpose();
+                        rot.transform(l0.set(l0w)).normalize();
+                        rot.transform(l1.set(l1w)).normalize();
+                    }
                     if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
                     if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
                     float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying);
@@ -221,6 +224,15 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         if (nether) Lighting.setupNetherLevel(); else Lighting.setupLevel();
         rt.clearRenderState();
         glass.add(new Glass(entity, view, proj, units, sliced, lod, lit * (1f - 0.2f * dying), hurt, e.state.red, fs, fe, l0w, l1w, shown));
+    }
+
+    /**
+     * The lights for a glowing block: one shining on it from each side, so every face of it is at full brightness
+     * (lit like the rest of him, from above, the faces under a light were drawn dim, nearly black from below)
+     */
+    static void glowLight(Vector3f l0, Vector3f l1) {
+        l0.set(5f, 5f, 5f);
+        l1.set(-5f, -5f, -5f);
     }
 
     private static void upload(Uniform u, Matrix4f m) { if (u != null) { u.set(m); u.upload(); } }
