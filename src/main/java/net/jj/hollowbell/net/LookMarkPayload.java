@@ -11,8 +11,11 @@ public record LookMarkPayload(int entityId) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<LookMarkPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "look_mark"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, LookMarkPayload> CODEC = StreamCodec.of(
-            (buf, p) -> buf.writeVarInt(p.entityId()), buf -> new LookMarkPayload(buf.readVarInt()));
+    public static final StreamCodec<RegistryFriendlyByteBuf, LookMarkPayload> CODEC =
+            StreamCodec.of((buf, p) -> buf.writeVarInt(p.entityId()), buf -> new LookMarkPayload(buf.readVarInt()));
 
-    @Override public CustomPacketPayload.Type<LookMarkPayload> type() { return TYPE; }
+    @Override
+    public CustomPacketPayload.Type<LookMarkPayload> type() {
+        return TYPE;
+    }
 }

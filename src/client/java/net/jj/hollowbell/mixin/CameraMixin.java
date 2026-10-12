@@ -3,6 +3,7 @@ package net.jj.hollowbell.mixin;
 import net.jj.hollowbell.client.BeingHim;
 import net.jj.hollowbell.client.Shake;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.fx.client.BigFxClient;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
@@ -20,25 +21,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(Camera.class)
 public abstract class CameraMixin {
-    @Shadow protected abstract void move(float forward, float up, float side);
-    @Shadow protected abstract void setPosition(double x, double y, double z);
-    @Shadow protected abstract void setRotation(float yaw, float pitch);
+    @Shadow
+    protected abstract void move(float forward, float up, float side);
+
+    @Shadow
+    protected abstract void setPosition(double x, double y, double z);
+
+    @Shadow
+    protected abstract void setRotation(float yaw, float pitch);
 
     @Inject(method = "setup", at = @At("TAIL"), require = 0)
-    private void hollowbell$view(BlockGetter world, Entity focus, boolean detached, boolean mirror, float partial, CallbackInfo ci) {
+    private void hollowbell$view(
+            BlockGetter world, Entity focus, boolean detached, boolean mirror, float partial, CallbackInfo ci) {
         HollowbellEntity m = BeingHim.him();
         if (m != null && focus == m) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) setRotation(mc.player.getViewYRot(partial), mc.player.getViewXRot(partial));
             float s = m.bellScale();
-            setPosition(Mth.lerp(partial, m.xo, m.getX()), Mth.lerp(partial, m.yo, m.getY()) + 120 * s, Mth.lerp(partial, m.zo, m.getZ()));
+            setPosition(
+                    Mth.lerp(partial, m.xo, m.getX()),
+                    Mth.lerp(partial, m.yo, m.getY()) + 120 * s,
+                    Mth.lerp(partial, m.zo, m.getZ()));
             float z = BeingHim.zoom();
             float back = Math.min(700f, (300 * s + 26) * z), up = Math.min(300f, (80 * s + 10) * z);
             move(-back, up, 0);
         }
         float[] o = Shake.offset(partial);
         if (o != null) move(o[2], o[1], o[0]);
-        float[] o2 = net.jj.hollowbell.fx.client.BigFxClient.cameraShake(partial);
+        float[] o2 = BigFxClient.cameraShake(partial);
         if (o2 != null) move(o2[2], o2[1], o2[0]);
     }
 }

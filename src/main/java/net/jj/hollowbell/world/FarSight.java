@@ -1,5 +1,8 @@
 package net.jj.hollowbell.world;
 
+import java.util.ArrayList;
+import java.util.List;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -15,9 +18,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Seeing him from far off. The game only sends a player the creatures within a few hundred blocks, and with
@@ -35,15 +35,17 @@ public final class FarSight {
         if (--clock > 0) return;
         clock = 20;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, FarSightPayload.TYPE)) continue;
-            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new FarSightPayload(listFor(p)));
+            if (!ServerPlayNetworking.canSend(p, FarSightPayload.TYPE)) continue;
+            ServerPlayNetworking.send(p, new FarSightPayload(listFor(p)));
         }
     }
 
     /** is this player already being sent this one as a real creature? */
     public static boolean tracked(ServerPlayer p, HollowbellEntity h) {
         if (!(h.level() instanceof ServerLevel sl)) return false;
-        Object te = ((ChunkMapAccess) sl.getChunkSource().chunkMap).hollowbell$entityMap().get(h.getId());
+        Object te = ((ChunkMapAccess) sl.getChunkSource().chunkMap)
+                .hollowbell$entityMap()
+                .get(h.getId());
         return te != null && ((TrackedEntityAccess) te).hollowbell$seenBy().contains(p.connection);
     }
 
@@ -57,7 +59,8 @@ public final class FarSight {
         for (HollowbellEntity h : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying())) {
             if (Mth.square(h.getX() - p.getX()) + Mth.square(h.getZ() - p.getZ()) > r2) continue;
             if (tracked(p, h)) continue;
-            out.add(new FarSightPayload.Far(h.getUUID(), h.getX(), h.getY(), h.getZ(), h.getYRot(), h.bellScale(), h.variant(), h.asleep()));
+            out.add(new FarSightPayload.Far(
+                    h.getUUID(), h.getX(), h.getY(), h.getZ(), h.getYRot(), h.bellScale(), h.variant(), h.asleep()));
             if (out.size() >= 16) return out;
         }
         String dim = l.dimension().location().toString();
@@ -71,16 +74,26 @@ public final class FarSight {
                 ListTag rot = r.body.getList("Rotation", Tag.TAG_FLOAT);
                 if (!rot.isEmpty()) yaw = rot.getFloat(0);
             }
-            out.add(new FarSightPayload.Far(r.id, s.x, groundUnder(l, s.x, s.z) + r.lift, s.z, yaw, r.scale, r.variant, r.body.getBoolean("Asleep")));
+            out.add(new FarSightPayload.Far(
+                    r.id,
+                    s.x,
+                    groundUnder(l, s.x, s.z) + r.lift,
+                    s.z,
+                    yaw,
+                    r.scale,
+                    r.variant,
+                    r.body.getBoolean("Asleep")));
             if (out.size() >= 16) return out;
         }
         return out;
     }
 
-    /** the ground under a spot: the loaded world if it's there, otherwise what the generator would make (nothing loads) */
+    /**
+     * the ground under a spot: the loaded world if it's there, otherwise what the generator would make (nothing loads)
+     */
     public static int groundUnder(ServerLevel l, double x, double z) {
         int bx = Mth.floor(x), bz = Mth.floor(z);
-        if (net.jj.hollowbell.world.NoWait.loaded(l, new BlockPos(bx, 0, bz))) return l.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
+        if (NoWait.loaded(l, new BlockPos(bx, 0, bz))) return l.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
         var src = l.getChunkSource();
         return src.getGenerator().getBaseHeight(bx, bz, Heightmap.Types.MOTION_BLOCKING, l, src.randomState());
     }

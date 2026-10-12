@@ -1,12 +1,12 @@
 package net.jj.hollowbell.rig;
 
+import java.util.Arrays;
+import java.util.BitSet;
 import net.minecraft.util.Mth;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-
-import java.util.Arrays;
-import java.util.BitSet;
 
 /**
  * How Hollowbell moves, with weight. Run once a tick on both sides (the server for hits and for where the things he
@@ -24,6 +24,7 @@ public final class BellAnim {
     private final BellRig rig;
     /** the pose as of the end of the last tick (chains and body), and the one before, for blending frames */
     private final BellState now;
+
     private final float[][] prev, last;
     private final float[][] target, eased;
     private final float[] groundAt;
@@ -33,14 +34,34 @@ public final class BellAnim {
     private final float[] stretchNow;
     /** per chain: the last step one of its joints was pushed by the ground or his bell (a knock, not a swing) */
     private final long[] knockedAt;
+
     private boolean started;
     private long steps;
 
     // body springs: value, speed, and the value a tick ago
     /** 0 to 1 while he's dead and sinking away into the ground */
     private float sinkingIn;
-    private static final int LOWER = 0, TX = 1, TZ = 2, SQUEEZE = 3, RIPPLE = 4, DEATH = 5, DROOP = 6, GLOW = 7, SWELL = 8, SHAKE = 9,
-            SPIN = 10, DX = 11, DY = 12, DZ = 13, CLIMB = 14, SINK = 15, FOLD = 16, SLEEP = 17, SPLAY = 18, N = 19;
+
+    private static final int LOWER = 0,
+            TX = 1,
+            TZ = 2,
+            SQUEEZE = 3,
+            RIPPLE = 4,
+            DEATH = 5,
+            DROOP = 6,
+            GLOW = 7,
+            SWELL = 8,
+            SHAKE = 9,
+            SPIN = 10,
+            DX = 11,
+            DY = 12,
+            DZ = 13,
+            CLIMB = 14,
+            SINK = 15,
+            FOLD = 16,
+            SLEEP = 17,
+            SPLAY = 18,
+            N = 19;
     private final float[] x = new float[N], v = new float[N], xl = new float[N];
     private float timeNow;
 
@@ -61,6 +82,7 @@ public final class BellAnim {
         public float sleep;
         /** ticks since he died, or -1 */
         public float dying = -1f;
+
         public boolean tired, red;
         /** the ground under his middle, in model blocks above his base (NaN if not known) */
         public float groundUnder = Float.NaN;
@@ -68,6 +90,7 @@ public final class BellAnim {
         public Ground ground = (mx, mz) -> Float.NaN;
         /** filled by the move: how far the bell is brought down (0-1), the flip (a turn, x z), the spin, the glow... */
         public float drop, flipX, flipZ, spin, glow, podSwell, eggShake, squeezeAdd, lowerAdd;
+
         public boolean spinning;
         /** 0-1: his body follows the asks tightly (a blow landing) instead of with its usual slow weight */
         public float snap;
@@ -76,11 +99,28 @@ public final class BellAnim {
         /** the move of the moment and how far into it (Moves.pose fills them in): when the move changes or starts
          * over, what the old one asked of his body is let go of over a moment instead of all at once */
         public int move = -1;
+
         public float moveT;
-        public void clearAsks() { drop = 0; flipX = 0; flipZ = 0; spin = 0; glow = 0; podSwell = 0; eggShake = 0; squeezeAdd = 0; lowerAdd = 0; spinning = false; snap = 0; rippleAdd = 0; }
+
+        public void clearAsks() {
+            drop = 0;
+            flipX = 0;
+            flipZ = 0;
+            spin = 0;
+            glow = 0;
+            podSwell = 0;
+            eggShake = 0;
+            squeezeAdd = 0;
+            lowerAdd = 0;
+            spinning = false;
+            snap = 0;
+            rippleAdd = 0;
+        }
     }
 
-    public interface Ground { float at(float mx, float mz); }
+    public interface Ground {
+        float at(float mx, float mz);
+    }
 
     public BellAnim(BellRig rig) {
         this.rig = rig;
@@ -94,9 +134,9 @@ public final class BellAnim {
         stretchNow = new float[nc];
         Arrays.fill(stretchNow, 1f);
         knockedAt = new long[nc];
-        java.util.Arrays.fill(knockedAt, -100);
+        Arrays.fill(knockedAt, -100);
         groundAt = new float[nc];
-        java.util.Arrays.fill(groundAt, Float.NaN);
+        Arrays.fill(groundAt, Float.NaN);
         for (int c = 0; c < nc; c++) {
             prev[c] = now.chain[c].clone();
             last[c] = now.chain[c].clone();
@@ -106,12 +146,16 @@ public final class BellAnim {
     }
 
     /** the state as of the last tick, for the moves to read and fill in */
-    public BellState now() { return now; }
+    public BellState now() {
+        return now;
+    }
 
     /** forget the swinging: everything goes straight to where it is asked to be on the next tick */
-    public void reset() { started = false; }
+    public void reset() {
+        started = false;
+    }
 
-    // ------------------------------------------------------------------ one tick
+    // one tick
 
     public void step(In in) {
         BellState st = now;
@@ -137,13 +181,17 @@ public final class BellAnim {
         // dying: he sinks slowly like a parachute, his lights stuttering, then the strands give and he collapses,
         // hitting the ground hard
         float deathK = d < 0 ? 0f : d < 110f ? 0.6f * smoothK(d / 110f) : 0.6f + 0.4f * fallK((d - 110f) / 28f);
-        if (d >= 0f && d < 40f) in.glow = Math.max(in.glow, 1.2f * Math.abs(Mth.sin(d * 0.7f) * Mth.sin(d * 0.23f)) * (1f - d / 40f));
+        if (d >= 0f && d < 40f)
+            in.glow = Math.max(in.glow, 1.2f * Math.abs(Mth.sin(d * 0.7f) * Mth.sin(d * 0.23f)) * (1f - d / 40f));
         if (d >= 0f) {
             in.squeezeAdd -= 0.5f * humpK(d, 40, 55, 100, 110);
             for (float c : DEATH_BREAKS) now.spread = Math.max(now.spread, 0.15f * humpK(d, c, c + 2, c + 4, c + 14));
         }
         float sn = Mth.clamp(Math.max(in.snap, d >= 108f && d <= 146f ? 1f : 0f), 0f, 1f);
-        if (popSnap > 0) { sn = Math.max(sn, 1f); popSnap--; }
+        if (popSnap > 0) {
+            sn = Math.max(sn, 1f);
+            popSnap--;
+        }
         spring(SLEEP, in.sleep, 0.05f, 1f, first);
         // asleep, the bell settles part way down and everything hanging from it lies on the ground
         float fold = Math.max(Math.max(Math.max(in.drop, in.sunk), deathK), 0.6f * x[SLEEP]);
@@ -155,7 +203,11 @@ public final class BellAnim {
         float ground = Float.isNaN(in.groundUnder) ? 0f : Mth.clamp(in.groundUnder, -40f, 20f);
         float sinkIn = in.dying < 0 ? 0f : Mth.clamp((in.dying - 190f) / 120f, 0f, 1f);
         sinkingIn = sinkIn;
-        float lowerT = in.hangLower + x[FOLD] * (rig.rimY - 12f - ground) + sinkIn * (rig.crownY + 10f) + in.lowerAdd + 4f * x[DROOP];
+        float lowerT = in.hangLower
+                + x[FOLD] * (rig.rimY - 12f - ground)
+                + sinkIn * (rig.crownY + 10f)
+                + in.lowerAdd
+                + 4f * x[DROOP];
         spring(LOWER, lowerT, Mth.lerp(sn, 0.06f, 0.6f), Mth.lerp(sn, 0.8f, 0.7f), first);
 
         // leaning into the way he's going, heavily
@@ -163,7 +215,10 @@ public final class BellAnim {
         float h = (float) Math.sqrt(hx * hx + hz * hz);
         float lean = 0.2f * Math.min(1f, h / ref);
         float tx = in.hangTiltX + in.flipX, tz = in.hangTiltZ + in.flipZ + 0.22f * deathK;
-        if (h > 1e-4f) { tx += hz / h * lean; tz += -hx / h * lean; }
+        if (h > 1e-4f) {
+            tx += hz / h * lean;
+            tz += -hx / h * lean;
+        }
         boolean flipping = in.flipX * in.flipX + in.flipZ * in.flipZ > 0.01f;
         float tk = Mth.lerp(sn, flipping ? 0.05f : 0.03f, 0.25f), tzz = Mth.lerp(sn, 0.6f, 0.5f);
         spring(TX, tx, tk, tzz, first);
@@ -172,7 +227,12 @@ public final class BellAnim {
         // the bell: the pulse squeezes it, climbing keeps it narrow, sinking opens it wide like a parachute
         float sq = in.pulse + 0.35f * x[CLIMB] - 1.0f * x[SINK] - 0.45f * x[DROOP] + in.squeezeAdd - 0.3f * x[SLEEP];
         spring(SQUEEZE, sq * (1f - deathK), 0.35f, 0.75f, first);
-        spring(RIPPLE, (0.35f + 0.8f * Math.abs(in.pulse) + 0.5f * x[SINK]) * (1f - 0.6f * x[SLEEP]) + in.rippleAdd, 0.1f, 1f, first);
+        spring(
+                RIPPLE,
+                (0.35f + 0.8f * Math.abs(in.pulse) + 0.5f * x[SINK]) * (1f - 0.6f * x[SLEEP]) + in.rippleAdd,
+                0.1f,
+                1f,
+                first);
         spring(DEATH, deathK, 0.08f, 1f, first);
         spring(DROOP, in.tired ? 1f : 0f, 0.05f, 1f, first);
         // (a flash comes up at once; it fades slowly)
@@ -183,10 +243,27 @@ public final class BellAnim {
         float spinT = in.spinning ? in.spin : (float) (Math.round(x[SPIN] / (2 * Math.PI)) * 2 * Math.PI);
         spring(SPIN, spinT, in.spinning ? 0.12f : 0.03f, 0.95f, first);
 
-        st.lower = x[LOWER]; st.tiltX = x[TX]; st.tiltZ = x[TZ]; st.squeeze = x[SQUEEZE]; st.ripple = x[RIPPLE];
-        st.death = x[DEATH]; st.droop = x[DROOP]; st.glow = x[GLOW]; st.podSwell = x[SWELL]; st.eggShake = x[SHAKE]; st.spin = x[SPIN];
-        st.driftX = x[DX]; st.driftY = x[DY]; st.driftZ = x[DZ]; st.climb = x[CLIMB]; st.sink = x[SINK]; st.fold = x[FOLD]; st.splay = x[SPLAY];
-        st.pulse = in.pulse; st.red = in.red; st.sleep = x[SLEEP];
+        st.lower = x[LOWER];
+        st.tiltX = x[TX];
+        st.tiltZ = x[TZ];
+        st.squeeze = x[SQUEEZE];
+        st.ripple = x[RIPPLE];
+        st.death = x[DEATH];
+        st.droop = x[DROOP];
+        st.glow = x[GLOW];
+        st.podSwell = x[SWELL];
+        st.eggShake = x[SHAKE];
+        st.spin = x[SPIN];
+        st.driftX = x[DX];
+        st.driftY = x[DY];
+        st.driftZ = x[DZ];
+        st.climb = x[CLIMB];
+        st.sink = x[SINK];
+        st.fold = x[FOLD];
+        st.splay = x[SPLAY];
+        st.pulse = in.pulse;
+        st.red = in.red;
+        st.sleep = x[SLEEP];
 
         chains(in, first);
         started = true;
@@ -195,6 +272,7 @@ public final class BellAnim {
 
     /** when in his death the strands give way (the bone-break sounds) */
     private static final float[] DEATH_BREAKS = {60f, 100f, 130f};
+
     private boolean[] seenPopped;
     private float lastHang = Float.NaN;
     private int popSnap;
@@ -216,7 +294,10 @@ public final class BellAnim {
         lastHang = in.hangLower;
     }
 
-    private static float fallK(float k) { k = Mth.clamp(k, 0f, 1f); return k * k; }
+    private static float fallK(float k) {
+        k = Mth.clamp(k, 0f, 1f);
+        return k * k;
+    }
 
     private static float humpK(float t, float a, float b, float c, float e) {
         if (t < b) return smoothK((t - a) / Math.max(1f, b - a));
@@ -224,10 +305,11 @@ public final class BellAnim {
         return 1f - smoothK((t - c) / Math.max(1f, e - c));
     }
 
-    // ------------------------------------------------------------------ a move cut off, or one following another
+    // a move cut off, or one following another
 
     /** how many ticks what a move asked of his body takes to let go after it ends or is cut off */
     static final int LET_GO = 16;
+
     private static final int NA = 5;
     private final float[] askRaw = new float[NA], askUsed = new float[NA], askOff = new float[NA];
     private int askMove = Integer.MIN_VALUE, askAge = LET_GO;
@@ -241,34 +323,60 @@ public final class BellAnim {
      */
     private void letGoOfAsks(In in, boolean first) {
         float[] raw = askRaw;
-        raw[0] = in.drop; raw[1] = in.squeezeAdd; raw[2] = in.lowerAdd; raw[3] = in.flipX; raw[4] = in.flipZ;
+        raw[0] = in.drop;
+        raw[1] = in.squeezeAdd;
+        raw[2] = in.lowerAdd;
+        raw[3] = in.flipX;
+        raw[4] = in.flipZ;
         boolean changed = in.move != askMove || in.moveT < askT;
-        askMove = in.move; askT = in.moveT;
-        if (first) { java.util.Arrays.fill(askOff, 0f); askAge = LET_GO; }
-        else if (changed) { for (int k = 0; k < NA; k++) askOff[k] = askUsed[k] - raw[k]; askAge = 0; }
+        askMove = in.move;
+        askT = in.moveT;
+        if (first) {
+            Arrays.fill(askOff, 0f);
+            askAge = LET_GO;
+        } else if (changed) {
+            for (int k = 0; k < NA; k++) askOff[k] = askUsed[k] - raw[k];
+            askAge = 0;
+        }
         float w = askAge >= LET_GO ? 0f : 1f - smoothK(askAge / (float) LET_GO);
         if (askAge < LET_GO) askAge++;
         for (int k = 0; k < NA; k++) askUsed[k] = raw[k] + askOff[k] * w;
-        in.drop = Mth.clamp(askUsed[0], 0f, 1f); in.squeezeAdd = askUsed[1]; in.lowerAdd = askUsed[2]; in.flipX = askUsed[3]; in.flipZ = askUsed[4];
+        in.drop = Mth.clamp(askUsed[0], 0f, 1f);
+        in.squeezeAdd = askUsed[1];
+        in.lowerAdd = askUsed[2];
+        in.flipX = askUsed[3];
+        in.flipZ = askUsed[4];
     }
 
-    private static float smoothK(float k) { k = Mth.clamp(k, 0f, 1f); return k * k * (3f - 2f * k); }
+    private static float smoothK(float k) {
+        k = Mth.clamp(k, 0f, 1f);
+        return k * k * (3f - 2f * k);
+    }
 
     /** a spring toward want: k how stiff (per tick squared), z how damped (1 = no overshoot) */
     private void spring(int i, float want, float k, float z, boolean snap) {
-        if (snap) { x[i] = want; v[i] = 0f; xl[i] = want; return; }
+        if (snap) {
+            x[i] = want;
+            v[i] = 0f;
+            xl[i] = want;
+            return;
+        }
         float c = 2f * z * (float) Math.sqrt(k);
         v[i] += k * (want - x[i]) - c * v[i];
         x[i] += v[i];
     }
 
-    // ------------------------------------------------------------------ the chains
+    // the chains
 
     private final Matrix4f mBody = new Matrix4f(), mAnchor = new Matrix4f(), mInv = new Matrix4f();
-    private final Quaternionf qRot = new Quaternionf(), qBody = new Quaternionf(), qLocal = new Quaternionf(), qTmp = new Quaternionf();
+    private final Quaternionf qRot = new Quaternionf(),
+            qBody = new Quaternionf(),
+            qLocal = new Quaternionf(),
+            qTmp = new Quaternionf();
     private final Vector3f tv = new Vector3f(), tv2 = new Vector3f();
     /** how far a piece lying on the ground slides out along it in a tick, at most (model blocks) */
     private static final float SLIDE = 1.5f;
+
     private final float[] velScratch = new float[3 * 64], oldScratch = new float[3 * 64];
 
     private void chains(In in, boolean first) {
@@ -287,7 +395,8 @@ public final class BellAnim {
             // a strand drawn in to lift something pays out again slowly when it lets go, a heavy wet rope dropping
             // back, not at once
             float reel = !ch.arm && ch.index == st.grabStrand ? 1f - 0.8f * st.grabLift : 1f;
-            stretchNow[c] = first ? reel : stretchNow[c] + (reel - stretchNow[c]) * (reel > stretchNow[c] ? 0.06f : 0.3f);
+            stretchNow[c] =
+                    first ? reel : stretchNow[c] + (reel - stretchNow[c]) * (reel > stretchNow[c] ? 0.06f : 0.3f);
             targets(ch, st, mAnchor, raw, stretchNow[c]);
             if (first) {
                 System.arraycopy(raw, 0, tg, 0, raw.length);
@@ -309,34 +418,65 @@ public final class BellAnim {
             // grows longer when what it hangs from moves fast), and keeps the length asked for
             float[] old = oldScratch;
             System.arraycopy(tg, 0, old, 0, raw.length);
-            tg[0] = raw[0]; tg[1] = raw[1]; tg[2] = raw[2];
+            tg[0] = raw[0];
+            tg[1] = raw[1];
+            tg[2] = raw[2];
             for (int i = 3; i < raw.length; i += 3) {
                 float rx = raw[i] - raw[i - 3], ry = raw[i + 1] - raw[i - 2], rz = raw[i + 2] - raw[i - 1];
                 float nx = old[i] - old[i - 3], ny = old[i + 1] - old[i - 2], nz = old[i + 2] - old[i - 1];
                 float ex = nx + (rx - nx) * ease, ey = ny + (ry - ny) * ease, ez = nz + (rz - nz) * ease;
-                float rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz), el = (float) Math.sqrt(ex * ex + ey * ey + ez * ez);
+                float rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz),
+                        el = (float) Math.sqrt(ex * ex + ey * ey + ez * ez);
                 if (ch.arm) {
                     // an arm eases as it always has (its moves, the slam landing where it's aimed, are made for it)
                     float ax = tg[i] - tg[i - 3], ay = tg[i + 1] - tg[i - 2], az = tg[i + 2] - tg[i - 1];
-                    ex = ax + (rx - ax) * ease; ey = ay + (ry - ay) * ease; ez = az + (rz - az) * ease;
-                } else if (el > 1e-4f) { float f = rl / el; ex *= f; ey *= f; ez *= f; } else { ex = rx; ey = ry; ez = rz; }
-                tg[i] = tg[i - 3] + ex; tg[i + 1] = tg[i - 2] + ey; tg[i + 2] = tg[i - 1] + ez;
+                    ex = ax + (rx - ax) * ease;
+                    ey = ay + (ry - ay) * ease;
+                    ez = az + (rz - az) * ease;
+                } else if (el > 1e-4f) {
+                    float f = rl / el;
+                    ex *= f;
+                    ey *= f;
+                    ez *= f;
+                } else {
+                    ex = rx;
+                    ey = ry;
+                    ez = rz;
+                }
+                tg[i] = tg[i - 3] + ex;
+                tg[i + 1] = tg[i - 2] + ey;
+                tg[i + 2] = tg[i - 1] + ez;
             }
             // the ground under this one, looked at now and then (and kept level with the world as he rises and sinks)
             if ((tick + c) % 4 == 0) groundAt[c] = in.ground.at(p[3 * m], p[3 * m + 2]);
             else groundAt[c] -= in.shiftY;
             float hk = held[c];
             float k0, damp, abs;
-            if (ch.arm) { k0 = Mth.lerp(hk, 0.12f, 0.6f); damp = Mth.lerp(hk, 0.88f, 0.8f); abs = Mth.lerp(hk, 0.3f, 0.9f); }
-            else { k0 = Mth.lerp(hk, 0.05f, 0.3f); damp = Mth.lerp(hk, 0.93f, 0.82f); abs = Mth.lerp(hk, 0.1f, 0.7f); }
+            if (ch.arm) {
+                k0 = Mth.lerp(hk, 0.12f, 0.6f);
+                damp = Mth.lerp(hk, 0.88f, 0.8f);
+                abs = Mth.lerp(hk, 0.3f, 0.9f);
+            } else {
+                k0 = Mth.lerp(hk, 0.05f, 0.3f);
+                damp = Mth.lerp(hk, 0.93f, 0.82f);
+                abs = Mth.lerp(hk, 0.1f, 0.7f);
+            }
             // the top joint goes where it hangs from
-            p[0] = tg[0]; p[1] = tg[1]; p[2] = tg[2];
-            q[0] = tg[0]; q[1] = tg[1]; q[2] = tg[2];
+            p[0] = tg[0];
+            p[1] = tg[1];
+            p[2] = tg[2];
+            q[0] = tg[0];
+            q[1] = tg[1];
+            q[2] = tg[2];
             for (int i = 1; i <= m; i++) {
                 int o = 3 * i;
                 // he moved: the water holds the joint where it was
-                p[o] -= in.shiftX; p[o + 1] -= in.shiftY; p[o + 2] -= in.shiftZ;
-                q[o] -= in.shiftX; q[o + 1] -= in.shiftY; q[o + 2] -= in.shiftZ;
+                p[o] -= in.shiftX;
+                p[o + 1] -= in.shiftY;
+                p[o + 2] -= in.shiftZ;
+                q[o] -= in.shiftX;
+                q[o + 1] -= in.shiftY;
+                q[o + 2] -= in.shiftZ;
                 float k = k0 * (1f - 0.45f * i / m);
                 // where it wants to be: its piece of the asked-for shape hung off the joint above, mixed with where
                 // the shape puts it outright
@@ -348,13 +488,22 @@ public final class BellAnim {
                 float sp = (float) Math.sqrt(ux * ux + uy * uy + uz * uz);
                 float dmp = damp / (1f + 0.035f * sp);
                 float vx = ux * dmp, vy = uy * dmp, vz = uz * dmp;
-                q[o] = p[o]; q[o + 1] = p[o + 1]; q[o + 2] = p[o + 2];
+                q[o] = p[o];
+                q[o + 1] = p[o + 1];
+                q[o + 2] = p[o + 2];
                 float mx = vx + k * (wx - p[o]), my = vy + k * (wy - p[o + 1]), mz = vz + k * (wz - p[o + 2]);
                 // however hard it's swung, nothing moves further than this in a tick
                 // (an arm swung by a move, a slam, may go much faster than one just swaying)
                 float ml = mx * mx + my * my + mz * mz, cap = ch.arm ? 14f + 26f * hk : 10f;
-                if (ml > cap * cap) { float f = cap / (float) Math.sqrt(ml); mx *= f; my *= f; mz *= f; }
-                p[o] += mx; p[o + 1] += my; p[o + 2] += mz;
+                if (ml > cap * cap) {
+                    float f = cap / (float) Math.sqrt(ml);
+                    mx *= f;
+                    my *= f;
+                    mz *= f;
+                }
+                p[o] += mx;
+                p[o + 1] += my;
+                p[o + 2] += mz;
             }
             float gy = groundAt[c];
             for (int i = 1; i <= m; i++) {
@@ -364,7 +513,12 @@ public final class BellAnim {
                 float len = (float) Math.sqrt(lx * lx + ly * ly + lz * lz);
                 float dx = p[o] - p[o - 3], dy = p[o + 1] - p[o - 2], dz = p[o + 2] - p[o - 1];
                 float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-                if (d < 1e-5f) { dx = lx; dy = ly; dz = lz; d = Math.max(1e-5f, len); }
+                if (d < 1e-5f) {
+                    dx = lx;
+                    dy = ly;
+                    dz = lz;
+                    d = Math.max(1e-5f, len);
+                }
                 // a strand is like wet rope: pushed together it bunches up a little rather than kicking out
                 // sideways, pulled it gives a little rather than yanking tight, and either way it eases back to
                 // its length over a few ticks. An arm keeps its length
@@ -375,18 +529,27 @@ public final class BellAnim {
                 float bx, by, bz;
                 // the way the shape asked for goes on from the piece above (the first piece: just the way it's asked
                 // to go), turned the way the piece above really goes now: a joint may bend only so far from that
-                if (i == 1) { bx = lx; by = ly; bz = lz; }
-                else {
+                if (i == 1) {
+                    bx = lx;
+                    by = ly;
+                    bz = lz;
+                } else {
                     tv.set(tg[o - 3] - tg[o - 6], tg[o - 2] - tg[o - 5], tg[o - 1] - tg[o - 4]);
                     tv2.set(p[o - 3] - p[o - 6], p[o - 2] - p[o - 5], p[o - 1] - p[o - 4]);
-                    if (tv.lengthSquared() > 1e-8f && tv2.lengthSquared() > 1e-8f) qTmp.rotationTo(tv.normalize(), tv2.normalize()); else qTmp.identity();
+                    if (tv.lengthSquared() > 1e-8f && tv2.lengthSquared() > 1e-8f)
+                        qTmp.rotationTo(tv.normalize(), tv2.normalize());
+                    else qTmp.identity();
                     qTmp.transform(tv2.set(lx, ly, lz));
-                    bx = tv2.x; by = tv2.y; bz = tv2.z;
+                    bx = tv2.x;
+                    by = tv2.y;
+                    bz = tv2.z;
                 }
                 float lim = ch.arm ? (i == 1 ? 1.45f : 0.6f + 0.35f * hk) : (i == 1 ? 0.75f : 0.45f + 0.35f * hk);
                 float bl = (float) Math.sqrt(bx * bx + by * by + bz * bz);
                 if (bl > 1e-4f) {
-                    bx /= bl; by /= bl; bz /= bl;
+                    bx /= bl;
+                    by /= bl;
+                    bz /= bl;
                     float ux = dx / d, uy = dy / d, uz = dz / d;
                     float cos = Mth.clamp(ux * bx + uy * by + uz * bz, -1f, 1f);
                     float ang = (float) Math.acos(cos);
@@ -394,7 +557,12 @@ public final class BellAnim {
                         // turned back toward the way the piece above goes, just to the limit
                         float sx = ux - cos * bx, sy = uy - cos * by, sz = uz - cos * bz;
                         float sl = (float) Math.sqrt(sx * sx + sy * sy + sz * sz);
-                        if (sl < 1e-4f) { sx = -bz; sy = 0f; sz = bx; sl = Math.max(1e-4f, (float) Math.sqrt(sx * sx + sz * sz)); }
+                        if (sl < 1e-4f) {
+                            sx = -bz;
+                            sy = 0f;
+                            sz = bx;
+                            sl = Math.max(1e-4f, (float) Math.sqrt(sx * sx + sz * sz));
+                        }
                         // (eased back a quarter of the way each tick, a little at a time: snapped straight to the
                         // limit, a strand was yanked along whole when his bell came down hard)
                         // (lying on the ground or knocked against it, held to the limit outright: there the ground
@@ -402,11 +570,19 @@ public final class BellAnim {
                         boolean onGround = steps - knockedAt[c] <= 8;
                         float to = ang - (ang - lim) * (onGround ? 1f : 0.25f);
                         float cl = Mth.cos(to), sn = Mth.sin(to);
-                        dx = bx * cl + sx / sl * sn; dy = by * cl + sy / sl * sn; dz = bz * cl + sz / sl * sn;
+                        dx = bx * cl + sx / sl * sn;
+                        dy = by * cl + sy / sl * sn;
+                        dz = bz * cl + sz / sl * sn;
                         // and never more than a little way in a tick
                         float ox = (dx - ux) * want, oy = (dy - uy) * want, oz = (dz - uz) * want;
-                        float ol = (float) Math.sqrt(ox * ox + oy * oy + oz * oz), cap = onGround ? Float.MAX_VALUE : 0.3f;
-                        if (ol > cap) { float f = cap / ol; dx = ux + (dx - ux) * f; dy = uy + (dy - uy) * f; dz = uz + (dz - uz) * f; }
+                        float ol = (float) Math.sqrt(ox * ox + oy * oy + oz * oz),
+                                cap = onGround ? Float.MAX_VALUE : 0.3f;
+                        if (ol > cap) {
+                            float f = cap / ol;
+                            dx = ux + (dx - ux) * f;
+                            dy = uy + (dy - uy) * f;
+                            dz = uz + (dz - uz) * f;
+                        }
                         d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
                     }
                 }
@@ -422,12 +598,15 @@ public final class BellAnim {
                         tv.y = top;
                         knockedAt[c] = steps;
                         mBody.transformPosition(tv);
-                        p[o] = tv.x; p[o + 1] = tv.y; p[o + 2] = tv.z;
+                        p[o] = tv.x;
+                        p[o + 1] = tv.y;
+                        p[o + 2] = tv.z;
                     }
                 }
                 // never into the ground: it rests on it and drags
                 if (!Float.isNaN(gy)) {
-                    // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under with him)
+                    // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under
+                    // with him)
                     float floor = gy + (ch.arm ? 1.2f : 0.5f) - sinkingIn * (rig.crownY + 30f);
                     if (p[o + 1] < floor) {
                         // a strand lies on the ground and slides out along it, keeping its length (pushed straight up,
@@ -439,18 +618,33 @@ public final class BellAnim {
                         float hl = (float) Math.sqrt(hx * hx + hz * hz);
                         if (hl < 0.05f) {
                             // straight down: out away from where it hangs from (or from his middle)
-                            hx = p[o - 3] - p[0]; hz = p[o - 1] - p[2];
+                            hx = p[o - 3] - p[0];
+                            hz = p[o - 1] - p[2];
                             hl = (float) Math.sqrt(hx * hx + hz * hz);
-                            if (hl < 0.05f) { hx = p[o - 3]; hz = p[o - 1]; hl = (float) Math.sqrt(hx * hx + hz * hz); }
-                            if (hl < 0.05f) { hx = (float) Math.cos(c); hz = (float) Math.sin(c); hl = 1f; }
+                            if (hl < 0.05f) {
+                                hx = p[o - 3];
+                                hz = p[o - 1];
+                                hl = (float) Math.sqrt(hx * hx + hz * hz);
+                            }
+                            if (hl < 0.05f) {
+                                hx = (float) Math.cos(c);
+                                hz = (float) Math.sin(c);
+                                hl = 1f;
+                            }
                         }
                         // (out along the ground a little at a time, so it never jumps)
                         float sx = p[o - 3] + hx / hl * flat - p[o], sz = p[o - 1] + hz / hl * flat - p[o + 2];
                         float sl = (float) Math.sqrt(sx * sx + sz * sz);
-                        if (sl > SLIDE) { sx *= SLIDE / sl; sz *= SLIDE / sl; }
+                        if (sl > SLIDE) {
+                            sx *= SLIDE / sl;
+                            sz *= SLIDE / sl;
+                        }
                         // (an arm only stops where it comes down: one a move swings down, a slam, lands where it's
                         // aimed, and one laid down when he sinks is laid out straight already)
-                        if (ch.arm) { sx = 0f; sz = 0f; }
+                        if (ch.arm) {
+                            sx = 0f;
+                            sz = 0f;
+                        }
                         p[o] += sx;
                         p[o + 2] += sz;
                         p[o + 1] = floor;
@@ -464,8 +658,14 @@ public final class BellAnim {
             // the strand's own stiffness: each joint's swing is blended a little with its neighbours', which takes out
             // any quick wobble between joints and leaves the slow, heavy swing
             float[] vel = velScratch;
-            for (int i = 1; i <= m; i++) { vel[3 * i] = p[3 * i] - q[3 * i]; vel[3 * i + 1] = p[3 * i + 1] - q[3 * i + 1]; vel[3 * i + 2] = p[3 * i + 2] - q[3 * i + 2]; }
-            vel[0] = 0; vel[1] = 0; vel[2] = 0;
+            for (int i = 1; i <= m; i++) {
+                vel[3 * i] = p[3 * i] - q[3 * i];
+                vel[3 * i + 1] = p[3 * i + 1] - q[3 * i + 1];
+                vel[3 * i + 2] = p[3 * i + 2] - q[3 * i + 2];
+            }
+            vel[0] = 0;
+            vel[1] = 0;
+            vel[2] = 0;
             for (int i = 1; i <= m; i++) {
                 int o = 3 * i, up = o - 3, dn = i < m ? o + 3 : o;
                 for (int a = 0; a < 3; a++) {
@@ -477,15 +677,19 @@ public final class BellAnim {
             // a strand carrying somebody up onto his crown is laid out along the way they go (see CarryPath)
             if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
         }
-        if (st.carryStrand < 0) { carryChain = -1; carryP0 = null; }
+        if (st.carryStrand < 0) {
+            carryChain = -1;
+            carryP0 = null;
+        }
     }
 
-    // ------------------------------------------------------------------ carrying somebody up onto his crown
+    // carrying somebody up onto his crown
 
     /** the carrying strand as it was when the carry started (rest space), which chain that was, and the pick-up spot */
     private float[] carryFrom;
+
     private int carryChain = -1;
-    private @org.jetbrains.annotations.Nullable Vector3f carryP0;
+    private @Nullable Vector3f carryP0;
 
     /**
      * Lays the carrying strand out: while it reaches (carryReach below 1) it eases from where it hung toward a
@@ -502,7 +706,9 @@ public final class BellAnim {
             carryFrom = new float[p.length];
             for (int i = 0; i < n; i++) {
                 mInv.transformPosition(tv.set(p[3 * i], p[3 * i + 1], p[3 * i + 2]));
-                carryFrom[3 * i] = tv.x; carryFrom[3 * i + 1] = tv.y; carryFrom[3 * i + 2] = tv.z;
+                carryFrom[3 * i] = tv.x;
+                carryFrom[3 * i + 1] = tv.y;
+                carryFrom[3 * i + 2] = tv.z;
             }
             carryPos = carryFrom.clone();
             carryPrev = carryFrom.clone();
@@ -526,8 +732,12 @@ public final class BellAnim {
         CarryPath.step(carryPos, carryPrev, ch.restLen, from.x, from.y, from.z, end.x, end.y, end.z, groundRest);
         for (int i = 0; i < n; i++) {
             mBody.transformPosition(tv.set(carryPos[3 * i], carryPos[3 * i + 1], carryPos[3 * i + 2]));
-            p[3 * i] = tv.x; p[3 * i + 1] = tv.y; p[3 * i + 2] = tv.z;
-            q[3 * i] = p[3 * i]; q[3 * i + 1] = p[3 * i + 1]; q[3 * i + 2] = p[3 * i + 2];
+            p[3 * i] = tv.x;
+            p[3 * i + 1] = tv.y;
+            p[3 * i + 2] = tv.z;
+            q[3 * i] = p[3 * i];
+            q[3 * i + 1] = p[3 * i + 1];
+            q[3 * i + 2] = p[3 * i + 2];
         }
     }
 
@@ -537,7 +747,9 @@ public final class BellAnim {
     private float groundRest = -1000f;
 
     /** the height (rest space) the middle of the one carried ends at, over the crown: right where his crown seat is */
-    private float carryEndY(BellState st) { return rig.crownY + rig.stretchY(st) + st.carryEnd; }
+    private float carryEndY(BellState st) {
+        return rig.crownY + rig.stretchY(st) + st.carryEnd;
+    }
 
     private static float dist(float[] r, int i, int j) {
         float dx = r[3 * j] - r[3 * i], dy = r[3 * j + 1] - r[3 * i + 1], dz = r[3 * j + 2] - r[3 * i + 2];
@@ -551,16 +763,21 @@ public final class BellAnim {
     }
 
     private static boolean scripted(BellRig.Chain ch, BellState st) {
-        if (ch.arm) return ch.index == st.slamArm || ch.index == st.wrapArm || (ch.index < st.armRaise.length && Math.abs(st.armRaise[ch.index]) > 0.03f);
+        if (ch.arm)
+            return ch.index == st.slamArm
+                    || ch.index == st.wrapArm
+                    || (ch.index < st.armRaise.length && Math.abs(st.armRaise[ch.index]) > 0.03f);
         return ch.index == st.grabStrand || ch.index == st.lashStrand || ch.index == st.carryStrand;
     }
 
-    // ------------------------------------------------------------------ the shape asked for
+    // the shape asked for
 
     /** the joints of a chain in the shape the moment asks for, hung from its anchor */
     private void targets(BellRig.Chain ch, BellState st, Matrix4f anchor, float[] out, float stretch) {
         anchor.transformPosition(tv.set(ch.joints[0]));
-        out[0] = tv.x; out[1] = tv.y; out[2] = tv.z;
+        out[0] = tv.x;
+        out[1] = tv.y;
+        out[2] = tv.z;
         qRot.set(qBody);
         int m = ch.points() - 1;
         for (int i = 0; i < m; i++) {
@@ -595,14 +812,16 @@ public final class BellAnim {
         float awake = 1f - 0.8f * st.sleep;
         float out = free * awake * st.armSwing * (0.05f + 0.03f * sg) * (st.pulse - 0.35f);
         // a slow curl in and out while he idles (asleep, hardly at all)
-        if (sg > 0) out -= free * awake * 0.05f * (1f + (float) Math.sin(t * 0.03f + ph)) * (0.6f + 0.4f * sg / (float) m);
+        if (sg > 0)
+            out -= free * awake * 0.05f * (1f + (float) Math.sin(t * 0.03f + ph)) * (0.6f + 0.4f * sg / (float) m);
         // climbing: folded in under him; sinking: spread out and up
         float open = free * Math.max(st.sink, st.spread);
         if (sg == 0) out += -0.28f * st.climb * free + 0.45f * open;
         else out += 0.06f * st.climb * free + 0.14f * open;
         // folded out when the bell comes down
         // (and lying straight out along the ground: curled back in, the ground rolled them into loops)
-        if (sg == 0) out += st.fold * 0.85f; else out += st.fold * 0.04f;
+        if (sg == 0) out += st.fold * 0.85f;
+        else out += st.fold * 0.04f;
         int segK = Math.min(sg, 2);
         if (A.k() == st.slamArm) {
             out += BellRig.slam(st.slamT, segK);
@@ -611,7 +830,8 @@ public final class BellAnim {
                 // turned so the line from its root to its tip lies on the line from its root to the spot
                 Vector3f j0 = A.joints()[0];
                 float reach = BellRig.smooth((st.slamT - 0.4f) / 0.15f);
-                Vector3f built = new Vector3f(A.tip()).sub(j0), want = new Vector3f(st.slamX, st.slamY, st.slamZ).sub(j0);
+                Vector3f built = new Vector3f(A.tip()).sub(j0),
+                        want = new Vector3f(st.slamX, st.slamY, st.slamZ).sub(j0);
                 if (built.lengthSquared() > 1 && want.lengthSquared() > 1) {
                     Quaternionf aimQ = new Quaternionf().rotationTo(built.normalize(), want.normalize());
                     local.mul(new Quaternionf().slerp(aimQ, reach));
@@ -626,7 +846,11 @@ public final class BellAnim {
         if (st.swirl > 0f) local.mul(swing(qTmp, -dz, dx, 0.3f * st.swirl * (sg == 0 ? 1f : 0.4f)));
         // the sweep: the free arms are carried a little the way the strands swing
         if (st.sweep != 0f && free > 0f) {
-            local.premul(swing(qTmp, (float) Math.cos(st.sweepDir), (float) Math.sin(st.sweepDir), 0.4f * st.sweep * (sg == 0 ? 0.25f : 0.1f)));
+            local.premul(swing(
+                    qTmp,
+                    (float) Math.cos(st.sweepDir),
+                    (float) Math.sin(st.sweepDir),
+                    0.4f * st.sweep * (sg == 0 ? 0.25f : 0.1f)));
         }
         if (A.k() == st.wrapArm) {
             // reach out toward it, then the lower segments curl in round it
@@ -638,7 +862,9 @@ public final class BellAnim {
         local.mul(swing(qTmp, dx, dz, out));
         // trailing behind as he goes (the water does the rest)
         float sp = (float) Math.sqrt(st.driftX * st.driftX + st.driftZ * st.driftZ);
-        if (sp > 1e-4f && free > 0f) local.premul(swing(qTmp, -st.driftX, -st.driftZ, Math.min(0.3f, sp * 0.8f) / (m + 1) * (sg == 0 ? 0.5f : 1f)));
+        if (sp > 1e-4f && free > 0f)
+            local.premul(
+                    swing(qTmp, -st.driftX, -st.driftZ, Math.min(0.3f, sp * 0.8f) / (m + 1) * (sg == 0 ? 0.5f : 1f)));
     }
 
     private void strandLocal(BellRig.Chain ch, int sg, int m, BellState st, Quaternionf local) {
@@ -647,17 +873,25 @@ public final class BellAnim {
         float ph = S.k() * 2.39f;
         // sway, a little more at the bottom
         float amp = (0.018f + 0.006f * sg) * (1f - 0.7f * st.sleep);
-        local.rotateX(amp * (float) Math.sin(t * 0.045f + ph + sg * 0.7f)).rotateZ(amp * (float) Math.cos(t * 0.039f + ph * 1.3f + sg * 0.6f));
+        local.rotateX(amp * (float) Math.sin(t * 0.045f + ph + sg * 0.7f))
+                .rotateZ(amp * (float) Math.cos(t * 0.039f + ph * 1.3f + sg * 0.6f));
         Vector3f top = S.joints()[0];
         float ox = top.x, oz = top.z;
         float r = (float) Math.sqrt(ox * ox + oz * oz);
-        if (r < 1f) { ox = (float) Math.cos(ph); oz = (float) Math.sin(ph); r = 1f; }
+        if (r < 1f) {
+            ox = (float) Math.cos(ph);
+            oz = (float) Math.sin(ph);
+            r = 1f;
+        }
         // trailing behind as he drifts
         float sp = (float) Math.sqrt(st.driftX * st.driftX + st.driftZ * st.driftZ);
-        if (sp > 1e-4f) local.premul(swing(qTmp, -st.driftX, -st.driftZ, Math.min(0.5f, sp * 1.2f) / (m + 1) * (sg == 0 ? 0.6f : 1f)));
+        if (sp > 1e-4f)
+            local.premul(
+                    swing(qTmp, -st.driftX, -st.driftZ, Math.min(0.5f, sp * 1.2f) / (m + 1) * (sg == 0 ? 0.6f : 1f)));
         // climbing: drawn in to a bundle under him. Sinking: floating up and out (not a strand a move has hold of)
         float free = scripted(ch, st) ? 0f : 1f;
-        if (sg == 0 && st.climb > 0f) local.premul(swing(qTmp, -ox, -oz, free * 0.1f * st.climb * Math.min(1f, r / 50f)));
+        if (sg == 0 && st.climb > 0f)
+            local.premul(swing(qTmp, -ox, -oz, free * 0.1f * st.climb * Math.min(1f, r / 50f)));
         float open = free * Math.max(st.sink, st.spread);
         if (open > 0f) local.premul(swing(qTmp, ox, oz, open * (sg == 0 ? 0.3f : 0.12f)));
         // laid out round him when the bell comes down: swung out from the root and curving on out, flat along the
@@ -675,13 +909,23 @@ public final class BellAnim {
         float flick = st.flickNear > 0f && shooter(S) ? Math.max(st.flick, st.flickNear) : st.flick;
         if (flick > 0f && sg >= m - 2) local.premul(swing(qTmp, ox, oz, 0.55f * flick));
         // the whirlpool: swung round and out
-        if (st.swirl > 0f) local.premul(swing(qTmp, -oz, ox, st.swirl * (sg == 0 ? 0.4f : 0.12f))).premul(swing(qTmp, ox, oz, 0.15f * st.swirl));
+        if (st.swirl > 0f)
+            local.premul(swing(qTmp, -oz, ox, st.swirl * (sg == 0 ? 0.4f : 0.12f)))
+                    .premul(swing(qTmp, ox, oz, 0.15f * st.swirl));
         // the lash: one strand wound back, then whipped across
         // (each piece a moment after the one above, so the whip runs down it and the end cracks past)
         if (S.k() == st.lashStrand) {
             float k = st.lashT - 0.035f * sg;
-            float a = k < 0.4f ? -0.6f * BellRig.smooth(k / 0.4f) : k < 0.6f ? Mth.lerp(BellRig.smooth((k - 0.4f) / 0.2f), -0.6f, 1.1f) : 1.1f * (1f - BellRig.smooth((k - 0.6f) / 0.4f));
-            local.premul(swing(qTmp, (float) Math.cos(st.lashDir), (float) Math.sin(st.lashDir), a * (sg == 0 ? 0.6f : 0.25f + 0.1f * sg / (float) m)));
+            float a = k < 0.4f
+                    ? -0.6f * BellRig.smooth(k / 0.4f)
+                    : k < 0.6f
+                            ? Mth.lerp(BellRig.smooth((k - 0.4f) / 0.2f), -0.6f, 1.1f)
+                            : 1.1f * (1f - BellRig.smooth((k - 0.6f) / 0.4f));
+            local.premul(swing(
+                    qTmp,
+                    (float) Math.cos(st.lashDir),
+                    (float) Math.sin(st.lashDir),
+                    a * (sg == 0 ? 0.6f : 0.25f + 0.1f * sg / (float) m)));
         }
         // the curtain: the bottoms drawn in round the one inside
         if (st.curtain > 0f && sg == 0) {
@@ -707,7 +951,8 @@ public final class BellAnim {
     private boolean shooter(BellRig.StrandDef S) {
         BellState st = now;
         if (st.flickX != shootersX || st.flickZ != shootersZ) {
-            shootersX = st.flickX; shootersZ = st.flickZ;
+            shootersX = st.flickX;
+            shootersZ = st.flickZ;
             shooters.clear();
             Integer[] order = new Integer[rig.strands.length];
             for (int i = 0; i < order.length; i++) order[i] = i;
@@ -723,7 +968,7 @@ public final class BellAnim {
         return dx * dx + dz * dz;
     }
 
-    // ------------------------------------------------------------------ a frame
+    // a frame
 
     /** the pose between the last tick and this one, for drawing */
     public void fill(BellState out, float partial) {
@@ -742,8 +987,15 @@ public final class BellAnim {
         out.eggShake = Mth.lerp(k, xl[SHAKE], x[SHAKE]);
         out.spin = Mth.lerp(k, xl[SPIN], x[SPIN]);
         out.sleep = Mth.lerp(k, xl[SLEEP], x[SLEEP]);
-        out.driftX = st.driftX; out.driftY = st.driftY; out.driftZ = st.driftZ;
-        out.climb = st.climb; out.sink = st.sink; out.fold = st.fold; out.splay = st.splay; out.pulse = st.pulse; out.red = st.red;
+        out.driftX = st.driftX;
+        out.driftY = st.driftY;
+        out.driftZ = st.driftZ;
+        out.climb = st.climb;
+        out.sink = st.sink;
+        out.fold = st.fold;
+        out.splay = st.splay;
+        out.pulse = st.pulse;
+        out.red = st.red;
         for (int c = 0; c < st.chain.length; c++) {
             float[] a = last[c], b = st.chain[c], o = out.chain[c];
             if (k >= 1f) System.arraycopy(b, 0, o, 0, b.length);
@@ -754,7 +1006,8 @@ public final class BellAnim {
             System.arraycopy(st.podGrowth, 0, out.podGrowth, 0, st.podGrowth.length);
             for (int i = 0; i < st.podPopAge.length; i++) out.podPopAge[i] = st.podPopAge[i] + k - 1f;
             System.arraycopy(st.eggGone, 0, out.eggGone, 0, st.eggGone.length);
-            out.grabStrand = st.grabStrand; out.grabLift = st.grabLift;
+            out.grabStrand = st.grabStrand;
+            out.grabLift = st.grabLift;
         }
     }
 }

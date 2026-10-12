@@ -38,10 +38,15 @@ public final class FightMusic {
         public void tick() {
             // in over two seconds, out over four
             volume = want ? Math.min(1f, volume + 1f / 40f) : volume - 1f / 80f;
-            if (volume <= 0f) { volume = 0f; stop(); }
+            if (volume <= 0f) {
+                volume = 0f;
+                stop();
+            }
         }
 
-        void end() { stop(); }
+        void end() {
+            stop();
+        }
     }
 
     /** the nearest one fighting near you, as distance squared; or -1 */
@@ -59,8 +64,10 @@ public final class FightMusic {
 
     public static void tick(Minecraft mc) {
         double d = HollowbellConfig.V.fightMusic ? fightNear(mc) : -1;
-        if (d >= 0) MusicBoard.want(HollowbellMod.MOD_ID, d); else MusicBoard.drop(HollowbellMod.MOD_ID);
-        boolean mine = d >= 0 && MusicBoard.plays(MusicBoard.musicBoard(), HollowbellMod.MOD_ID, System.currentTimeMillis());
+        if (d >= 0) MusicBoard.want(HollowbellMod.MOD_ID, d);
+        else MusicBoard.drop(HollowbellMod.MOD_ID);
+        boolean mine =
+                d >= 0 && MusicBoard.plays(MusicBoard.musicBoard(), HollowbellMod.MOD_ID, System.currentTimeMillis());
         if (mine) {
             if (playing == null || playing.isStopped() || !mc.getSoundManager().isActive(playing)) {
                 if (playing != null) playing.end();
@@ -76,6 +83,9 @@ public final class FightMusic {
 
     public static void clear() {
         MusicBoard.drop(HollowbellMod.MOD_ID);
-        if (playing != null) { Minecraft.getInstance().getSoundManager().stop(playing); playing = null; }
+        if (playing != null) {
+            Minecraft.getInstance().getSoundManager().stop(playing);
+            playing = null;
+        }
     }
 }

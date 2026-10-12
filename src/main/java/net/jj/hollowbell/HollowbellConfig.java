@@ -2,20 +2,22 @@ package net.jj.hollowbell;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
-
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import net.fabricmc.loader.api.FabricLoader;
 
 /** config/hollowbell.json - written with defaults the first time the game starts. */
 public final class HollowbellConfig {
     public static final class Values {
         /** Which version of these settings this file was written by (older files are brought up to date). */
         public int configVersion = 0;
-        /** How big the spawn eggs make him. 1.0 = full size, the same as the KillzAI build (about 200 wide and 200 tall). */
+        /**
+         * How big the spawn eggs make him. 1.0 = full size, the same as the KillzAI build (about 200 wide and 200
+         * tall).
+         */
         public float spawnEggScale = 1.0f;
         /** How big the small spawn egg makes him. */
         public float smallEggScale = 0.2f;
@@ -23,7 +25,10 @@ public final class HollowbellConfig {
         public float health = 6000f;
         /** A very slow heal of his own: on or off. */
         public boolean passiveHeal = true;
-        /** How much of his most health that slow heal gives back a minute, in percent. It waits 15 seconds after every hurt. */
+        /**
+         * How much of his most health that slow heal gives back a minute, in percent. It waits 15 seconds after every
+         * hurt.
+         */
         public float passiveHealPerMinute = 1.0f;
         /** Multiplies every hit he lands. */
         public float damageMultiplier = 1.0f;
@@ -50,7 +55,10 @@ public final class HollowbellConfig {
         public int meetCooldown = 10;
         /** (This computer.) His fight music plays when a fight with him is on near you. */
         public boolean fightMusic = true;
-        /** Lets him pull trees up, flatten plants with his strands and crack the ground with his arm (also needs the mobGriefing gamerule). */
+        /**
+         * Lets him pull trees up, flatten plants with his strands and crack the ground with his arm (also needs the
+         * mobGriefing gamerule).
+         */
         public boolean griefing = true;
         /** He pulls cows, villagers and trees up into his dome. */
         public boolean harvest = true;
@@ -66,7 +74,10 @@ public final class HollowbellConfig {
         public int sunkSeconds = 30;
         /** How many egg clumps he sheds at a time, and whether he sheds at all (0 = never). */
         public int shedCount = 4;
-        /** Keeps the chunk at his middle moving and the ground under him loaded while a player can see him, so he never freezes in the air. */
+        /**
+         * Keeps the chunk at his middle moving and the ground under him loaded while a player can see him, so he never
+         * freezes in the air.
+         */
         public boolean chunkLoading = true;
         /** How many of him the world holds at once. Summon another past this and the oldest one goes. 0 = no limit. */
         public int maxInWorld = 1;
@@ -80,9 +91,15 @@ public final class HollowbellConfig {
         public int worldRespawnDays = 10;
         /** How far from where he fell the next one rises, in blocks. */
         public int respawnBlocks = 7000;
-        /** How far his own ground, the Bell Hollows, reaches from its middle, in blocks (200 to 2000). A bigger number only grows a ground, it never shrinks one. */
+        /**
+         * How far his own ground, the Bell Hollows, reaches from its middle, in blocks (200 to 2000). A bigger number
+         * only grows a ground, it never shrinks one.
+         */
         public int homeRadius = 900;
-        /** How far off you can see him coming, in blocks, even past where the game would stop drawing him (0 = off, up to 4096). */
+        /**
+         * How far off you can see him coming, in blocks, even past where the game would stop drawing him (0 = off, up
+         * to 4096).
+         */
         public int farSightBlocks = 1024;
         /** How far his crown, woken against him, holds him off, in blocks ("/hollowbell ward blocks"). */
         public int wardBlocks = 700;
@@ -98,13 +115,19 @@ public final class HollowbellConfig {
         public boolean ambientSounds = true;
         /** The screen shakes when his bell or arm slams down. */
         public boolean screenShake = true;
-        /** How much flies about in his big moves (dust and chunks of ground, splashes and waves, flashes, clouds): 0 = none, 1 = normal, 2 = more. */
+        /**
+         * How much flies about in his big moves (dust and chunks of ground, splashes and waves, flashes, clouds): 0 =
+         * none, 1 = normal, 2 = more.
+         */
         public float bigEffects = 1.0f;
         /** Shows his health and pods bars. */
         public boolean bossBar = true;
         /** How far away (in blocks) he is still drawn. */
         public int renderDistance = 720;
-        /** Far away he is drawn with bigger, merged blocks so he runs faster ("/hollowbell detail on"). Off = always drawn in full ("/hollowbell detail off"). */
+        /**
+         * Far away he is drawn with bigger, merged blocks so he runs faster ("/hollowbell detail on"). Off = always
+         * drawn in full ("/hollowbell detail off").
+         */
         public boolean simpleFarAway = true;
         /** How far away (in blocks, at full size) the simpler drawing starts. */
         public int simpleFarAwayAt = 160;
@@ -120,9 +143,15 @@ public final class HollowbellConfig {
         public int bookRange = 600;
         /** How far away (in blocks) his boss bars still show. 0 = worked out from his size (420 at full size). */
         public int bossBarRange = 0;
-        /** With nobody near him he steps out of the world and keeps going as a sum, and comes back when somebody gets near. */
+        /**
+         * With nobody near him he steps out of the world and keeps going as a sum, and comes back when somebody gets
+         * near.
+         */
         public boolean offscreenTravel = true;
-        /** How far the nearest player has to be before he steps out. 0 = worked out from his size and the game's own settings. */
+        /**
+         * How far the nearest player has to be before he steps out. 0 = worked out from his size and the game's own
+         * settings.
+         */
         public int awayBlocks = 0;
     }
 
@@ -130,17 +159,29 @@ public final class HollowbellConfig {
 
     /** which version of the settings this build writes; save() and load() both stamp it */
     private static final int VERSION = 7;
-    /** the file on disk couldn't be read: it's kept as it is, and nothing is written over it until /hollowbell reload reads it cleanly */
+    /**
+     * the file on disk couldn't be read: it's kept as it is, and nothing is written over it until /hollowbell reload
+     * reads it cleanly
+     */
     private static boolean locked;
 
-    private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json"); }
+    private static Path file() {
+        return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json");
+    }
 
     public static void save() {
         // an unreadable file is never written over (the settings still change for this session)
-        if (locked) { HollowbellMod.LOG.warn("Not writing {}: it couldn't be read, so it is left as it is until it reads cleanly", file()); return; }
+        if (locked) {
+            HollowbellMod.LOG.warn(
+                    "Not writing {}: it couldn't be read, so it is left as it is until it reads cleanly", file());
+            return;
+        }
         V.configVersion = Math.max(V.configVersion, VERSION);
-        try { write(new GsonBuilder().setPrettyPrinting().create().toJson(V)); }
-        catch (Exception e) { HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString()); }
+        try {
+            write(new GsonBuilder().setPrettyPrinting().create().toJson(V));
+        } catch (Exception e) {
+            HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString());
+        }
     }
 
     /** written beside it first, then put in its place, so a crash halfway never leaves half a file */
@@ -169,16 +210,23 @@ public final class HollowbellConfig {
             return true;
         } catch (Exception e) {
             // a file that won't read is never written over: it's kept as it was, and a copy goes beside it as .bad
-            HollowbellMod.LOG.warn("Could not read {}, using defaults (your file is kept, and copied to hollowbell.json.bad): {}", file(), e.toString());
-            try { Files.copy(file(), file().resolveSibling("hollowbell.json.bad"), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
-            catch (Exception ignored) { }
+            HollowbellMod.LOG.warn(
+                    "Could not read {}, using defaults (your file is kept, and copied to hollowbell.json.bad): {}",
+                    file(),
+                    e.toString());
+            try {
+                Files.copy(file(), file().resolveSibling("hollowbell.json.bad"), StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception ignored) {
+            }
             V = new Values();
             locked = true;
             return false;
         }
     }
 
-    public static boolean locked() { return locked; }
+    public static boolean locked() {
+        return locked;
+    }
 
     /** brings settings saved by an older version up to date; only values still at an old default are changed */
     public static void migrate(Values v) {
@@ -192,7 +240,10 @@ public final class HollowbellConfig {
         // when a new one is made, or on /hollowbell limit)
         if (v.configVersion < 5 && v.maxHollowbells != null && v.maxHollowbells == 0) v.maxHollowbells = 1;
         // (the old name)
-        if (v.maxHollowbells != null) { v.maxInWorld = v.maxHollowbells; v.maxHollowbells = null; }
+        if (v.maxHollowbells != null) {
+            v.maxInWorld = v.maxHollowbells;
+            v.maxHollowbells = null;
+        }
         // (6: his ground is much bigger, and he can be seen from much further off)
         if (v.configVersion < 6 && (v.homeRadius == 0 || v.homeRadius == 320)) v.homeRadius = 900;
         if (v.configVersion < 6 && v.farSightBlocks == 0) v.farSightBlocks = 1024;

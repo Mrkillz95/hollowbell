@@ -1,8 +1,15 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.*;
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+import java.util.UUID;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.NoWait;
+import net.jj.hollowbell.world.TakeMe;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -11,11 +18,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
-
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
-
-import static net.jj.hollowbell.test.HollowbellGameTests.*;
 
 /**
  * The server never stops to wait for land to be made. Asking the height of land that was asked for but was still
@@ -38,14 +40,16 @@ public class FreezeTests implements FabricGameTest {
         h.runAfterDelay(5, () -> {
             NoWait.ask(l, far.getX(), far.getZ(), 2);
             h.assertTrue(!NoWait.loaded(l, far.getX(), far.getZ()), "that land was loaded already");
-            double under = e.groundAt(e.getX(), e.getZ());                 // (loaded: the last ground he saw)
+            double under = e.groundAt(e.getX(), e.getZ()); // (loaded: the last ground he saw)
             // (the server thread's own time: a busy machine adds its waits for a core to the wall clock; and had the
             // call waited for the land instead, the land would be there right after it)
             ThreadMXBean threads = ManagementFactory.getThreadMXBean();
             long t0 = threads.getCurrentThreadCpuTime();
             double g = e.groundAt(far.getX() + 0.5, far.getZ() + 0.5);
             long ms = (threads.getCurrentThreadCpuTime() - t0) / 1_000_000;
-            h.assertTrue(Math.abs(g - under) < 1e-6, "the ground of land not made yet should be taken as the last he saw (" + under + "), not " + g);
+            h.assertTrue(
+                    Math.abs(g - under) < 1e-6,
+                    "the ground of land not made yet should be taken as the last he saw (" + under + "), not " + g);
             h.assertTrue(ms < 50, "asking the ground of land not made yet took " + ms + " ms");
             h.assertTrue(!NoWait.loaded(l, far.getX(), far.getZ()), "asking the ground made the land there");
         });
@@ -59,7 +63,11 @@ public class FreezeTests implements FabricGameTest {
             if (!NoWait.loaded(l, far.getX(), far.getZ())) {
                 // (the same work the game does while it waits for a chunk, so a server with no spare time gets there)
                 l.getChunkSource().pollTask();
-                if (System.currentTimeMillis() > until[0]) { done[0] = true; release(h, e); h.fail("the land asked for was never made"); }
+                if (System.currentTimeMillis() > until[0]) {
+                    done[0] = true;
+                    release(h, e);
+                    h.fail("the land asked for was never made");
+                }
                 return;
             }
             done[0] = true;
@@ -81,7 +89,7 @@ public class FreezeTests implements FabricGameTest {
             Vec3 was = p[0].position();
             long t0 = System.nanoTime();
             NoWait.go(p[0], l, far.getX(), far.getZ(), q -> {
-                BlockPos safe = net.jj.hollowbell.world.TakeMe.safeNear(l, far.getX(), far.getZ(), 8);
+                BlockPos safe = TakeMe.safeNear(l, far.getX(), far.getZ(), 8);
                 q.teleportTo(l, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, 0f, 0f);
                 return Component.literal("There.");
             });
@@ -115,19 +123,21 @@ public class FreezeTests implements FabricGameTest {
         HollowbellEntity e = spawnAway(h, 0.1f, HollowbellEntity.CALM, 392);
         ServerLevel l = h.getLevel();
         BlockPos far = unmade(h, 2);
-        net.jj.hollowbell.world.Away a = net.jj.hollowbell.world.Away.get(l.getServer());
-        java.util.UUID[] id = {null};
+        Away a = Away.get(l.getServer());
+        UUID[] id = {null};
         // (kept here too: other tests may clear the shared list of those out of the world while this one waits)
         Object[] rec = {null};
         boolean[] done = {false};
         h.runAfterDelay(20, () -> {
             id[0] = e.getUUID();
             h.assertTrue(e.stepAside(), "out of the world he goes");
-            net.jj.hollowbell.world.Away.Rec r = a.get(id[0]);
+            Away.Rec r = a.get(id[0]);
             h.assertTrue(r != null, "and is written down");
             rec[0] = r;
             // (his sum moved out to land nobody has made yet)
-            r.going = false; r.fromX = far.getX() + 0.5; r.fromZ = far.getZ() + 0.5;
+            r.going = false;
+            r.fromX = far.getX() + 0.5;
+            r.fromZ = far.getZ() + 0.5;
             NoWait.ask(l, far.getX(), far.getZ(), 1);
             h.assertTrue(!NoWait.loaded(l, far.getX(), far.getZ()), "that land was loaded already");
             long t0 = System.nanoTime();
@@ -144,12 +154,14 @@ public class FreezeTests implements FabricGameTest {
                 // (a busy test server can leave that land waiting a long time behind the rest: after a while it's
                 // forced, as somebody standing there would; what's tested is that he comes back once it's loaded)
                 if (at == 400) l.setChunkForced(far.getX() >> 4, far.getZ() >> 4, true);
-                net.jj.hollowbell.world.Away.Rec r = (net.jj.hollowbell.world.Away.Rec) rec[0];
+                Away.Rec r = (Away.Rec) rec[0];
                 NoWait.ask(l, far.getX(), far.getZ(), 1);
                 HollowbellEntity back = a.bringBackWhenLoaded(l, r);
                 if (back == null) return;
                 done[0] = true;
-                h.assertTrue(Math.hypot(back.getX() - (far.getX() + 0.5), back.getZ() - (far.getZ() + 0.5)) < 2, "he came back somewhere else");
+                h.assertTrue(
+                        Math.hypot(back.getX() - (far.getX() + 0.5), back.getZ() - (far.getZ() + 0.5)) < 2,
+                        "he came back somewhere else");
                 back.discard();
                 l.setChunkForced(far.getX() >> 4, far.getZ() >> 4, false);
                 release(h, e);

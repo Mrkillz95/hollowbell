@@ -3,6 +3,10 @@ package net.jj.hollowbell.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.block.LootCacheBlock;
@@ -16,14 +20,10 @@ import net.minecraft.client.renderer.blockentity.BeaconRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.EmptyLevelChunk;
 import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * The beams of his loot caches, seen from far off. The cache draws its own beam while its ground is loaded for you;
@@ -36,6 +36,7 @@ public final class LootBeamsClient {
 
     /** the beam's look (the same as a beacon's, pale green) */
     public static final int COLOUR = 0xFFA8F0B4;
+
     public static final float WIDTH = 0.25f, GLOW = 0.32f;
     /** from this far off the beam widens so it stays as wide on the screen */
     public static final double WIDE_FROM = 96;
@@ -46,6 +47,7 @@ public final class LootBeamsClient {
     private static ClientLevel beamsFor;
     /** the frame each cache last drew its own beam in */
     private static final Map<Long, Long> drawnByCache = new HashMap<>();
+
     private static long frame;
     private static MultiBufferSource.BufferSource own;
 
@@ -55,10 +57,16 @@ public final class LootBeamsClient {
         beamsFor = mc.level;
     }
 
-    public static void clear() { beams = new ArrayList<>(); beamsFor = null; drawnByCache.clear(); }
+    public static void clear() {
+        beams = new ArrayList<>();
+        beamsFor = null;
+        drawnByCache.clear();
+    }
 
     /** how many beams the server has told us about */
-    public static int count() { return beams.size(); }
+    public static int count() {
+        return beams.size();
+    }
 
     public static void startFrame() {
         frame++;
@@ -66,7 +74,9 @@ public final class LootBeamsClient {
     }
 
     /** the cache drew its own beam this frame */
-    public static void cacheDrew(BlockPos pos) { drawnByCache.put(pos.asLong(), frame); }
+    public static void cacheDrew(BlockPos pos) {
+        drawnByCache.put(pos.asLong(), frame);
+    }
 
     /** the far ones: every beam the server told us about that its cache isn't drawing itself */
     public static void render(WorldRenderContext ctx) {
@@ -80,13 +90,19 @@ public final class LootBeamsClient {
             if (f != null && frame - f <= 1) continue;
             // loaded here and not a lit cache any more: the server will say so in a moment
             var ch = mc.level.getChunkSource().getChunk(b.getX() >> 4, b.getZ() >> 4, false);
-            if (ch != null && !(ch instanceof net.minecraft.world.level.chunk.EmptyLevelChunk)) {
+            if (ch != null && !(ch instanceof EmptyLevelChunk)) {
                 BlockState st = mc.level.getBlockState(b);
                 if (!st.is(ModBlocks.LOOT_CACHE) || !st.getValue(LootCacheBlock.LIT)) continue;
             }
             double dx = b.getX() - cam.x, dz = b.getZ() - cam.z;
             if (dx * dx + dz * dz > 1100.0 * 1100.0) continue;
-            draw(new Matrix4f().translation((float) dx, (float) (b.getY() - cam.y), (float) dz), b, partial, t, mc.level.getMaxBuildHeight(), ctx.camera());
+            draw(
+                    new Matrix4f().translation((float) dx, (float) (b.getY() - cam.y), (float) dz),
+                    b,
+                    partial,
+                    t,
+                    mc.level.getMaxBuildHeight(),
+                    ctx.camera());
         }
     }
 
@@ -112,14 +128,19 @@ public final class LootBeamsClient {
         float fs0 = RenderSystem.getShaderFogStart(), fe0 = RenderSystem.getShaderFogEnd();
         float fs = fs0, fe = fe0;
         // pushed-back fog, unless you're under water, in lava or snow, or blinded
-        boolean clear = camera.getFluidInCamera() == FogType.NONE && (mc.player == null
-                || (!mc.player.hasEffect(MobEffects.BLINDNESS) && !mc.player.hasEffect(MobEffects.DARKNESS)));
-        if (clear) { fs = Math.max(fs0, FOG_START); fe = Math.max(fe0, FOG_END); }
+        boolean clear = camera.getFluidInCamera() == FogType.NONE
+                && (mc.player == null
+                        || (!mc.player.hasEffect(MobEffects.BLINDNESS) && !mc.player.hasEffect(MobEffects.DARKNESS)));
+        if (clear) {
+            fs = Math.max(fs0, FOG_START);
+            fe = Math.max(fe0, FOG_END);
+        }
         try {
             // (set first: the beam's two layers are each drawn the moment the next one starts)
             RenderSystem.setShaderFogStart(fs * k);
             RenderSystem.setShaderFogEnd(fe * k);
-            BeaconRenderer.renderBeaconBeam(ps, own, BeaconRenderer.BEAM_LOCATION, partial, 1f, t, 1, top, COLOUR, WIDTH * wide, GLOW * wide);
+            BeaconRenderer.renderBeaconBeam(
+                    ps, own, BeaconRenderer.BEAM_LOCATION, partial, 1f, t, 1, top, COLOUR, WIDTH * wide, GLOW * wide);
             own.endBatch();
         } finally {
             RenderSystem.setShaderFogStart(fs0);

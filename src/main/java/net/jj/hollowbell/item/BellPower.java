@@ -1,5 +1,9 @@
 package net.jj.hollowbell.item;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -19,10 +23,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 /**
  * The bell glass set's own moves, on the "Armour power" key. On the ground: the Bell toll, you float up like he
  * does, hang for a moment ringing, then slam down and a ring goes out that knocks back and stuns everything round
@@ -38,31 +38,53 @@ public final class BellPower {
     public static final float RING_DAMAGE = 8f;
     private static final Vector3f GLASS = new Vector3f(0.72f, 0.95f, 0.72f);
 
-    public enum Kind { TOLL, GLIDE }
-    private static final class Doing { Kind kind; int t; boolean rung; Doing(Kind k) { kind = k; } }
+    public enum Kind {
+        TOLL,
+        GLIDE
+    }
+
+    private static final class Doing {
+        Kind kind;
+        int t;
+        boolean rung;
+
+        Doing(Kind k) {
+            kind = k;
+        }
+    }
+
     private static final Map<UUID, Doing> DOING = new HashMap<>();
 
     /** what the key does right now; null when nothing happened */
     public static Kind use(ServerPlayer p) {
         if (p.isSpectator() || p.isPassenger() || !BellArmorItem.fullSet(p)) {
-            if (!BellArmorItem.fullSet(p)) p.displayClientMessage(Component.translatable("message.hollowbell.power_no_set"), true);
+            if (!BellArmorItem.fullSet(p))
+                p.displayClientMessage(Component.translatable("message.hollowbell.power_no_set"), true);
             return null;
         }
         if (p.getCooldowns().isOnCooldown(ModItems.BELL_CHESTPLATE) || DOING.containsKey(p.getUUID())) return null;
         Kind k = p.onGround() || p.isInWater() ? Kind.TOLL : Kind.GLIDE;
         DOING.put(p.getUUID(), new Doing(k));
-        net.jj.hollowbell.HollowbellMod.award(p, "bell_toll");
+        HollowbellMod.award(p, "bell_toll");
         p.getCooldowns().addCooldown(ModItems.BELL_CHESTPLATE, k == Kind.TOLL ? TOLL_COOLDOWN : GLIDE_COOLDOWN);
         ServerLevel l = p.serverLevel();
-        if (k == Kind.TOLL) l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.PULSE, SoundSource.PLAYERS, 1.2f, 1.4f);
+        if (k == Kind.TOLL)
+            l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.PULSE, SoundSource.PLAYERS, 1.2f, 1.4f);
         else l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.DRIFT, SoundSource.PLAYERS, 1f, 1.5f);
         return k;
     }
 
-    public static boolean busy(Player p) { return DOING.containsKey(p.getUUID()); }
-    public static void clear() { DOING.clear(); }
+    public static boolean busy(Player p) {
+        return DOING.containsKey(p.getUUID());
+    }
+
+    public static void clear() {
+        DOING.clear();
+    }
     /** whatever power a player is in the middle of stops (a command resetting their powers) */
-    public static void stop(Player p) { DOING.remove(p.getUUID()); }
+    public static void stop(Player p) {
+        DOING.remove(p.getUUID());
+    }
 
     public static void tick(MinecraftServer server) {
         if (DOING.isEmpty()) return;
@@ -85,12 +107,15 @@ public final class BellPower {
             double up = 0.75 * (1 - d.t / (double) (RISE + 2));
             p.setDeltaMovement(v.x * 0.6, up, v.z * 0.6);
             p.hurtMarked = true;
-            if (d.t % 2 == 0) l.sendParticles(new DustParticleOptions(GLASS, 1.2f), p.getX(), p.getY(), p.getZ(), 6, 0.3, 0.1, 0.3, 0);
+            if (d.t % 2 == 0)
+                l.sendParticles(
+                        new DustParticleOptions(GLASS, 1.2f), p.getX(), p.getY(), p.getZ(), 6, 0.3, 0.1, 0.3, 0);
         } else if (d.t <= RISE + HANG) {
             // hanging: a soft bob and a hum, the wind-up before the slam
             p.setDeltaMovement(0, 0.02 * Math.sin(d.t), 0);
             p.hurtMarked = true;
-            if (d.t == RISE + 1) l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.TOLL, SoundSource.PLAYERS, 0.9f, 1.6f);
+            if (d.t == RISE + 1)
+                l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.TOLL, SoundSource.PLAYERS, 0.9f, 1.6f);
             l.sendParticles(ParticleTypes.END_ROD, p.getX(), p.getY() + 1, p.getZ(), 2, 0.4, 0.4, 0.4, 0.01);
         } else {
             boolean landed = d.t > RISE + HANG + 2 && (p.onGround() || p.isInWater());
@@ -99,7 +124,10 @@ public final class BellPower {
                 p.hurtMarked = true;
                 return false;
             }
-            if (!d.rung) { ring(p, 1f); d.rung = true; }
+            if (!d.rung) {
+                ring(p, 1f);
+                d.rung = true;
+            }
             return true;
         }
         return false;
@@ -115,8 +143,20 @@ public final class BellPower {
         Vec3 h = flat.scale(0.55 * ease + 0.1);
         p.setDeltaMovement(h.x, -0.06 + 0.04 * Math.sin(d.t * 0.3), h.z);
         p.hurtMarked = true;
-        if (d.t % 3 == 0) p.serverLevel().sendParticles(new DustParticleOptions(GLASS, 1f), p.getX(), p.getY() + 0.2, p.getZ(), 3, 0.3, 0.05, 0.3, 0);
-        if (d.t == GLIDE || d.t > 3 && p.onGround()) p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, true, false, true));
+        if (d.t % 3 == 0)
+            p.serverLevel()
+                    .sendParticles(
+                            new DustParticleOptions(GLASS, 1f),
+                            p.getX(),
+                            p.getY() + 0.2,
+                            p.getZ(),
+                            3,
+                            0.3,
+                            0.05,
+                            0.3,
+                            0);
+        if (d.t == GLIDE || d.t > 3 && p.onGround())
+            p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, true, false, true));
         return false;
     }
 
@@ -128,7 +168,8 @@ public final class BellPower {
         ServerLevel l = p.serverLevel();
         double r = RING * (0.6 + 0.4 * strength);
         int n = 0;
-        for (LivingEntity e : l.getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(r, 3, r), e -> e != p && e.isAlive())) {
+        for (LivingEntity e : l.getEntitiesOfClass(
+                LivingEntity.class, p.getBoundingBox().inflate(r, 3, r), e -> e != p && e.isAlive())) {
             if (e instanceof OwnableEntity o && p.getUUID().equals(o.getOwnerUUID())) continue;
             if (e instanceof Player q && (q.isCreative() || q.isSpectator())) continue;
             if (e instanceof HollowbellEntity || e.isPassengerOfSameVehicle(p)) continue;
@@ -151,7 +192,16 @@ public final class BellPower {
         for (int i = 0; i < 48; i++) {
             double a = i * Math.PI * 2 / 48;
             for (double rr = 1.5; rr <= r; rr += 1.8)
-                l.sendParticles(new DustParticleOptions(GLASS, 1.6f), p.getX() + Math.cos(a) * rr, p.getY() + 0.15, p.getZ() + Math.sin(a) * rr, 1, 0, 0.02, 0, 0);
+                l.sendParticles(
+                        new DustParticleOptions(GLASS, 1.6f),
+                        p.getX() + Math.cos(a) * rr,
+                        p.getY() + 0.15,
+                        p.getZ() + Math.sin(a) * rr,
+                        1,
+                        0,
+                        0.02,
+                        0,
+                        0);
         }
         l.sendParticles(ParticleTypes.SONIC_BOOM, p.getX(), p.getY() + 0.3, p.getZ(), 1, 0, 0, 0, 0);
         return n;

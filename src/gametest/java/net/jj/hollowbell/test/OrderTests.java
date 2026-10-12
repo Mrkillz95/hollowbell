@@ -1,5 +1,10 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.drop;
+import static net.jj.hollowbell.test.HollowbellGameTests.player;
+import static net.jj.hollowbell.test.HollowbellGameTests.release;
+import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
+
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -10,11 +15,6 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-
-import static net.jj.hollowbell.test.HollowbellGameTests.drop;
-import static net.jj.hollowbell.test.HollowbellGameTests.player;
-import static net.jj.hollowbell.test.HollowbellGameTests.release;
-import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 
 /** Orders from a player's game are checked: a spot that isn't a real place never reaches him. */
 public class OrderTests implements FabricGameTest {

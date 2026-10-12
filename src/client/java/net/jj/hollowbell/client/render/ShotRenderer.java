@@ -3,6 +3,8 @@ package net.jj.hollowbell.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import java.util.ArrayList;
+import java.util.List;
 import net.jj.hollowbell.entity.Shot;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.client.Minecraft;
@@ -15,10 +17,12 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -26,9 +30,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * What he throws. A stinger is drawn as the item. An egg is a pale ball of his strands' blocks with froglight in it,
@@ -44,7 +45,10 @@ public class ShotRenderer extends EntityRenderer<Shot> {
         item = new ThrownItemRenderer<>(ctx, 2.2f, false);
     }
 
-    @Override public ResourceLocation getTextureLocation(Shot e) { return TextureAtlas.LOCATION_BLOCKS; }
+    @Override
+    public ResourceLocation getTextureLocation(Shot e) {
+        return TextureAtlas.LOCATION_BLOCKS;
+    }
 
     @Override
     public boolean shouldRender(Shot e, Frustum f, double cx, double cy, double cz) {
@@ -52,19 +56,26 @@ public class ShotRenderer extends EntityRenderer<Shot> {
         // the egg and its marker on the ground, which can be a long way under it
         Vec3 l = e.landing();
         double r = markerRadius(e) + 4;
-        AABB box = new AABB(e.getX(), e.getY(), e.getZ(), l.x, l.y, l.z).inflate(r, 2, r).expandTowards(0, 6, 0);
+        AABB box = new AABB(e.getX(), e.getY(), e.getZ(), l.x, l.y, l.z)
+                .inflate(r, 2, r)
+                .expandTowards(0, 6, 0);
         return f.isVisible(box);
     }
 
     @Override
     public void render(Shot e, float yaw, float partial, PoseStack ps, MultiBufferSource buf, int light) {
-        if (e.kind() != Shot.EGG) { item.render(e, yaw, partial, ps, buf, light); return; }
+        if (e.kind() != Shot.EGG) {
+            item.render(e, yaw, partial, ps, buf, light);
+            return;
+        }
         if (e.stage() == Shot.FALLING) marker(e, partial, ps, buf);
         egg(e, partial, ps, buf);
     }
 
     /** how wide the ring round the landing spot is, at the widest (just dropped) */
-    static double markerRadius(Shot e) { return 2.5 + 3 * e.size() + 2.5 + 3.5 * e.size(); }
+    static double markerRadius(Shot e) {
+        return 2.5 + 3 * e.size() + 2.5 + 3.5 * e.size();
+    }
 
     /** the ring on the ground: wide and pale as it drops, tight and red as it's about to land */
     private void marker(Shot e, float partial, PoseStack ps, MultiBufferSource buf) {
@@ -83,11 +94,22 @@ public class ShotRenderer extends EntityRenderer<Shot> {
         int a = (int) (200 * flash);
         for (int i = 0; i < n; i++) {
             double a0 = i * Math.PI * 2 / n, a1 = (i + 1) * Math.PI * 2 / n;
-            double[] xs = {l.x + Math.cos(a0) * (r - w), l.x + Math.cos(a0) * (r + w), l.x + Math.cos(a1) * (r + w), l.x + Math.cos(a1) * (r - w)};
-            double[] zs = {l.z + Math.sin(a0) * (r - w), l.z + Math.sin(a0) * (r + w), l.z + Math.sin(a1) * (r + w), l.z + Math.sin(a1) * (r - w)};
+            double[] xs = {
+                l.x + Math.cos(a0) * (r - w),
+                l.x + Math.cos(a0) * (r + w),
+                l.x + Math.cos(a1) * (r + w),
+                l.x + Math.cos(a1) * (r - w)
+            };
+            double[] zs = {
+                l.z + Math.sin(a0) * (r - w),
+                l.z + Math.sin(a0) * (r + w),
+                l.z + Math.sin(a1) * (r + w),
+                l.z + Math.sin(a1) * (r - w)
+            };
             for (int j = 0; j < 4; j++) {
                 double y = groundY(level, xs[j], zs[j], l.y) + 0.08;
-                vc.addVertex(m, (float) (xs[j] - me.x), (float) (y - me.y), (float) (zs[j] - me.z)).setColor(red, grn, blu, a);
+                vc.addVertex(m, (float) (xs[j] - me.x), (float) (y - me.y), (float) (zs[j] - me.z))
+                        .setColor(red, grn, blu, a);
             }
         }
         // and a faint spot in the middle, where it hits
@@ -98,14 +120,15 @@ public class ShotRenderer extends EntityRenderer<Shot> {
             double[] zs = {l.z, l.z + Math.sin(a0) * rr, l.z + Math.sin(a1) * rr, l.z};
             for (int j = 0; j < 4; j++) {
                 double y = groundY(level, xs[j], zs[j], l.y) + 0.07;
-                vc.addVertex(m, (float) (xs[j] - me.x), (float) (y - me.y), (float) (zs[j] - me.z)).setColor(red, grn, blu, (int) (90 * flash));
+                vc.addVertex(m, (float) (xs[j] - me.x), (float) (y - me.y), (float) (zs[j] - me.z))
+                        .setColor(red, grn, blu, (int) (90 * flash));
             }
         }
     }
 
-    static double groundY(net.minecraft.world.level.Level level, double x, double z, double near) {
+    static double groundY(Level level, double x, double z, double near) {
         int bx = Mth.floor(x), bz = Mth.floor(z);
-        if (!level.hasChunkAt(new net.minecraft.core.BlockPos(bx, 0, bz))) return near;
+        if (!level.hasChunkAt(new BlockPos(bx, 0, bz))) return near;
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
         return Math.abs(y - near) > 12 ? near : y;
     }
@@ -166,41 +189,57 @@ public class ShotRenderer extends EntityRenderer<Shot> {
 
     /** the egg's blocks: a ball SAC_R blocks round, x y z and which block (0 bone, 1 calcite, 2 froglight) */
     private static final float SAC_R = 2.5f;
+
     private static final int[][] SAC = sac();
     private static final BlockState[] SAC_BLOCKS = {
-            Blocks.BONE_BLOCK.defaultBlockState(),
-            Blocks.CALCITE.defaultBlockState(),
-            Blocks.VERDANT_FROGLIGHT.defaultBlockState()};
+        Blocks.BONE_BLOCK.defaultBlockState(),
+        Blocks.CALCITE.defaultBlockState(),
+        Blocks.VERDANT_FROGLIGHT.defaultBlockState()
+    };
 
     private static int[][] sac() {
         List<int[]> l = new ArrayList<>();
-        for (int x = -2; x <= 2; x++) for (int y = -2; y <= 2; y++) for (int z = -2; z <= 2; z++) {
-            int d = x * x + y * y + z * z;
-            if (d > 6) continue;
-            // (the middle is never seen)
-            if (d <= 2) continue;
-            int h = Math.floorMod(x * 7 + y * 13 + z * 29 + x * y * 3, 10);
-            l.add(new int[]{x, y, z, h < 3 ? 2 : h < 6 ? 1 : 0});
-        }
+        for (int x = -2; x <= 2; x++)
+            for (int y = -2; y <= 2; y++)
+                for (int z = -2; z <= 2; z++) {
+                    int d = x * x + y * y + z * z;
+                    if (d > 6) continue;
+                    // (the middle is never seen)
+                    if (d <= 2) continue;
+                    int h = Math.floorMod(x * 7 + y * 13 + z * 29 + x * y * 3, 10);
+                    l.add(new int[] {x, y, z, h < 3 ? 2 : h < 6 ? 1 : 0});
+                }
         return l.toArray(new int[0][]);
     }
 
-    /** the client's sparkle for an egg (see Shot.eggFx): a glowing trail as it falls, and the ring of motes round its mark */
+    /**
+     * the client's sparkle for an egg (see Shot.eggFx): a glowing trail as it falls, and the ring of motes round its
+     * mark
+     */
     public static void fx(Shot e) {
         var level = e.level();
         var rnd = e.getRandom();
         if (e.stage() == Shot.FALLING) {
             double w = 0.6 + e.size() * 2;
             for (int i = 0; i < 2; i++)
-                level.addAlwaysVisibleParticle(ParticleTypes.GLOW, true, e.getX() + (rnd.nextDouble() - 0.5) * w, e.getY() + (rnd.nextDouble() - 0.5) * w,
-                        e.getZ() + (rnd.nextDouble() - 0.5) * w, 0, 0.05, 0);
+                level.addAlwaysVisibleParticle(
+                        ParticleTypes.GLOW,
+                        true,
+                        e.getX() + (rnd.nextDouble() - 0.5) * w,
+                        e.getY() + (rnd.nextDouble() - 0.5) * w,
+                        e.getZ() + (rnd.nextDouble() - 0.5) * w,
+                        0,
+                        0.05,
+                        0);
             if (e.tickCount % 3 == 0)
-                level.addAlwaysVisibleParticle(ParticleTypes.ITEM_SLIME, true, e.getX(), e.getY() - w * 0.4, e.getZ(), 0, -0.1, 0);
+                level.addAlwaysVisibleParticle(
+                        ParticleTypes.ITEM_SLIME, true, e.getX(), e.getY() - w * 0.4, e.getZ(), 0, -0.1, 0);
             if (e.tickCount % 2 == 0) {
                 Vec3 l = e.landing();
                 float k = e.fallen();
                 double r = Mth.lerp(k, markerRadius(e), 2.5 + 3 * e.size());
-                var dust = new DustParticleOptions(new Vector3f(Mth.lerp(k, 0.65f, 1f), Mth.lerp(k, 1f, 0.3f), 0.25f), 1.8f);
+                var dust = new DustParticleOptions(
+                        new Vector3f(Mth.lerp(k, 0.65f, 1f), Mth.lerp(k, 1f, 0.3f), 0.25f), 1.8f);
                 int n = 14;
                 double off = e.tickCount * 0.05;
                 for (int i = 0; i < n; i++) {
@@ -210,8 +249,15 @@ public class ShotRenderer extends EntityRenderer<Shot> {
                 }
             }
         } else if (e.stage() == Shot.HATCHING && e.tickCount % 3 == 0) {
-            level.addAlwaysVisibleParticle(ParticleTypes.GLOW, true, e.getX() + (rnd.nextDouble() - 0.5) * 2, e.getY() + 0.5 + rnd.nextDouble(),
-                    e.getZ() + (rnd.nextDouble() - 0.5) * 2, 0, 0.08, 0);
+            level.addAlwaysVisibleParticle(
+                    ParticleTypes.GLOW,
+                    true,
+                    e.getX() + (rnd.nextDouble() - 0.5) * 2,
+                    e.getY() + 0.5 + rnd.nextDouble(),
+                    e.getZ() + (rnd.nextDouble() - 0.5) * 2,
+                    0,
+                    0.08,
+                    0);
         }
     }
 }

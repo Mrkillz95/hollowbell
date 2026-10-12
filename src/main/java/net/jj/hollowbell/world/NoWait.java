@@ -1,5 +1,12 @@
 package net.jj.hollowbell.world;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -17,12 +24,6 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Function;
-
 /**
  * Looking at the world without ever making the server wait for it. The game's own getChunk, getHeight and
  * getBlockState stop the whole server until a chunk that isn't ready yet has been loaded or made (hasChunk also says
@@ -37,22 +38,31 @@ public final class NoWait {
     public static final int NOT_YET = Integer.MIN_VALUE;
 
     /** asks for land to be loaded (and made, if it has to be) on the world's own threads, for a few seconds */
-    public static final TicketType<ChunkPos> SOON = TicketType.create("hollowbell_soon", Comparator.comparingLong(ChunkPos::toLong), 100);
+    public static final TicketType<ChunkPos> SOON =
+            TicketType.create("hollowbell_soon", Comparator.comparingLong(ChunkPos::toLong), 100);
 
     /** the chunk at this block, if it's loaded right now (never loads or makes one) */
     public static @Nullable LevelChunk chunk(Level l, int x, int z) {
         return l.getChunkSource().getChunkNow(x >> 4, z >> 4);
     }
 
-    public static boolean loaded(Level l, int x, int z) { return chunk(l, x, z) != null; }
-    public static boolean loaded(Level l, BlockPos p) { return chunk(l, p.getX(), p.getZ()) != null; }
+    public static boolean loaded(Level l, int x, int z) {
+        return chunk(l, x, z) != null;
+    }
+
+    public static boolean loaded(Level l, BlockPos p) {
+        return chunk(l, p.getX(), p.getZ()) != null;
+    }
     /** by chunk: loaded right now (hasChunk also says yes for one still being made) */
-    public static boolean loadedChunk(Level l, int cx, int cz) { return l.getChunkSource().getChunkNow(cx, cz) != null; }
+    public static boolean loadedChunk(Level l, int cx, int cz) {
+        return l.getChunkSource().getChunkNow(cx, cz) != null;
+    }
 
     /** the land within a few blocks of here is all loaded */
     public static boolean loadedAround(Level l, int x, int z) {
         for (int cx = (x - 3) >> 4; cx <= (x + 3) >> 4; cx++)
-            for (int cz = (z - 3) >> 4; cz <= (z + 3) >> 4; cz++) if (l.getChunkSource().getChunkNow(cx, cz) == null) return false;
+            for (int cz = (z - 3) >> 4; cz <= (z + 3) >> 4; cz++)
+                if (l.getChunkSource().getChunkNow(cx, cz) == null) return false;
         return true;
     }
 
@@ -89,7 +99,8 @@ public final class NoWait {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int y = from; y > l.getMinBuildHeight(); y--) {
             if (!c.getBlockState(m.set(x, y - 1, z)).isFaceSturdy(l, m, Direction.UP)) continue;
-            if (!c.getBlockState(m.set(x, y, z)).getCollisionShape(l, m).isEmpty() || !c.getFluidState(m).isEmpty()) continue;
+            if (!c.getBlockState(m.set(x, y, z)).getCollisionShape(l, m).isEmpty()
+                    || !c.getFluidState(m).isEmpty()) continue;
             if (c.getBlockState(m.set(x, y + 1, z)).getCollisionShape(l, m).isEmpty()) return y;
         }
         return top;
@@ -104,7 +115,9 @@ public final class NoWait {
 
     /** the highest a thing can go: the roof in the nether, else the top of the world */
     public static int ceiling(Level l) {
-        return l.dimensionType().hasCeiling() ? l.getMinBuildHeight() + l.dimensionType().logicalHeight() : l.getMaxBuildHeight();
+        return l.dimensionType().hasCeiling()
+                ? l.getMinBuildHeight() + l.dimensionType().logicalHeight()
+                : l.getMaxBuildHeight();
     }
 
     /** ask for the land round this block to be made ready (radius in chunks), without waiting for it */
@@ -120,16 +133,25 @@ public final class NoWait {
         return Mth.clamp(y, l.getMinBuildHeight() + 1, l.getMaxBuildHeight() - 1);
     }
 
-    // ------------------------------------------------------------------ trips to land that isn't loaded yet
+    // trips to land that isn't loaded yet
 
     /**
      * A tp to land that isn't loaded yet: going there at once would have the server stop and wait while it's made.
      * Instead the land is asked for and the player goes the moment it's there (or after a minute, onto a guess).
      * `arrive` sets the player down and gives what to tell them.
      */
-    private record Trip(ResourceKey<Level> dim, int x, int z, Function<ServerPlayer, Component> arrive, long until /* clock ms */) {}
+    private record Trip(
+            ResourceKey<Level> dim,
+            int x,
+            int z,
+            Function<ServerPlayer, Component> arrive,
+            long until /* clock ms */) {}
+
     private static final Map<UUID, Trip> TRIPS = new HashMap<>();
-    /** how long a trip waits for its land at most (60 seconds, by the clock: land is made in real time, whatever the ticks do) */
+    /**
+     * how long a trip waits for its land at most (60 seconds, by the clock: land is made in real time, whatever the
+     * ticks do)
+     */
     static final int TRIP_WAIT = 1200;
 
     public static void go(ServerPlayer p, ServerLevel l, int x, int z, Function<ServerPlayer, Component> arrive) {
@@ -138,18 +160,26 @@ public final class NoWait {
     }
 
     /** every trip's wait has run out, as if a minute had gone by */
-    public static void runOutForTests() { TRIPS.replaceAll((k, t) -> new Trip(t.dim(), t.x(), t.z(), t.arrive(), 0L)); }
+    public static void runOutForTests() {
+        TRIPS.replaceAll((k, t) -> new Trip(t.dim(), t.x(), t.z(), t.arrive(), 0L));
+    }
 
     /** is this player waiting on a trip? (the tests ask) */
-    public static boolean onTheWay(ServerPlayer p) { return TRIPS.containsKey(p.getUUID()); }
+    public static boolean onTheWay(ServerPlayer p) {
+        return TRIPS.containsKey(p.getUUID());
+    }
 
-    // ------------------------------------------------------------------ land held until it's there
+    // land held until it's there
 
     /** land asked for until it's loaded (a single ask runs out after five seconds, and new land can take longer) */
     private record Hold(ResourceKey<Level> dim, int x, int z, long until /* clock ms */) {}
-    private static final java.util.List<Hold> HOLDS = new java.util.ArrayList<>();
 
-    /** ask for the land here and keep asking until it's loaded (at most `ticks`): something was put there that has to run */
+    private static final List<Hold> HOLDS = new ArrayList<>();
+
+    /**
+     * ask for the land here and keep asking until it's loaded (at most `ticks`): something was put there that has to
+     * run
+     */
     public static void hold(ServerLevel l, int x, int z, int ticks) {
         ask(l, x, z, 1);
         HOLDS.add(new Hold(l.dimension(), x, z, System.currentTimeMillis() + ticks * 50L));
@@ -161,18 +191,29 @@ public final class NoWait {
         while (it.hasNext()) {
             Hold h = it.next();
             ServerLevel l = server.getLevel(h.dim());
-            if (l == null || System.currentTimeMillis() > h.until()) { it.remove(); continue; }
-            if (loaded(l, h.x(), h.z())) { ask(l, h.x(), h.z(), 1); it.remove(); continue; }   // (one more ask: it runs a while longer)
+            if (l == null || System.currentTimeMillis() > h.until()) {
+                it.remove();
+                continue;
+            }
+            if (loaded(l, h.x(), h.z())) {
+                ask(l, h.x(), h.z(), 1);
+                it.remove();
+                continue;
+            } // (one more ask: it runs a while longer)
             if (l.getGameTime() % 40 == 0) ask(l, h.x(), h.z(), 1);
         }
     }
 
-    // ------------------------------------------------------------------ one just put down, held running a while
+    // one just put down, held running a while
 
     /** held round one just put down far from everybody, at the level where things there take their ticks */
-    public static final TicketType<ChunkPos> SETTLE = TicketType.create("hollowbell_settle", Comparator.comparingLong(ChunkPos::toLong), 100);
-    private record Settle(ResourceKey<Level> dim, int x, int z, long giveUp /* clock ms */, int ticks, long[] loadedAt) {}
-    private static final java.util.List<Settle> SETTLES = new java.util.ArrayList<>();
+    public static final TicketType<ChunkPos> SETTLE =
+            TicketType.create("hollowbell_settle", Comparator.comparingLong(ChunkPos::toLong), 100);
+
+    private record Settle(
+            ResourceKey<Level> dim, int x, int z, long giveUp /* clock ms */, int ticks, long[] loadedAt) {}
+
+    private static final List<Settle> SETTLES = new ArrayList<>();
 
     /**
      * One was put down here, maybe far from everybody (a summon): his land is asked for without waiting, and once it's
@@ -186,7 +227,9 @@ public final class NoWait {
     }
 
     /** is anything still being held running? (the tests ask) */
-    public static boolean settling() { return !SETTLES.isEmpty(); }
+    public static boolean settling() {
+        return !SETTLES.isEmpty();
+    }
 
     private static void settles(MinecraftServer server) {
         if (SETTLES.isEmpty()) return;
@@ -194,12 +237,21 @@ public final class NoWait {
         while (it.hasNext()) {
             Settle s = it.next();
             ServerLevel l = server.getLevel(s.dim());
-            if (l == null) { it.remove(); continue; }
+            if (l == null) {
+                it.remove();
+                continue;
+            }
             long now = l.getGameTime();
             if (s.loadedAt()[0] < 0) {
                 if (loaded(l, s.x(), s.z())) s.loadedAt()[0] = now;
-                else if (System.currentTimeMillis() > s.giveUp()) { it.remove(); continue; }
-            } else if (now - s.loadedAt()[0] > s.ticks()) { it.remove(); continue; }   // (the ticket runs out on its own)
+                else if (System.currentTimeMillis() > s.giveUp()) {
+                    it.remove();
+                    continue;
+                }
+            } else if (now - s.loadedAt()[0] > s.ticks()) {
+                it.remove();
+                continue;
+            } // (the ticket runs out on its own)
             if (now % 40 == 0) {
                 ChunkPos cp = new ChunkPos(s.x() >> 4, s.z() >> 4);
                 l.getChunkSource().addRegionTicket(SETTLE, cp, 3, cp);
@@ -217,7 +269,10 @@ public final class NoWait {
             ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
             Trip t = e.getValue();
             ServerLevel l = server.getLevel(t.dim());
-            if (p == null || l == null || p.isRemoved()) { it.remove(); continue; }
+            if (p == null || l == null || p.isRemoved()) {
+                it.remove();
+                continue;
+            }
             boolean ready = loadedAround(l, t.x(), t.z());
             if (!ready && System.currentTimeMillis() <= t.until()) {
                 // (the ask runs out after a few seconds: asked again while the land is still being made)
@@ -237,5 +292,9 @@ public final class NoWait {
         }
     }
 
-    public static void forget() { TRIPS.clear(); HOLDS.clear(); SETTLES.clear(); }
+    public static void forget() {
+        TRIPS.clear();
+        HOLDS.clear();
+        SETTLES.clear();
+    }
 }

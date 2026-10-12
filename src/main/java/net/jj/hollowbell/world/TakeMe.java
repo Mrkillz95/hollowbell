@@ -1,24 +1,28 @@
 package net.jj.hollowbell.world;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.item.FinderItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * /hollowbell tp [which] (cheats on, never in the book): takes you to him. You land on safe open ground a little
@@ -31,17 +35,19 @@ public final class TakeMe {
     /** everyone /hollowbell list shows, in the same order: those in the world, then those out of it */
     public static List<Object> listed(MinecraftServer server) {
         List<Object> out = new ArrayList<>();
-        for (ServerLevel l : server.getAllLevels()) out.addAll(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved()));
+        for (ServerLevel l : server.getAllLevels())
+            out.addAll(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved()));
         out.addAll(Away.get(server).all());
         for (var e : Away.get(server).lying(server).entrySet()) out.add(new Lying(e.getKey(), e.getValue()));
         return out;
     }
 
     /** one written down as lying still where nobody was near: not loaded, not out of the world */
-    public record Lying(java.util.UUID id, Away.Parked at) {}
+    public record Lying(UUID id, Away.Parked at) {}
 
     /** is this player waiting to be taken somewhere (the tests ask) */
-    public static boolean onTheWay(ServerPlayer p) { return NoWait.onTheWay(p);
+    public static boolean onTheWay(ServerPlayer p) {
+        return NoWait.onTheWay(p);
     }
 
     /** which = 0: the nearest (this dimension first); 1, 2...: that one on /hollowbell list */
@@ -56,15 +62,20 @@ public final class TakeMe {
             double bd = Double.MAX_VALUE;
             for (Object o : listed(server)) {
                 double d;
-                if (o instanceof Lying) continue;                    // (looked at below, when there's nobody else)
+                if (o instanceof Lying) continue; // (looked at below, when there's nobody else)
                 if (o instanceof HollowbellEntity h) d = h.level() == p.level() ? h.distanceToSqr(p) : 1e18;
                 else {
                     Away.Rec r = (Away.Rec) o;
                     Vec3 s = r.spot(p.serverLevel().getGameTime());
-                    d = r.dim.equals(p.level().dimension().location().toString()) ? Mth.square(s.x - p.getX()) + Mth.square(s.z - p.getZ()) : 1e18;
-                    d += 1;                                            // one in the world wins a tie
+                    d = r.dim.equals(p.level().dimension().location().toString())
+                            ? Mth.square(s.x - p.getX()) + Mth.square(s.z - p.getZ())
+                            : 1e18;
+                    d += 1; // one in the world wins a tie
                 }
-                if (pick == null || d < bd) { bd = d; pick = o; }
+                if (pick == null || d < bd) {
+                    bd = d;
+                    pick = o;
+                }
             }
         }
         if (pick instanceof HollowbellEntity h) {
@@ -77,23 +88,35 @@ public final class TakeMe {
             return land(p, l, s.x, s.z, r.scale);
         }
         if (pick instanceof Lying k) {
-            Component c = land(p, level(server, k.at().dim()), k.at().x(), k.at().z(), k.at().sizeOr(net.jj.hollowbell.HollowbellConfig.V.worldScale));
+            Component c = land(
+                    p,
+                    level(server, k.at().dim()),
+                    k.at().x(),
+                    k.at().z(),
+                    k.at().sizeOr(HollowbellConfig.V.worldScale));
             if (NoWait.onTheWay(p)) return c;
-            return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.at().x()), Mth.floor(k.at().z()));
+            return Component.translatable(
+                    "command.hollowbell.tp_waiting", Mth.floor(k.at().x()), Mth.floor(k.at().z()));
         }
-        // one put away with his chunk where nobody was near (not loaded, not out of the world): beside him, he loads round you
+        // one put away with his chunk where nobody was near (not loaded, not out of the world): beside him, he loads
+        // round you
         if (which <= 0) {
-            java.util.Map.Entry<java.util.UUID, Away.Parked> lay = null;
+            Map.Entry<UUID, Away.Parked> lay = null;
             double bd = Double.MAX_VALUE;
             for (var e : Away.get(server).parked().entrySet()) {
                 ServerLevel l = level(server, e.getValue().dim());
                 if (l.getEntity(e.getKey()) != null) continue;
-                double d = (l == p.level() ? 0 : 1e12) + Mth.square(e.getValue().x() - p.getX()) + Mth.square(e.getValue().z() - p.getZ());
-                if (d < bd) { bd = d; lay = e; }
+                double d = (l == p.level() ? 0 : 1e12)
+                        + Mth.square(e.getValue().x() - p.getX())
+                        + Mth.square(e.getValue().z() - p.getZ());
+                if (d < bd) {
+                    bd = d;
+                    lay = e;
+                }
             }
             if (lay != null) {
                 Away.Parked k = lay.getValue();
-                Component c = land(p, level(server, k.dim()), k.x(), k.z(), k.sizeOr(net.jj.hollowbell.HollowbellConfig.V.worldScale));
+                Component c = land(p, level(server, k.dim()), k.x(), k.z(), k.sizeOr(HollowbellConfig.V.worldScale));
                 if (NoWait.onTheWay(p)) return c;
                 return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.x()), Mth.floor(k.z()));
             }
@@ -102,13 +125,13 @@ public final class TakeMe {
         WorldOne w = WorldOne.get(server);
         BlockPos at = w.where();
         if (at != null && w.aliveNow()) {
-            Component c = land(p, server.overworld(), at.getX() + 0.5, at.getZ() + 0.5, net.jj.hollowbell.HollowbellConfig.V.worldScale);
+            Component c = land(p, server.overworld(), at.getX() + 0.5, at.getZ() + 0.5, HollowbellConfig.V.worldScale);
             if (NoWait.onTheWay(p)) return c;
             return Component.translatable("command.hollowbell.tp_waiting", at.getX(), at.getZ());
         }
         if (at != null) {
             ServerLevel over = server.overworld();
-            java.util.function.Function<ServerPlayer, Component> go = q -> {
+            Function<ServerPlayer, Component> go = q -> {
                 BlockPos safe = safeNear(over, at.getX(), at.getZ(), 48);
                 q.teleportTo(over, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, q.getYRot(), 0f);
                 return Component.translatable("command.hollowbell.tp_rise");
@@ -126,7 +149,11 @@ public final class TakeMe {
     private static Component land(ServerPlayer p, ServerLevel l, double hx, double hz, float scale) {
         double dx = p.level() == l ? p.getX() - hx : 1, dz = p.level() == l ? p.getZ() - hz : 0;
         double len = Math.hypot(dx, dz);
-        if (len < 1e-3) { dx = 1; dz = 0; len = 1; }
+        if (len < 1e-3) {
+            dx = 1;
+            dz = 0;
+            len = 1;
+        }
         double out = 88 * scale * 1.05 + 20 * scale + 3;
         int tx = Mth.floor(hx + dx / len * out), tz = Mth.floor(hz + dz / len * out);
         if (!NoWait.loadedAround(l, tx, tz)) {
@@ -142,11 +169,14 @@ public final class TakeMe {
         double fx = hx - (safe.getX() + 0.5), fz = hz - (safe.getZ() + 0.5);
         float yaw = (float) Math.toDegrees(Math.atan2(-fx, fz));
         p.teleportTo(l, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, yaw, 0f);
-        int n = net.jj.hollowbell.item.FinderItem.tens(Math.hypot(fx, fz));
+        int n = FinderItem.tens(Math.hypot(fx, fz));
         return Component.translatable("command.hollowbell.tp", n);
     }
 
-    /** a spot to stand on near x, z: solid ground under your feet, air for your body, no water or lava (searched outward) */
+    /**
+     * a spot to stand on near x, z: solid ground under your feet, air for your body, no water or lava (searched
+     * outward)
+     */
     public static BlockPos safeNear(ServerLevel l, int x, int z, int reach) {
         for (int r = 0; r <= reach; r += 2) {
             int steps = Math.max(1, r * 3);
@@ -158,9 +188,12 @@ public final class TakeMe {
                 int y = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, px, pz);
                 BlockPos feet = new BlockPos(px, y, pz);
                 BlockState under = l.getBlockState(feet.below());
-                if (y <= l.getMinBuildHeight() + 1 || !under.getFluidState().isEmpty() || !under.isFaceSturdy(l, feet.below(), Direction.UP)) continue;
-                if (!l.getBlockState(feet).isAir() || !l.getBlockState(feet.above()).isAir()) continue;
-                if (under.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK) || under.is(net.minecraft.world.level.block.Blocks.CACTUS)) continue;
+                if (y <= l.getMinBuildHeight() + 1
+                        || !under.getFluidState().isEmpty()
+                        || !under.isFaceSturdy(l, feet.below(), Direction.UP)) continue;
+                if (!l.getBlockState(feet).isAir()
+                        || !l.getBlockState(feet.above()).isAir()) continue;
+                if (under.is(Blocks.MAGMA_BLOCK) || under.is(Blocks.CACTUS)) continue;
                 return feet;
             }
         }

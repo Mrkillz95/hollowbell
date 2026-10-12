@@ -1,18 +1,17 @@
 package net.jj.giants.net;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.giants.Giant;
-import net.jj.giants.Giants;
-import net.jj.giants.GiantsGuideMod;
-import net.minecraft.server.MinecraftServer;
-
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.jj.giants.Giant;
+import net.jj.giants.Giants;
+import net.jj.giants.GiantsGuideMod;
+import net.minecraft.server.MinecraftServer;
 
 /**
  * Live news for the guide's "Where" page. The guide never touches a giant's own code: it asks his mod's
@@ -26,26 +25,31 @@ public final class LiveNews {
     public static void register() {
         PayloadTypeRegistry.playC2S().register(AskPayload.TYPE, AskPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ToldPayload.TYPE, ToldPayload.CODEC);
-        ServerPlayNetworking.registerGlobalReceiver(AskPayload.TYPE, (p, ctx) -> ctx.server().execute(() -> {
-            var player = ctx.player();
-            long now = ctx.server().getTickCount();
-            Long last = lastAsked.get(player.getUUID());
-            if (last != null && now - last >= 0 && now - last < 10) return; // at most twice a second each
-            lastAsked.put(player.getUUID(), now);
-            Giant g = Giants.byKey(p.giant());
-            if (g == null) return;
-            if (ServerPlayNetworking.canSend(player, ToldPayload.TYPE))
-                ServerPlayNetworking.send(player, new ToldPayload(g.key(), ask(ctx.server(), g)));
-        }));
+        ServerPlayNetworking.registerGlobalReceiver(
+                AskPayload.TYPE,
+                (p, ctx) -> ctx.server().execute(() -> {
+                    var player = ctx.player();
+                    long now = ctx.server().getTickCount();
+                    Long last = lastAsked.get(player.getUUID());
+                    if (last != null && now - last >= 0 && now - last < 10) return; // at most twice a second each
+                    lastAsked.put(player.getUUID(), now);
+                    Giant g = Giants.byKey(p.giant());
+                    if (g == null) return;
+                    if (ServerPlayNetworking.canSend(player, ToldPayload.TYPE))
+                        ServerPlayNetworking.send(player, new ToldPayload(g.key(), ask(ctx.server(), g)));
+                }));
     }
 
     /** where he is and how he's set, in his own mod's words; empty when his mod isn't on this server or says nothing */
     public static List<String> ask(MinecraftServer server, Giant g) {
         List<String> out = new ArrayList<>();
         if (!Giants.loaded(g)) return out;
-        for (String action : new String[]{"where", "status"}) {
+        for (String action : new String[] {"where", "status"}) {
             List<String> got = bridge(server, g, action);
-            if (got != null) for (String s : got) if (s != null && !s.isBlank() && out.size() < 24) out.add(s.length() > 500 ? s.substring(0, 500) : s);
+            if (got != null)
+                for (String s : got)
+                    if (s != null && !s.isBlank() && out.size() < 24)
+                        out.add(s.length() > 500 ? s.substring(0, 500) : s);
         }
         return out;
     }

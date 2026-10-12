@@ -1,5 +1,10 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.pig;
+import static net.jj.hollowbell.test.HollowbellGameTests.release;
+import static net.jj.hollowbell.test.HollowbellGameTests.run;
+import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
+
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -7,11 +12,6 @@ import net.jj.hollowbell.entity.Moves;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.animal.Pig;
-
-import static net.jj.hollowbell.test.HollowbellGameTests.pig;
-import static net.jj.hollowbell.test.HollowbellGameTests.release;
-import static net.jj.hollowbell.test.HollowbellGameTests.run;
-import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 
 /** Over half health he keeps his heavy moves out of the first part of a fight, as long as the setting says. */
 public class HeavyDelayTests implements FabricGameTest {
@@ -29,7 +29,9 @@ public class HeavyDelayTests implements FabricGameTest {
             e.setTarget(p[0]);
             e.setMoveCooldown(0);
         });
-        h.onEachTick(() -> { if (Moves.tier(e.moves().move()) == Moves.HEAVY) heavy[0] = true; });
+        h.onEachTick(() -> {
+            if (Moves.tier(e.moves().move()) == Moves.HEAVY) heavy[0] = true;
+        });
         h.runAfterDelay(260, () -> {
             boolean waited = !e.moves().heavyWaitOver();
             run(h, e.position(), "hollowbell heavydelay 0");

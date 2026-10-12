@@ -1,5 +1,11 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.drop;
+import static net.jj.hollowbell.test.HollowbellGameTests.player;
+import static net.jj.hollowbell.test.HollowbellGameTests.release;
+import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
+import static net.jj.hollowbell.test.SolidTests.slice;
+
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -13,12 +19,6 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-
-import static net.jj.hollowbell.test.HollowbellGameTests.drop;
-import static net.jj.hollowbell.test.HollowbellGameTests.player;
-import static net.jj.hollowbell.test.HollowbellGameTests.release;
-import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
-import static net.jj.hollowbell.test.SolidTests.slice;
 
 /** His long death: whoever stands on him floats down, and the one who brought him down still gets the XP. */
 public class DeathTests implements FabricGameTest {
@@ -50,7 +50,9 @@ public class DeathTests implements FabricGameTest {
             h.assertTrue(e.isDeadOrDying(), "he didn't die");
             MobEffectInstance slow = pl[1].getEffect(MobEffects.SLOW_FALLING);
             h.assertTrue(slow != null, "the player on his crown got no slow falling as he died");
-            h.assertTrue(slow.getDuration() * 0.45 > over, "slow falling for " + slow.getDuration() + " ticks from " + over + " blocks up");
+            h.assertTrue(
+                    slow.getDuration() * 0.45 > over,
+                    "slow falling for " + slow.getDuration() + " ticks from " + over + " blocks up");
         });
         h.runAfterDelay(60 + HollowbellEntity.DEATH_LENGTH + 10, () -> {
             var orbs = h.getLevel().getEntitiesOfClass(ExperienceOrb.class, new AABB(at[0], at[0]).inflate(60));

@@ -37,8 +37,14 @@ public final class SolidClient {
     public static void tick(Minecraft mc) {
         restore();
         LocalPlayer p = mc.player;
-        if (p == null || mc.level == null) { clear(); return; }
-        if (p.isSpectator() || p.isPassenger() || p.noPhysics) { clear(); return; }
+        if (p == null || mc.level == null) {
+            clear();
+            return;
+        }
+        if (p.isSpectator() || p.isPassenger() || p.noPhysics) {
+            clear();
+            return;
+        }
         long t0 = System.nanoTime();
         // carried first (moved with the part you stand on), then out of him if he's still into you
         if (p.getAbilities().flying || (p.isInWater() && !p.onGround())) CARRY.clear();
@@ -47,7 +53,8 @@ public final class SolidClient {
         for (SolidBody b : Solid.bodies(true)) {
             if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
             if (Solid.unstick(b, p, 0.08, onHim && CARRY.on == b)) {
-                unstuck++; Solid.unstuckClient++;
+                unstuck++;
+                Solid.unstuckClient++;
                 // (the spot under you looked for again where you are now)
                 CARRY.clear();
                 if (!p.getAbilities().flying) CARRY.step(p, Solid.bodies(true));
@@ -64,48 +71,73 @@ public final class SolidClient {
         Solid.nanosClient += System.nanoTime() - t0;
     }
 
-    /** before a frame is drawn: you where the spot under you is in the pose he's drawn in, and your view turned with him */
+    /**
+     * before a frame is drawn: you where the spot under you is in the pose he's drawn in, and your view turned with him
+     */
     public static void beforeFrame(float partial) {
         restore();
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         SolidBody b = CARRY.on;
-        if (p == null || b == null || CARRY.rest == null || !b.solidReady() || p.isPassenger()) { frameYaw = Float.NaN; return; }
+        if (p == null || b == null || CARRY.rest == null || !b.solidReady() || p.isPassenger()) {
+            frameYaw = Float.NaN;
+            return;
+        }
         Entity s = b.solidSelf();
         int bone = b.solidShape().bone[CARRY.frame];
         Matrix4f[] tickPose = b.solidPose();
-        if (scratch == null || scratch.length != tickPose.length) { scratch = new Matrix4f[tickPose.length]; for (int i = 0; i < scratch.length; i++) scratch[i] = new Matrix4f(); }
+        if (scratch == null || scratch.length != tickPose.length) {
+            scratch = new Matrix4f[tickPose.length];
+            for (int i = 0; i < scratch.length; i++) scratch[i] = new Matrix4f();
+        }
         b.solidPoseAt(partial, scratch);
         Matrix4f f = b.solidRoot(partial, new Matrix4f()).mul(scratch[bone]);
-        double ex = Mth.lerp(partial, s.xo, s.getX()), ey = Mth.lerp(partial, s.yo, s.getY()), ez = Mth.lerp(partial, s.zo, s.getZ());
+        double ex = Mth.lerp(partial, s.xo, s.getX()),
+                ey = Mth.lerp(partial, s.yo, s.getY()),
+                ez = Mth.lerp(partial, s.zo, s.getZ());
         // his turning turns your view, smoothly
         float yaw = Solid.yawOf(f);
         int key = s.getId() * 4096 + CARRY.frame;
         if (!Float.isNaN(frameYaw) && key == frameKey) {
             float dy = Mth.wrapDegrees(yaw - frameYaw);
             if (Math.abs(dy) < 20f) {
-                p.setYRot(p.getYRot() + dy); p.yRotO += dy;
-                p.setYBodyRot(p.yBodyRot + dy); p.yBodyRotO += dy;
-                p.setYHeadRot(p.getYHeadRot() + dy); p.yHeadRotO += dy;
+                p.setYRot(p.getYRot() + dy);
+                p.yRotO += dy;
+                p.setYBodyRot(p.yBodyRot + dy);
+                p.yBodyRotO += dy;
+                p.setYHeadRot(p.getYHeadRot() + dy);
+                p.yHeadRotO += dy;
             }
         }
-        frameYaw = yaw; frameKey = key;
+        frameYaw = yaw;
+        frameKey = key;
         if (CARRY.restPrev == null) return;
         Vector3f r = new Vector3f(CARRY.restPrev).lerp(CARRY.rest, Mth.clamp(partial, 0f, 1f));
         Vector3f w = f.transformPosition(r);
         double dx = w.x + ex, dy = w.y + ey, dz = w.z + ez;
-        double lx = Mth.lerp(partial, p.xo, p.getX()), ly = Mth.lerp(partial, p.yo, p.getY()), lz = Mth.lerp(partial, p.zo, p.getZ());
+        double lx = Mth.lerp(partial, p.xo, p.getX()),
+                ly = Mth.lerp(partial, p.yo, p.getY()),
+                lz = Mth.lerp(partial, p.zo, p.getZ());
         double off = Math.sqrt((dx - lx) * (dx - lx) + (dy - ly) * (dy - ly) + (dz - lz) * (dz - lz));
         if (off > 1.5) return;
         frameFix = Math.max(frameFix, off);
-        rx = p.getX(); ry = p.getY(); rz = p.getZ(); rxo = p.xo; ryo = p.yo; rzo = p.zo;
+        rx = p.getX();
+        ry = p.getY();
+        rz = p.getZ();
+        rxo = p.xo;
+        ryo = p.yo;
+        rzo = p.zo;
         p.setPos(dx, dy, dz);
-        p.xo = dx; p.yo = dy; p.zo = dz;
+        p.xo = dx;
+        p.yo = dy;
+        p.zo = dz;
         moved = true;
     }
 
     /** after the frame: your game's own position back */
-    public static void afterFrame() { restore(); }
+    public static void afterFrame() {
+        restore();
+    }
 
     private static void restore() {
         if (!moved) return;
@@ -113,8 +145,15 @@ public final class SolidClient {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return;
         p.setPos(rx, ry, rz);
-        p.xo = rxo; p.yo = ryo; p.zo = rzo;
+        p.xo = rxo;
+        p.yo = ryo;
+        p.zo = rzo;
     }
 
-    public static void clear() { restore(); CARRY.clear(); frameYaw = Float.NaN; frameKey = Integer.MIN_VALUE; }
+    public static void clear() {
+        restore();
+        CARRY.clear();
+        frameYaw = Float.NaN;
+        frameKey = Integer.MIN_VALUE;
+    }
 }

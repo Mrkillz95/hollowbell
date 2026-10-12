@@ -19,27 +19,38 @@ public final class BellPick {
 
     /** the bone of him under the crosshair right now, or -1 */
     public static int bone = -1;
+
     public static int bellId = -1;
 
     public static void afterPick(float partial) {
-        bone = -1; bellId = -1;
+        bone = -1;
+        bellId = -1;
         Minecraft mc = Minecraft.getInstance();
         Entity cam = mc.getCameraEntity();
         if (mc.level == null || mc.player == null || cam == null || cam instanceof HollowbellEntity) return;
         double reach = mc.player.entityInteractionRange();
         Vec3 eye = cam.getEyePosition(partial), look = cam.getViewVector(partial);
         HitResult was = mc.hitResult;
-        double best = was == null || was.getType() == HitResult.Type.MISS ? reach : Math.min(reach, was.getLocation().distanceTo(eye));
-        HollowbellEntity got = null; int gotBone = -1; double gotT = best;
+        double best = was == null || was.getType() == HitResult.Type.MISS
+                ? reach
+                : Math.min(reach, was.getLocation().distanceTo(eye));
+        HollowbellEntity got = null;
+        int gotBone = -1;
+        double gotT = best;
         for (Entity e : mc.level.entitiesForRendering()) {
             if (!(e instanceof HollowbellEntity h) || h.isRemoved() || !h.clientPoseReady()) continue;
             if (!h.bodyBox().inflate(reach).contains(eye)) continue;
             h.ensurePose();
             BellRig.Hit hit = h.raycast(eye, look, gotT);
-            if (hit != null && hit.t() < gotT) { got = h; gotBone = hit.bone(); gotT = hit.t(); }
+            if (hit != null && hit.t() < gotT) {
+                got = h;
+                gotBone = hit.bone();
+                gotT = hit.t();
+            }
         }
         if (got == null) return;
-        bone = gotBone; bellId = got.getId();
+        bone = gotBone;
+        bellId = got.getId();
         mc.hitResult = new EntityHitResult(got, eye.add(look.scale(gotT)));
         mc.crosshairPickEntity = got;
     }

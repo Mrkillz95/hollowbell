@@ -25,12 +25,27 @@ public record Giant(String key, String modId, String command, String bridge, Lis
     public record Move(String id, int tier, String nameKey, String whatKey) {}
 
     /** the guide's own copy of a move's name, used when his mod doesn't have the key (an older one) */
-    public String moveNameCopy(Move m) { return "guide.jj_giants." + key + ".move." + m.id(); }
-    public String moveWhatCopy(Move m) { return "guide.jj_giants." + key + ".move." + m.id() + ".what"; }
+    public String moveNameCopy(Move m) {
+        return "guide.jj_giants." + key + ".move." + m.id();
+    }
 
-    public String nameKey() { return "guide.jj_giants." + key + ".name"; }
-    public String roleKey() { return "guide.jj_giants." + key + ".role"; }
-    public String sizeKey() { return "guide.jj_giants." + key + ".size"; }
+    public String moveWhatCopy(Move m) {
+        return "guide.jj_giants." + key + ".move." + m.id() + ".what";
+    }
+
+    public String nameKey() {
+        return "guide.jj_giants." + key + ".name";
+    }
+
+    public String roleKey() {
+        return "guide.jj_giants." + key + ".role";
+    }
+
+    public String sizeKey() {
+        return "guide.jj_giants." + key + ".size";
+    }
     /** the numbered lines of one of his pages: guide.jj_giants.KEY.PAGE.1, .2, ... */
-    public String lineKey(String page, int n) { return "guide.jj_giants." + key + "." + page + "." + n; }
+    public String lineKey(String page, int n) {
+        return "guide.jj_giants." + key + "." + page + "." + n;
+    }
 }

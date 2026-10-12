@@ -1,5 +1,10 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.drop;
+import static net.jj.hollowbell.test.HollowbellGameTests.player;
+import static net.jj.hollowbell.test.HollowbellGameTests.release;
+import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
+
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.minecraft.gametest.framework.GameTest;
@@ -16,11 +21,6 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-
-import static net.jj.hollowbell.test.HollowbellGameTests.drop;
-import static net.jj.hollowbell.test.HollowbellGameTests.player;
-import static net.jj.hollowbell.test.HollowbellGameTests.release;
-import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 
 /** What is shot or thrown at him: it hurts him the way a blow does, and what it was is never lost. */
 public class ThrownTests implements FabricGameTest {
@@ -51,7 +51,8 @@ public class ThrownTests implements FabricGameTest {
             tr[0].setOwner(pl[0]);
             tr[0].pickup = AbstractArrow.Pickup.ALLOWED;
             shootAtCrown(h, e, tr[0]);
-            Arrow a = new Arrow(h.getLevel(), 0, 0, 0, PotionContents.createItemStack(Items.TIPPED_ARROW, Potions.POISON), null);
+            Arrow a = new Arrow(
+                    h.getLevel(), 0, 0, 0, PotionContents.createItemStack(Items.TIPPED_ARROW, Potions.POISON), null);
             a.setOwner(pl[0]);
             a.pickup = AbstractArrow.Pickup.ALLOWED;
             shootAtCrown(h, e, a);
@@ -63,7 +64,10 @@ public class ThrownTests implements FabricGameTest {
             var dropped = h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(near[0], near[0]).inflate(12));
             boolean tipped = dropped.stream().anyMatch(i -> i.getItem().is(Items.TIPPED_ARROW));
             boolean plain = dropped.stream().anyMatch(i -> i.getItem().is(Items.ARROW));
-            h.assertTrue(tipped && !plain, "the tipped arrow came back as " + dropped.stream().map(i -> i.getItem().toString()).toList());
+            h.assertTrue(
+                    tipped && !plain,
+                    "the tipped arrow came back as "
+                            + dropped.stream().map(i -> i.getItem().toString()).toList());
             for (ItemEntity i : dropped) i.discard();
             tr[0].discard();
             drop(pl[0]);
@@ -90,7 +94,9 @@ public class ThrownTests implements FabricGameTest {
             }
         });
         h.runAfterDelay(40, () -> {
-            h.assertTrue(e.healthNow() >= hp[0], "invulnerable, arrows still took him from " + hp[0] + " to " + e.healthNow());
+            h.assertTrue(
+                    e.healthNow() >= hp[0],
+                    "invulnerable, arrows still took him from " + hp[0] + " to " + e.healthNow());
             e.setInvulnerable(false);
             drop(pl[0]);
             release(h, e);

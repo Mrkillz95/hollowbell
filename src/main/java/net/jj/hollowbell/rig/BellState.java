@@ -1,5 +1,7 @@
 package net.jj.hollowbell.rig;
 
+import java.util.Arrays;
+
 /**
  * Everything the pose needs to know about him at one moment. Filled in by {@link BellAnim} (the smoothed body and
  * the chain points) and handed to {@link BellRig#computePose}. All positions are in model space: blocks at size 1,
@@ -59,6 +61,7 @@ public final class BellState {
     public float fold;
     /** how far the strands lie out round him on the ground (follows fold, but lets go slowly) */
     public float splay;
+
     public float sweep, sweepDir;
     public float curtain, curtainX, curtainZ;
     public int slamArm = -1;
@@ -73,9 +76,11 @@ public final class BellState {
      * their middle ends (model blocks), and where they are picked up (model space).
      */
     public int carryStrand = -1;
+
     public float carryReach, carryU, carryD, carryEnd, carryX, carryY, carryZ;
     /** a strand lashing sideways: which, how far through (0-1), and which way */
     public int lashStrand = -1;
+
     public float lashT, lashDir;
     /** every strand flicked up and back (sting volley, stinger storm), 0-1 */
     public float flick;
@@ -91,23 +96,36 @@ public final class BellState {
     public BellState(BellRig rig) {
         podPopped = new boolean[rig.pods.length];
         podGrowth = new float[rig.pods.length];
-        java.util.Arrays.fill(podGrowth, 1f);
+        Arrays.fill(podGrowth, 1f);
         podPopAge = new float[rig.pods.length];
-        java.util.Arrays.fill(podPopAge, 1000f);
+        Arrays.fill(podPopAge, 1000f);
         eggGone = new boolean[rig.eggs.length];
         chain = new float[rig.chains.length][];
         for (int c = 0; c < chain.length; c++) {
             BellRig.Chain ch = rig.chains[c];
             float[] p = new float[3 * ch.points()];
-            for (int i = 0; i < ch.points(); i++) { p[3 * i] = ch.joints[i].x; p[3 * i + 1] = ch.joints[i].y; p[3 * i + 2] = ch.joints[i].z; }
+            for (int i = 0; i < ch.points(); i++) {
+                p[3 * i] = ch.joints[i].x;
+                p[3 * i + 1] = ch.joints[i].y;
+                p[3 * i + 2] = ch.joints[i].z;
+            }
             chain[c] = p;
         }
     }
 
     /** clears what the moves ask for, before the move of the moment fills it in again */
     public void clearMoves() {
-        sweep = 0f; curtain = 0f; slamArm = -1; wrapArm = -1; grabStrand = -1; lashStrand = -1; carryStrand = -1;
-        flick = 0f; flickNear = 0f; swirl = 0f; spread = 0f;
-        java.util.Arrays.fill(armRaise, 0f);
+        sweep = 0f;
+        curtain = 0f;
+        slamArm = -1;
+        wrapArm = -1;
+        grabStrand = -1;
+        lashStrand = -1;
+        carryStrand = -1;
+        flick = 0f;
+        flickNear = 0f;
+        swirl = 0f;
+        spread = 0f;
+        Arrays.fill(armRaise, 0f);
     }
 }

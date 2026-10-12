@@ -1,23 +1,30 @@
 package net.jj.hollowbell.item;
 
+import java.util.List;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.world.Away;
+import net.jj.hollowbell.world.BellGen;
+import net.jj.hollowbell.world.FarOrders;
 import net.jj.hollowbell.world.WorldOne;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -26,9 +33,13 @@ import org.jetbrains.annotations.Nullable;
  * It glints while he is close.
  */
 public class FinderItem extends Item {
-    public FinderItem(Properties p) { super(p); }
+    public FinderItem(Properties p) {
+        super(p);
+    }
 
-    private static final String[] WAY = {"south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"};
+    private static final String[] WAY = {
+        "south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"
+    };
 
     /** eight ways round, from you towards that spot */
     public static String way(double dx, double dz) {
@@ -41,7 +52,9 @@ public class FinderItem extends Item {
         if (lvl instanceof ServerLevel sl) {
             answer(sl, player);
             float vol = HollowbellConfig.V.soundVolume;
-            if (vol > 0) lvl.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.LODESTONE_COMPASS_LOCK, SoundSource.PLAYERS, vol, 1f);
+            if (vol > 0)
+                lvl.playSound(
+                        null, player.blockPosition(), SoundEvents.LODESTONE_COMPASS_LOCK, SoundSource.PLAYERS, vol, 1f);
             player.getCooldowns().addCooldown(this, 40);
         }
         return InteractionResultHolder.sidedSuccess(stack, lvl.isClientSide);
@@ -57,18 +70,23 @@ public class FinderItem extends Item {
 
     /** he's on his way to this player (the book's "Come to me"): the finder says so, and how far */
     private static @Nullable Component comingTo(ServerLevel sl, Player player) {
-        for (HollowbellEntity h : sl.getEntities(ModEntities.HOLLOWBELL, h -> player.getUUID().equals(h.comingTo())))
-            return net.jj.hollowbell.world.FarOrders.coming(Math.hypot(h.getX() - player.getX(), h.getZ() - player.getZ()), h.travelSpeed(), true);
+        for (HollowbellEntity h :
+                sl.getEntities(ModEntities.HOLLOWBELL, h -> player.getUUID().equals(h.comingTo())))
+            return FarOrders.coming(
+                    Math.hypot(h.getX() - player.getX(), h.getZ() - player.getZ()), h.travelSpeed(), true);
         for (Away.Rec r : Away.get(sl.getServer()).all()) {
-            if (!player.getUUID().equals(r.follow) || !r.dim.equals(sl.dimension().location().toString())) continue;
+            if (!player.getUUID().equals(r.follow)
+                    || !r.dim.equals(sl.dimension().location().toString())) continue;
             Vec3 s = r.spot(sl.getGameTime());
-            return net.jj.hollowbell.world.FarOrders.coming(Math.hypot(s.x - player.getX(), s.z - player.getZ()), r.speed, true);
+            return FarOrders.coming(Math.hypot(s.x - player.getX(), s.z - player.getZ()), r.speed, true);
         }
         return null;
     }
 
     /** a distance the way the finder says it: to the nearest ten blocks */
-    public static int tens(double d) { return (int) (Math.round(d / 10.0) * 10); }
+    public static int tens(double d) {
+        return (int) (Math.round(d / 10.0) * 10);
+    }
 
     /**
      * The one sentence every giant's finder uses (the same words in the book's "Where is he?" and /hollowbell natural):
@@ -80,7 +98,10 @@ public class FinderItem extends Item {
         double bd = Double.MAX_VALUE;
         for (HollowbellEntity h : sl.getEntities(ModEntities.HOLLOWBELL, h -> !h.isRemoved() && !h.isDeadOrDying())) {
             double d = h.distanceToSqr(from);
-            if (d < bd) { bd = d; near = h; }
+            if (d < bd) {
+                bd = d;
+                near = h;
+            }
         }
         if (near != null) return found(sl, from, near.getX(), near.getZ());
         // one out of the world, drifting on his own in this dimension
@@ -91,7 +112,8 @@ public class FinderItem extends Item {
         }
         // one put away with his chunk where nobody was near: written down where he lies
         var lay = Away.get(sl.getServer()).nearestLying(sl, from);
-        if (lay != null) return found(sl, from, lay.getValue().x(), lay.getValue().z());
+        if (lay != null)
+            return found(sl, from, lay.getValue().x(), lay.getValue().z());
         // the world's notes are about the overworld: from the nether or the end they would mean nothing
         if (sl.dimension() != Level.OVERWORLD) return Component.translatable("message.hollowbell.finder_wrong_world");
         WorldOne w = WorldOne.get(sl.getServer());
@@ -102,7 +124,12 @@ public class FinderItem extends Item {
             // where the next one comes down: the middle of his ground
             double dx = at.getX() + 0.5 - from.x, dz = at.getZ() + 0.5 - from.z;
             int n = tens(Math.sqrt(dx * dx + dz * dz));
-            if (days > 0) return Component.translatable(days == 1 ? "message.hollowbell.finder_dead_day" : "message.hollowbell.finder_dead", days, n, way(dx, dz));
+            if (days > 0)
+                return Component.translatable(
+                        days == 1 ? "message.hollowbell.finder_dead_day" : "message.hollowbell.finder_dead",
+                        days,
+                        n,
+                        way(dx, dz));
             return Component.translatable("message.hollowbell.finder_due", n, way(dx, dz));
         }
         return Component.translatable("message.hollowbell.finder_none");
@@ -113,27 +140,34 @@ public class FinderItem extends Item {
         double dx = x - from.x, dz = z - from.z;
         double d = Math.sqrt(dx * dx + dz * dz);
         if (d < 64) return Component.translatable("message.hollowbell.finder_close", tens(d), way(dx, dz));
-        boolean inGround = sl.dimension() == Level.OVERWORLD && net.jj.hollowbell.world.BellGen.inGround(Mth.floor(x), Mth.floor(z));
-        return Component.translatable(inGround ? "message.hollowbell.finder_ground" : "message.hollowbell.finder",
-                tens(d), way(dx, dz), Mth.floor(x), Mth.floor(z));
+        boolean inGround = sl.dimension() == Level.OVERWORLD && BellGen.inGround(Mth.floor(x), Mth.floor(z));
+        return Component.translatable(
+                inGround ? "message.hollowbell.finder_ground" : "message.hollowbell.finder",
+                tens(d),
+                way(dx, dz),
+                Mth.floor(x),
+                Mth.floor(z));
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext ctx, java.util.List<Component> tip, net.minecraft.world.item.TooltipFlag flag) {
-        tip.add(Component.translatable("item.hollowbell.hollowbell_finder.tip").withStyle(net.minecraft.ChatFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
+        tip.add(Component.translatable("item.hollowbell.hollowbell_finder.tip").withStyle(ChatFormatting.GRAY));
     }
 
-    // ------------------------------------------------------------------ a glint while he is near
+    // a glint while he is near
 
     @Override
     public void inventoryTick(ItemStack stack, Level lvl, Entity holder, int slot, boolean selected) {
         if (lvl.isClientSide || lvl.getGameTime() % 20 != 0) return;
-        boolean close = !lvl.getEntities(ModEntities.HOLLOWBELL, holder.getBoundingBox().inflate(300, 400, 300),
-                h -> !h.isRemoved() && !h.isDeadOrDying()).isEmpty();
-        boolean has = Boolean.TRUE.equals(stack.get(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE));
+        boolean close = !lvl.getEntities(
+                        ModEntities.HOLLOWBELL,
+                        holder.getBoundingBox().inflate(300, 400, 300),
+                        h -> !h.isRemoved() && !h.isDeadOrDying())
+                .isEmpty();
+        boolean has = Boolean.TRUE.equals(stack.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE));
         if (close != has) {
-            if (close) stack.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
-            else stack.remove(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
+            if (close) stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+            else stack.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
         }
     }
 }
