@@ -165,7 +165,7 @@ public class SolidTests implements FabricGameTest {
                         slice(rig, "bell_6", 0),
                         slice(rig, "spot_0", 0),
                         BellPieces.get().first[rig.pods[11].bone()],
-                        slice(rig, rig.boneNames[rig.arms[2].bones()[0]], 2)
+                        slice(rig, rig.boneNames[rig.arms[2].bones()[0]], 0)
                     }
                     : new int[] {slice(rig, "crown", 0), slice(rig, "bell_2", 0)};
             // (a pod and an arm swing about on their own: they must carry you while he drifts, not through his big
