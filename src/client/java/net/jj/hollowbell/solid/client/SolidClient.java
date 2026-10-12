@@ -62,7 +62,7 @@ public final class SolidClient {
             for (SolidBody b : Solid.bodies(true)) {
                 Solid.Runs r = Solid.column(b, p.getX(), p.getZ(), p.getY() - 6, p.getY() + 3, true, new Solid.Runs());
                 StringBuilder sb = new StringBuilder();
-                for (int j = 0; j < r.n; j++) sb.append(String.format(" [f%d k%d %.2f..%.2f]", r.frame[j], r.kind[j], r.bot[j], r.top[j]));
+                for (int j = 0; j < r.n; j++) sb.append(String.format(" [%s k%d %.2f..%.2f]", ((net.jj.hollowbell.entity.HollowbellEntity) b).rig.boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[b.solidShape().bone[r.frame[j]]]] + "/" + r.frame[j], r.kind[j], r.bot[j], r.top[j]));
                 net.jj.hollowbell.HollowbellMod.LOG.info("trace runs{}", sb);
             }
         }
@@ -71,7 +71,7 @@ public final class SolidClient {
             int[] tf = {-1};
             double td = Solid.depthIn(b, p.getBoundingBox(), 0.08, tf, true);
             if (Solid.unstick(b, p, 0.08)) {
-                if (traceTicks > 0) net.jj.hollowbell.HollowbellMod.LOG.info("trace UNSTICK depth {} frame {} -> {}", td, tf[0], tr(p));
+                if (traceTicks > 0) net.jj.hollowbell.HollowbellMod.LOG.info("trace UNSTICK depth {} frame {} -> {}", td, ((net.jj.hollowbell.entity.HollowbellEntity) b).rig.boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[b.solidShape().bone[tf[0]]]] + "/" + tf[0], tr(p));
                 unstuck++; Solid.unstuckClient++;
                 // (the spot under you looked for again where you are now)
                 CARRY.clear();
