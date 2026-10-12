@@ -1,79 +1,34 @@
 package net.jj.hollowbell.entity;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
-import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
-import net.jj.hollowbell.item.BellArmorItem;
-import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.mixin.TridentAccess;
-import net.jj.hollowbell.net.BeingHimPayload;
-import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
-import net.jj.hollowbell.rig.BellState;
-import net.jj.hollowbell.solid.GiantHull;
 import net.jj.hollowbell.solid.Solid;
-import net.jj.hollowbell.solid.SolidBody;
-import net.jj.hollowbell.solid.SolidCache;
-import net.jj.hollowbell.solid.SolidShape;
-import net.jj.hollowbell.world.Away;
-import net.jj.hollowbell.world.BellWorld;
-import net.jj.hollowbell.world.NoWait;
 import net.jj.hollowbell.world.Shrine;
-import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.FloatTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.TicketType;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
-import net.minecraft.world.BossEvent;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.OwnableEntity;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
@@ -83,11 +38,8 @@ import net.minecraft.world.entity.projectile.ThrownEgg;
 import net.minecraft.world.entity.projectile.ThrownTrident;
 import net.minecraft.world.entity.projectile.windcharge.AbstractWindCharge;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -144,7 +96,8 @@ final class BellHealth {
         }
     }
 
-    @Nullable Vec3 boneCentreWorld(int b) {
+    @Nullable
+    Vec3 boneCentreWorld(int b) {
         float[] bb = BellModel.get().bounds[b];
         if (bb == null) return null;
         return hb.boneWorld(b, new Vector3f((bb[0] + bb[3]) / 2, (bb[1] + bb[4]) / 2, (bb[2] + bb[5]) / 2));
@@ -307,7 +260,8 @@ final class BellHealth {
         float ps = hb.bellScale();
         double size = 4 * ps + 2 * Math.sqrt(Math.min(1f, ps));
         BigFx.send(hb.level(), BigFx.SPARKS, c, (float) size, new Vec3(0, -1, 0), 0x9CFF6A);
-        BigFx.send(hb.level(), BigFx.CLOUD, new Vec3(c.x, hb.groundAt(c.x, c.z), c.z), (float) size, Vec3.ZERO, 0x9CFF6A);
+        BigFx.send(
+                hb.level(), BigFx.CLOUD, new Vec3(c.x, hb.groundAt(c.x, c.z), c.z), (float) size, Vec3.ZERO, 0x9CFF6A);
         // a pod out of his twenty-three is worth a piece of him
         float worth = hb.healthMax() * Mth.clamp(BellConfig.V.podPopShare, 0f, 0.2f);
         hb.hp = Math.max(0f, hb.healthNow() - worth);
@@ -380,8 +334,8 @@ final class BellHealth {
                 hb.getX() + 100 * s,
                 hb.getY() + hb.rig.rimY * s,
                 hb.getZ() + 100 * s);
-        List<LivingEntity> near = hb.level().getEntitiesOfClass(
-                        LivingEntity.class, box, e -> hb.fairGame(e) && !(e instanceof HollowbellEntity));
+        List<LivingEntity> near = hb.level()
+                .getEntitiesOfClass(LivingEntity.class, box, e -> hb.fairGame(e) && !(e instanceof HollowbellEntity));
         if (near.isEmpty()) return;
         Matrix4f inv = new Matrix4f();
         for (LivingEntity e : near) {
@@ -415,7 +369,8 @@ final class BellHealth {
 
     /** arrows and other things thrown at him: the game can't find him for them, so he looks for them himself */
     void arrowsTick() {
-        List<Projectile> ps = hb.level().getEntitiesOfClass(
+        List<Projectile> ps = hb.level()
+                .getEntitiesOfClass(
                         Projectile.class,
                         hb.bodyBox(),
                         p -> p.getDeltaMovement().lengthSqr() > 0.04
@@ -465,10 +420,11 @@ final class BellHealth {
                 || p instanceof AbstractHurtingProjectile && !(p instanceof AbstractWindCharge);
     }
 
-        void tickDeath() {
+    void tickDeath() {
         hb.deathTime++;
         if (hb.level().isClientSide) return;
-        if (hb.deathBy != null && hb.level().getPlayerByUUID(hb.deathBy) instanceof Player killer) hb.setLastHurtByPlayer(killer);
+        if (hb.deathBy != null && hb.level().getPlayerByUUID(hb.deathBy) instanceof Player killer)
+            hb.setLastHurtByPlayer(killer);
         float s = hb.bellScale();
         hb.ensurePose();
         double small = Math.sqrt(Math.min(1f, s));
@@ -481,7 +437,11 @@ final class BellHealth {
             for (int i = 0; i < 6; i++) {
                 var S = hb.rig.strands[hb.getRandom().nextInt(hb.rig.strands.length)];
                 Vec3 c = hb.strandTipWorld(S.k());
-                hb.sound(c, SoundEvents.BONE_BLOCK_BREAK, 2f, 0.5f + hb.getRandom().nextFloat() * 0.3f);
+                hb.sound(
+                        c,
+                        SoundEvents.BONE_BLOCK_BREAK,
+                        2f,
+                        0.5f + hb.getRandom().nextFloat() * 0.3f);
             }
         }
         if (hb.deathTime == 140) {
@@ -512,7 +472,10 @@ final class BellHealth {
                 hb.caught = new ArrayList<>();
                 try {
                     hb.dropLootNow(
-                            sl, hb.deathLoot != null ? hb.deathLoot : hb.damageSources().generic());
+                            sl,
+                            hb.deathLoot != null
+                                    ? hb.deathLoot
+                                    : hb.damageSources().generic());
                 } finally {
                     List<ItemStack> loot = hb.caught;
                     hb.caught = null;
@@ -554,5 +517,4 @@ final class BellHealth {
     public long sinceHurtForHeal() {
         return hb.level().getGameTime() - healHurtAt;
     }
-
 }

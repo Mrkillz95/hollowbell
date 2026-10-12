@@ -6,18 +6,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
-import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.item.BellArmorItem;
-import net.jj.hollowbell.item.CodexItem;
-import net.jj.hollowbell.mixin.TridentAccess;
-import net.jj.hollowbell.net.BeingHimPayload;
 import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
@@ -28,20 +23,13 @@ import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.solid.SolidBody;
 import net.jj.hollowbell.solid.SolidCache;
 import net.jj.hollowbell.solid.SolidShape;
-import net.jj.hollowbell.world.Away;
-import net.jj.hollowbell.world.BellWorld;
 import net.jj.hollowbell.world.NoWait;
-import net.jj.hollowbell.world.Shrine;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.FloatTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -53,40 +41,25 @@ import net.minecraft.server.level.TicketType;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
-import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.Snowball;
-import net.minecraft.world.entity.projectile.ThrownEgg;
-import net.minecraft.world.entity.projectile.ThrownTrident;
-import net.minecraft.world.entity.projectile.windcharge.AbstractWindCharge;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -162,7 +135,9 @@ public class HollowbellEntity extends Monster implements SolidBody {
     private final BellAnim anim = new BellAnim(rig);
 
     private final BellAnim.In animIn = new BellAnim.In();
-    @Nullable Vec3 animAt;
+
+    @Nullable
+    Vec3 animAt;
 
     {
         // one set of his parts, seen by the pose and the animation alike
@@ -196,7 +171,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
     final Map<UUID, Long> fighters = new HashMap<>();
 
     // ---- going places
-    @Nullable Vec3 home, goal;
+    @Nullable
+    Vec3 home, goal;
     /** blocks per tick, in the world */
     Vec3 vel = Vec3.ZERO;
 
@@ -226,12 +202,15 @@ public class HollowbellEntity extends Monster implements SolidBody {
     int wanderIn;
     boolean stay;
     int angerTicks;
-    @Nullable UUID hunted;
+
+    @Nullable
+    UUID hunted;
     /** "go after what I look at": a player's order. It overrides his own picks, his wandering and his circle, and holds
      *  until the target dies, is lost for {@link #HUNT_LOST_TICKS}, or he is given a new order */
     boolean huntOrdered;
     /** where the one he's after was last seen, and since when it hasn't been (-1: it's here) */
-    @Nullable Vec3 huntSeen;
+    @Nullable
+    Vec3 huntSeen;
 
     long huntLostAt = -1;
     WeakReference<LivingEntity> huntRef = new WeakReference<>(null);
@@ -249,12 +228,17 @@ public class HollowbellEntity extends Monster implements SolidBody {
     int boundR = -1;
 
     // ---- being him
-    @Nullable LivingEntity rider;
-    @Nullable Seat riderSeat;
+    @Nullable
+    LivingEntity rider;
+
+    @Nullable
+    Seat riderSeat;
+
     float driveF, driveS, driveYaw;
     int driveIdle;
     /** who asked him to come and put them on his crown */
-    @Nullable UUID fetching;
+    @Nullable
+    UUID fetching;
 
     // ---- bars
     private @Nullable BellBar barHp, barPods;
@@ -392,7 +376,9 @@ public class HollowbellEntity extends Monster implements SolidBody {
             else if (isHunter()) {
                 double r = 32 * bellScale() + 8;
                 for (Player p : level().players())
-                    if (targets.fairGame(p) && horiz(p.position()) < r && Math.abs(p.getY() - getY()) < r + 60 * bellScale()) {
+                    if (targets.fairGame(p)
+                            && horiz(p.position()) < r
+                            && Math.abs(p.getY() - getY()) < r + 60 * bellScale()) {
                         wakeUp();
                         break;
                     }
@@ -1113,7 +1099,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
     }
 
     /** who he is coming to (their spot is looked up again every ten seconds while he comes), or null */
-    @Nullable UUID comeTo;
+    @Nullable
+    UUID comeTo;
     /** a movement order: when he gets there he holds still until he's given something else */
     boolean holdThere;
 
@@ -1191,7 +1178,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
         return flight.maxSpeed();
     }
 
-    @Nullable Vec3 wanderTo;
+    @Nullable
+    Vec3 wanderTo;
 
     public double horiz(Vec3 p) {
         double dx = p.x - getX(), dz = p.z - getZ();
@@ -1620,9 +1608,12 @@ public class HollowbellEntity extends Monster implements SolidBody {
      * The player who brought him down. The game forgets who hit him 100 ticks after the blow, and his death takes
      * longer, so it's told again every tick: the XP and the loot stay theirs.
      */
-    @Nullable UUID deathBy;
+    @Nullable
+    UUID deathBy;
 
-    @Nullable DamageSource deathLoot;
+    @Nullable
+    DamageSource deathLoot;
+
     boolean lootDropped;
     public static final int DEATH_LENGTH = 320;
     private static final TicketType<Integer> DYING_TICKET =
@@ -1648,7 +1639,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
     }
 
     /** while his loot is being made: what he drops is kept here instead of thrown on the ground */
-    @Nullable List<ItemStack> caught;
+    @Nullable
+    List<ItemStack> caught;
 
     @Override
     public @Nullable ItemEntity spawnAtLocation(ItemStack stack, float up) {
@@ -1908,15 +1900,19 @@ public class HollowbellEntity extends Monster implements SolidBody {
     // meeting the other giants
 
     /** the giant he is having a meeting fight with (see Meeting), or null */
-    @Nullable UUID meetFoe;
+    @Nullable
+    UUID meetFoe;
     /** the giant he is keeping out of the way of, and where it was last */
-    @Nullable UUID meetAvoid;
+    @Nullable
+    UUID meetAvoid;
 
-    @Nullable Vec3 avoidAt;
+    @Nullable
+    Vec3 avoidAt;
     /** backed down: until when (game time); and running from where, until when */
     long yieldUntil, fleeUntil, yieldFor, fleeFor;
 
-    @Nullable Vec3 fleeFrom;
+    @Nullable
+    Vec3 fleeFrom;
     /** the giants he has met lately (by their id): not again until this game time */
     final Map<UUID, Long> metLately = new HashMap<>();
     /** the tests: how often he looks round for other giants (ticks) */
@@ -1933,6 +1929,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public @Nullable UUID avoiding() {
         return meetAvoid;
     }
+
     public long meetCooldownLeft(UUID other) {
         return targets.meetCooldownLeft(other);
     }
@@ -2203,8 +2200,9 @@ public class HollowbellEntity extends Monster implements SolidBody {
      * must keep over it so his dome and arms stay out of it (his strands may hang over it), and whether he is already
      * in reach across (so he stops drifting in).
      */
-    @Nullable double[] giantPlan;
+    @Nullable
+    double[] giantPlan;
 
-    @Nullable LivingEntity giantPlanFor;
-
+    @Nullable
+    LivingEntity giantPlanFor;
 }

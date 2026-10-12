@@ -1047,38 +1047,11 @@ public final class FxWorld {
             float al = 0.9f * fade, ac = 0.95f * fade, ab = 0.55f * fade;
             float tr = lighten(cr, 0.3f), tg = lighten(cg, 0.3f), tb = lighten(cb, 0.3f);
             // the back slope: from the flat water up to the crest (a swell of water, not a sheet)
-            vert(
+            waveVert(vc, w, (float) (rx0 + c0 * rb) * k, y0 * k, (float) (rz0 + s0 * rb) * k, cr, cg, cb, 0f, u0, vA);
+            waveVert(vc, w, (float) (rx0 + c1 * rb) * k, y0 * k, (float) (rz0 + s1 * rb) * k, cr, cg, cb, 0f, u1, vA);
+            waveVert(
                     vc,
-                    (float) (rx0 + c0 * rb) * k,
-                    y0 * k,
-                    (float) (rz0 + s0 * rb) * k,
-                    cr,
-                    cg,
-                    cb,
-                    0f,
-                    u0,
-                    vA,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
-                    vc,
-                    (float) (rx0 + c1 * rb) * k,
-                    y0 * k,
-                    (float) (rz0 + s1 * rb) * k,
-                    cr,
-                    cg,
-                    cb,
-                    0f,
-                    u1,
-                    vA,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
-                    vc,
+                    w,
                     (float) (rx0 + c1 * (r + l1)) * k,
                     (y0 + h1) * k,
                     (float) (rz0 + s1 * (r + l1)) * k,
@@ -1087,13 +1060,10 @@ public final class FxWorld {
                     tb,
                     ab + 0.4f * fade,
                     u1,
-                    vB,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
+                    vB);
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c0 * (r + l0)) * k,
                     (y0 + h0) * k,
                     (float) (rz0 + s0 * (r + l0)) * k,
@@ -1102,16 +1072,13 @@ public final class FxWorld {
                     tb,
                     ab + 0.4f * fade,
                     u0,
-                    vB,
-                    w.light,
-                    0,
-                    1,
-                    0);
+                    vB);
             // the face: from just under the crest, curling over, down to its foot: deep water, darker at the foot
             float fr0 = r + l0 * 0.15f, fr1 = r + l1 * 0.15f;
             float m0 = h0 * 0.82f, m1 = h1 * 0.82f, ml0 = l0 * 0.85f, ml1 = l1 * 0.85f;
-            vert(
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c0 * (r + ml0)) * k,
                     (y0 + m0) * k,
                     (float) (rz0 + s0 * (r + ml0)) * k,
@@ -1120,13 +1087,10 @@ public final class FxWorld {
                     tb,
                     ac,
                     u0,
-                    vB,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
+                    vB);
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c1 * (r + ml1)) * k,
                     (y0 + m1) * k,
                     (float) (rz0 + s1 * (r + ml1)) * k,
@@ -1135,13 +1099,10 @@ public final class FxWorld {
                     tb,
                     ac,
                     u1,
-                    vB,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
+                    vB);
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c1 * fr1) * k,
                     y0 * k,
                     (float) (rz0 + s1 * fr1) * k,
@@ -1150,13 +1111,10 @@ public final class FxWorld {
                     cb * 0.75f,
                     al,
                     u1,
-                    vC,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
+                    vC);
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c0 * fr0) * k,
                     y0 * k,
                     (float) (rz0 + s0 * fr0) * k,
@@ -1165,14 +1123,11 @@ public final class FxWorld {
                     cb * 0.75f,
                     al,
                     u0,
-                    vC,
-                    w.light,
-                    0,
-                    1,
-                    0);
+                    vC);
             // the foam on the lip: white, from the crest down the top of the face
-            vert(
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c0 * (r + l0)) * k,
                     (y0 + h0) * k,
                     (float) (rz0 + s0 * (r + l0)) * k,
@@ -1181,13 +1136,10 @@ public final class FxWorld {
                     1f,
                     ac,
                     u0,
-                    vA,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
+                    vA);
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c1 * (r + l1)) * k,
                     (y0 + h1) * k,
                     (float) (rz0 + s1 * (r + l1)) * k,
@@ -1196,13 +1148,10 @@ public final class FxWorld {
                     1f,
                     ac,
                     u1,
-                    vA,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
+                    vA);
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c1 * (r + ml1)) * k,
                     (y0 + m1) * k,
                     (float) (rz0 + s1 * (r + ml1)) * k,
@@ -1211,13 +1160,10 @@ public final class FxWorld {
                     lighten(cb, 0.7f),
                     ac,
                     u1,
-                    vB,
-                    w.light,
-                    0,
-                    1,
-                    0);
-            vert(
+                    vB);
+            waveVert(
                     vc,
+                    w,
                     (float) (rx0 + c0 * (r + ml0)) * k,
                     (y0 + m0) * k,
                     (float) (rz0 + s0 * (r + ml0)) * k,
@@ -1226,12 +1172,24 @@ public final class FxWorld {
                     lighten(cb, 0.7f),
                     ac,
                     u0,
-                    vB,
-                    w.light,
-                    0,
-                    1,
-                    0);
+                    vB);
         }
+    }
+
+    /** a vertex of a wave: its own light, facing up */
+    private static void waveVert(
+            VertexConsumer vc,
+            Wave w,
+            float x,
+            float y,
+            float z,
+            float r,
+            float g,
+            float b,
+            float a,
+            float u,
+            float v) {
+        vert(vc, x, y, z, r, g, b, a, u, v, w.light, 0, 1, 0);
     }
 
     private static float lighten(float c, float by) {

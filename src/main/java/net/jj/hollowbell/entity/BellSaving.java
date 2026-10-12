@@ -1,98 +1,12 @@
 package net.jj.hollowbell.entity;
 
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
-import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
-import net.jj.hollowbell.HollowbellMod;
-import net.jj.hollowbell.ModItems;
-import net.jj.hollowbell.ModSounds;
-import net.jj.hollowbell.fx.BigFx;
-import net.jj.hollowbell.item.BellArmorItem;
-import net.jj.hollowbell.item.CodexItem;
-import net.jj.hollowbell.mixin.TridentAccess;
-import net.jj.hollowbell.net.BeingHimPayload;
-import net.jj.hollowbell.rig.BellAnim;
-import net.jj.hollowbell.rig.BellModel;
-import net.jj.hollowbell.rig.BellPieces;
-import net.jj.hollowbell.rig.BellRig;
-import net.jj.hollowbell.rig.BellState;
-import net.jj.hollowbell.solid.GiantHull;
-import net.jj.hollowbell.solid.Solid;
-import net.jj.hollowbell.solid.SolidBody;
-import net.jj.hollowbell.solid.SolidCache;
-import net.jj.hollowbell.solid.SolidShape;
-import net.jj.hollowbell.world.Away;
-import net.jj.hollowbell.world.BellWorld;
-import net.jj.hollowbell.world.NoWait;
-import net.jj.hollowbell.world.Shrine;
-import net.jj.hollowbell.world.WorldOne;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.TicketType;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
-import net.minecraft.world.BossEvent;
-import net.minecraft.world.Difficulty;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.OwnableEntity;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
-import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.Snowball;
-import net.minecraft.world.entity.projectile.ThrownEgg;
-import net.minecraft.world.entity.projectile.ThrownTrident;
-import net.minecraft.world.entity.projectile.windcharge.AbstractWindCharge;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 /** What he writes into his save and reads back. */
 final class BellSaving {
@@ -188,21 +102,30 @@ final class BellSaving {
 
     void readSave(CompoundTag tag) {
         if (tag.contains("BellScale"))
-            hb.getEntityData().set(HollowbellEntity.DATA_SCALE, Mth.clamp(tag.getFloat("BellScale"), HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+            hb.getEntityData()
+                    .set(
+                            HollowbellEntity.DATA_SCALE,
+                            Mth.clamp(
+                                    tag.getFloat("BellScale"), HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
         hb.asleep = tag.getBoolean("Asleep");
         hb.frozen = tag.getBoolean("Frozen");
         hb.speedMul = tag.contains("SpeedMul") ? Mth.clamp(tag.getFloat("SpeedMul"), 0.1f, 5f) : 1f;
         hb.comeTo = tag.hasUUID("ComeTo") ? tag.getUUID("ComeTo") : null;
         hb.comeLostAt = tag.getLong("ComeLostAt");
         hb.holdThere = tag.getBoolean("HoldThere");
-        if (tag.contains("SleepK")) hb.getEntityData().set(HollowbellEntity.DATA_SLEEP, Mth.clamp(tag.getFloat("SleepK"), 0f, 1f));
-        if (tag.contains("BellVariant")) hb.getEntityData().set(HollowbellEntity.DATA_VARIANT, Mth.clamp(tag.getInt("BellVariant"), 0, 2));
+        if (tag.contains("SleepK"))
+            hb.getEntityData().set(HollowbellEntity.DATA_SLEEP, Mth.clamp(tag.getFloat("SleepK"), 0f, 1f));
+        if (tag.contains("BellVariant"))
+            hb.getEntityData().set(HollowbellEntity.DATA_VARIANT, Mth.clamp(tag.getInt("BellVariant"), 0, 2));
         // a spawn egg's own tag: 0 calm, 1 hunting, 2 guardian, 3 small
         if (tag.contains("HollowbellEgg")) {
             int v = tag.getInt("HollowbellEgg");
             hb.getEntityData().set(HollowbellEntity.DATA_VARIANT, v == 3 ? HollowbellEntity.HUNTER : v);
             float sc = v == 3 ? BellConfig.V.smallEggScale : BellConfig.V.spawnEggScale;
-            hb.getEntityData().set(HollowbellEntity.DATA_SCALE, Mth.clamp(sc, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+            hb.getEntityData()
+                    .set(
+                            HollowbellEntity.DATA_SCALE,
+                            Mth.clamp(sc, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
         }
         // an egg's tag also carries the fresh body's health (6000, base -1): his first tick works it out for his size
         if (tag.contains("HollowbellEgg")) hb.hp = -1f;

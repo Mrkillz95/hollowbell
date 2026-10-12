@@ -416,37 +416,7 @@ public final class BellAnim {
             // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs. A
             // strand's piece eases from the way it pointed a tick ago (from the joint above's new place, every piece
             // grows longer when what it hangs from moves fast), and keeps the length asked for
-            float[] old = oldScratch;
-            System.arraycopy(tg, 0, old, 0, raw.length);
-            tg[0] = raw[0];
-            tg[1] = raw[1];
-            tg[2] = raw[2];
-            for (int i = 3; i < raw.length; i += 3) {
-                float rx = raw[i] - raw[i - 3], ry = raw[i + 1] - raw[i - 2], rz = raw[i + 2] - raw[i - 1];
-                float nx = old[i] - old[i - 3], ny = old[i + 1] - old[i - 2], nz = old[i + 2] - old[i - 1];
-                float ex = nx + (rx - nx) * ease, ey = ny + (ry - ny) * ease, ez = nz + (rz - nz) * ease;
-                float rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz),
-                        el = (float) Math.sqrt(ex * ex + ey * ey + ez * ez);
-                if (ch.arm) {
-                    // an arm eases as it always has (its moves, the slam landing where it's aimed, are made for it)
-                    float ax = tg[i] - tg[i - 3], ay = tg[i + 1] - tg[i - 2], az = tg[i + 2] - tg[i - 1];
-                    ex = ax + (rx - ax) * ease;
-                    ey = ay + (ry - ay) * ease;
-                    ez = az + (rz - az) * ease;
-                } else if (el > 1e-4f) {
-                    float f = rl / el;
-                    ex *= f;
-                    ey *= f;
-                    ez *= f;
-                } else {
-                    ex = rx;
-                    ey = ry;
-                    ez = rz;
-                }
-                tg[i] = tg[i - 3] + ex;
-                tg[i + 1] = tg[i - 2] + ey;
-                tg[i + 2] = tg[i - 1] + ez;
-            }
+            easeTargets(ch, raw, tg, ease);
             // the ground under this one, looked at now and then (and kept level with the world as he rises and sinks)
             if ((tick + c) % 4 == 0) groundAt[c] = in.ground.at(p[3 * m], p[3 * m + 2]);
             else groundAt[c] -= in.shiftY;
@@ -590,96 +560,139 @@ public final class BellAnim {
                 p[o + 1] = p[o - 2] + dy / d * want;
                 p[o + 2] = p[o - 1] + dz / d * want;
                 // never up through his own bell: kept under it, in his own body's frame
-                if (!ch.arm) {
-                    tv.set(p[o], p[o + 1], p[o + 2]);
-                    mInv.transformPosition(tv);
-                    float top = rig.rimY - 2f;
-                    if (tv.y > top && tv.x * tv.x + tv.z * tv.z < 95f * 95f) {
-                        tv.y = top;
-                        knockedAt[c] = steps;
-                        mBody.transformPosition(tv);
-                        p[o] = tv.x;
-                        p[o + 1] = tv.y;
-                        p[o + 2] = tv.z;
-                    }
-                }
+                if (!ch.arm) underBell(c, p, o);
                 // never into the ground: it rests on it and drags
-                if (!Float.isNaN(gy)) {
-                    // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under
-                    // with him)
-                    float floor = gy + (ch.arm ? 1.2f : 0.5f) - sinkingIn * (rig.crownY + 30f);
-                    if (p[o + 1] < floor) {
-                        // a strand lies on the ground and slides out along it, keeping its length (pushed straight up,
-                        // a piece pointing down would be squashed to nothing, a short stub or a ball at its end)
-                        float above = Math.max(0f, p[o - 2] - floor);
-                        float seg = Math.max(want, 1e-3f);
-                        float flat = above < seg ? (float) Math.sqrt(seg * seg - above * above) : 0f;
-                        float hx = p[o] - p[o - 3], hz = p[o + 2] - p[o - 1];
-                        float hl = (float) Math.sqrt(hx * hx + hz * hz);
-                        if (hl < 0.05f) {
-                            // straight down: out away from where it hangs from (or from his middle)
-                            hx = p[o - 3] - p[0];
-                            hz = p[o - 1] - p[2];
-                            hl = (float) Math.sqrt(hx * hx + hz * hz);
-                            if (hl < 0.05f) {
-                                hx = p[o - 3];
-                                hz = p[o - 1];
-                                hl = (float) Math.sqrt(hx * hx + hz * hz);
-                            }
-                            if (hl < 0.05f) {
-                                hx = (float) Math.cos(c);
-                                hz = (float) Math.sin(c);
-                                hl = 1f;
-                            }
-                        }
-                        // (out along the ground a little at a time, so it never jumps)
-                        float sx = p[o - 3] + hx / hl * flat - p[o], sz = p[o - 1] + hz / hl * flat - p[o + 2];
-                        float sl = (float) Math.sqrt(sx * sx + sz * sz);
-                        if (sl > SLIDE) {
-                            sx *= SLIDE / sl;
-                            sz *= SLIDE / sl;
-                        }
-                        // (an arm only stops where it comes down: one a move swings down, a slam, lands where it's
-                        // aimed, and one laid down when he sinks is laid out straight already)
-                        if (ch.arm) {
-                            sx = 0f;
-                            sz = 0f;
-                        }
-                        p[o] += sx;
-                        p[o + 2] += sz;
-                        p[o + 1] = floor;
-                        knockedAt[c] = steps;
-                        if (q[o + 1] < floor) q[o + 1] = floor;
-                        q[o] += (p[o] - q[o]) * 0.35f;
-                        q[o + 2] += (p[o + 2] - q[o + 2]) * 0.35f;
-                    }
-                }
+                if (!Float.isNaN(gy)) onTheGround(ch, c, p, q, o, gy, want);
             }
             // the strand's own stiffness: each joint's swing is blended a little with its neighbours', which takes out
             // any quick wobble between joints and leaves the slow, heavy swing
-            float[] vel = velScratch;
-            for (int i = 1; i <= m; i++) {
-                vel[3 * i] = p[3 * i] - q[3 * i];
-                vel[3 * i + 1] = p[3 * i + 1] - q[3 * i + 1];
-                vel[3 * i + 2] = p[3 * i + 2] - q[3 * i + 2];
-            }
-            vel[0] = 0;
-            vel[1] = 0;
-            vel[2] = 0;
-            for (int i = 1; i <= m; i++) {
-                int o = 3 * i, up = o - 3, dn = i < m ? o + 3 : o;
-                for (int a = 0; a < 3; a++) {
-                    float avg = (vel[up + a] + vel[dn + a]) * 0.5f;
-                    float nv = vel[o + a] * 0.72f + avg * 0.28f;
-                    q[o + a] = p[o + a] - nv;
-                }
-            }
+            stiffen(p, q, m);
             // a strand carrying somebody up onto his crown is laid out along the way they go (see CarryPath)
             if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
         }
         if (st.carryStrand < 0) {
             carryChain = -1;
             carryP0 = null;
+        }
+    }
+
+    /** the asked-for shape eased toward, piece by piece in the frame of the joint above */
+    private void easeTargets(BellRig.Chain ch, float[] raw, float[] tg, float ease) {
+        float[] old = oldScratch;
+        System.arraycopy(tg, 0, old, 0, raw.length);
+        tg[0] = raw[0];
+        tg[1] = raw[1];
+        tg[2] = raw[2];
+        for (int i = 3; i < raw.length; i += 3) {
+            float rx = raw[i] - raw[i - 3], ry = raw[i + 1] - raw[i - 2], rz = raw[i + 2] - raw[i - 1];
+            float nx = old[i] - old[i - 3], ny = old[i + 1] - old[i - 2], nz = old[i + 2] - old[i - 1];
+            float ex = nx + (rx - nx) * ease, ey = ny + (ry - ny) * ease, ez = nz + (rz - nz) * ease;
+            float rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz),
+                    el = (float) Math.sqrt(ex * ex + ey * ey + ez * ez);
+            if (ch.arm) {
+                // an arm eases as it always has (its moves, the slam landing where it's aimed, are made for it)
+                float ax = tg[i] - tg[i - 3], ay = tg[i + 1] - tg[i - 2], az = tg[i + 2] - tg[i - 1];
+                ex = ax + (rx - ax) * ease;
+                ey = ay + (ry - ay) * ease;
+                ez = az + (rz - az) * ease;
+            } else if (el > 1e-4f) {
+                float f = rl / el;
+                ex *= f;
+                ey *= f;
+                ez *= f;
+            } else {
+                ex = rx;
+                ey = ry;
+                ez = rz;
+            }
+            tg[i] = tg[i - 3] + ex;
+            tg[i + 1] = tg[i - 2] + ey;
+            tg[i + 2] = tg[i - 1] + ez;
+        }
+    }
+
+    private void underBell(int c, float[] p, int o) {
+        tv.set(p[o], p[o + 1], p[o + 2]);
+        mInv.transformPosition(tv);
+        float top = rig.rimY - 2f;
+        if (tv.y > top && tv.x * tv.x + tv.z * tv.z < 95f * 95f) {
+            tv.y = top;
+            knockedAt[c] = steps;
+            mBody.transformPosition(tv);
+            p[o] = tv.x;
+            p[o + 1] = tv.y;
+            p[o + 2] = tv.z;
+        }
+    }
+
+    private void onTheGround(BellRig.Chain ch, int c, float[] p, float[] q, int o, float gy, float want) {
+        // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under
+        // with him)
+        float floor = gy + (ch.arm ? 1.2f : 0.5f) - sinkingIn * (rig.crownY + 30f);
+        if (p[o + 1] < floor) {
+            // a strand lies on the ground and slides out along it, keeping its length (pushed straight up,
+            // a piece pointing down would be squashed to nothing, a short stub or a ball at its end)
+            float above = Math.max(0f, p[o - 2] - floor);
+            float seg = Math.max(want, 1e-3f);
+            float flat = above < seg ? (float) Math.sqrt(seg * seg - above * above) : 0f;
+            float hx = p[o] - p[o - 3], hz = p[o + 2] - p[o - 1];
+            float hl = (float) Math.sqrt(hx * hx + hz * hz);
+            if (hl < 0.05f) {
+                // straight down: out away from where it hangs from (or from his middle)
+                hx = p[o - 3] - p[0];
+                hz = p[o - 1] - p[2];
+                hl = (float) Math.sqrt(hx * hx + hz * hz);
+                if (hl < 0.05f) {
+                    hx = p[o - 3];
+                    hz = p[o - 1];
+                    hl = (float) Math.sqrt(hx * hx + hz * hz);
+                }
+                if (hl < 0.05f) {
+                    hx = (float) Math.cos(c);
+                    hz = (float) Math.sin(c);
+                    hl = 1f;
+                }
+            }
+            // (out along the ground a little at a time, so it never jumps)
+            float sx = p[o - 3] + hx / hl * flat - p[o], sz = p[o - 1] + hz / hl * flat - p[o + 2];
+            float sl = (float) Math.sqrt(sx * sx + sz * sz);
+            if (sl > SLIDE) {
+                sx *= SLIDE / sl;
+                sz *= SLIDE / sl;
+            }
+            // (an arm only stops where it comes down: one a move swings down, a slam, lands where it's
+            // aimed, and one laid down when he sinks is laid out straight already)
+            if (ch.arm) {
+                sx = 0f;
+                sz = 0f;
+            }
+            p[o] += sx;
+            p[o + 2] += sz;
+            p[o + 1] = floor;
+            knockedAt[c] = steps;
+            if (q[o + 1] < floor) q[o + 1] = floor;
+            q[o] += (p[o] - q[o]) * 0.35f;
+            q[o + 2] += (p[o + 2] - q[o + 2]) * 0.35f;
+        }
+    }
+
+    private void stiffen(float[] p, float[] q, int m) {
+        float[] vel = velScratch;
+        for (int i = 1; i <= m; i++) {
+            vel[3 * i] = p[3 * i] - q[3 * i];
+            vel[3 * i + 1] = p[3 * i + 1] - q[3 * i + 1];
+            vel[3 * i + 2] = p[3 * i + 2] - q[3 * i + 2];
+        }
+        vel[0] = 0;
+        vel[1] = 0;
+        vel[2] = 0;
+        for (int i = 1; i <= m; i++) {
+            int o = 3 * i, up = o - 3, dn = i < m ? o + 3 : o;
+            for (int a = 0; a < 3; a++) {
+                float avg = (vel[up + a] + vel[dn + a]) * 0.5f;
+                float nv = vel[o + a] * 0.72f + avg * 0.28f;
+                q[o + a] = p[o + a] - nv;
+            }
         }
     }
 
