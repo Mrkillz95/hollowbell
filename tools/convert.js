@@ -16,6 +16,7 @@ const { classify } = require('./lib/classify');
 const { buildRig } = require('./lib/rig');
 const { isGlass } = require('./lib/names');
 const { thinSpeckles, dropFloating, eggBitsAway } = require('./lib/tidy');
+const { rebuildStrands } = require('./lib/strands');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'src', 'main', 'resources', 'hollowbell');
@@ -44,7 +45,11 @@ function main() {
   const eggBlocks = vox.length - kept;
   vox.length = kept;
   const eggBits = eggBitsAway(vox, R.bones, palette, pal);
-  console.log(`egg clumps left off: ${eggBlocks} blocks, and ${eggBits} stray egg clump blocks in the strands and arms turned into the blocks round them`);
+  console.log(`egg clumps left off: ${eggBlocks} blocks, and ${eggBits} stray egg clump blocks in the strands and arms`
+    + ' turned into the blocks round them');
+  const strands = rebuildStrands(vox, R.rig, R.bones, pal);
+  console.log(`strands drawn again, all alike: ${strands.before} blocks before, ${strands.after} now (${strands.joined} tops`
+    + ` joined on, ${strands.stalks} pod stalks, ${strands.moved} points moved round arms and pods, ${strands.shortened} cut short)`);
   console.log(`tidied: ${R.stats.eggsTakenOff} egg clumps and ${R.stats.floatingTakenOff + floating} floating blocks taken off, ${thinned.arm} arm speckles and ${thinned.strand} strand dots thinned out`);
   const occupied = new Map();
   const key = (x, y, z) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
