@@ -1,12 +1,9 @@
 package net.jj.hollowbell.entity;
 
-import com.mojang.math.Transformation;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -14,7 +11,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
@@ -26,45 +22,29 @@ import net.jj.hollowbell.solid.GiantHull;
 import net.jj.hollowbell.world.NoWait;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.alchemy.PotionContents;
-import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.IronBarsBlock;
-import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
@@ -82,16 +62,23 @@ public final class BellMoves {
     final BellHeavyMoves heavy;
 
     int move, t, arg = -1, lastArg = -1, cooldown = 60, harvestIn = 400;
-    @Nullable LivingEntity target;
+
+    @Nullable
+    LivingEntity target;
     /** what the move running now is aimed at (null between moves) */
     public @Nullable LivingEntity moveTarget() {
         return target;
     }
     /** the strand grabbing: who, on which seat, how far up, how many hits it has taken */
-    @Nullable LivingEntity grabbed;
+    @Nullable
+    LivingEntity grabbed;
 
-    @Nullable Tree grabbedTree;
-    @Nullable Seat grabSeat;
+    @Nullable
+    Tree grabbedTree;
+
+    @Nullable
+    Seat grabSeat;
+
     float lift;
     float strandHits;
     boolean gentle;
@@ -108,10 +95,14 @@ public final class BellMoves {
      * he's been sinking to it; then, as a gentle grab with down set, the strand going up empty (phase UP) and coming
      * back down with them (phase DOWN).
      */
-    @Nullable LivingEntity downWho;
+    @Nullable
+    LivingEntity downWho;
 
     int downStrand = -1, downWait, carryPhase;
-    @Nullable Vec3 downSpot;
+
+    @Nullable
+    Vec3 downSpot;
+
     boolean down;
     static final int PHASE_UP = 1, PHASE_DOWN = 2;
     int reachHurt;
@@ -124,9 +115,12 @@ public final class BellMoves {
 
     float reachHp;
     /** the arm wrap */
-    @Nullable LivingEntity wrapped;
+    @Nullable
+    LivingEntity wrapped;
 
-    @Nullable Seat wrapSeat;
+    @Nullable
+    Seat wrapSeat;
+
     float armHits;
     /** whatever is inside the dome */
     final List<Inside> inside = new ArrayList<>();
@@ -137,7 +131,8 @@ public final class BellMoves {
     /** per creature, the tick it was last hurt by the move of the moment (for moves that hurt over and over) */
     final Map<UUID, Integer> hitAt = new HashMap<>();
 
-    @Nullable BlockPos treeAt;
+    @Nullable
+    BlockPos treeAt;
     /** the slam's arm has come down (it only hits once); which of the storm's arms have */
     boolean landed;
 
@@ -161,7 +156,7 @@ public final class BellMoves {
     /** the sun lances: where each beam touches the ground */
     final Vec3[] lance = new Vec3[5];
 
-    private static final class Inside {
+    static final class Inside {
         @Nullable
         LivingEntity e;
 
@@ -409,7 +404,8 @@ public final class BellMoves {
         }
     }
 
-    @Nullable Vec3 forcedSpot;
+    @Nullable
+    Vec3 forcedSpot;
 
     private boolean start(int which, @Nullable LivingEntity at) {
         if (h.sunk()
@@ -436,8 +432,9 @@ public final class BellMoves {
             }
             case Moves.HARVEST -> {
                 if (grabbed != null || grabbedTree != null) return false;
-                LivingEntity mob =
-                        at != null && !(at instanceof Player) && HollowbellEntity.canCarry(at) ? at : holds.findHarvestMob();
+                LivingEntity mob = at != null && !(at instanceof Player) && HollowbellEntity.canCarry(at)
+                        ? at
+                        : holds.findHarvestMob();
                 if (mob != null) {
                     target = mob;
                     aim = h.toModel(mob.position());
@@ -563,7 +560,7 @@ public final class BellMoves {
         fightSince = 0;
     }
 
-    private void end() {
+    void end() {
         int was = move;
         if (move == Moves.GRAB || move == Moves.HARVEST) holds.letGoOfGrab(false);
         gentle = false;
@@ -1124,7 +1121,8 @@ public final class BellMoves {
     }
 
     /** where the eggs go when there's nobody to aim at (set with the move) */
-    @Nullable Vec3 eggSpot;
+    @Nullable
+    Vec3 eggSpot;
     /** the eggs of the last egg rain */
     public final List<Shot> lastEggs = new ArrayList<>();
 
@@ -1133,7 +1131,9 @@ public final class BellMoves {
 
     static final int GLASS = 0xA8E6B0;
     boolean diveWarned;
-    @Nullable Vec3 diveAt;
+
+    @Nullable
+    Vec3 diveAt;
 
     boolean griefing() {
         return BellConfig.V.griefing && level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
@@ -1251,7 +1251,8 @@ public final class BellMoves {
     }
 
     /** the one the strand is going up to fetch down (still on his crown until it gets there) */
-    @Nullable LivingEntity carryWho;
+    @Nullable
+    LivingEntity carryWho;
 
     public void strandHit(int strand, float amount, @Nullable Entity by) {
         holds.strandHit(strand, amount, by);

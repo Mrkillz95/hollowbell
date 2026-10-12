@@ -1,60 +1,27 @@
 package net.jj.hollowbell.entity;
 
-import com.mojang.math.Transformation;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.hollowbell.Adv;
-import net.jj.hollowbell.BellConfig;
-import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
-import net.jj.hollowbell.net.ThumpPayload;
 import net.jj.hollowbell.rig.BellRig;
-import net.jj.hollowbell.rig.CarryPath;
-import net.jj.hollowbell.solid.GiantHull;
 import net.jj.hollowbell.world.NoWait;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AreaEffectCloud;
-import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.npc.AbstractVillager;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
-import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.IronBarsBlock;
@@ -63,11 +30,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
-/** The heavy moves: the whirlpool, the sky dive, the deep toll, the stinger storm, the sun lances, the undertow, and the egg rain, pod burst and spores. */
+/**
+ * The heavy moves: the whirlpool, the sky dive, the deep toll, the stinger storm, the sun lances, the undertow, and the
+ * egg rain, pod burst and spores.
+ */
 final class BellHeavyMoves {
     private final BellMoves mv;
     private final HollowbellEntity h;
@@ -131,7 +98,8 @@ final class BellHeavyMoves {
             }
             if (c.tickCount % 10 == 0) {
                 double r = c.getRadius();
-                for (LivingEntity e : mv.level().getEntitiesOfClass(
+                for (LivingEntity e : mv.level()
+                        .getEntitiesOfClass(
                                 LivingEntity.class,
                                 new AABB(c.position(), c.position()).inflate(r, 3 + 3 * s, r),
                                 x -> h.fairGame(x) && h.fightingGiant(x))) {
@@ -164,7 +132,8 @@ final class BellHeavyMoves {
             for (int k = 0; k < 6; k++) {
                 double ox = (h.getRandom().nextDouble() - 0.5) * r,
                         oz = (h.getRandom().nextDouble() - 0.5) * r;
-                mv.level().sendParticles(
+                mv.level()
+                        .sendParticles(
                                 ParticleTypes.ITEM_SLIME,
                                 c.x + ox * 0.3,
                                 c.y,
@@ -178,7 +147,8 @@ final class BellHeavyMoves {
             mv.level().sendParticles(ParticleTypes.SNEEZE, c.x, c.y - 2 * s, c.z, 4, r * 0.3, 1, r * 0.3, 0.02);
             double gy = h.groundAt(c.x, c.z);
             for (LivingEntity e : mv.near(new AABB(c.x - r, gy - 1, c.z - r, c.x + r, c.y, c.z + r))) {
-                if (mv.struckThisMove.contains(e.getUUID()) || Math.hypot(mv.at(e).x - c.x, mv.at(e).z - c.z) > r) continue;
+                if (mv.struckThisMove.contains(e.getUUID()) || Math.hypot(mv.at(e).x - c.x, mv.at(e).z - c.z) > r)
+                    continue;
                 mv.struckThisMove.add(e.getUUID());
                 mv.blow(e, 18f, c, 0, 0);
                 e.addEffect(new MobEffectInstance(MobEffects.POISON, 120, 1));
@@ -218,7 +188,8 @@ final class BellHeavyMoves {
             }
         }
         if (mv.t == Moves.EGG_AT - 8) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.TOLL, 3f, 1.35f);
-        if (mv.t == Moves.EGG_AT) mv.fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), mv.px(20, 6), Vec3.ZERO, BellMoves.GLOW);
+        if (mv.t == Moves.EGG_AT)
+            mv.fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), mv.px(20, 6), Vec3.ZERO, BellMoves.GLOW);
         if (mv.t >= Moves.EGG_AT && mv.t <= Moves.EGG_AT + 24 && (mv.t - Moves.EGG_AT) % 4 == 0) dropEgg();
     }
 
@@ -268,7 +239,12 @@ final class BellHeavyMoves {
         double bell = h.bellRadius();
         if (mv.t == Moves.WHIRL_UP) h.sound(h.position(), ModSounds.CHURN, 4f, 0.6f);
         if (mv.t == Moves.WHIRL_UP)
-            mv.fx(BigFx.WHIRL, mv.under(), h.bellRadius() * 1.9 + mv.px(0, 6), Vec3.ZERO, Moves.WHIRL_CRUSH - Moves.WHIRL_UP);
+            mv.fx(
+                    BigFx.WHIRL,
+                    mv.under(),
+                    h.bellRadius() * 1.9 + mv.px(0, 6),
+                    Vec3.ZERO,
+                    Moves.WHIRL_CRUSH - Moves.WHIRL_UP);
         if (mv.t > Moves.WHIRL_UP && mv.t < Moves.WHIRL_CRUSH) {
             if (mv.t % 20 == 0) h.sound(h.position(), ModSounds.CHURN, 3f, 0.7f);
             double R = bell * 1.9 + 6;
@@ -296,7 +272,8 @@ final class BellHeavyMoves {
                 double a = mv.t * 0.4;
                 for (int k = 0; k < 16; k++) {
                     double aa = a + k * Math.PI / 8, rr = R * (0.3 + 0.7 * ((k * 37 + mv.t) % 16) / 16.0);
-                    mv.level().sendParticles(
+                    mv.level()
+                            .sendParticles(
                                     ParticleTypes.BUBBLE_POP,
                                     c.x + Math.cos(aa) * rr,
                                     mv.groundUnder() + 0.5,
@@ -356,7 +333,12 @@ final class BellHeavyMoves {
                 mv.fx(BigFx.SHOCKWAVE, c, R, Vec3.ZERO, BellMoves.DIVE_RING);
                 mv.fx(BigFx.FLASH, c.add(0, 4 * s, 0), mv.px(30, 8), Vec3.ZERO, BellMoves.GLOW);
                 // crown first: his own glass and calcite fly
-                mv.fx(BigFx.DEBRIS, c, mv.px(25, 6), new Vec3(0, 1, 0), Block.getId(Blocks.CALCITE.defaultBlockState()));
+                mv.fx(
+                        BigFx.DEBRIS,
+                        c,
+                        mv.px(25, 6),
+                        new Vec3(0, 1, 0),
+                        Block.getId(Blocks.CALCITE.defaultBlockState()));
                 mv.fx(BigFx.SPARKS, c, mv.px(30, 6), new Vec3(0, 1, 0), BellMoves.GLASS);
                 if (mv.griefing()) mv.crack(BlockPos.containing(c), (int) Math.ceil(R * 0.6));
                 // on to the turn back up
@@ -481,7 +463,8 @@ final class BellHeavyMoves {
                 LivingEntity e = near.get(h.getRandom().nextInt(near.size()));
                 double sp = 2 * s + 1.5;
                 // (at another giant: at the bit of it that's in reach)
-                to = mv.at(e).add(
+                to = mv.at(e)
+                        .add(
                                 (h.getRandom().nextDouble() - 0.5) * sp,
                                 mv.giantAt.containsKey(e) ? 0 : e.getBbHeight() * 0.5,
                                 (h.getRandom().nextDouble() - 0.5) * sp);
@@ -521,8 +504,10 @@ final class BellHeavyMoves {
             return;
         }
         float frac = (mv.t - from) / (float) (to - from);
-        if (mv.t == from) for (int i = 0; i < 5; i++) mv.fx(BigFx.FLASH, h.spotWorld(i), mv.px(10, 3), Vec3.ZERO, 0xFFF2B0);
-        if (mv.t % 20 == 0) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.BEAM, 3f, 0.7f + 0.3f * frac);
+        if (mv.t == from)
+            for (int i = 0; i < 5; i++) mv.fx(BigFx.FLASH, h.spotWorld(i), mv.px(10, 3), Vec3.ZERO, 0xFFF2B0);
+        if (mv.t % 20 == 0)
+            h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.BEAM, 3f, 0.7f + 0.3f * frac);
         double beamR = 2.5 + 2.5 * s;
         for (int i = 0; i < 5; i++) {
             Vec3 top = h.spotWorld(i);
@@ -551,7 +536,8 @@ final class BellHeavyMoves {
                     Vec3 p = top.add(line.scale(k / 12.0));
                     mv.level().sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.3 * s, 0.3 * s, 0.3 * s, 0);
                 }
-                mv.level().sendParticles(
+                mv.level()
+                        .sendParticles(
                                 ParticleTypes.FLAME,
                                 ground.x,
                                 ground.y + 0.2,
@@ -561,7 +547,8 @@ final class BellHeavyMoves {
                                 0.1,
                                 beamR * 0.4,
                                 0.02);
-                mv.level().sendParticles(
+                mv.level()
+                        .sendParticles(
                                 ParticleTypes.LAVA,
                                 ground.x,
                                 ground.y + 0.2,
@@ -632,7 +619,8 @@ final class BellHeavyMoves {
                 for (int k = 0; k < 12; k++) {
                     double a = h.getRandom().nextDouble() * Math.PI * 2,
                             r = R * (0.5 + 0.5 * h.getRandom().nextDouble());
-                    mv.level().sendParticles(
+                    mv.level()
+                            .sendParticles(
                                     ParticleTypes.BUBBLE_COLUMN_UP,
                                     c.x + Math.cos(a) * r,
                                     mv.groundUnder() + 1,
