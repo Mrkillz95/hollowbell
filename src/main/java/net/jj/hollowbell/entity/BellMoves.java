@@ -34,6 +34,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -348,7 +349,7 @@ public final class BellMoves {
             default -> {}
         }
         if (which == Moves.EGG_RAIN) { lastEggs.clear(); eggSpot = forcedSpot; }
-        move = which; t = 0; arg = a; landed = false;
+        move = which; t = 0; arg = a; landed = false; diveWarned = false; diveAt = null;
         lastMove = which;
         h.setMove(which, a, aim);
         if (which == Moves.SKY_DIVE) h.setLift(0f);
@@ -591,15 +592,35 @@ public final class BellMoves {
                     }
                     if (t % 15 == 0) h.sound(c, ModSounds.GRAB, 2f, 0.6f);
                 }
+                Vec3 mid = h.toWorld(h.aim());
+                if (t >= 6 && t <= 34 && t % 4 == 2) {
+                    for (int k = 0; k < 6; k++) {
+                        Vec3 tip = h.strandTipWorld(Math.floorMod(k * 13 + 5, rig.strands.length));
+                        Vec3 to = mid.subtract(tip).multiply(1, 0, 1);
+                        fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(4, 1.5), to.lengthSqr() > 1e-6 ? to.normalize() : Vec3.ZERO, 0);
+                    }
+                }
+                if (t == Moves.CURTAIN_CLOSE) fx(BigFx.DUST_RING, new Vec3(mid.x, h.groundAt(mid.x, mid.z), mid.z), px(16, 4));
             }
             case Moves.SWEEP -> {
-                if (t >= 20 && t <= 48 && t % 2 == 0) {
-                    Vector3f a = h.aim();
-                    Vec3 dir = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10)).subtract(h.position()).normalize();
+                Vector3f a = h.aim();
+                Vec3 dir = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10)).subtract(h.position()).normalize();
+                if (t >= 22 && t <= 40 && t % 4 == 2) {
+                    // dust dragged along by the strand ends at the front of the swing
+                    for (int k = 0; k < 6; k++) {
+                        Vec3 tip = h.strandTipWorld(Math.floorMod(arg + k * 13, rig.strands.length));
+                        fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(4, 1.5), dir, 0);
+                    }
+                }
+                if (t >= 21 && t <= 44) {
                     double r = bell * 1.35 + 4;
+                    // (only what the swing has reached so far: the strands run across from its back to its front)
+                    double front = Moves.sweepFront(t);
                     // (the box round him only reaches 112 out; the sweep reaches further)
                     for (LivingEntity e : near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.8))) {
                         if (struckThisMove.contains(e.getUUID()) || h.horiz(at(e)) > r) continue;
+                        Vec3 off = at(e).subtract(h.position()).multiply(1, 0, 1);
+                        if (Mth.clamp(off.dot(dir) / r, -1, 1) > front) continue;
                         struckThisMove.add(e.getUUID());
                         blow(e, 18f, h.position(), 0, 0.6);
                         e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 2.0, 0, dir.z * 2.0));
@@ -625,8 +646,9 @@ public final class BellMoves {
             }
             case Moves.WRAP -> runWrap();
             case Moves.PULSE -> {
+                // (the bell shuts a moment before the shock goes out)
+                if (t == Moves.PULSE_AT - 5) h.pulse(1.6f);
                 if (t == Moves.PULSE_AT) {
-                    h.pulse(1.6f);
                     h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.SHOCK, 3f, 0.8f);
                     thump(h.position(), 0.6f);
                     fx(BigFx.DUST_RING, under(), h.bellRadius() + px(70, 30));
@@ -666,7 +688,11 @@ public final class BellMoves {
                     fx(BigFx.SHOCKWAVE, under(), bell * 2.4 + px(0, 10));
                     if (griefing()) crack(BlockPos.containing(c.x, groundUnder(), c.z), (int) Math.ceil(bell * 0.8));
                 }
-                if (t == hit + Moves.DROP_DOWN) h.sound(h.position(), ModSounds.PULSE, 3f, 0.7f);
+                bellTone(hit);
+                // he swims back up: a beat, and the downdraft as he lifts off, then two more
+                int up = hit + Moves.DROP_DOWN;
+                if (t == up || t == up + 40 || t == up + 80) h.pulse(1.3f);
+                if (t == up) fx(BigFx.DUST_RING, under(), bell * 1.1 + px(0, 6));
             }
             case Moves.SHED -> { if (t == Moves.SHED_AT) shed(); }
             case Moves.VOLLEY -> {
@@ -674,6 +700,18 @@ public final class BellMoves {
             }
             case Moves.LASH -> {
                 if (t == Moves.LASH_AT - 3) h.sound(h.strandTipWorld(arg), ModSounds.WHIP, 2.5f, 0.6f);
+                if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
+                    // the end cracks past, dragging dust; where it meets the ground, a thud
+                    Vec3 tip = h.strandTipWorld(arg);
+                    Vec3 low = new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z);
+                    Vector3f a = h.aim();
+                    Vec3 way = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10)).subtract(h.position()).normalize();
+                    fx(BigFx.TRAIL, low, px(4, 1.5), way, 0);
+                    if (t == Moves.LASH_AT) {
+                        if (tip.y - low.y < 6 * s + 2) fx(BigFx.STOMP, low, px(6, 2), way, 0);
+                        h.sound(tip, SoundEvents.TRIDENT_RIPTIDE_1.value(), 2f, 1.4f);
+                    }
+                }
                 if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
                     Vector3f a = h.aim();
                     double dirA = Math.atan2(a.z, a.x);
@@ -694,6 +732,7 @@ public final class BellMoves {
                 }
             }
             case Moves.FLASH -> {
+                if (t == 0) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 18);
                 if (t == Moves.FLASH_AT) {
                     boolean night = h.level().getSkyDarken() > 6 || h.level().isThundering();
                     double r = 50 * s + 30;
@@ -707,7 +746,11 @@ public final class BellMoves {
                         blow(e, night ? 8f : 5f, c, 0, 0);
                     }
                     h.sound(c, ModSounds.FLASH, 4f, 1.3f);
-                    for (var S : rig.spots) h.particles(ParticleTypes.FLASH, h.spotWorld(S.k()), 1, 0, 0);
+                    for (var S : rig.spots) {
+                        h.particles(ParticleTypes.FLASH, h.spotWorld(S.k()), 1, 0, 0);
+                        fx(BigFx.FLASH, h.spotWorld(S.k()), px(12, 4), Vec3.ZERO, GLOW);
+                    }
+                    fx(BigFx.FLASH, c, px(40, 10), Vec3.ZERO, GLOW);
                     h.particles(ParticleTypes.END_ROD, c, 200, 40 * s + 4, 0.4);
                 }
             }
@@ -760,6 +803,8 @@ public final class BellMoves {
         h.particles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.WEATHERED_COPPER.defaultBlockState()), c, 80, 6 * s + 1, 0.2);
         h.particles(ParticleTypes.EXPLOSION, c, 6, 4 * s + 1, 0);
         fx(heavy(px(14, 4)), c, px(14, 4));
+        // copper on stone
+        fx(BigFx.SPARKS, c, px(3, 1.5), Vec3.ZERO, 0);
         if (griefing()) crack(BlockPos.containing(c), (int) Math.ceil(8 * s + 1));
     }
 
@@ -784,6 +829,12 @@ public final class BellMoves {
             }
         }
         if (down.isEmpty()) return;
+        // the arm drags back in along the ground
+        if ((t - from) % 4 == 0) {
+            Vec3 tip = h.armTipWorld(arm);
+            Vec3 in = h.position().subtract(tip).multiply(1, 0, 1);
+            fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(4, 1.5), in.lengthSqr() > 1e-6 ? in.normalize() : Vec3.ZERO, 0);
+        }
         for (Vec3 p : down) {
             for (LivingEntity e : near(new AABB(p.x - r, p.y - 10 * s - 4, p.z - r, p.x + r, p.y + 6 * s + 3, p.z + r))) {
                 String key = e.getUUID() + "/" + arm;
@@ -876,7 +927,12 @@ public final class BellMoves {
         if (t < Moves.POD_AT || t > Moves.POD_AT + 16 || t % 2 != 0) return;
         if (t == Moves.POD_AT) {
             h.sound(h.position().add(0, 40 * s, 0), ModSounds.GOO, 4f, 0.6f);
-            for (int i = 0; i < rig.pods.length; i++) if (!h.isPodPopped(i)) fx(BigFx.SPARKS, h.podWorld(i), px(4, 2), new Vec3(0, -1, 0), 0x9CFF6A);
+            for (int i = 0; i < rig.pods.length; i++) {
+                if (h.isPodPopped(i)) continue;
+                Vec3 pod = h.podWorld(i);
+                fx(BigFx.SPARKS, pod, px(4, 2), new Vec3(0, -1, 0), 0x9CFF6A);
+                fx(BigFx.CLOUD, new Vec3(pod.x, h.groundAt(pod.x, pod.z), pod.z), 5 * s + 3, Vec3.ZERO, 0x9CFF6A);
+            }
         }
         double r = 5 * s + 3;
         for (int i = 0; i < rig.pods.length; i++) {
@@ -917,6 +973,7 @@ public final class BellMoves {
             }
         }
         if (t == Moves.EGG_AT - 8) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.TOLL, 3f, 1.35f);
+        if (t == Moves.EGG_AT) fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), px(20, 6), Vec3.ZERO, GLOW);
         if (t >= Moves.EGG_AT && t <= Moves.EGG_AT + 24 && (t - Moves.EGG_AT) % 4 == 0) dropEgg();
     }
 
@@ -992,9 +1049,9 @@ public final class BellMoves {
             }
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);
             h.sound(c, ModSounds.SPLASH, 4f, 0.5f);
-            ring(new Vec3(c.x, groundUnder() + 1, c.z), r);
-            fx(BigFx.SLAM, under(), r);
+            fx(heavy(r), under(), r);
         }
+        bellTone(Moves.WHIRL_CRUSH);
     }
 
     /** the sky dive: up very high, over he turns, bell first down he comes, and a huge shock wave where he lands */
@@ -1006,36 +1063,69 @@ public final class BellMoves {
         if (t == turn - 10) h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.WARN_DIVE, 5f, 0.9f);
         if (t >= turn && t < fall) diveOver = Moves.smooth((t - turn) / (float) Moves.DIVE_TURN);
         if (t == fall) h.sound(h.position(), ModSounds.SWOOP, 5f, 0.6f);
+        if (t == turn) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 20);
         if (t >= fall && t < back && !landed) {
             // down, bell first: he's landed when the lowest of him reaches the ground
             Vec3 crown = h.crownWorld();
             double gy = h.groundAt(crown.x, crown.z);
+            // (the air he pushes ahead flattens the ground first)
+            if (!diveWarned && crown.y - gy < px(40, 10)) {
+                diveWarned = true;
+                fx(BigFx.DUST_RING, new Vec3(crown.x, gy, crown.z), px(60, 12));
+            }
             if (crown.y <= gy + 1.5 * s + 0.5 || t == back - 1) {
                 landed = true;
                 double R = 75 * s + 24;
                 Vec3 c = new Vec3(crown.x, gy, crown.z);
-                for (LivingEntity e : near(new AABB(c, c).inflate(R, 30 * s + 12, R))) {
-                    double d = Math.hypot(at(e).x - c.x, at(e).z - c.z);
-                    if (d > R) continue;
-                    blow(e, 70f * (float) (1 - 0.5 * d / R), c, 3.0, 1.4);
-                    knockDown(e);
-                }
+                diveAt = c;
                 h.sound(c, ModSounds.SHOCK, 5f, 0.5f);
                 h.sound(c, ModSounds.SLAM, 5f, 0.4f);
                 h.sound(c, ModSounds.SPLASH, 4f, 0.5f);
                 h.particles(ParticleTypes.EXPLOSION_EMITTER, c.add(0, 1, 0), 3, 6 * s, 0);
                 h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 250, R * 0.5, 0.25);
                 fx(heavy(px(45, 12)), c, px(45, 12));
-                fx(BigFx.SHOCKWAVE, c, R * 1.2, Vec3.ZERO, 22);
+                fx(BigFx.SHOCKWAVE, c, R, Vec3.ZERO, DIVE_RING);
                 fx(BigFx.FLASH, c.add(0, 4 * s, 0), px(30, 8), Vec3.ZERO, GLOW);
+                // crown first: his own glass and calcite fly
+                fx(BigFx.DEBRIS, c, px(25, 6), new Vec3(0, 1, 0), Block.getId(Blocks.CALCITE.defaultBlockState()));
+                fx(BigFx.SPARKS, c, px(30, 6), new Vec3(0, 1, 0), GLASS);
                 if (griefing()) crack(BlockPos.containing(c), (int) Math.ceil(R * 0.6));
                 // on to the turn back up
                 h.rewindMove(back);
                 t = back;
             }
         }
+        // the blow runs out from where he landed as a ring
+        if (landed && diveAt != null && t >= back && t <= back + DIVE_RING) {
+            double R = 75 * s + 24, r = R * (t - back) / DIVE_RING;
+            Vec3 c = diveAt;
+            for (LivingEntity e : near(new AABB(c, c).inflate(R, 30 * s + 12, R))) {
+                if (struckThisMove.contains(e.getUUID())) continue;
+                double d = Math.hypot(at(e).x - c.x, at(e).z - c.z);
+                if (d > r) continue;
+                struckThisMove.add(e.getUUID());
+                blow(e, 70f * (float) (1 - 0.5 * d / R), c, 3.0, 1.4);
+                knockDown(e);
+            }
+        }
+        if (landed) bellTone(back);
         if (t >= back) diveOver = 1f - Moves.smooth((t - back - 8) / (float) (Moves.DIVE_BACK - 8));
         h.setLift(diveOver);
+    }
+
+    /** how many ticks the sky dive's blow takes to run out to its edge */
+    private static final int DIVE_RING = 12;
+    private static final int GLASS = 0xA8E6B0;
+    private boolean diveWarned;
+    private @Nullable Vec3 diveAt;
+
+    /**
+     * His glass bell hitting the ground at tick at: a low note of the bell itself, then the glass ringing on.
+     */
+    private void bellTone(int at) {
+        Vec3 c = h.position().add(0, rig.rimY * s(), 0);
+        if (t == at) h.sound(c, ModSounds.TOLL, 4f, 0.5f);
+        if (t == at + 6) h.sound(c, SoundEvents.AMETHYST_BLOCK_RESONATE, 4f, 0.5f);
     }
 
     /** the deep toll: three tolls, louder each time, then a massive shock ring that throws everything far */
@@ -1046,11 +1136,12 @@ public final class BellMoves {
             int k = t / 36;
             h.pulse(1.2f + 0.2f * k);
             h.sound(mid, ModSounds.TOLL, 3f + 1.5f * k, 0.8f);
-            ring(h.position().add(0, (rig.rimY - 10) * s, 0), h.bellRadius() * (1.0 + 0.15 * k));
             for (LivingEntity e : near(h.bodyBox().inflate(40 * s + 20))) e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80 + 40 * k, 0));
             fx(BigFx.DUST_RING, under(), h.bellRadius() * (1.2 + 0.3 * k));
             fx(BigFx.SHAKE, h.position(), px(20 + 10 * k, 8));
+            h.sound(mid, SoundEvents.AMETHYST_BLOCK_CHIME, 3f, 0.6f);
         }
+        if (t == 74) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 36);
         int big = Moves.TOLL_BIG;
         if (t == big) {
             h.pulse(1.8f);
@@ -1059,10 +1150,15 @@ public final class BellMoves {
             // (the big toll: a flash of his light and the ring the players see, running out with the real one)
             fx(BigFx.FLASH, mid, px(60, 16), Vec3.ZERO, GLOW);
             fx(BigFx.SHOCKWAVE, under(), px(120, 40), Vec3.ZERO, 25);
+            fx(BigFx.SPARKS, mid, px(30, 6), new Vec3(0, 1, 0), GLASS);
+            // (under the big note, the bell's own low one, and the glass ringing on after)
+            h.sound(mid, ModSounds.TOLL, 4f, 0.5f);
         }
+        if (t == big + 4 || t == big + 10) h.sound(mid, SoundEvents.AMETHYST_BLOCK_RESONATE, 4f, 0.5f);
         if (t >= big && t <= big + 25) {
+            // (from right under him out, at the pace of the ring the players see)
             double R = 120 * s + 40, r0 = h.bellRadius();
-            double r = r0 + (t - big) / 25.0 * (R - r0), rIn = r0 + (t - big - 1) / 25.0 * (R - r0);
+            double r = (t - big) / 25.0 * R, rIn = (t - big - 1) / 25.0 * R;
             Vec3 c = h.position();
             for (LivingEntity e : near(h.bodyBox().inflate(R - r0 + 4, 100 * s + 40, R - r0 + 4))) {
                 if (struckThisMove.contains(e.getUUID())) continue;
@@ -1133,6 +1229,7 @@ public final class BellMoves {
             double time = Math.max(8, horiz / speed);
             sh.setDeltaMovement(d.x / time, d.y / time + 0.5 * 0.02 * time, d.z / time);
             level().addFreshEntity(sh);
+            if (k == 0 && t % 10 == 0) fx(BigFx.SPARKS, to, px(3, 1), Vec3.ZERO, 0xD8FFE0);
         }
         if (t % 6 == 0) h.sound(c.add(0, 20 * s, 0), ModSounds.VOLLEY, 3f, 0.8f + h.getRandom().nextFloat() * 0.3f);
     }
@@ -1147,6 +1244,7 @@ public final class BellMoves {
             return;
         }
         float frac = (t - from) / (float) (to - from);
+        if (t == from) for (int i = 0; i < 5; i++) fx(BigFx.FLASH, h.spotWorld(i), px(10, 3), Vec3.ZERO, 0xFFF2B0);
         if (t % 20 == 0) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.BEAM, 3f, 0.7f + 0.3f * frac);
         double beamR = 2.5 + 2.5 * s;
         for (int i = 0; i < 5; i++) {
@@ -1169,6 +1267,7 @@ public final class BellMoves {
                 ground = new Vec3(nx.x, h.groundAt(nx.x, nx.z), nx.z);
             }
             lance[i] = ground;
+            if (t == from) fx(BigFx.SPARKS, ground, px(3, 1.5), Vec3.ZERO, 0);
             if (t % 2 == 0) {
                 Vec3 line = ground.subtract(top);
                 for (int k = 0; k <= 12; k++) {
@@ -1212,6 +1311,14 @@ public final class BellMoves {
                 e.hurtMarked = true;
                 if (every(e, 20)) sting(e);
             }
+            // dust dragged in by the strand ends round his edge
+            if (t % 4 == 2 && t < Moves.UNDERTOW_SLAM - 2) {
+                for (int k = 0; k < 8; k++) {
+                    Vec3 tip = h.strandTipWorld(Math.floorMod(k * 10 + 3, rig.strands.length));
+                    Vec3 to = c.subtract(tip).multiply(1, 0, 1);
+                    fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(5, 2), to.lengthSqr() > 1e-6 ? to.normalize() : Vec3.ZERO, 0);
+                }
+            }
             if (t % 2 == 0) {
                 for (int k = 0; k < 12; k++) {
                     double a = h.getRandom().nextDouble() * Math.PI * 2, r = R * (0.5 + 0.5 * h.getRandom().nextDouble());
@@ -1230,8 +1337,10 @@ public final class BellMoves {
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);
             h.sound(c, ModSounds.SPLASH, 4f, 0.6f);
             h.particles(ParticleTypes.CLOUD, new Vec3(c.x, groundUnder() + 1, c.z), 150, r * 0.5, 0.1);
-            fx(BigFx.SLAM, under(), r);
+            fx(heavy(px(40, 6)), under(), px(40, 6));
+            fx(BigFx.DUST_RING, under(), bell * 0.95 + px(0, 5));
         }
+        bellTone(Moves.UNDERTOW_SLAM);
     }
 
     private boolean griefing() {
@@ -1252,14 +1361,6 @@ public final class BellMoves {
                 l.setBlock(below, Blocks.COARSE_DIRT.defaultBlockState(), 3);
             BlockState up = l.getBlockState(top);
             if (!up.isAir() && up.canBeReplaced() && up.getFluidState().isEmpty()) l.destroyBlock(top, false);
-        }
-    }
-
-    private void ring(Vec3 c, double r) {
-        int n = (int) Math.min(120, 12 + r * 1.5);
-        for (int i = 0; i < n; i++) {
-            double a = i * Math.PI * 2 / n;
-            level().sendParticles(ParticleTypes.SONIC_BOOM, c.x + Math.cos(a) * r, c.y, c.z + Math.sin(a) * r, 1, 0, 0, 0, 0);
         }
     }
 
@@ -1313,9 +1414,15 @@ public final class BellMoves {
                 h.sound(tip, ModSounds.GRAB, 2.5f, 0.8f);
                 if (grabbed instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable(gentle ? "message.hollowbell.lifting_you" : "message.hollowbell.grabbed"), true);
             } else if (treeAt != null) {
+                BlockPos base = treeAt;
+                int wood = Block.getId(level().getBlockState(base));
                 grabbedTree = pullUpTree(treeAt, tip);
                 treeAt = null;
                 if (grabbedTree == null) { end(); return; }
+                // the roots tear out
+                Vec3 b = Vec3.atBottomCenterOf(base);
+                fx(BigFx.DEBRIS, b, px(4, 2), new Vec3(0, 1, 0), wood);
+                fx(BigFx.DUST, b, px(5, 2));
             }
             intoFrom = tip;
         }
@@ -1735,6 +1842,7 @@ public final class BellMoves {
             blow(wrapped, 8f, tip, 0, 0);
             wrapped.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
             h.sound(tip, SoundEvents.COPPER_STEP, 2f, 0.5f);
+            fx(BigFx.SPARKS, tip, px(2, 1), Vec3.ZERO, 0);
         }
     }
 
