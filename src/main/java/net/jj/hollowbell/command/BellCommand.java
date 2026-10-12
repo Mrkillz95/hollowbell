@@ -100,521 +100,656 @@ public final class BellCommand {
     public static void register(CommandDispatcher<CommandSourceStack> d) {
         d.register(OpsCommand.addTo(Commands.literal("hollowbell")).then(windCommand()));
         d.register(Commands.literal("hollowbell")
-                // no cheats needed: it only changes how their own game draws him
-                .then(Commands.literal("detail")
-                        .executes(c -> detail(c, DetailPayload.ASK))
-                        .then(Commands.literal("on").executes(c -> detail(c, DetailPayload.ON)))
-                        .then(Commands.literal("off").executes(c -> detail(c, DetailPayload.OFF)))
-                        .then(Commands.literal("far")
-                                .executes(BellCommand::farSay)
-                                .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 4096))
-                                        .requires(OP)
-                                        .executes(c -> farSet(c, IntegerArgumentType.getInteger(c, "blocks"))))))
-                .then(Commands.literal("summon")
-                        .requires(OP)
-                        .executes(c -> summon(c, HollowbellEntity.HUNTER, eggSize()))
-                        .then(Commands.argument("mood", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
-                                .executes(BellCommand::summonMoodOrSize)
-                                .then(Commands.argument(
-                                                "size",
-                                                FloatArgumentType.floatArg(
-                                                        HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
-                                        .executes(c -> summon(c, mood(c), FloatArgumentType.getFloat(c, "size"))))))
-                .then(Commands.literal("do")
-                        .requires(OP)
-                        .then(Commands.argument("move", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(
-                                        Arrays.copyOfRange(Moves.NAMES, 1, Moves.NAMES.length), b))
-                                .executes(c -> doMove(c, null, null))
-                                .then(Commands.literal("at")
-                                        .then(Commands.argument("pos", Vec3Argument.vec3())
-                                                .executes(c -> doMove(c, null, Vec3Argument.getVec3(c, "pos")))))
-                                .then(Commands.argument("target", EntityArgument.entity())
-                                        .executes(c -> doMove(c, EntityArgument.getEntity(c, "target"), null)))))
-                .then(Commands.literal("list").requires(OP).executes(BellCommand::list))
-                .then(Commands.literal("where").executes(BellCommand::where))
-                .then(Commands.literal("away")
-                        .requires(OP)
-                        .executes(c -> awaySay(c))
-                        .then(Commands.literal("on")
-                                .executes(c ->
-                                        set(c, () -> BellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
-                        .then(Commands.literal("off")
-                                .executes(c ->
-                                        set(c, () -> BellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
-                        .then(Commands.literal("blocks")
-                                .then(Commands.argument("n", IntegerArgumentType.integer(0, 100000))
-                                        .executes(c -> set(
-                                                c,
-                                                () -> BellConfig.V.awayBlocks = IntegerArgumentType.getInteger(c, "n"),
-                                                "awayBlocks",
-                                                IntegerArgumentType.getInteger(c, "n")))))
-                        .then(Commands.literal("now").executes(BellCommand::awayNow)))
-                .then(Commands.literal("bossbar")
-                        .requires(OP)
-                        .executes(BellCommand::bossbarSay)
-                        .then(Commands.literal("on")
-                                .executes(c -> set(c, () -> BellConfig.V.bossBar = true, "bossBar", true)))
-                        .then(Commands.literal("off")
-                                .executes(c -> set(c, () -> BellConfig.V.bossBar = false, "bossBar", false)))
-                        .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.bossBarRange = IntegerArgumentType.getInteger(c, "blocks"),
-                                        "bossBarRange",
-                                        IntegerArgumentType.getInteger(c, "blocks")))))
-                .then(Commands.literal("mood")
-                        .requires(OP)
-                        .then(Commands.argument("mood", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
-                                .executes(c -> near(
-                                        c,
-                                        h -> {
-                                            h.setVariant(mood(c));
-                                            if (h.isGuardian()) h.setHome(h.position());
-                                        },
-                                        "mood"))))
-                .then(Commands.literal("size")
-                        .requires(OP)
+                .then(detailCommand())
+                .then(summonCommand())
+                .then(doCommand())
+                .then(listCommand())
+                .then(whereCommand())
+                .then(awayCommand())
+                .then(bossbarCommand())
+                .then(moodCommand())
+                .then(sizeCommand())
+                .then(hurtCommand())
+                .then(sethealthCommand())
+                .then(healCommand())
+                .then(poppedCommand())
+                .then(gotoCommand())
+                .then(comeCommand())
+                .then(configCommand())
+                .then(setCommand())
+                .then(podsCommand())
+                .then(paintCommand())
+                .then(tpCommand())
+                .then(groundCommand())
+                .then(stayCommand())
+                .then(sleepCommand())
+                .then(spareCommand())
+                .then(heightCommand())
+                .then(rideCommand())
+                .then(carryCommand())
+                .then(naturalCommand())
+                .then(limitCommand())
+                .then(wardCommand())
+                .then(areaCommand())
+                .then(giantsCommand())
+                .then(meetingsCommand())
+                .then(volumeCommand())
+                .then(killCommand())
+                .then(removeCommand())
+                .then(healthCommand())
+                .then(damageCommand())
+                .then(toggle("griefing", "griefing", () -> BellConfig.V.griefing, v -> BellConfig.V.griefing = v))
+                .then(heavydelayCommand())
+                .then(toggle("shake", "screenShake", () -> BellConfig.V.screenShake, v -> BellConfig.V.screenShake = v))
+                .then(reloadCommand()));
+    }
+
+    /** no cheats needed: it only changes how their own game draws him */
+    private static LiteralArgumentBuilder<CommandSourceStack> detailCommand() {
+        return Commands.literal("detail")
+                .executes(c -> detail(c, DetailPayload.ASK))
+                .then(Commands.literal("on").executes(c -> detail(c, DetailPayload.ON)))
+                .then(Commands.literal("off").executes(c -> detail(c, DetailPayload.OFF)))
+                .then(Commands.literal("far")
+                        .executes(BellCommand::farSay)
+                        .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 4096))
+                                .requires(OP)
+                                .executes(c -> farSet(c, IntegerArgumentType.getInteger(c, "blocks")))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> summonCommand() {
+        return Commands.literal("summon")
+                .requires(OP)
+                .executes(c -> summon(c, HollowbellEntity.HUNTER, eggSize()))
+                .then(Commands.argument("mood", StringArgumentType.word())
+                        .suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
+                        .executes(BellCommand::summonMoodOrSize)
                         .then(Commands.argument(
                                         "size",
                                         FloatArgumentType.floatArg(
                                                 HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
-                                .executes(c ->
-                                        near(c, h -> h.setBellScale(FloatArgumentType.getFloat(c, "size")), "size"))))
-                .then(Commands.literal("hurt")
-                        .requires(OP)
-                        .then(Commands.argument("amount", FloatArgumentType.floatArg(0f))
-                                .executes(
-                                        c -> near(c, h -> h.hurtBy(FloatArgumentType.getFloat(c, "amount")), "hurt"))))
-                .then(Commands.literal("sethealth")
-                        .requires(OP)
-                        .then(Commands.argument("health", FloatArgumentType.floatArg(1f))
-                                .executes(c -> near(
-                                        c, h -> h.setHealthTo(FloatArgumentType.getFloat(c, "health")), "sethealth"))))
-                .then(Commands.literal("heal")
-                        .requires(OP)
+                                .executes(c -> summon(c, mood(c), FloatArgumentType.getFloat(c, "size")))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> doCommand() {
+        return Commands.literal("do")
+                .requires(OP)
+                .then(Commands.argument("move", StringArgumentType.word())
+                        .suggests((c, b) -> SharedSuggestionProvider.suggest(
+                                Arrays.copyOfRange(Moves.NAMES, 1, Moves.NAMES.length), b))
+                        .executes(c -> doMove(c, null, null))
+                        .then(Commands.literal("at")
+                                .then(Commands.argument("pos", Vec3Argument.vec3())
+                                        .executes(c -> doMove(c, null, Vec3Argument.getVec3(c, "pos")))))
+                        .then(Commands.argument("target", EntityArgument.entity())
+                                .executes(c -> doMove(c, EntityArgument.getEntity(c, "target"), null))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> listCommand() {
+        return Commands.literal("list").requires(OP).executes(BellCommand::list);
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> whereCommand() {
+        return Commands.literal("where").executes(BellCommand::where);
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> awayCommand() {
+        return Commands.literal("away")
+                .requires(OP)
+                .executes(c -> awaySay(c))
+                .then(Commands.literal("on")
+                        .executes(c -> set(c, () -> BellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
+                .then(Commands.literal("off")
+                        .executes(c -> set(c, () -> BellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
+                .then(Commands.literal("blocks")
+                        .then(Commands.argument("n", IntegerArgumentType.integer(0, 100000))
+                                .executes(c -> set(
+                                        c,
+                                        () -> BellConfig.V.awayBlocks = IntegerArgumentType.getInteger(c, "n"),
+                                        "awayBlocks",
+                                        IntegerArgumentType.getInteger(c, "n")))))
+                .then(Commands.literal("now").executes(BellCommand::awayNow));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> bossbarCommand() {
+        return Commands.literal("bossbar")
+                .requires(OP)
+                .executes(BellCommand::bossbarSay)
+                .then(Commands.literal("on").executes(c -> set(c, () -> BellConfig.V.bossBar = true, "bossBar", true)))
+                .then(Commands.literal("off")
+                        .executes(c -> set(c, () -> BellConfig.V.bossBar = false, "bossBar", false)))
+                .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
+                        .executes(c -> set(
+                                c,
+                                () -> BellConfig.V.bossBarRange = IntegerArgumentType.getInteger(c, "blocks"),
+                                "bossBarRange",
+                                IntegerArgumentType.getInteger(c, "blocks"))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> moodCommand() {
+        return Commands.literal("mood")
+                .requires(OP)
+                .then(Commands.argument("mood", StringArgumentType.word())
+                        .suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
                         .executes(c -> near(
                                 c,
                                 h -> {
-                                    h.heal();
-                                    h.mendPods();
+                                    h.setVariant(mood(c));
+                                    if (h.isGuardian()) h.setHome(h.position());
                                 },
-                                "heal")))
-                .then(Commands.literal("popped")
-                        .requires(OP)
-                        .then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
-                                .executes(c ->
-                                        near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "n")), "popped"))))
-                .then(Commands.literal("goto")
-                        .requires(OP)
-                        .then(Commands.argument("x", FloatArgumentType.floatArg())
-                                .then(Commands.argument("z", FloatArgumentType.floatArg())
-                                        .executes(c -> farGo(
-                                                c,
-                                                new Vec3(
-                                                        FloatArgumentType.getFloat(c, "x"),
-                                                        0,
-                                                        FloatArgumentType.getFloat(c, "z")),
-                                                null)))))
-                // come: the book's "Come to me", at any distance (to you, or to the player named)
-                .then(Commands.literal("come")
-                        .requires(OP)
-                        .executes(c -> farGo(c, null, c.getSource().getPlayerOrException()))
-                        .then(Commands.argument("player", EntityArgument.player())
-                                .executes(c -> farGo(c, null, EntityArgument.getPlayer(c, "player")))))
-                // config: any setting from the file, by name
-                .then(Commands.literal("config")
-                        .requires(OP)
-                        .executes(BellCommand::configList)
-                        .then(Commands.argument("key", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(OpsCommand.keys(), b))
-                                .executes(c -> configGet(c, StringArgumentType.getString(c, "key")))
-                                .then(Commands.argument("value", StringArgumentType.word())
-                                        .executes(c -> configSet(
-                                                c,
-                                                StringArgumentType.getString(c, "key"),
-                                                StringArgumentType.getString(c, "value"))))))
-                // set: everything about the nearest one
-                .then(Commands.literal("set")
-                        .requires(OP)
-                        .then(Commands.literal("freeze")
-                                .then(Commands.argument("value", BoolArgumentType.bool())
-                                        .executes(c ->
-                                                near(c, h -> h.setFrozen(BoolArgumentType.getBool(c, "value")), "set")))
-                                .then(Commands.literal("on").executes(c -> near(c, h -> h.setFrozen(true), "set")))
-                                .then(Commands.literal("off").executes(c -> near(c, h -> h.setFrozen(false), "set"))))
-                        .then(Commands.literal("speed")
-                                .then(Commands.argument("times", FloatArgumentType.floatArg(0.1f, 5f))
-                                        .executes(c -> near(
-                                                c, h -> h.setSpeedMul(FloatArgumentType.getFloat(c, "times")), "set"))))
-                        .then(Commands.literal("invulnerable")
-                                .then(Commands.literal("on")
-                                        .executes(c -> near(c, h -> h.setInvulnerable(true), "set")))
-                                .then(Commands.literal("off")
-                                        .executes(c -> near(c, h -> h.setInvulnerable(false), "set"))))
-                        .then(Commands.literal("glow")
-                                .then(Commands.literal("on").executes(c -> near(c, h -> h.setGlowingTag(true), "set")))
-                                .then(Commands.literal("off")
-                                        .executes(c -> near(c, h -> h.setGlowingTag(false), "set"))))
-                        .then(Commands.literal("name")
-                                .then(Commands.argument("name", StringArgumentType.greedyString())
-                                        .executes(c -> near(
-                                                c,
-                                                h -> h.setCustomName(
-                                                        Component.literal(StringArgumentType.getString(c, "name"))),
-                                                "set"))))
-                        .then(Commands.literal("target")
-                                .then(Commands.argument("target", EntityArgument.entity())
-                                        .executes(c -> {
-                                            var t = EntityArgument.getEntity(c, "target");
-                                            // (a part of another giant stands for its giant)
-                                            if (!(LookTrace.ownerOf(t) instanceof LivingEntity le)) {
-                                                c.getSource()
-                                                        .sendFailure(
-                                                                Component.translatable("command.hollowbell.not_alive"));
-                                                return 0;
-                                            }
-                                            return near(c, h -> h.sendAfter(le), "set");
-                                        }))
-                                // what the player giving it is looking at, by the book's rules
-                                .then(Commands.literal("look").executes(c -> {
-                                    String said = CodexOrders.attackLooked(
-                                            c.getSource().getPlayerOrException(),
-                                            new CodexPayload(CodexPayload.ATTACK_THAT, 0),
-                                            true);
-                                    return said.startsWith("look_going") ? 1 : 0;
-                                }))
-                                .then(Commands.literal("none")
-                                        .executes(c -> near(c, HollowbellEntity::clearHitList, "set"))))
-                        .then(Commands.literal("wind")
-                                .then(Commands.argument("wind", FloatArgumentType.floatArg(0f, 1f))
-                                        .executes(c -> near(
-                                                c,
-                                                h -> h.mood().setWind(FloatArgumentType.getFloat(c, "wind")),
-                                                "set"))))
-                        .then(Commands.literal("grudge")
-                                .then(Commands.argument("player", EntityArgument.player())
-                                        .then(Commands.argument("grudge", FloatArgumentType.floatArg(0f, 1f))
-                                                .executes(c -> {
-                                                    var pl = EntityArgument.getPlayer(c, "player");
-                                                    return near(
-                                                            c,
-                                                            h -> h.mood()
-                                                                    .setSour(
-                                                                            pl.getUUID(),
-                                                                            FloatArgumentType.getFloat(c, "grudge")),
-                                                            "set");
-                                                }))))
-                        .then(Commands.literal("home")
-                                .executes(c ->
-                                        near(c, h -> h.setHome(c.getSource().getPosition()), "set")))
-                        .then(Commands.literal("cooldowns")
-                                .then(Commands.literal("clear")
-                                        .executes(c -> near(c, h -> h.moves().clearCooldowns(), "set")))))
-                .then(Commands.literal("pods")
-                        .requires(OP)
-                        .then(Commands.literal("mend").executes(c -> near(c, HollowbellEntity::mendPods, "set")))
-                        .then(Commands.literal("pop")
-                                .then(Commands.argument("how many", IntegerArgumentType.integer(0, 64))
-                                        .executes(c -> near(
-                                                c,
-                                                h -> h.popPods(IntegerArgumentType.getInteger(c, "how many")),
-                                                "popped")))))
-                // paint: the land round you becomes the Bell Hollows (admins; the same as /giants paint hollowbell)
-                .then(Commands.literal("paint")
-                        .requires(OP)
-                        .executes(c -> paint(c, 64, true))
-                        .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512))
-                                .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
-                                .then(Commands.literal("full")
-                                        .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
-                                        .then(Commands.literal("depth")
-                                                .then(Commands.argument("depth", IntegerArgumentType.integer(1, 64))
-                                                        .executes(c -> paint(
-                                                                c,
-                                                                IntegerArgumentType.getInteger(c, "radius"),
-                                                                true,
-                                                                IntegerArgumentType.getInteger(c, "depth"))))))
-                                .then(Commands.literal("biome")
-                                        .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), false)))))
-                // tp: take me to him (never in the book)
-                .then(Commands.literal("tp")
-                        .requires(OP)
-                        .executes(c -> tp(c, 0))
-                        .then(Commands.argument("which", IntegerArgumentType.integer(1, 999))
-                                .executes(c -> tp(c, IntegerArgumentType.getInteger(c, "which")))))
-                .then(Commands.literal("ground")
-                        .requires(OP)
-                        .executes(BellCommand::groundSay)
-                        .then(Commands.literal("new").executes(BellCommand::groundNew))
-                        // check: goes over his whole ground on the real world and says what came out wrong (a map in
-                        // the world folder)
-                        .then(Commands.literal("check")
-                                .executes(c -> groundCheck(c, 0))
-                                .then(Commands.argument("radius", IntegerArgumentType.integer(16, 4000))
-                                        .executes(c -> groundCheck(c, IntegerArgumentType.getInteger(c, "radius"))))))
-                .then(Commands.literal("stay")
-                        .requires(OP)
-                        .executes(c -> near(c, h -> h.setStay(!h.staying()), "stay"))
-                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setStay(true), "stay")))
-                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setStay(false), "stay")))
+                                "mood")));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> sizeCommand() {
+        return Commands.literal("size")
+                .requires(OP)
+                .then(Commands.argument(
+                                "size",
+                                FloatArgumentType.floatArg(HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
+                        .executes(c -> near(c, h -> h.setBellScale(FloatArgumentType.getFloat(c, "size")), "size")));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> hurtCommand() {
+        return Commands.literal("hurt")
+                .requires(OP)
+                .then(Commands.argument("amount", FloatArgumentType.floatArg(0f))
+                        .executes(c -> near(c, h -> h.hurtBy(FloatArgumentType.getFloat(c, "amount")), "hurt")));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> sethealthCommand() {
+        return Commands.literal("sethealth")
+                .requires(OP)
+                .then(Commands.argument("health", FloatArgumentType.floatArg(1f))
+                        .executes(c ->
+                                near(c, h -> h.setHealthTo(FloatArgumentType.getFloat(c, "health")), "sethealth")));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> healCommand() {
+        return Commands.literal("heal")
+                .requires(OP)
+                .executes(c -> near(
+                        c,
+                        h -> {
+                            h.heal();
+                            h.mendPods();
+                        },
+                        "heal"));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> poppedCommand() {
+        return Commands.literal("popped")
+                .requires(OP)
+                .then(Commands.argument("n", IntegerArgumentType.integer(0, 64))
+                        .executes(c -> near(c, h -> h.popPods(IntegerArgumentType.getInteger(c, "n")), "popped")));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> gotoCommand() {
+        return Commands.literal("goto")
+                .requires(OP)
+                .then(Commands.argument("x", FloatArgumentType.floatArg())
+                        .then(Commands.argument("z", FloatArgumentType.floatArg())
+                                .executes(c -> farGo(
+                                        c,
+                                        new Vec3(
+                                                FloatArgumentType.getFloat(c, "x"),
+                                                0,
+                                                FloatArgumentType.getFloat(c, "z")),
+                                        null))));
+    }
+
+    /** come: the book's "Come to me", at any distance (to you, or to the player named) */
+    private static LiteralArgumentBuilder<CommandSourceStack> comeCommand() {
+        return Commands.literal("come")
+                .requires(OP)
+                .executes(c -> farGo(c, null, c.getSource().getPlayerOrException()))
+                .then(Commands.argument("player", EntityArgument.player())
+                        .executes(c -> farGo(c, null, EntityArgument.getPlayer(c, "player"))));
+    }
+
+    /** config: any setting from the file, by name */
+    private static LiteralArgumentBuilder<CommandSourceStack> configCommand() {
+        return Commands.literal("config")
+                .requires(OP)
+                .executes(BellCommand::configList)
+                .then(Commands.argument("key", StringArgumentType.word())
+                        .suggests((c, b) -> SharedSuggestionProvider.suggest(OpsCommand.keys(), b))
+                        .executes(c -> configGet(c, StringArgumentType.getString(c, "key")))
+                        .then(Commands.argument("value", StringArgumentType.word())
+                                .executes(c -> configSet(
+                                        c,
+                                        StringArgumentType.getString(c, "key"),
+                                        StringArgumentType.getString(c, "value")))));
+    }
+
+    /** set: everything about the nearest one */
+    private static LiteralArgumentBuilder<CommandSourceStack> setCommand() {
+        return Commands.literal("set")
+                .requires(OP)
+                .then(Commands.literal("freeze")
                         .then(Commands.argument("value", BoolArgumentType.bool())
-                                .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "value")), "stay"))))
-                // sleep: he drifts down and sleeps, or wakes up (a toggle)
-                .then(Commands.literal("sleep")
-                        .requires(OP)
-                        .executes(BellCommand::sleepToggle)
-                        .then(Commands.literal("on").executes(c -> near(c, HollowbellEntity::goToSleep, "sleep")))
-                        .then(Commands.literal("off").executes(c -> near(c, HollowbellEntity::wakeUp, "sleep"))))
-                // the safe list of whoever runs it: players, single creatures, or whole kinds
-                .then(Commands.literal("spare")
-                        .requires(OP)
-                        .executes(BellCommand::spareList)
-                        .then(Commands.literal("add")
-                                .then(Commands.literal("kind")
-                                        .then(Commands.argument("type", ResourceLocationArgument.id())
-                                                .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
-                                                        BuiltInRegistries.ENTITY_TYPE.keySet(), b))
-                                                .executes(c -> spareKind(c, true))))
-                                .then(Commands.argument("targets", EntityArgument.entities())
-                                        .executes(c -> spareWho(c, true))))
-                        .then(Commands.literal("remove")
-                                .then(Commands.literal("kind")
-                                        .then(Commands.argument("type", ResourceLocationArgument.id())
-                                                .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
-                                                        BuiltInRegistries.ENTITY_TYPE.keySet(), b))
-                                                .executes(c -> spareKind(c, false))))
-                                .then(Commands.argument("targets", EntityArgument.entities())
-                                        .executes(c -> spareWho(c, false)))))
-                .then(Commands.literal("height")
-                        .requires(OP)
-                        .then(Commands.argument("blocks", FloatArgumentType.floatArg(0f))
+                                .executes(c -> near(c, h -> h.setFrozen(BoolArgumentType.getBool(c, "value")), "set")))
+                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setFrozen(true), "set")))
+                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setFrozen(false), "set"))))
+                .then(Commands.literal("speed")
+                        .then(Commands.argument("times", FloatArgumentType.floatArg(0.1f, 5f))
                                 .executes(c ->
-                                        near(c, h -> h.setCruise(FloatArgumentType.getFloat(c, "blocks")), "height"))))
-                .then(Commands.literal("ride").requires(OP).executes(c -> {
-                    ServerPlayer p = c.getSource().getPlayerOrException();
-                    HollowbellEntity h = nearest(c.getSource());
-                    if (h == null) return none(c);
-                    if (h.carrying()) h.dropRider();
-                    else h.possess(p);
-                    return 1;
-                }))
-                .then(Commands.literal("carry").requires(OP).executes(c -> {
-                    // he comes to you and a strand carries you up onto his crown, like "ride him" in the book
-                    // (with /execute as, anything alive can be fetched: handy for watching it from the side)
-                    if (!(c.getSource().getEntity() instanceof LivingEntity p)) {
-                        c.getSource().getPlayerOrException();
-                        return 0;
-                    }
-                    HollowbellEntity h = nearest(c.getSource());
-                    if (h == null) return none(c);
-                    // already up there: he carries you back down the same way
-                    if (h.rider() == p) {
-                        h.setMeDown(p);
-                        c.getSource()
-                                .sendSuccess(() -> Component.translatable("command.hollowbell.done_set_down"), false);
-                        return 1;
-                    }
-                    if (h.carrying() || !h.comeAndGetMe(p)) {
-                        c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot_carry"));
-                        return 0;
-                    }
-                    c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_carry"), false);
-                    return 1;
-                }))
-                .then(Commands.literal("natural")
-                        .requires(OP)
-                        .executes(BellCommand::naturalSay)
-                        .then(Commands.literal("on").executes(c -> setNatural(c, true)))
-                        .then(Commands.literal("off").executes(c -> setNatural(c, false))))
-                .then(Commands.literal("limit")
-                        .requires(OP)
-                        .executes(BellCommand::limitSay)
-                        .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20))
-                                .executes(BellCommand::setLimit)))
-                .then(Commands.literal("ward")
-                        .requires(OP)
-                        .executes(BellCommand::wardSay)
-                        .then(Commands.literal("on").executes(BellCommand::wardOn))
-                        .then(Commands.literal("off").executes(c -> {
-                            WorldOne.get(c.getSource().getServer()).forgetWard();
-                            c.getSource()
-                                    .sendSuccess(() -> Component.translatable("command.hollowbell.ward_off"), true);
-                            return 1;
+                                        near(c, h -> h.setSpeedMul(FloatArgumentType.getFloat(c, "times")), "set"))))
+                .then(Commands.literal("invulnerable")
+                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setInvulnerable(true), "set")))
+                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setInvulnerable(false), "set"))))
+                .then(Commands.literal("glow")
+                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setGlowingTag(true), "set")))
+                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setGlowingTag(false), "set"))))
+                .then(Commands.literal("name")
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                .executes(c -> near(
+                                        c,
+                                        h -> h.setCustomName(
+                                                Component.literal(StringArgumentType.getString(c, "name"))),
+                                        "set"))))
+                .then(Commands.literal("target")
+                        .then(Commands.argument("target", EntityArgument.entity())
+                                .executes(c -> {
+                                    var t = EntityArgument.getEntity(c, "target");
+                                    // (a part of another giant stands for its giant)
+                                    if (!(LookTrace.ownerOf(t) instanceof LivingEntity le)) {
+                                        c.getSource()
+                                                .sendFailure(Component.translatable("command.hollowbell.not_alive"));
+                                        return 0;
+                                    }
+                                    return near(c, h -> h.sendAfter(le), "set");
+                                }))
+                        // what the player giving it is looking at, by the book's rules
+                        .then(Commands.literal("look").executes(c -> {
+                            String said = CodexOrders.attackLooked(
+                                    c.getSource().getPlayerOrException(),
+                                    new CodexPayload(CodexPayload.ATTACK_THAT, 0),
+                                    true);
+                            return said.startsWith("look_going") ? 1 : 0;
                         }))
-                        .then(Commands.literal("minutes")
-                                .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 1440))
+                        .then(Commands.literal("none").executes(c -> near(c, HollowbellEntity::clearHitList, "set"))))
+                .then(Commands.literal("wind")
+                        .then(Commands.argument("wind", FloatArgumentType.floatArg(0f, 1f))
+                                .executes(c ->
+                                        near(c, h -> h.mood().setWind(FloatArgumentType.getFloat(c, "wind")), "set"))))
+                .then(Commands.literal("grudge")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("grudge", FloatArgumentType.floatArg(0f, 1f))
                                         .executes(c -> {
-                                            int v = IntegerArgumentType.getInteger(c, "minutes");
-                                            BellConfig.V.wardSeconds = v * 60;
-                                            BellConfig.save();
-                                            c.getSource()
-                                                    .sendSuccess(
-                                                            () -> Component.translatable(
-                                                                    "command.hollowbell.ward_minutes", v),
-                                                            true);
-                                            return 1;
-                                        })))
-                        .then(Commands.literal("rest")
-                                .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 1440))
-                                        .executes(c -> {
-                                            int v = IntegerArgumentType.getInteger(c, "minutes");
-                                            BellConfig.V.wardRestSeconds = v * 60;
-                                            BellConfig.save();
-                                            c.getSource()
-                                                    .sendSuccess(
-                                                            () -> v == 0
-                                                                    ? Component.translatable(
-                                                                            "command.hollowbell.ward_rest_none")
-                                                                    : Component.translatable(
-                                                                            "command.hollowbell.ward_rest", v),
-                                                            true);
-                                            return 1;
-                                        })))
-                        .then(Commands.literal("blocks")
-                                .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 20000))
-                                        .executes(c -> {
-                                            int v = IntegerArgumentType.getInteger(c, "blocks");
-                                            BellConfig.V.wardBlocks = v;
-                                            BellConfig.save();
-                                            c.getSource()
-                                                    .sendSuccess(
-                                                            () -> v == 0
-                                                                    ? Component.translatable(
-                                                                            "command.hollowbell.ward_blocks_none")
-                                                                    : Component.translatable(
-                                                                            "command.hollowbell.ward_blocks", v),
-                                                            true);
-                                            return 1;
+                                            var pl = EntityArgument.getPlayer(c, "player");
+                                            return near(
+                                                    c,
+                                                    h -> h.mood()
+                                                            .setSour(
+                                                                    pl.getUUID(),
+                                                                    FloatArgumentType.getFloat(c, "grudge")),
+                                                    "set");
                                         }))))
-                .then(Commands.literal("area")
-                        .requires(OP)
-                        .executes(BellCommand::areaSay)
-                        .then(Commands.literal("off").executes(BellCommand::areaFree))
-                        .then(Commands.argument("x", FloatArgumentType.floatArg())
-                                .then(Commands.argument("z", FloatArgumentType.floatArg())
-                                        .then(Commands.argument("radius", IntegerArgumentType.integer(32, 100000))
-                                                .executes(BellCommand::areaBind)))))
-                .then(Commands.literal("giants")
-                        .requires(OP)
-                        .executes(c -> {
-                            c.getSource()
-                                    .sendSuccess(
-                                            () -> Component.translatable(
-                                                    BellConfig.V.fightGiants
-                                                            ? "command.hollowbell.giants_is_on"
-                                                            : "command.hollowbell.giants_is_off"),
-                                            false);
-                            return 1;
-                        })
-                        .then(Commands.literal("on")
-                                .executes(c -> set(c, () -> BellConfig.V.fightGiants = true, "fightGiants", true)))
-                        .then(Commands.literal("off")
-                                .executes(c -> set(c, () -> BellConfig.V.fightGiants = false, "fightGiants", false))))
-                .then(Commands.literal("meetings")
-                        .requires(OP)
-                        .executes(c -> {
-                            c.getSource()
-                                    .sendSuccess(
-                                            () -> Component.translatable(
-                                                    BellConfig.V.meetings
-                                                            ? "command.hollowbell.meetings_is_on"
-                                                            : "command.hollowbell.meetings_is_off"),
-                                            false);
-                            return 1;
-                        })
-                        .then(Commands.literal("on")
-                                .executes(c -> set(c, () -> BellConfig.V.meetings = true, "meetings", true)))
-                        .then(Commands.literal("off")
-                                .executes(c -> set(c, () -> BellConfig.V.meetings = false, "meetings", false))))
-                .then(Commands.literal("volume")
-                        .requires(OP)
-                        .executes(c -> {
-                            c.getSource()
-                                    .sendSuccess(
-                                            () -> Component.translatable(
-                                                    "command.hollowbell.volume_is",
-                                                    String.valueOf(BellConfig.V.soundVolume)),
-                                            false);
-                            return 1;
-                        })
-                        .then(Commands.literal("off")
-                                .executes(c -> set(c, () -> BellConfig.V.soundVolume = 0f, "soundVolume", 0f)))
-                        .then(Commands.argument("volume", FloatArgumentType.floatArg(0f, 2f))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.soundVolume = FloatArgumentType.getFloat(c, "volume"),
-                                        "soundVolume",
-                                        FloatArgumentType.getFloat(c, "volume")))))
-                .then(Commands.literal("kill").requires(OP).executes(c -> {
-                    int n = FarOrders.killAll(c.getSource().getServer());
-                    if (n == 0) return none(c);
-                    c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_kill"), true);
-                    return n;
+                .then(Commands.literal("home")
+                        .executes(c -> near(c, h -> h.setHome(c.getSource().getPosition()), "set")))
+                .then(Commands.literal("cooldowns")
+                        .then(Commands.literal("clear")
+                                .executes(c -> near(c, h -> h.moves().clearCooldowns(), "set"))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> podsCommand() {
+        return Commands.literal("pods")
+                .requires(OP)
+                .then(Commands.literal("mend").executes(c -> near(c, HollowbellEntity::mendPods, "set")))
+                .then(Commands.literal("pop")
+                        .then(Commands.argument("how many", IntegerArgumentType.integer(0, 64))
+                                .executes(c -> near(
+                                        c, h -> h.popPods(IntegerArgumentType.getInteger(c, "how many")), "popped"))));
+    }
+
+    /** paint: the land round you becomes the Bell Hollows (admins; the same as /giants paint hollowbell) */
+    private static LiteralArgumentBuilder<CommandSourceStack> paintCommand() {
+        return Commands.literal("paint")
+                .requires(OP)
+                .executes(c -> paint(c, 64, true))
+                .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512))
+                        .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
+                        .then(Commands.literal("full")
+                                .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), true))
+                                .then(Commands.literal("depth")
+                                        .then(Commands.argument("depth", IntegerArgumentType.integer(1, 64))
+                                                .executes(c -> paint(
+                                                        c,
+                                                        IntegerArgumentType.getInteger(c, "radius"),
+                                                        true,
+                                                        IntegerArgumentType.getInteger(c, "depth"))))))
+                        .then(Commands.literal("biome")
+                                .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), false))));
+    }
+
+    /** tp: take me to him (never in the book) */
+    private static LiteralArgumentBuilder<CommandSourceStack> tpCommand() {
+        return Commands.literal("tp")
+                .requires(OP)
+                .executes(c -> tp(c, 0))
+                .then(Commands.argument("which", IntegerArgumentType.integer(1, 999))
+                        .executes(c -> tp(c, IntegerArgumentType.getInteger(c, "which"))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> groundCommand() {
+        return Commands.literal("ground")
+                .requires(OP)
+                .executes(BellCommand::groundSay)
+                .then(Commands.literal("new").executes(BellCommand::groundNew))
+                // check: goes over his whole ground on the real world and says what came out wrong (a map in
+                // the world folder)
+                .then(Commands.literal("check")
+                        .executes(c -> groundCheck(c, 0))
+                        .then(Commands.argument("radius", IntegerArgumentType.integer(16, 4000))
+                                .executes(c -> groundCheck(c, IntegerArgumentType.getInteger(c, "radius")))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> stayCommand() {
+        return Commands.literal("stay")
+                .requires(OP)
+                .executes(c -> near(c, h -> h.setStay(!h.staying()), "stay"))
+                .then(Commands.literal("on").executes(c -> near(c, h -> h.setStay(true), "stay")))
+                .then(Commands.literal("off").executes(c -> near(c, h -> h.setStay(false), "stay")))
+                .then(Commands.argument("value", BoolArgumentType.bool())
+                        .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "value")), "stay")));
+    }
+
+    /** sleep: he drifts down and sleeps, or wakes up (a toggle) */
+    private static LiteralArgumentBuilder<CommandSourceStack> sleepCommand() {
+        return Commands.literal("sleep")
+                .requires(OP)
+                .executes(BellCommand::sleepToggle)
+                .then(Commands.literal("on").executes(c -> near(c, HollowbellEntity::goToSleep, "sleep")))
+                .then(Commands.literal("off").executes(c -> near(c, HollowbellEntity::wakeUp, "sleep")));
+    }
+
+    /** the safe list of whoever runs it: players, single creatures, or whole kinds */
+    private static LiteralArgumentBuilder<CommandSourceStack> spareCommand() {
+        return Commands.literal("spare")
+                .requires(OP)
+                .executes(BellCommand::spareList)
+                .then(Commands.literal("add")
+                        .then(Commands.literal("kind")
+                                .then(Commands.argument("type", ResourceLocationArgument.id())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
+                                                BuiltInRegistries.ENTITY_TYPE.keySet(), b))
+                                        .executes(c -> spareKind(c, true))))
+                        .then(Commands.argument("targets", EntityArgument.entities())
+                                .executes(c -> spareWho(c, true))))
+                .then(Commands.literal("remove")
+                        .then(Commands.literal("kind")
+                                .then(Commands.argument("type", ResourceLocationArgument.id())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
+                                                BuiltInRegistries.ENTITY_TYPE.keySet(), b))
+                                        .executes(c -> spareKind(c, false))))
+                        .then(Commands.argument("targets", EntityArgument.entities())
+                                .executes(c -> spareWho(c, false))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> heightCommand() {
+        return Commands.literal("height")
+                .requires(OP)
+                .then(Commands.argument("blocks", FloatArgumentType.floatArg(0f))
+                        .executes(c -> near(c, h -> h.setCruise(FloatArgumentType.getFloat(c, "blocks")), "height")));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> rideCommand() {
+        return Commands.literal("ride").requires(OP).executes(c -> {
+            ServerPlayer p = c.getSource().getPlayerOrException();
+            HollowbellEntity h = nearest(c.getSource());
+            if (h == null) return none(c);
+            if (h.carrying()) h.dropRider();
+            else h.possess(p);
+            return 1;
+        });
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> carryCommand() {
+        return Commands.literal("carry").requires(OP).executes(c -> {
+            // he comes to you and a strand carries you up onto his crown, like "ride him" in the book
+            // (with /execute as, anything alive can be fetched: handy for watching it from the side)
+            if (!(c.getSource().getEntity() instanceof LivingEntity p)) {
+                c.getSource().getPlayerOrException();
+                return 0;
+            }
+            HollowbellEntity h = nearest(c.getSource());
+            if (h == null) return none(c);
+            // already up there: he carries you back down the same way
+            if (h.rider() == p) {
+                h.setMeDown(p);
+                c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_set_down"), false);
+                return 1;
+            }
+            if (h.carrying() || !h.comeAndGetMe(p)) {
+                c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot_carry"));
+                return 0;
+            }
+            c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_carry"), false);
+            return 1;
+        });
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> naturalCommand() {
+        return Commands.literal("natural")
+                .requires(OP)
+                .executes(BellCommand::naturalSay)
+                .then(Commands.literal("on").executes(c -> setNatural(c, true)))
+                .then(Commands.literal("off").executes(c -> setNatural(c, false)));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> limitCommand() {
+        return Commands.literal("limit")
+                .requires(OP)
+                .executes(BellCommand::limitSay)
+                .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20))
+                        .executes(BellCommand::setLimit));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> wardCommand() {
+        return Commands.literal("ward")
+                .requires(OP)
+                .executes(BellCommand::wardSay)
+                .then(Commands.literal("on").executes(BellCommand::wardOn))
+                .then(Commands.literal("off").executes(c -> {
+                    WorldOne.get(c.getSource().getServer()).forgetWard();
+                    c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.ward_off"), true);
+                    return 1;
                 }))
-                .then(Commands.literal("remove").requires(OP).executes(c -> {
-                    var server = c.getSource().getServer();
-                    WorldOne w = WorldOne.get(server);
-                    int out = Away.get(server).count() + FarOrders.removeLying(server);
-                    for (Away.Rec r : Away.get(server).all()) w.removed(server.overworld(), r.id);
-                    Away.get(server).forgetAll();
-                    if (allOf(c.getSource()).isEmpty() && out > 0) {
-                        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove"), true);
-                        return out;
-                    }
-                    return all(
-                            c,
-                            h -> {
-                                h.discard();
-                                w.removed(server.overworld(), h.getUUID());
-                            },
-                            "remove");
-                }))
-                .then(Commands.literal("health")
-                        .requires(OP)
-                        .executes(c -> say(c, "health", BellConfig.V.health))
-                        .then(Commands.argument("health", FloatArgumentType.floatArg(10f, 1_000_000f))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.health = FloatArgumentType.getFloat(c, "health"),
-                                        "health",
-                                        FloatArgumentType.getFloat(c, "health")))))
-                .then(Commands.literal("damage")
-                        .requires(OP)
-                        .executes(c -> say(c, "damage", BellConfig.V.damageMultiplier))
-                        .then(Commands.literal("mobs")
-                                .executes(c -> say(c, "mobDamage", BellConfig.V.mobDamage))
-                                .then(Commands.argument("times", FloatArgumentType.floatArg(0f, 100f))
-                                        .executes(c -> set(
-                                                c,
-                                                () -> BellConfig.V.mobDamage = FloatArgumentType.getFloat(c, "times"),
-                                                "mobDamage",
-                                                FloatArgumentType.getFloat(c, "times")))))
-                        .then(Commands.argument("multiplier", FloatArgumentType.floatArg(0f, 100f))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.damageMultiplier =
-                                                FloatArgumentType.getFloat(c, "multiplier"),
-                                        "damage",
-                                        FloatArgumentType.getFloat(c, "multiplier")))))
-                .then(toggle("griefing", "griefing", () -> BellConfig.V.griefing, v -> BellConfig.V.griefing = v))
-                .then(Commands.literal("heavydelay")
-                        .requires(OP)
-                        .executes(c -> heavyDelay(c, -1))
-                        .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
-                                .executes(c -> heavyDelay(c, IntegerArgumentType.getInteger(c, "seconds")))))
-                .then(toggle("shake", "screenShake", () -> BellConfig.V.screenShake, v -> BellConfig.V.screenShake = v))
-                .then(Commands.literal("reload").requires(OP).executes(c -> {
-                    boolean ok = BellConfig.load();
+                .then(Commands.literal("minutes")
+                        .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 1440))
+                                .executes(c -> {
+                                    int v = IntegerArgumentType.getInteger(c, "minutes");
+                                    BellConfig.V.wardSeconds = v * 60;
+                                    BellConfig.save();
+                                    c.getSource()
+                                            .sendSuccess(
+                                                    () -> Component.translatable("command.hollowbell.ward_minutes", v),
+                                                    true);
+                                    return 1;
+                                })))
+                .then(Commands.literal("rest")
+                        .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 1440))
+                                .executes(c -> {
+                                    int v = IntegerArgumentType.getInteger(c, "minutes");
+                                    BellConfig.V.wardRestSeconds = v * 60;
+                                    BellConfig.save();
+                                    c.getSource()
+                                            .sendSuccess(
+                                                    () -> v == 0
+                                                            ? Component.translatable(
+                                                                    "command.hollowbell.ward_rest_none")
+                                                            : Component.translatable("command.hollowbell.ward_rest", v),
+                                                    true);
+                                    return 1;
+                                })))
+                .then(Commands.literal("blocks")
+                        .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 20000))
+                                .executes(c -> {
+                                    int v = IntegerArgumentType.getInteger(c, "blocks");
+                                    BellConfig.V.wardBlocks = v;
+                                    BellConfig.save();
+                                    c.getSource()
+                                            .sendSuccess(
+                                                    () -> v == 0
+                                                            ? Component.translatable(
+                                                                    "command.hollowbell.ward_blocks_none")
+                                                            : Component.translatable(
+                                                                    "command.hollowbell.ward_blocks", v),
+                                                    true);
+                                    return 1;
+                                })));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> areaCommand() {
+        return Commands.literal("area")
+                .requires(OP)
+                .executes(BellCommand::areaSay)
+                .then(Commands.literal("off").executes(BellCommand::areaFree))
+                .then(Commands.argument("x", FloatArgumentType.floatArg())
+                        .then(Commands.argument("z", FloatArgumentType.floatArg())
+                                .then(Commands.argument("radius", IntegerArgumentType.integer(32, 100000))
+                                        .executes(BellCommand::areaBind))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> giantsCommand() {
+        return Commands.literal("giants")
+                .requires(OP)
+                .executes(c -> {
                     c.getSource()
                             .sendSuccess(
                                     () -> Component.translatable(
-                                            ok ? "command.hollowbell.reloaded" : "command.hollowbell.reload_bad"),
-                                    true);
-                    return ok ? 1 : 0;
-                })));
+                                            BellConfig.V.fightGiants
+                                                    ? "command.hollowbell.giants_is_on"
+                                                    : "command.hollowbell.giants_is_off"),
+                                    false);
+                    return 1;
+                })
+                .then(Commands.literal("on")
+                        .executes(c -> set(c, () -> BellConfig.V.fightGiants = true, "fightGiants", true)))
+                .then(Commands.literal("off")
+                        .executes(c -> set(c, () -> BellConfig.V.fightGiants = false, "fightGiants", false)));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> meetingsCommand() {
+        return Commands.literal("meetings")
+                .requires(OP)
+                .executes(c -> {
+                    c.getSource()
+                            .sendSuccess(
+                                    () -> Component.translatable(
+                                            BellConfig.V.meetings
+                                                    ? "command.hollowbell.meetings_is_on"
+                                                    : "command.hollowbell.meetings_is_off"),
+                                    false);
+                    return 1;
+                })
+                .then(Commands.literal("on")
+                        .executes(c -> set(c, () -> BellConfig.V.meetings = true, "meetings", true)))
+                .then(Commands.literal("off")
+                        .executes(c -> set(c, () -> BellConfig.V.meetings = false, "meetings", false)));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> volumeCommand() {
+        return Commands.literal("volume")
+                .requires(OP)
+                .executes(c -> {
+                    c.getSource()
+                            .sendSuccess(
+                                    () -> Component.translatable(
+                                            "command.hollowbell.volume_is", String.valueOf(BellConfig.V.soundVolume)),
+                                    false);
+                    return 1;
+                })
+                .then(Commands.literal("off")
+                        .executes(c -> set(c, () -> BellConfig.V.soundVolume = 0f, "soundVolume", 0f)))
+                .then(Commands.argument("volume", FloatArgumentType.floatArg(0f, 2f))
+                        .executes(c -> set(
+                                c,
+                                () -> BellConfig.V.soundVolume = FloatArgumentType.getFloat(c, "volume"),
+                                "soundVolume",
+                                FloatArgumentType.getFloat(c, "volume"))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> killCommand() {
+        return Commands.literal("kill").requires(OP).executes(c -> {
+            int n = FarOrders.killAll(c.getSource().getServer());
+            if (n == 0) return none(c);
+            c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_kill"), true);
+            return n;
+        });
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> removeCommand() {
+        return Commands.literal("remove").requires(OP).executes(c -> {
+            var server = c.getSource().getServer();
+            WorldOne w = WorldOne.get(server);
+            int out = Away.get(server).count() + FarOrders.removeLying(server);
+            for (Away.Rec r : Away.get(server).all()) w.removed(server.overworld(), r.id);
+            Away.get(server).forgetAll();
+            if (allOf(c.getSource()).isEmpty() && out > 0) {
+                c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove"), true);
+                return out;
+            }
+            return all(
+                    c,
+                    h -> {
+                        h.discard();
+                        w.removed(server.overworld(), h.getUUID());
+                    },
+                    "remove");
+        });
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> healthCommand() {
+        return Commands.literal("health")
+                .requires(OP)
+                .executes(c -> say(c, "health", BellConfig.V.health))
+                .then(Commands.argument("health", FloatArgumentType.floatArg(10f, 1_000_000f))
+                        .executes(c -> set(
+                                c,
+                                () -> BellConfig.V.health = FloatArgumentType.getFloat(c, "health"),
+                                "health",
+                                FloatArgumentType.getFloat(c, "health"))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> damageCommand() {
+        return Commands.literal("damage")
+                .requires(OP)
+                .executes(c -> say(c, "damage", BellConfig.V.damageMultiplier))
+                .then(Commands.literal("mobs")
+                        .executes(c -> say(c, "mobDamage", BellConfig.V.mobDamage))
+                        .then(Commands.argument("times", FloatArgumentType.floatArg(0f, 100f))
+                                .executes(c -> set(
+                                        c,
+                                        () -> BellConfig.V.mobDamage = FloatArgumentType.getFloat(c, "times"),
+                                        "mobDamage",
+                                        FloatArgumentType.getFloat(c, "times")))))
+                .then(Commands.argument("multiplier", FloatArgumentType.floatArg(0f, 100f))
+                        .executes(c -> set(
+                                c,
+                                () -> BellConfig.V.damageMultiplier = FloatArgumentType.getFloat(c, "multiplier"),
+                                "damage",
+                                FloatArgumentType.getFloat(c, "multiplier"))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> heavydelayCommand() {
+        return Commands.literal("heavydelay")
+                .requires(OP)
+                .executes(c -> heavyDelay(c, -1))
+                .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
+                        .executes(c -> heavyDelay(c, IntegerArgumentType.getInteger(c, "seconds"))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> reloadCommand() {
+        return Commands.literal("reload").requires(OP).executes(c -> {
+            boolean ok = BellConfig.load();
+            c.getSource()
+                    .sendSuccess(
+                            () -> Component.translatable(
+                                    ok ? "command.hollowbell.reloaded" : "command.hollowbell.reload_bad"),
+                            true);
+            return ok ? 1 : 0;
+        });
     }
 
     /** how the book tires him: on or off, how long to get all his wind back, how fast pushing him sours him */

@@ -1,98 +1,28 @@
 package net.jj.hollowbell.entity;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
-import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
-import net.jj.hollowbell.fx.BigFx;
-import net.jj.hollowbell.item.BellArmorItem;
 import net.jj.hollowbell.item.CodexItem;
-import net.jj.hollowbell.mixin.TridentAccess;
-import net.jj.hollowbell.net.BeingHimPayload;
-import net.jj.hollowbell.rig.BellAnim;
-import net.jj.hollowbell.rig.BellModel;
-import net.jj.hollowbell.rig.BellPieces;
-import net.jj.hollowbell.rig.BellRig;
-import net.jj.hollowbell.rig.BellState;
 import net.jj.hollowbell.solid.GiantHull;
-import net.jj.hollowbell.solid.Solid;
-import net.jj.hollowbell.solid.SolidBody;
-import net.jj.hollowbell.solid.SolidCache;
-import net.jj.hollowbell.solid.SolidShape;
-import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.BellWorld;
-import net.jj.hollowbell.world.NoWait;
-import net.jj.hollowbell.world.Shrine;
-import net.jj.hollowbell.world.WorldOne;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.FloatTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.TicketType;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.tags.TagKey;
-import net.minecraft.util.Mth;
-import net.minecraft.world.BossEvent;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
-import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.Snowball;
-import net.minecraft.world.entity.projectile.ThrownEgg;
-import net.minecraft.world.entity.projectile.ThrownTrident;
-import net.minecraft.world.entity.projectile.windcharge.AbstractWindCharge;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 /** Who he goes after, who he leaves alone, and meeting the other giants. */
 final class BellTargets {
@@ -232,7 +162,8 @@ final class BellTargets {
         Vec3 c = hb.isGuardian() && hb.home != null ? hb.home : hb.position();
         LivingEntity mob = null;
         double md = Double.MAX_VALUE;
-        for (LivingEntity e : hb.level().getEntitiesOfClass(
+        for (LivingEntity e : hb.level()
+                .getEntitiesOfClass(
                         LivingEntity.class,
                         new AABB(c, c).inflate(mr, 60 * hb.bellScale() + 30, mr),
                         // (another giant is met by the meeting rules, not picked like any monster: see meetTick; nor is
@@ -336,7 +267,8 @@ final class BellTargets {
         return t == null ? 0 : Math.max(0, t - hb.level().getGameTime());
     }
 
-    @Nullable Vec3 keepAwayFrom() {
+    @Nullable
+    Vec3 keepAwayFrom() {
         long now = hb.level().getGameTime();
         if (hb.fleeFrom != null && now < hb.fleeUntil) return hb.fleeFrom;
         return hb.meetAvoid != null ? hb.avoidAt : null;
@@ -392,7 +324,8 @@ final class BellTargets {
             hb.removeTag(Meeting.YIELD);
             hb.yieldUntil = 0;
         }
-        if (!hb.metLately.isEmpty() && hb.tickCount % 200 == 0) hb.metLately.values().removeIf(t -> t < now);
+        if (!hb.metLately.isEmpty() && hb.tickCount % 200 == 0)
+            hb.metLately.values().removeIf(t -> t < now);
         // a meeting fight going on
         if (hb.meetFoe != null) {
             Entity f = sl.getEntity(hb.meetFoe);
@@ -410,7 +343,9 @@ final class BellTargets {
                 if (hb.getTarget() == foe) hb.setTarget(null);
                 hb.angerTicks = 0;
                 victory();
-            } else if (!hb.yielding() && BellConfig.V.yieldAt > 0f && hb.healthNow() < hb.healthMax() * BellConfig.V.yieldAt) {
+            } else if (!hb.yielding()
+                    && BellConfig.V.yieldAt > 0f
+                    && hb.healthNow() < hb.healthMax() * BellConfig.V.yieldAt) {
                 backDown(foe);
             } else if (hb.getTarget() != foe && fairGame(foe)) {
                 hb.setTarget(foe);
@@ -425,7 +360,10 @@ final class BellTargets {
                 hb.avoidAt = null;
             } else hb.avoidAt = o.position();
         }
-        if (HollowbellEntity.meetEvery <= 0 || hb.tickCount % HollowbellEntity.meetEvery != 0 || !freeToMeet() || hb.meetAvoid != null) return;
+        if (HollowbellEntity.meetEvery <= 0
+                || hb.tickCount % HollowbellEntity.meetEvery != 0
+                || !freeToMeet()
+                || hb.meetAvoid != null) return;
         double r = Meeting.range(hb.bellScale());
         LivingEntity best = null;
         double bd = Double.MAX_VALUE;
@@ -523,7 +461,8 @@ final class BellTargets {
                 && e.getY() > hb.groundAt(e.getX(), e.getZ()) + 3;
     }
 
-    @Nullable double[] giantTargetPlan(LivingEntity t) {
+    @Nullable
+    double[] giantTargetPlan(LivingEntity t) {
         if (!Giants.isGiant(t)) return null;
         LivingEntity o = Giants.ownerOf(t);
         if (o == null) o = t;

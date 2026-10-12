@@ -262,50 +262,8 @@ public final class Moves {
         in.moveT = t;
         int len = length(move);
         switch (move) {
-            case GRAB, HARVEST -> {
-                if (arg < 0 || arg >= rig.strands.length) return;
-                if (move == GRAB && phase >= CARRY_PHASE) {
-                    // carrying somebody up onto his crown: the strand reaches out to them, then takes them up
-                    st.carryStrand = arg;
-                    st.carryReach = smooth(t / REACH);
-                    st.carryU = Mth.clamp(phase - CARRY_PHASE, 0f, 1f);
-                    st.carryD = carryD;
-                    st.carryEnd = carryEnd;
-                    st.carryX = tx;
-                    st.carryY = ty;
-                    st.carryZ = tz;
-                    return;
-                }
-                st.grabStrand = arg;
-                // (the end overshoots as it catches and coils round)
-                st.grabReach = smooth(t / REACH) + 0.12f * recoil(t, REACH, 16f);
-                float lift = phase >= 0f ? phase : Mth.clamp((t - REACH) / LIFT, 0f, 1f);
-                st.grabLift = lift;
-                st.grabReach *= 1f - 0.7f * lift; // it comes back to hanging straight as it pulls up
-                st.grabX = tx;
-                st.grabY = ty;
-                st.grabZ = tz;
-            }
-            case CURTAIN -> {
-                float k = t < CURTAIN_CLOSE
-                        ? smooth(t / CURTAIN_CLOSE)
-                        : t < CURTAIN_CLOSE + CURTAIN_HOLD
-                                ? 1f
-                                : 1f
-                                        - smooth((t - CURTAIN_CLOSE - CURTAIN_HOLD)
-                                                / (len - CURTAIN_CLOSE - CURTAIN_HOLD));
-                // pulled tight in the middle of the hold
-                if (t > CURTAIN_CLOSE && t < CURTAIN_CLOSE + CURTAIN_HOLD)
-                    k += 0.15f * (float) Math.sin((t - CURTAIN_CLOSE) * 0.3f);
-                // he settles over you as it closes, and it cinches when it's shut
-                if (t >= CURTAIN_CLOSE) k += 0.15f * recoil(t, CURTAIN_CLOSE, 20f);
-                st.curtain = k;
-                st.curtainX = tx;
-                st.curtainZ = tz;
-                float close = Math.min(1f, k);
-                in.squeezeAdd = 0.3f * close;
-                in.lowerAdd = 3f * close;
-            }
+            case GRAB, HARVEST -> poseGrab(rig, st, move, t, arg, tx, ty, tz, phase, carryD, carryEnd);
+            case CURTAIN -> poseCurtain(st, in, t, tx, tz, len);
             case SWEEP -> {
                 // wound back and held there shivering, then swung right across, faster and faster, past and back
                 float s = sweepCurve(t);
@@ -316,87 +274,12 @@ public final class Moves {
                 in.spin = 0.12f * sweepCurve(t + 4);
                 lean(in, (float) Math.cos(st.sweepDir), (float) Math.sin(st.sweepDir), -0.05f * sweepCurve(t + 2));
             }
-            case SLAM -> {
-                st.slamArm = arg;
-                st.slamT = Mth.clamp(t / len, 0f, 1f);
-                st.slamX = tx;
-                st.slamY = ty;
-                st.slamZ = tz;
-                if (arg < 0 || arg >= rig.arms.length) return;
-                // he leans away while the arm goes up and is thrown toward it when it lands; the other arms jolt
-                float hit = Math.round(BellRig.SLAM_HIT * len);
-                float ax = (float) Math.cos(rig.arms[arg].angle()), az = (float) Math.sin(rig.arms[arg].angle());
-                float toward = t < hit ? smooth((t - hit + 4) / 4f) : recoil(t, hit, 30f);
-                lean(in, ax, az, 0.04f * hump(t, 6, 20, 34, hit - 6) - 0.07f * toward);
-                in.lowerAdd = 2f * hump(t, hit - 1, hit, hit + 2, hit + 13);
-                in.snap = hump(t, hit - 3, hit - 1, hit + 3, hit + 9);
-                st.spread = 0.12f * hump(t, hit, hit + 1, hit + 3, hit + 15);
-            }
-            case WRAP -> {
-                st.wrapArm = arg;
-                st.wrapAmt = t < WRAP_REACH
-                        ? smooth(t / WRAP_REACH)
-                        : t < WRAP_REACH + WRAP_HOLD
-                                ? 1f
-                                : 1f - smooth((t - WRAP_REACH - WRAP_HOLD) / (len - WRAP_REACH - WRAP_HOLD));
-                // each squeeze (one every 20 ticks of the hold) tightens the curl, then eases
-                if (t >= WRAP_REACH && t < WRAP_REACH + WRAP_HOLD)
-                    st.wrapAmt += 0.15f * hump((t - WRAP_REACH) % 20f, 0, 2, 4, 10);
-                st.wrapX = tx;
-                st.wrapY = ty;
-                st.wrapZ = tz;
-            }
-            case PULSE -> {
-                in.glow = t < PULSE_AT ? smooth(t / PULSE_AT) : 1f - smooth((t - PULSE_AT) / 20f);
-                // the breath in: the bell opens wide, he sinks a little and everything lifts out; a shiver; then the
-                // jet: shut hard, the arms and strands whipped down and in, and he shoots up and bobs
-                int in0 = PULSE_AT - 5;
-                if (t < in0) {
-                    in.squeezeAdd = -0.7f * smooth(t / (in0 - 1f)) + (t >= in0 - 2 ? 0.04f * Mth.sin(t * 2.2f) : 0f);
-                    in.lowerAdd = -2f * smooth(t / in0);
-                    st.spread = 0.35f * smooth(t / in0);
-                } else {
-                    in.squeezeAdd = -0.7f * (1f - smooth((t - in0) / 3f));
-                    st.spread = 0.35f * (1f - smooth((t - in0) / 4f))
-                            - 0.3f * hump(t, PULSE_AT, PULSE_AT + 2, PULSE_AT + 4, PULSE_AT + 18);
-                    in.lowerAdd = -2f * (1f - smooth((t - PULSE_AT) / 20f)) - 3f * recoil(t, PULSE_AT, 30f);
-                }
-                in.snap = hump(t, in0 - 1, in0, PULSE_AT + 2, PULSE_AT + 6);
-            }
-            case DROP -> {
-                in.drop = drop(move, t);
-                // the warning: he lifts a little, glowing, drawn tight and shivering at the top, then down he comes;
-                // landing, the bell squashes out flat and the strands are flung wide, then it springs back
-                int hit = DROP_WIND + DROP_FALL;
-                float shiver = t > DROP_WIND * 0.6f && t < DROP_WIND ? (float) Math.sin(t * 2.3f) : 0f;
-                float squash = hump(t, hit - 2, hit + 1, hit + 3, hit + 16);
-                float spring = t > hit ? (float) (Math.exp(-(t - hit) / 12.0) * Math.sin((t - hit) * 0.25)) : 0f;
-                in.lowerAdd = -6f * hump(t, 0, DROP_WIND * 0.7f, DROP_WIND * 0.8f, DROP_WIND + 4) + 0.8f * shiver;
-                in.glow = 0.9f * hump(t, 0, DROP_WIND, DROP_WIND + 2, DROP_WIND + DROP_FALL);
-                in.squeezeAdd =
-                        0.3f * hump(t, 4, DROP_WIND - 4, DROP_WIND, DROP_WIND + 6) - 0.6f * squash + 0.3f * spring;
-                st.spread = 0.5f * hump(t, 0, DROP_WIND, DROP_WIND, DROP_WIND + 10)
-                        + 0.35f * hump(t, hit - 2, hit + 5, hit + 8, hit + 34);
-                // (falling and landing his body follows tightly, so the bell is down on the ground at the blow)
-                in.snap = t >= DROP_WIND && t <= hit + 8 ? 1f : 0f;
-            }
+            case SLAM -> poseSlam(rig, st, in, t, arg, tx, ty, tz, len);
+            case WRAP -> poseWrap(st, t, arg, tx, ty, tz, len);
+            case PULSE -> posePulse(st, in, t);
+            case DROP -> poseDrop(st, in, move, t);
             case SHED -> in.eggShake = t < SHED_AT ? smooth(t / SHED_AT) : 1f - smooth((t - SHED_AT) / 16f);
-            case VOLLEY -> {
-                // the strands nearest what he aims at cock back before each shot and snap up as it goes; the rest
-                // only twitch. He spits each one
-                float up = hump(t, 0, VOLLEY_AT, VOLLEY_AT + 18, len);
-                float shot = 0f;
-                for (int k = 0; k < 3; k++) {
-                    float at = VOLLEY_AT + 8 * k;
-                    if (t >= at - 3 && t < at) shot = -0.3f * smooth((t - at + 3) / 3f);
-                    else if (t >= at && t < at + 6) shot = -0.3f + 1.3f * fall((t - at) / 2f);
-                    in.squeezeAdd += 0.2f * hump(t, at - 1, at, at + 1, at + 6);
-                }
-                st.flick = 0.15f * up;
-                st.flickNear = Mth.clamp(0.55f * up + 0.35f * shot * up, 0f, 1f);
-                st.flickX = tx;
-                st.flickZ = tz;
-            }
+            case VOLLEY -> poseVolley(st, in, t, tx, tz, len);
             case LASH -> {
                 if (arg < 0 || arg >= rig.strands.length) return;
                 st.lashStrand = arg;
@@ -426,119 +309,11 @@ public final class Moves {
                 in.lowerAdd = 2f * hump(t, 0, POD_AT - 2, POD_AT - 2, POD_AT)
                         - 4f * hump(t, POD_AT, POD_AT + 4, POD_AT + 6, POD_AT + 30);
             }
-            case EGG_RAIN -> {
-                // the wind-up: he rises and tips his mouth toward you, the glow builds and the clumps rattle harder and
-                // harder, the bell gathers (squeeze, strands drawn in); then he flings the strands out and the clumps
-                // come loose over a long shake; the strands swing back through and hang, and he rights himself
-                in.eggShake = hump(t, 4, EGG_AT, EGG_AT + 24, len - 20);
-                in.lowerAdd = -6f * hump(t, 0, EGG_AT - 4, EGG_AT + 20, len);
-                in.glow = 1.4f * hump(t, 0, EGG_AT, EGG_AT + 4, EGG_AT + 30);
-                in.squeezeAdd = 0.35f * hump(t, 6, EGG_AT - 4, EGG_AT - 4, EGG_AT)
-                        - 0.3f * hump(t, EGG_AT, EGG_AT + 3, EGG_AT + 8, EGG_AT + 24);
-                float fling = hump(t, EGG_AT - 2, EGG_AT + 3, EGG_AT + 20, EGG_AT + 36);
-                st.flick = fling * (0.75f + 0.25f * (float) Math.cos((t - EGG_AT) * 0.7f));
-                st.spread = 0.6f * fling - 0.2f * hump(t, 6, EGG_AT - 4, EGG_AT - 4, EGG_AT);
-                float tip = EGG_TIP * hump(t, 0, EGG_AT - 6, EGG_AT + 26, len - 6);
-                float dx = tx, dz = tz, d = (float) Math.sqrt(dx * dx + dz * dz);
-                if (d > 1e-3f) {
-                    in.flipX = dz / d * tip;
-                    in.flipZ = -dx / d * tip;
-                }
-            }
-            case WHIRLPOOL -> {
-                st.spread = hump(t, 0, WHIRL_UP, WHIRL_CRUSH - 20, WHIRL_CRUSH);
-                st.swirl = hump(t, 10, WHIRL_UP, WHIRL_CRUSH, len);
-                in.spinning = true;
-                // one whole turn, winding up and easing off, so he ends square (his strands swirl round the rest of
-                // the way: two turns spun the rim faster than his strands can follow)
-                in.spin = (float) (2 * Math.PI) * smoother(Mth.clamp((t - 20f) / (WHIRL_CRUSH - 5f), 0f, 1f));
-                in.glow = 0.7f * hump(t, 0, WHIRL_UP, WHIRL_UP, WHIRL_UP + 20);
-                if (t > WHIRL_CRUSH - 10 && t < WHIRL_CRUSH + 20)
-                    st.curtain = hump(t, WHIRL_CRUSH - 10, WHIRL_CRUSH, WHIRL_CRUSH + 4, WHIRL_CRUSH + 20);
-                // the crush: he rises and opens, then drives down shut, and springs back
-                crush(in, t, WHIRL_CRUSH, 6f, 0.7f);
-            }
-            case SKY_DIVE -> {
-                // phase: how far over he has turned (the server says; it knows when he lands)
-                float over = phase >= 0f ? phase : 0f;
-                float a = 2.9f * over;
-                float dx = tx, dz = tz, d = (float) Math.sqrt(dx * dx + dz * dz);
-                if (d < 1e-3f) {
-                    dx = 1f;
-                    dz = 0f;
-                    d = 1f;
-                }
-                in.flipX = dz / d * a;
-                in.flipZ = -dx / d * a;
-                in.glow = 1.2f
-                        * hump(t, DIVE_CLIMB - 20, DIVE_CLIMB, DIVE_CLIMB + DIVE_TURN, DIVE_CLIMB + DIVE_TURN + 10);
-                in.squeezeAdd = 0.6f * over;
-                st.spread = 0.4f * hump(t, 0, 20, DIVE_CLIMB - 10, DIVE_CLIMB);
-                // landed (the server cuts the fall short, so the turn back starts at the landing): the bell splats
-                // out wide and wobbles, the strands are flung out and he sinks into it
-                float back = DIVE_CLIMB + DIVE_TURN + DIVE_FALL;
-                if (t >= back) {
-                    in.squeezeAdd += -1.1f * hump(t, back, back + 1, back + 3, back + 18) + 0.3f * recoil(t, back, 30f);
-                    st.spread += 0.5f * hump(t, back, back + 3, back + 6, back + 30);
-                    in.lowerAdd = 3f * hump(t, back, back + 1, back + 2, back + 14);
-                    in.snap = hump(t, back, back + 1, back + 8, back + 14);
-                }
-            }
-            case DEEP_TOLL -> {
-                in.glow = 1.6f
-                        * Mth.clamp(t / TOLL_BIG, 0f, 1f)
-                        * (t < TOLL_BIG + 4 ? 1f : 1f - smooth((t - TOLL_BIG - 4) / 20f));
-                st.spread = 0.5f * hump(t, 60, TOLL_BIG, TOLL_BIG + 6, TOLL_BIG + 36);
-                // each toll swings him like a struck bell, and the rim shivers after it
-                float[] tolls = {1, 37, 73}, amp = {0.05f, 0.07f, 0.09f};
-                for (int k = 0; k < 3; k++) {
-                    if (t < tolls[k]) continue;
-                    float u = t - tolls[k];
-                    lean(in, tx, tz, amp[k] * (float) Math.exp(-u / 25f) * Mth.sin(u * 0.25f));
-                    in.rippleAdd += 2f * (float) Math.exp(-u / 12f);
-                }
-                // the big one: drawn up and open, held shivering, then down hard and swinging back
-                if (t >= 90 && t < TOLL_BIG) {
-                    in.lowerAdd = -8f * smooth((t - 90) / 14f);
-                    in.squeezeAdd = -0.6f * smooth((t - 90) / 14f) + (t >= 104 ? 0.04f * Mth.sin(t * 2.2f) : 0f);
-                } else if (t >= TOLL_BIG) {
-                    float down = t < TOLL_BIG + 3
-                            ? Mth.lerp(fall((t - TOLL_BIG) / 3f), -8f, 4f)
-                            : 4f * recoil(t, TOLL_BIG + 3, 36f);
-                    in.lowerAdd = down;
-                }
-                in.snap = hump(t, 106, 108, 114, 118);
-            }
-            case ARM_STORM -> {
-                int first = Math.max(0, arg);
-                for (int k = 0; k < 8 && k < st.armRaise.length; k++) {
-                    float hit = stormHit(k, first);
-                    float r;
-                    // up, cocked a little higher just before it comes down, then down hard, springing back
-                    if (t < STORM_UP) r = smooth(t / STORM_UP);
-                    else if (t < hit - 10) r = 1f;
-                    else if (t < hit - 4) r = 1f + 0.15f * smooth((t - hit + 10) / 6f);
-                    else if (t < hit) r = Mth.lerp(fall((t - hit + 4) / 4f), 1.15f, -0.3f);
-                    else
-                        r = (-0.15f - 0.15f * recoil(t, hit, 24f))
-                                * (1f - smooth((t - hit) / 20f))
-                                * (t < len - 10 ? 1f : 1f - smooth((t - len + 10) / 10f));
-                    st.armRaise[k] = r;
-                    // each blow rocks him toward that arm, and he dips with it
-                    if (t >= hit && k < rig.arms.length) {
-                        float u = t - hit;
-                        float imp = (float) Math.exp(-u / 8f) * Mth.sin(Math.min((float) Math.PI, u * 0.4f));
-                        float a = rig.arms[k].angle();
-                        lean(in, Mth.cos(a), Mth.sin(a), -0.06f * imp);
-                        in.lowerAdd += 1.5f * imp;
-                        in.snap = Math.max(in.snap, imp);
-                    }
-                }
-                // first a dip with the bell flared, then he rises as the arms go up
-                in.lowerAdd += 2f * hump(t, 0, 8, 8, 16) - 4f * hump(t, 12, STORM_UP, len - 20, len);
-                in.squeezeAdd = -0.3f * hump(t, 0, 6, 10, 16);
-                in.glow = 0.5f * hump(t, 0, STORM_UP, STORM_UP, STORM_UP + 20);
-            }
+            case EGG_RAIN -> poseEggRain(st, in, t, tx, tz, len);
+            case WHIRLPOOL -> poseWhirlpool(st, in, t, len);
+            case SKY_DIVE -> poseSkyDive(st, in, t, tx, tz, phase);
+            case DEEP_TOLL -> poseDeepToll(st, in, t, tx, tz);
+            case ARM_STORM -> poseArmStorm(rig, st, in, t, arg, len);
             case STINGER_STORM -> {
                 // the wind-up: he sinks a little and tightens, the strands drawn in and rattling; then every strand
                 // whips up again and again while the stingers fly, the bell open; then they drop and swing to rest
@@ -561,24 +336,282 @@ public final class Moves {
                 in.squeezeAdd = 0.4f * gather - 0.5f * open;
                 in.lowerAdd = -6f * hump(t, 0, LANCE_FROM, LANCE_TO, len);
             }
-            case UNDERTOW -> {
-                st.spread = hump(t, 0, UNDERTOW_PULL, UNDERTOW_PULL, UNDERTOW_SLAM - 10);
-                st.curtain = hump(t, UNDERTOW_PULL, UNDERTOW_SLAM, UNDERTOW_SLAM + 8, UNDERTOW_SLAM + 40);
-                st.curtainX = 0f;
-                st.curtainZ = 0f;
-                st.swirl = 0.4f * hump(t, UNDERTOW_PULL, UNDERTOW_SLAM - 10, UNDERTOW_SLAM, UNDERTOW_SLAM + 20);
-                in.squeezeAdd = 0.8f * hump(t, UNDERTOW_SLAM - 6, UNDERTOW_SLAM, UNDERTOW_SLAM + 2, UNDERTOW_SLAM + 16);
-                in.glow = 0.6f * hump(t, 0, UNDERTOW_PULL, UNDERTOW_PULL, UNDERTOW_SLAM);
-                // he draws himself up as he hauls everything in, then slams down
-                if (t >= UNDERTOW_PULL && t < UNDERTOW_SLAM - 4)
-                    in.lowerAdd = -4f * smooth((t - UNDERTOW_PULL) / (UNDERTOW_SLAM - 4f - UNDERTOW_PULL));
-                else if (t >= UNDERTOW_SLAM - 4 && t < UNDERTOW_SLAM)
-                    in.lowerAdd = Mth.lerp(fall((t - UNDERTOW_SLAM + 4) / 4f), -4f, 8f);
-                else if (t >= UNDERTOW_SLAM) in.lowerAdd = 8f * recoil(t, UNDERTOW_SLAM, 30f);
-                in.snap = hump(t, UNDERTOW_SLAM - 6, UNDERTOW_SLAM - 4, UNDERTOW_SLAM + 4, UNDERTOW_SLAM + 10);
-            }
+            case UNDERTOW -> poseUndertow(st, in, t);
             default -> {}
         }
+    }
+
+    private static void poseGrab(
+            BellRig rig,
+            BellState st,
+            int move,
+            float t,
+            int arg,
+            float tx,
+            float ty,
+            float tz,
+            float phase,
+            float carryD,
+            float carryEnd) {
+        if (arg < 0 || arg >= rig.strands.length) return;
+        if (move == GRAB && phase >= CARRY_PHASE) {
+            // carrying somebody up onto his crown: the strand reaches out to them, then takes them up
+            st.carryStrand = arg;
+            st.carryReach = smooth(t / REACH);
+            st.carryU = Mth.clamp(phase - CARRY_PHASE, 0f, 1f);
+            st.carryD = carryD;
+            st.carryEnd = carryEnd;
+            st.carryX = tx;
+            st.carryY = ty;
+            st.carryZ = tz;
+            return;
+        }
+        st.grabStrand = arg;
+        // (the end overshoots as it catches and coils round)
+        st.grabReach = smooth(t / REACH) + 0.12f * recoil(t, REACH, 16f);
+        float lift = phase >= 0f ? phase : Mth.clamp((t - REACH) / LIFT, 0f, 1f);
+        st.grabLift = lift;
+        st.grabReach *= 1f - 0.7f * lift; // it comes back to hanging straight as it pulls up
+        st.grabX = tx;
+        st.grabY = ty;
+        st.grabZ = tz;
+    }
+
+    private static void poseCurtain(BellState st, BellAnim.In in, float t, float tx, float tz, int len) {
+        float k = t < CURTAIN_CLOSE
+                ? smooth(t / CURTAIN_CLOSE)
+                : t < CURTAIN_CLOSE + CURTAIN_HOLD
+                        ? 1f
+                        : 1f - smooth((t - CURTAIN_CLOSE - CURTAIN_HOLD) / (len - CURTAIN_CLOSE - CURTAIN_HOLD));
+        // pulled tight in the middle of the hold
+        if (t > CURTAIN_CLOSE && t < CURTAIN_CLOSE + CURTAIN_HOLD)
+            k += 0.15f * (float) Math.sin((t - CURTAIN_CLOSE) * 0.3f);
+        // he settles over you as it closes, and it cinches when it's shut
+        if (t >= CURTAIN_CLOSE) k += 0.15f * recoil(t, CURTAIN_CLOSE, 20f);
+        st.curtain = k;
+        st.curtainX = tx;
+        st.curtainZ = tz;
+        float close = Math.min(1f, k);
+        in.squeezeAdd = 0.3f * close;
+        in.lowerAdd = 3f * close;
+    }
+
+    private static void poseSlam(
+            BellRig rig, BellState st, BellAnim.In in, float t, int arg, float tx, float ty, float tz, int len) {
+        st.slamArm = arg;
+        st.slamT = Mth.clamp(t / len, 0f, 1f);
+        st.slamX = tx;
+        st.slamY = ty;
+        st.slamZ = tz;
+        if (arg < 0 || arg >= rig.arms.length) return;
+        // he leans away while the arm goes up and is thrown toward it when it lands; the other arms jolt
+        float hit = Math.round(BellRig.SLAM_HIT * len);
+        float ax = (float) Math.cos(rig.arms[arg].angle()), az = (float) Math.sin(rig.arms[arg].angle());
+        float toward = t < hit ? smooth((t - hit + 4) / 4f) : recoil(t, hit, 30f);
+        lean(in, ax, az, 0.04f * hump(t, 6, 20, 34, hit - 6) - 0.07f * toward);
+        in.lowerAdd = 2f * hump(t, hit - 1, hit, hit + 2, hit + 13);
+        in.snap = hump(t, hit - 3, hit - 1, hit + 3, hit + 9);
+        st.spread = 0.12f * hump(t, hit, hit + 1, hit + 3, hit + 15);
+    }
+
+    private static void poseWrap(BellState st, float t, int arg, float tx, float ty, float tz, int len) {
+        st.wrapArm = arg;
+        st.wrapAmt = t < WRAP_REACH
+                ? smooth(t / WRAP_REACH)
+                : t < WRAP_REACH + WRAP_HOLD
+                        ? 1f
+                        : 1f - smooth((t - WRAP_REACH - WRAP_HOLD) / (len - WRAP_REACH - WRAP_HOLD));
+        // each squeeze (one every 20 ticks of the hold) tightens the curl, then eases
+        if (t >= WRAP_REACH && t < WRAP_REACH + WRAP_HOLD)
+            st.wrapAmt += 0.15f * hump((t - WRAP_REACH) % 20f, 0, 2, 4, 10);
+        st.wrapX = tx;
+        st.wrapY = ty;
+        st.wrapZ = tz;
+    }
+
+    private static void posePulse(BellState st, BellAnim.In in, float t) {
+        in.glow = t < PULSE_AT ? smooth(t / PULSE_AT) : 1f - smooth((t - PULSE_AT) / 20f);
+        // the breath in: the bell opens wide, he sinks a little and everything lifts out; a shiver; then the
+        // jet: shut hard, the arms and strands whipped down and in, and he shoots up and bobs
+        int in0 = PULSE_AT - 5;
+        if (t < in0) {
+            in.squeezeAdd = -0.7f * smooth(t / (in0 - 1f)) + (t >= in0 - 2 ? 0.04f * Mth.sin(t * 2.2f) : 0f);
+            in.lowerAdd = -2f * smooth(t / in0);
+            st.spread = 0.35f * smooth(t / in0);
+        } else {
+            in.squeezeAdd = -0.7f * (1f - smooth((t - in0) / 3f));
+            st.spread = 0.35f * (1f - smooth((t - in0) / 4f))
+                    - 0.3f * hump(t, PULSE_AT, PULSE_AT + 2, PULSE_AT + 4, PULSE_AT + 18);
+            in.lowerAdd = -2f * (1f - smooth((t - PULSE_AT) / 20f)) - 3f * recoil(t, PULSE_AT, 30f);
+        }
+        in.snap = hump(t, in0 - 1, in0, PULSE_AT + 2, PULSE_AT + 6);
+    }
+
+    private static void poseDrop(BellState st, BellAnim.In in, int move, float t) {
+        in.drop = drop(move, t);
+        // the warning: he lifts a little, glowing, drawn tight and shivering at the top, then down he comes;
+        // landing, the bell squashes out flat and the strands are flung wide, then it springs back
+        int hit = DROP_WIND + DROP_FALL;
+        float shiver = t > DROP_WIND * 0.6f && t < DROP_WIND ? (float) Math.sin(t * 2.3f) : 0f;
+        float squash = hump(t, hit - 2, hit + 1, hit + 3, hit + 16);
+        float spring = t > hit ? (float) (Math.exp(-(t - hit) / 12.0) * Math.sin((t - hit) * 0.25)) : 0f;
+        in.lowerAdd = -6f * hump(t, 0, DROP_WIND * 0.7f, DROP_WIND * 0.8f, DROP_WIND + 4) + 0.8f * shiver;
+        in.glow = 0.9f * hump(t, 0, DROP_WIND, DROP_WIND + 2, DROP_WIND + DROP_FALL);
+        in.squeezeAdd = 0.3f * hump(t, 4, DROP_WIND - 4, DROP_WIND, DROP_WIND + 6) - 0.6f * squash + 0.3f * spring;
+        st.spread = 0.5f * hump(t, 0, DROP_WIND, DROP_WIND, DROP_WIND + 10)
+                + 0.35f * hump(t, hit - 2, hit + 5, hit + 8, hit + 34);
+        // (falling and landing his body follows tightly, so the bell is down on the ground at the blow)
+        in.snap = t >= DROP_WIND && t <= hit + 8 ? 1f : 0f;
+    }
+
+    private static void poseVolley(BellState st, BellAnim.In in, float t, float tx, float tz, int len) {
+        // the strands nearest what he aims at cock back before each shot and snap up as it goes; the rest
+        // only twitch. He spits each one
+        float up = hump(t, 0, VOLLEY_AT, VOLLEY_AT + 18, len);
+        float shot = 0f;
+        for (int k = 0; k < 3; k++) {
+            float at = VOLLEY_AT + 8 * k;
+            if (t >= at - 3 && t < at) shot = -0.3f * smooth((t - at + 3) / 3f);
+            else if (t >= at && t < at + 6) shot = -0.3f + 1.3f * fall((t - at) / 2f);
+            in.squeezeAdd += 0.2f * hump(t, at - 1, at, at + 1, at + 6);
+        }
+        st.flick = 0.15f * up;
+        st.flickNear = Mth.clamp(0.55f * up + 0.35f * shot * up, 0f, 1f);
+        st.flickX = tx;
+        st.flickZ = tz;
+    }
+
+    private static void poseEggRain(BellState st, BellAnim.In in, float t, float tx, float tz, int len) {
+        // the wind-up: he rises and tips his mouth toward you, the glow builds and the clumps rattle harder and
+        // harder, the bell gathers (squeeze, strands drawn in); then he flings the strands out and the clumps
+        // come loose over a long shake; the strands swing back through and hang, and he rights himself
+        in.eggShake = hump(t, 4, EGG_AT, EGG_AT + 24, len - 20);
+        in.lowerAdd = -6f * hump(t, 0, EGG_AT - 4, EGG_AT + 20, len);
+        in.glow = 1.4f * hump(t, 0, EGG_AT, EGG_AT + 4, EGG_AT + 30);
+        in.squeezeAdd = 0.35f * hump(t, 6, EGG_AT - 4, EGG_AT - 4, EGG_AT)
+                - 0.3f * hump(t, EGG_AT, EGG_AT + 3, EGG_AT + 8, EGG_AT + 24);
+        float fling = hump(t, EGG_AT - 2, EGG_AT + 3, EGG_AT + 20, EGG_AT + 36);
+        st.flick = fling * (0.75f + 0.25f * (float) Math.cos((t - EGG_AT) * 0.7f));
+        st.spread = 0.6f * fling - 0.2f * hump(t, 6, EGG_AT - 4, EGG_AT - 4, EGG_AT);
+        float tip = EGG_TIP * hump(t, 0, EGG_AT - 6, EGG_AT + 26, len - 6);
+        float dx = tx, dz = tz, d = (float) Math.sqrt(dx * dx + dz * dz);
+        if (d > 1e-3f) {
+            in.flipX = dz / d * tip;
+            in.flipZ = -dx / d * tip;
+        }
+    }
+
+    private static void poseWhirlpool(BellState st, BellAnim.In in, float t, int len) {
+        st.spread = hump(t, 0, WHIRL_UP, WHIRL_CRUSH - 20, WHIRL_CRUSH);
+        st.swirl = hump(t, 10, WHIRL_UP, WHIRL_CRUSH, len);
+        in.spinning = true;
+        // one whole turn, winding up and easing off, so he ends square (his strands swirl round the rest of
+        // the way: two turns spun the rim faster than his strands can follow)
+        in.spin = (float) (2 * Math.PI) * smoother(Mth.clamp((t - 20f) / (WHIRL_CRUSH - 5f), 0f, 1f));
+        in.glow = 0.7f * hump(t, 0, WHIRL_UP, WHIRL_UP, WHIRL_UP + 20);
+        if (t > WHIRL_CRUSH - 10 && t < WHIRL_CRUSH + 20)
+            st.curtain = hump(t, WHIRL_CRUSH - 10, WHIRL_CRUSH, WHIRL_CRUSH + 4, WHIRL_CRUSH + 20);
+        // the crush: he rises and opens, then drives down shut, and springs back
+        crush(in, t, WHIRL_CRUSH, 6f, 0.7f);
+    }
+
+    private static void poseSkyDive(BellState st, BellAnim.In in, float t, float tx, float tz, float phase) {
+        // phase: how far over he has turned (the server says; it knows when he lands)
+        float over = phase >= 0f ? phase : 0f;
+        float a = 2.9f * over;
+        float dx = tx, dz = tz, d = (float) Math.sqrt(dx * dx + dz * dz);
+        if (d < 1e-3f) {
+            dx = 1f;
+            dz = 0f;
+            d = 1f;
+        }
+        in.flipX = dz / d * a;
+        in.flipZ = -dx / d * a;
+        in.glow = 1.2f * hump(t, DIVE_CLIMB - 20, DIVE_CLIMB, DIVE_CLIMB + DIVE_TURN, DIVE_CLIMB + DIVE_TURN + 10);
+        in.squeezeAdd = 0.6f * over;
+        st.spread = 0.4f * hump(t, 0, 20, DIVE_CLIMB - 10, DIVE_CLIMB);
+        // landed (the server cuts the fall short, so the turn back starts at the landing): the bell splats
+        // out wide and wobbles, the strands are flung out and he sinks into it
+        float back = DIVE_CLIMB + DIVE_TURN + DIVE_FALL;
+        if (t >= back) {
+            in.squeezeAdd += -1.1f * hump(t, back, back + 1, back + 3, back + 18) + 0.3f * recoil(t, back, 30f);
+            st.spread += 0.5f * hump(t, back, back + 3, back + 6, back + 30);
+            in.lowerAdd = 3f * hump(t, back, back + 1, back + 2, back + 14);
+            in.snap = hump(t, back, back + 1, back + 8, back + 14);
+        }
+    }
+
+    private static void poseDeepToll(BellState st, BellAnim.In in, float t, float tx, float tz) {
+        in.glow = 1.6f
+                * Mth.clamp(t / TOLL_BIG, 0f, 1f)
+                * (t < TOLL_BIG + 4 ? 1f : 1f - smooth((t - TOLL_BIG - 4) / 20f));
+        st.spread = 0.5f * hump(t, 60, TOLL_BIG, TOLL_BIG + 6, TOLL_BIG + 36);
+        // each toll swings him like a struck bell, and the rim shivers after it
+        float[] tolls = {1, 37, 73}, amp = {0.05f, 0.07f, 0.09f};
+        for (int k = 0; k < 3; k++) {
+            if (t < tolls[k]) continue;
+            float u = t - tolls[k];
+            lean(in, tx, tz, amp[k] * (float) Math.exp(-u / 25f) * Mth.sin(u * 0.25f));
+            in.rippleAdd += 2f * (float) Math.exp(-u / 12f);
+        }
+        // the big one: drawn up and open, held shivering, then down hard and swinging back
+        if (t >= 90 && t < TOLL_BIG) {
+            in.lowerAdd = -8f * smooth((t - 90) / 14f);
+            in.squeezeAdd = -0.6f * smooth((t - 90) / 14f) + (t >= 104 ? 0.04f * Mth.sin(t * 2.2f) : 0f);
+        } else if (t >= TOLL_BIG) {
+            float down =
+                    t < TOLL_BIG + 3 ? Mth.lerp(fall((t - TOLL_BIG) / 3f), -8f, 4f) : 4f * recoil(t, TOLL_BIG + 3, 36f);
+            in.lowerAdd = down;
+        }
+        in.snap = hump(t, 106, 108, 114, 118);
+    }
+
+    private static void poseArmStorm(BellRig rig, BellState st, BellAnim.In in, float t, int arg, int len) {
+        int first = Math.max(0, arg);
+        for (int k = 0; k < 8 && k < st.armRaise.length; k++) {
+            float hit = stormHit(k, first);
+            float r;
+            // up, cocked a little higher just before it comes down, then down hard, springing back
+            if (t < STORM_UP) r = smooth(t / STORM_UP);
+            else if (t < hit - 10) r = 1f;
+            else if (t < hit - 4) r = 1f + 0.15f * smooth((t - hit + 10) / 6f);
+            else if (t < hit) r = Mth.lerp(fall((t - hit + 4) / 4f), 1.15f, -0.3f);
+            else
+                r = (-0.15f - 0.15f * recoil(t, hit, 24f))
+                        * (1f - smooth((t - hit) / 20f))
+                        * (t < len - 10 ? 1f : 1f - smooth((t - len + 10) / 10f));
+            st.armRaise[k] = r;
+            // each blow rocks him toward that arm, and he dips with it
+            if (t >= hit && k < rig.arms.length) {
+                float u = t - hit;
+                float imp = (float) Math.exp(-u / 8f) * Mth.sin(Math.min((float) Math.PI, u * 0.4f));
+                float a = rig.arms[k].angle();
+                lean(in, Mth.cos(a), Mth.sin(a), -0.06f * imp);
+                in.lowerAdd += 1.5f * imp;
+                in.snap = Math.max(in.snap, imp);
+            }
+        }
+        // first a dip with the bell flared, then he rises as the arms go up
+        in.lowerAdd += 2f * hump(t, 0, 8, 8, 16) - 4f * hump(t, 12, STORM_UP, len - 20, len);
+        in.squeezeAdd = -0.3f * hump(t, 0, 6, 10, 16);
+        in.glow = 0.5f * hump(t, 0, STORM_UP, STORM_UP, STORM_UP + 20);
+    }
+
+    private static void poseUndertow(BellState st, BellAnim.In in, float t) {
+        st.spread = hump(t, 0, UNDERTOW_PULL, UNDERTOW_PULL, UNDERTOW_SLAM - 10);
+        st.curtain = hump(t, UNDERTOW_PULL, UNDERTOW_SLAM, UNDERTOW_SLAM + 8, UNDERTOW_SLAM + 40);
+        st.curtainX = 0f;
+        st.curtainZ = 0f;
+        st.swirl = 0.4f * hump(t, UNDERTOW_PULL, UNDERTOW_SLAM - 10, UNDERTOW_SLAM, UNDERTOW_SLAM + 20);
+        in.squeezeAdd = 0.8f * hump(t, UNDERTOW_SLAM - 6, UNDERTOW_SLAM, UNDERTOW_SLAM + 2, UNDERTOW_SLAM + 16);
+        in.glow = 0.6f * hump(t, 0, UNDERTOW_PULL, UNDERTOW_PULL, UNDERTOW_SLAM);
+        // he draws himself up as he hauls everything in, then slams down
+        if (t >= UNDERTOW_PULL && t < UNDERTOW_SLAM - 4)
+            in.lowerAdd = -4f * smooth((t - UNDERTOW_PULL) / (UNDERTOW_SLAM - 4f - UNDERTOW_PULL));
+        else if (t >= UNDERTOW_SLAM - 4 && t < UNDERTOW_SLAM)
+            in.lowerAdd = Mth.lerp(fall((t - UNDERTOW_SLAM + 4) / 4f), -4f, 8f);
+        else if (t >= UNDERTOW_SLAM) in.lowerAdd = 8f * recoil(t, UNDERTOW_SLAM, 30f);
+        in.snap = hump(t, UNDERTOW_SLAM - 6, UNDERTOW_SLAM - 4, UNDERTOW_SLAM + 4, UNDERTOW_SLAM + 10);
     }
 
     private static float smoother(float k) {

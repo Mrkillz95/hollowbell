@@ -768,210 +768,20 @@ public final class BellMoves {
         double bell = h.bellRadius();
         switch (move) {
             case Moves.GRAB, Moves.HARVEST -> runGrab();
-            case Moves.CURTAIN -> {
-                // it follows you while it closes, then it has you
-                if (target != null && t < Moves.CURTAIN_CLOSE && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
-                if (t >= Moves.CURTAIN_CLOSE - 6 && t < Moves.CURTAIN_CLOSE + Moves.CURTAIN_HOLD && t % 5 == 0) {
-                    Vec3 c = h.toWorld(h.aim());
-                    double r = 16 * s + 4;
-                    for (LivingEntity e : near(new AABB(c, c).inflate(r, 10 + 30 * s, r))) {
-                        Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
-                        double dist = in.length();
-                        if (dist > r) continue;
-                        if (dist > 1.5)
-                            e.setDeltaMovement(e.getDeltaMovement()
-                                    .scale(0.4)
-                                    .add(in.normalize().scale(0.35)));
-                        e.hurtMarked = true;
-                        e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
-                        if (every(e, 20)) {
-                            blow(e, 7f, c, 0, 0);
-                            sting(e);
-                        }
-                    }
-                    if (t % 15 == 0) h.sound(c, ModSounds.GRAB, 2f, 0.6f);
-                }
-                Vec3 mid = h.toWorld(h.aim());
-                if (t >= 6 && t <= 34 && t % 4 == 2) {
-                    for (int k = 0; k < 6; k++) {
-                        Vec3 tip = h.strandTipWorld(Math.floorMod(k * 13 + 5, rig.strands.length));
-                        Vec3 to = mid.subtract(tip).multiply(1, 0, 1);
-                        fx(
-                                BigFx.TRAIL,
-                                new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z),
-                                px(4, 1.5),
-                                to.lengthSqr() > 1e-6 ? to.normalize() : Vec3.ZERO,
-                                0);
-                    }
-                }
-                if (t == Moves.CURTAIN_CLOSE)
-                    fx(BigFx.DUST_RING, new Vec3(mid.x, h.groundAt(mid.x, mid.z), mid.z), px(16, 4));
-            }
-            case Moves.SWEEP -> {
-                Vector3f a = h.aim();
-                Vec3 dir = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10))
-                        .subtract(h.position())
-                        .normalize();
-                if (t >= 22 && t <= 40 && t % 4 == 2) {
-                    // dust dragged along by the strand ends at the front of the swing
-                    for (int k = 0; k < 6; k++) {
-                        Vec3 tip = h.strandTipWorld(Math.floorMod(arg + k * 13, rig.strands.length));
-                        fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(4, 1.5), dir, 0);
-                    }
-                }
-                if (t >= 21 && t <= 44) {
-                    double r = bell * 1.35 + 4;
-                    // (only what the swing has reached so far: the strands run across from its back to its front)
-                    double front = Moves.sweepFront(t);
-                    // (the box round him only reaches 112 out; the sweep reaches further)
-                    for (LivingEntity e : near(h.bodyBox()
-                            .inflate(r - bell + 4, 0, r - bell + 4)
-                            .setMaxY(h.getY() + rig.rimY * s * 0.8))) {
-                        if (struckThisMove.contains(e.getUUID()) || h.horiz(at(e)) > r) continue;
-                        Vec3 off = at(e).subtract(h.position()).multiply(1, 0, 1);
-                        if (Mth.clamp(off.dot(dir) / r, -1, 1) > front) continue;
-                        struckThisMove.add(e.getUUID());
-                        blow(e, 18f, h.position(), 0, 0.6);
-                        e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 2.0, 0, dir.z * 2.0));
-                        sting(e);
-                    }
-                    if (t == 30) h.sound(h.position().add(0, 30 * s, 0), ModSounds.WHIP, 3f, 0.4f);
-                }
-            }
-            case Moves.SLAM -> {
-                int hit = Math.round(BellRig.SLAM_HIT * Moves.length(Moves.SLAM));
-                // it follows you while the arm is up, then it's coming down where you were
-                if (target != null && target.isAlive() && t < hit - 10) h.setAim(h.toModel(aimAt(target)));
-                // the arm has weight: it lands when its tip really comes down, a moment after it's swung
-                Vec3 tipNow = h.armTipWorld(arg);
-                double gy = h.groundAt(tipNow.x, tipNow.z);
-                boolean down = tipNow.y - gy < 6 * s + 2;
-                if (!landed && t >= hit - 2 && (down || t >= hit + 14)) {
-                    landed = true;
-                    landedAt[arg] = t;
-                    armBlow(tipNow, 32f, 12 * s + 4);
-                }
-                if (landed) armSlap(arg, 32f, landedAt[arg]);
-            }
+            case Moves.CURTAIN -> runCurtain(s);
+            case Moves.SWEEP -> runSweep(s, bell);
+            case Moves.SLAM -> runSlam(s);
             case Moves.WRAP -> runWrap();
-            case Moves.PULSE -> {
-                // (the bell shuts a moment before the shock goes out)
-                if (t == Moves.PULSE_AT - 5) h.pulse(1.6f);
-                if (t == Moves.PULSE_AT) {
-                    h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.SHOCK, 3f, 0.8f);
-                    thump(h.position(), 0.6f);
-                    fx(BigFx.DUST_RING, under(), h.bellRadius() + px(70, 30));
-                    fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), px(30, 8), Vec3.ZERO, GLOW);
-                }
-                if (t > Moves.PULSE_AT && t <= Moves.PULSE_AT + 24) {
-                    // the shock goes out from the rim in a ring
-                    double r = bell + (t - Moves.PULSE_AT) / 24.0 * (70 * s + 30);
-                    Vec3 c = h.position().add(0, rig.rimY * s, 0);
-                    for (LivingEntity e : near(h.bodyBox().inflate(80 * s + 34, 90 * s + 40, 80 * s + 34))) {
-                        if (struckThisMove.contains(e.getUUID())) continue;
-                        double d = at(e).distanceTo(c);
-                        if (d > r) continue;
-                        struckThisMove.add(e.getUUID());
-                        blow(e, 18f, c, 2.0, 0.6);
-                        e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 140, 0));
-                        knockDown(e);
-                    }
-                }
-            }
-            case Moves.DROP -> {
-                int hit = Moves.DROP_WIND + Moves.DROP_FALL;
-                if (t == hit) {
-                    Vec3 c = h.position();
-                    double r = bell * 1.2 + 6;
-                    for (LivingEntity e : near(
-                            h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + 50 * s + 8))) {
-                        double d = h.horiz(at(e));
-                        if (d > r) continue;
-                        blow(e, 52f * (float) (1 - 0.35 * d / r), c, 2.4, 0.9);
-                        knockDown(e);
-                    }
-                    h.sound(c, ModSounds.SLAM, 4f, 0.5f);
-                    h.sound(c, ModSounds.SPLASH, 3f, 0.6f);
-                    h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 200, bell, 0.15);
-                    // (the whole bell down on the ground: chunks, dust and a ring; on water a splash and a wave)
-                    fx(heavy(bell * 1.2 + px(0, 6)), under(), bell * 1.2 + px(0, 6));
-                    fx(BigFx.SHOCKWAVE, under(), bell * 2.4 + px(0, 10));
-                    if (griefing()) crack(BlockPos.containing(c.x, groundUnder(), c.z), (int) Math.ceil(bell * 0.8));
-                }
-                bellTone(hit);
-                // he swims back up: a beat, and the downdraft as he lifts off, then two more
-                int up = hit + Moves.DROP_DOWN;
-                if (t == up || t == up + 40 || t == up + 80) h.pulse(1.3f);
-                if (t == up) fx(BigFx.DUST_RING, under(), bell * 1.1 + px(0, 6));
-            }
+            case Moves.PULSE -> runPulse(s, bell);
+            case Moves.DROP -> runDrop(s, bell);
             case Moves.SHED -> {
                 if (t == Moves.SHED_AT) shed();
             }
             case Moves.VOLLEY -> {
                 if (t == Moves.VOLLEY_AT || t == Moves.VOLLEY_AT + 8 || t == Moves.VOLLEY_AT + 16) volley();
             }
-            case Moves.LASH -> {
-                if (t == Moves.LASH_AT - 3) h.sound(h.strandTipWorld(arg), ModSounds.WHIP, 2.5f, 0.6f);
-                if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
-                    // the end cracks past, dragging dust; where it meets the ground, a thud
-                    Vec3 tip = h.strandTipWorld(arg);
-                    Vec3 low = new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z);
-                    Vector3f a = h.aim();
-                    Vec3 way = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10))
-                            .subtract(h.position())
-                            .normalize();
-                    fx(BigFx.TRAIL, low, px(4, 1.5), way, 0);
-                    if (t == Moves.LASH_AT) {
-                        if (tip.y - low.y < 6 * s + 2) fx(BigFx.STOMP, low, px(6, 2), way, 0);
-                        h.sound(tip, SoundEvents.TRIDENT_RIPTIDE_1.value(), 2f, 1.4f);
-                    }
-                }
-                if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
-                    Vector3f a = h.aim();
-                    double dirA = Math.atan2(a.z, a.x);
-                    Vec3 dir = h.toWorld(new Vector3f((float) Math.cos(dirA), 0, (float) Math.sin(dirA)).mul(10))
-                            .subtract(h.position())
-                            .normalize();
-                    double r = bell * 1.35 + 3;
-                    for (LivingEntity e : near(h.bodyBox()
-                            .inflate(r - bell + 4, 0, r - bell + 4)
-                            .setMaxY(h.getY() + rig.rimY * s * 0.9))) {
-                        if (struckThisMove.contains(e.getUUID())) continue;
-                        Vec3 to = at(e).subtract(h.position()).multiply(1, 0, 1);
-                        double d = to.length();
-                        if (d > r) continue;
-                        // in the half of him the strand whips through
-                        if (d > 2 * s + 1 && to.normalize().dot(dir) < 0.3) continue;
-                        struckThisMove.add(e.getUUID());
-                        blow(e, 14f, h.position(), 0.6, 0.5);
-                        e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 1.8, 0, dir.z * 1.8));
-                        sting(e);
-                    }
-                }
-            }
-            case Moves.FLASH -> {
-                if (t == 0) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 18);
-                if (t == Moves.FLASH_AT) {
-                    boolean night = h.level().getSkyDarken() > 6 || h.level().isThundering();
-                    double r = 50 * s + 30;
-                    Vec3 c = h.position().add(0, (rig.rimY + 30) * s, 0);
-                    for (LivingEntity e : near(new AABB(c, c).inflate(r))) {
-                        if (at(e).distanceTo(c) > r) continue;
-                        e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, night ? 200 : 100, 0));
-                        e.addEffect(new MobEffectInstance(MobEffects.DARKNESS, night ? 160 : 60, 0));
-                        if (night) e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 160, 0));
-                        e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 0));
-                        blow(e, night ? 8f : 5f, c, 0, 0);
-                    }
-                    h.sound(c, ModSounds.FLASH, 4f, 1.3f);
-                    for (var S : rig.spots) {
-                        h.particles(ParticleTypes.FLASH, h.spotWorld(S.k()), 1, 0, 0);
-                        fx(BigFx.FLASH, h.spotWorld(S.k()), px(12, 4), Vec3.ZERO, GLOW);
-                    }
-                    fx(BigFx.FLASH, c, px(40, 10), Vec3.ZERO, GLOW);
-                    h.particles(ParticleTypes.END_ROD, c, 200, 40 * s + 4, 0.4);
-                }
-            }
+            case Moves.LASH -> runLash(s, bell);
+            case Moves.FLASH -> runFlash(s);
             case Moves.SPORES -> {
                 if (t == Moves.SPORES_AT) spores();
             }
@@ -980,26 +790,7 @@ public final class BellMoves {
             case Moves.WHIRLPOOL -> whirlpool();
             case Moves.SKY_DIVE -> skyDive();
             case Moves.DEEP_TOLL -> deepToll();
-            case Moves.ARM_STORM -> {
-                if (t == Moves.STORM_UP - 8)
-                    h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.WARN_ARMS, 3f, 0.8f);
-                // each arm hits when its end really comes down on the ground (or a moment after it should have)
-                if (t == 1) stormLanded = 0;
-                for (int k = 0; k < rig.arms.length; k++) {
-                    int hit = Moves.stormHit(k, Math.max(0, arg));
-                    if ((stormLanded & (1 << k)) != 0) {
-                        armSlap(k, 45f, landedAt[k]);
-                        continue;
-                    }
-                    if (t < hit - 2) continue;
-                    Vec3 tip = h.armTipWorld(k);
-                    if (tip.y - h.groundAt(tip.x, tip.z) < 6 * s + 2 || t >= hit + 14) {
-                        stormLanded |= 1 << k;
-                        landedAt[k] = t;
-                        armBlow(tip, 45f, 16 * s + 5);
-                    }
-                }
-            }
+            case Moves.ARM_STORM -> runArmStorm(s);
             case Moves.STINGER_STORM -> {
                 if (t == Moves.RAIN_FROM - 10) h.sound(h.position().add(0, 30 * s, 0), ModSounds.CLICK, 4f, 0.8f);
                 if (t >= Moves.RAIN_FROM && t < Moves.RAIN_TO && t % 2 == 0) stingerRain();
@@ -1007,6 +798,226 @@ public final class BellMoves {
             case Moves.SUN_LANCES -> sunLances();
             case Moves.UNDERTOW -> undertow();
             default -> {}
+        }
+    }
+
+    private void runCurtain(float s) {
+        // it follows you while it closes, then it has you
+        if (target != null && t < Moves.CURTAIN_CLOSE && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
+        if (t >= Moves.CURTAIN_CLOSE - 6 && t < Moves.CURTAIN_CLOSE + Moves.CURTAIN_HOLD && t % 5 == 0) {
+            Vec3 c = h.toWorld(h.aim());
+            double r = 16 * s + 4;
+            for (LivingEntity e : near(new AABB(c, c).inflate(r, 10 + 30 * s, r))) {
+                Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
+                double dist = in.length();
+                if (dist > r) continue;
+                if (dist > 1.5)
+                    e.setDeltaMovement(
+                            e.getDeltaMovement().scale(0.4).add(in.normalize().scale(0.35)));
+                e.hurtMarked = true;
+                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
+                if (every(e, 20)) {
+                    blow(e, 7f, c, 0, 0);
+                    sting(e);
+                }
+            }
+            if (t % 15 == 0) h.sound(c, ModSounds.GRAB, 2f, 0.6f);
+        }
+        Vec3 mid = h.toWorld(h.aim());
+        if (t >= 6 && t <= 34 && t % 4 == 2) {
+            for (int k = 0; k < 6; k++) {
+                Vec3 tip = h.strandTipWorld(Math.floorMod(k * 13 + 5, rig.strands.length));
+                Vec3 to = mid.subtract(tip).multiply(1, 0, 1);
+                fx(
+                        BigFx.TRAIL,
+                        new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z),
+                        px(4, 1.5),
+                        to.lengthSqr() > 1e-6 ? to.normalize() : Vec3.ZERO,
+                        0);
+            }
+        }
+        if (t == Moves.CURTAIN_CLOSE) fx(BigFx.DUST_RING, new Vec3(mid.x, h.groundAt(mid.x, mid.z), mid.z), px(16, 4));
+    }
+
+    private void runSweep(float s, double bell) {
+        Vector3f a = h.aim();
+        Vec3 dir = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10))
+                .subtract(h.position())
+                .normalize();
+        if (t >= 22 && t <= 40 && t % 4 == 2) {
+            // dust dragged along by the strand ends at the front of the swing
+            for (int k = 0; k < 6; k++) {
+                Vec3 tip = h.strandTipWorld(Math.floorMod(arg + k * 13, rig.strands.length));
+                fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(4, 1.5), dir, 0);
+            }
+        }
+        if (t >= 21 && t <= 44) {
+            double r = bell * 1.35 + 4;
+            // (only what the swing has reached so far: the strands run across from its back to its front)
+            double front = Moves.sweepFront(t);
+            // (the box round him only reaches 112 out; the sweep reaches further)
+            for (LivingEntity e :
+                    near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.8))) {
+                if (struckThisMove.contains(e.getUUID()) || h.horiz(at(e)) > r) continue;
+                Vec3 off = at(e).subtract(h.position()).multiply(1, 0, 1);
+                if (Mth.clamp(off.dot(dir) / r, -1, 1) > front) continue;
+                struckThisMove.add(e.getUUID());
+                blow(e, 18f, h.position(), 0, 0.6);
+                e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 2.0, 0, dir.z * 2.0));
+                sting(e);
+            }
+            if (t == 30) h.sound(h.position().add(0, 30 * s, 0), ModSounds.WHIP, 3f, 0.4f);
+        }
+    }
+
+    private void runSlam(float s) {
+        int hit = Math.round(BellRig.SLAM_HIT * Moves.length(Moves.SLAM));
+        // it follows you while the arm is up, then it's coming down where you were
+        if (target != null && target.isAlive() && t < hit - 10) h.setAim(h.toModel(aimAt(target)));
+        // the arm has weight: it lands when its tip really comes down, a moment after it's swung
+        Vec3 tipNow = h.armTipWorld(arg);
+        double gy = h.groundAt(tipNow.x, tipNow.z);
+        boolean down = tipNow.y - gy < 6 * s + 2;
+        if (!landed && t >= hit - 2 && (down || t >= hit + 14)) {
+            landed = true;
+            landedAt[arg] = t;
+            armBlow(tipNow, 32f, 12 * s + 4);
+        }
+        if (landed) armSlap(arg, 32f, landedAt[arg]);
+    }
+
+    private void runPulse(float s, double bell) {
+        // (the bell shuts a moment before the shock goes out)
+        if (t == Moves.PULSE_AT - 5) h.pulse(1.6f);
+        if (t == Moves.PULSE_AT) {
+            h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.SHOCK, 3f, 0.8f);
+            thump(h.position(), 0.6f);
+            fx(BigFx.DUST_RING, under(), h.bellRadius() + px(70, 30));
+            fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), px(30, 8), Vec3.ZERO, GLOW);
+        }
+        if (t > Moves.PULSE_AT && t <= Moves.PULSE_AT + 24) {
+            // the shock goes out from the rim in a ring
+            double r = bell + (t - Moves.PULSE_AT) / 24.0 * (70 * s + 30);
+            Vec3 c = h.position().add(0, rig.rimY * s, 0);
+            for (LivingEntity e : near(h.bodyBox().inflate(80 * s + 34, 90 * s + 40, 80 * s + 34))) {
+                if (struckThisMove.contains(e.getUUID())) continue;
+                double d = at(e).distanceTo(c);
+                if (d > r) continue;
+                struckThisMove.add(e.getUUID());
+                blow(e, 18f, c, 2.0, 0.6);
+                e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 140, 0));
+                knockDown(e);
+            }
+        }
+    }
+
+    private void runDrop(float s, double bell) {
+        int hit = Moves.DROP_WIND + Moves.DROP_FALL;
+        if (t == hit) {
+            Vec3 c = h.position();
+            double r = bell * 1.2 + 6;
+            for (LivingEntity e :
+                    near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + 50 * s + 8))) {
+                double d = h.horiz(at(e));
+                if (d > r) continue;
+                blow(e, 52f * (float) (1 - 0.35 * d / r), c, 2.4, 0.9);
+                knockDown(e);
+            }
+            h.sound(c, ModSounds.SLAM, 4f, 0.5f);
+            h.sound(c, ModSounds.SPLASH, 3f, 0.6f);
+            h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 200, bell, 0.15);
+            // (the whole bell down on the ground: chunks, dust and a ring; on water a splash and a wave)
+            fx(heavy(bell * 1.2 + px(0, 6)), under(), bell * 1.2 + px(0, 6));
+            fx(BigFx.SHOCKWAVE, under(), bell * 2.4 + px(0, 10));
+            if (griefing()) crack(BlockPos.containing(c.x, groundUnder(), c.z), (int) Math.ceil(bell * 0.8));
+        }
+        bellTone(hit);
+        // he swims back up: a beat, and the downdraft as he lifts off, then two more
+        int up = hit + Moves.DROP_DOWN;
+        if (t == up || t == up + 40 || t == up + 80) h.pulse(1.3f);
+        if (t == up) fx(BigFx.DUST_RING, under(), bell * 1.1 + px(0, 6));
+    }
+
+    private void runLash(float s, double bell) {
+        if (t == Moves.LASH_AT - 3) h.sound(h.strandTipWorld(arg), ModSounds.WHIP, 2.5f, 0.6f);
+        if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
+            // the end cracks past, dragging dust; where it meets the ground, a thud
+            Vec3 tip = h.strandTipWorld(arg);
+            Vec3 low = new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z);
+            Vector3f a = h.aim();
+            Vec3 way = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10))
+                    .subtract(h.position())
+                    .normalize();
+            fx(BigFx.TRAIL, low, px(4, 1.5), way, 0);
+            if (t == Moves.LASH_AT) {
+                if (tip.y - low.y < 6 * s + 2) fx(BigFx.STOMP, low, px(6, 2), way, 0);
+                h.sound(tip, SoundEvents.TRIDENT_RIPTIDE_1.value(), 2f, 1.4f);
+            }
+        }
+        if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
+            Vector3f a = h.aim();
+            double dirA = Math.atan2(a.z, a.x);
+            Vec3 dir = h.toWorld(new Vector3f((float) Math.cos(dirA), 0, (float) Math.sin(dirA)).mul(10))
+                    .subtract(h.position())
+                    .normalize();
+            double r = bell * 1.35 + 3;
+            for (LivingEntity e :
+                    near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.9))) {
+                if (struckThisMove.contains(e.getUUID())) continue;
+                Vec3 to = at(e).subtract(h.position()).multiply(1, 0, 1);
+                double d = to.length();
+                if (d > r) continue;
+                // in the half of him the strand whips through
+                if (d > 2 * s + 1 && to.normalize().dot(dir) < 0.3) continue;
+                struckThisMove.add(e.getUUID());
+                blow(e, 14f, h.position(), 0.6, 0.5);
+                e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 1.8, 0, dir.z * 1.8));
+                sting(e);
+            }
+        }
+    }
+
+    private void runFlash(float s) {
+        if (t == 0) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 18);
+        if (t == Moves.FLASH_AT) {
+            boolean night = h.level().getSkyDarken() > 6 || h.level().isThundering();
+            double r = 50 * s + 30;
+            Vec3 c = h.position().add(0, (rig.rimY + 30) * s, 0);
+            for (LivingEntity e : near(new AABB(c, c).inflate(r))) {
+                if (at(e).distanceTo(c) > r) continue;
+                e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, night ? 200 : 100, 0));
+                e.addEffect(new MobEffectInstance(MobEffects.DARKNESS, night ? 160 : 60, 0));
+                if (night) e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 160, 0));
+                e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 0));
+                blow(e, night ? 8f : 5f, c, 0, 0);
+            }
+            h.sound(c, ModSounds.FLASH, 4f, 1.3f);
+            for (var S : rig.spots) {
+                h.particles(ParticleTypes.FLASH, h.spotWorld(S.k()), 1, 0, 0);
+                fx(BigFx.FLASH, h.spotWorld(S.k()), px(12, 4), Vec3.ZERO, GLOW);
+            }
+            fx(BigFx.FLASH, c, px(40, 10), Vec3.ZERO, GLOW);
+            h.particles(ParticleTypes.END_ROD, c, 200, 40 * s + 4, 0.4);
+        }
+    }
+
+    private void runArmStorm(float s) {
+        if (t == Moves.STORM_UP - 8) h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.WARN_ARMS, 3f, 0.8f);
+        // each arm hits when its end really comes down on the ground (or a moment after it should have)
+        if (t == 1) stormLanded = 0;
+        for (int k = 0; k < rig.arms.length; k++) {
+            int hit = Moves.stormHit(k, Math.max(0, arg));
+            if ((stormLanded & (1 << k)) != 0) {
+                armSlap(k, 45f, landedAt[k]);
+                continue;
+            }
+            if (t < hit - 2) continue;
+            Vec3 tip = h.armTipWorld(k);
+            if (tip.y - h.groundAt(tip.x, tip.z) < 6 * s + 2 || t >= hit + 14) {
+                stormLanded |= 1 << k;
+                landedAt[k] = t;
+                armBlow(tip, 45f, 16 * s + 5);
+            }
         }
     }
 

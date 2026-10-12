@@ -87,38 +87,7 @@ public final class AutoTest implements ClientModInitializer {
                 mc.setScreen(new TitleScreen());
                 return;
             }
-            if (!asked && mc.screen instanceof TitleScreen) {
-                asked = true;
-                GameRules rules = new GameRules();
-                rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
-                rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
-                rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
-                LevelSettings ls = new LevelSettings(
-                        "hbtest",
-                        GameType.CREATIVE,
-                        false,
-                        Difficulty.NORMAL,
-                        true,
-                        rules,
-                        WorldDataConfiguration.DEFAULT);
-                String type = script.stream()
-                        .filter(l -> l.startsWith("world "))
-                        .map(l -> l.substring(6).trim())
-                        .findFirst()
-                        .orElse("flat");
-                mc.createWorldOpenFlows()
-                        .createFreshLevel(
-                                "hbtest" + System.currentTimeMillis() % 100000,
-                                ls,
-                                new WorldOptions(20260924L, false, false),
-                                ra -> type.equals("flat")
-                                        ? ra.registryOrThrow(Registries.WORLD_PRESET)
-                                                .getHolderOrThrow(WorldPresets.FLAT)
-                                                .value()
-                                                .createWorldDimensions()
-                                        : WorldPresets.createNormalWorldDimensions(ra),
-                                mc.screen);
-            }
+            if (!asked && mc.screen instanceof TitleScreen) newWorld(mc);
             return;
         }
         if (mc.player == null) return;
@@ -148,36 +117,12 @@ public final class AutoTest implements ClientModInitializer {
             }
             // atmove name tick: wait until the nearest one is that far into that move (gives up after 40 s)
             if (s.startsWith("atmove ")) {
-                String[] a = s.substring(7).trim().split("\\s+");
-                int want = a[0].equals("none") ? 0 : Moves.byName(a[0]);
-                float at = Float.parseFloat(a[1]);
-                HollowbellEntity near = null;
-                for (var e : mc.level.entitiesForRendering())
-                    if (e instanceof HollowbellEntity w
-                            && (near == null || w.distanceToSqr(mc.player) < near.distanceToSqr(mc.player))) near = w;
-                boolean there = near != null && near.moveNow() == want && near.moveT(0f) >= at;
-                if (!there && ++atWaited < 800) {
-                    line--;
-                    return;
-                }
-                if (!there) HollowbellMod.LOG.info("autotest {}: gave up waiting", s);
-                atWaited = 0;
+                if (atMove(mc, s)) return;
                 continue;
             }
             // fx kind x y z size [dx dy dz extra]: one of the big-moment effects, sent by the server as a move sends it
             if (s.startsWith("fx ")) {
-                String[] a = s.substring(3).trim().split("\\s+");
-                int kind = Arrays.asList(BigFx.NAMES).indexOf(a[0]);
-                double fx = Double.parseDouble(a[1]), fy = Double.parseDouble(a[2]), fz = Double.parseDouble(a[3]);
-                float size = Float.parseFloat(a[4]);
-                float dx = a.length > 5 ? Float.parseFloat(a[5]) : 0,
-                        dy = a.length > 6 ? Float.parseFloat(a[6]) : 0,
-                        dz = a.length > 7 ? Float.parseFloat(a[7]) : 0;
-                int extra = a.length > 8
-                        ? (int) Long.parseLong(a[8].replace("0x", ""), a[8].startsWith("0x") ? 16 : 10)
-                        : 0;
-                MinecraftServer sv = mc.getSingleplayerServer();
-                if (sv != null) sv.execute(() -> BigFx.send(sv.overworld(), kind, fx, fy, fz, size, dx, dy, dz, extra));
+                fx(mc, s);
                 continue;
             }
             // chat /...: typed the way a player types it, through the client (so client-side command handling counts)
@@ -251,24 +196,7 @@ public final class AutoTest implements ClientModInitializer {
                 continue;
             }
             if (s.equals("pick")) {
-                BellPick.afterPick(1f);
-                for (var en : mc.level.entitiesForRendering())
-                    if (en instanceof HollowbellEntity hh) {
-                        var cam = mc.getCameraEntity();
-                        HollowbellMod.LOG.info(
-                                "autotest pick: eye {} look {} in box {} ready {} ray {}",
-                                cam.getEyePosition(),
-                                cam.getViewVector(1f),
-                                hh.bodyBox().contains(cam.getEyePosition()),
-                                hh.clientPoseReady(),
-                                hh.raycast(cam.getEyePosition(), cam.getViewVector(1f), 100));
-                    }
-                var hb = BellPick.looking();
-                HollowbellMod.LOG.info(
-                        "autotest pick: {} bone {} {}",
-                        hb != null,
-                        BellPick.bone,
-                        hb != null && BellPick.bone >= 0 ? hb.rig.boneNames[BellPick.bone] : "-");
+                logPick(mc);
                 continue;
             }
             if (s.equals("swing")) {
@@ -279,29 +207,7 @@ public final class AutoTest implements ClientModInitializer {
                 continue;
             }
             if (s.equals("status")) {
-                for (var en : mc.level.entitiesForRendering())
-                    if (en instanceof HollowbellEntity hh)
-                        HollowbellMod.LOG.info(
-                                "autotest client sees him at {} (camera {}) fps {} hurtTime {} hp {}",
-                                hh.position(),
-                                mc.gameRenderer.getMainCamera().getPosition(),
-                                mc.getFps(),
-                                hh.hurtTime,
-                                hh.getHealth());
-                MinecraftServer sv = mc.getSingleplayerServer();
-                if (sv != null)
-                    sv.execute(() -> {
-                        for (var l : sv.getAllLevels())
-                            for (var hb : l.getEntities(ModEntities.HOLLOWBELL, x -> true))
-                                HollowbellMod.LOG.info(
-                                        "autotest status: hp {}/{} pods {} move {} inside {} at {}",
-                                        hb.healthNow(),
-                                        hb.healthMax(),
-                                        hb.podsLeft(),
-                                        hb.moveNow(),
-                                        hb.moves().insideCount(),
-                                        hb.position());
-                    });
+                logStatus(mc);
                 continue;
             }
             if (s.equals("book")) {
@@ -354,25 +260,7 @@ public final class AutoTest implements ClientModInitializer {
             // ridelog: is the player being carried on him, how far a frame set them from where the tick had them, how
             // often they were moved out of him
             if (s.equals("ridelog")) {
-                SolidCarry c = SolidClient.CARRY;
-                String on = c.on == null
-                        ? "-"
-                        : ((HollowbellEntity) c.on)
-                                .rig
-                                .boneNames[BellPieces.get().bone[c.on.solidShape().bone[c.frame]]];
-                HollowbellMod.LOG.info(
-                        "autotest ridelog: riding {} frame {} air {} at {} frame fix at most {}"
-                                + " unstuck {} by server {} soft pushes {} onGround {}",
-                        c.riding(),
-                        on,
-                        c.air,
-                        mc.player.position(),
-                        String.format("%.3f", SolidClient.frameFix),
-                        SolidClient.unstuck,
-                        Solid.unstuckServer,
-                        SolidClient.softPushed,
-                        mc.player.onGround());
-                SolidClient.frameFix = 0;
+                logRide(mc);
                 continue;
             }
             if (s.equals("quit")) {
@@ -381,6 +269,136 @@ public final class AutoTest implements ClientModInitializer {
                 return;
             }
         }
+    }
+
+    private static void fx(Minecraft mc, String s) {
+        String[] a = s.substring(3).trim().split("\\s+");
+        int kind = Arrays.asList(BigFx.NAMES).indexOf(a[0]);
+        double fx = Double.parseDouble(a[1]), fy = Double.parseDouble(a[2]), fz = Double.parseDouble(a[3]);
+        float size = Float.parseFloat(a[4]);
+        float dx = a.length > 5 ? Float.parseFloat(a[5]) : 0,
+                dy = a.length > 6 ? Float.parseFloat(a[6]) : 0,
+                dz = a.length > 7 ? Float.parseFloat(a[7]) : 0;
+        int extra = a.length > 8 ? (int) Long.parseLong(a[8].replace("0x", ""), a[8].startsWith("0x") ? 16 : 10) : 0;
+        MinecraftServer sv = mc.getSingleplayerServer();
+        if (sv != null) sv.execute(() -> BigFx.send(sv.overworld(), kind, fx, fy, fz, size, dx, dy, dz, extra));
+    }
+
+    /** true while still waiting for the move */
+    private static boolean atMove(Minecraft mc, String s) {
+        String[] a = s.substring(7).trim().split("\\s+");
+        int want = a[0].equals("none") ? 0 : Moves.byName(a[0]);
+        float at = Float.parseFloat(a[1]);
+        HollowbellEntity near = null;
+        for (var e : mc.level.entitiesForRendering())
+            if (e instanceof HollowbellEntity w
+                    && (near == null || w.distanceToSqr(mc.player) < near.distanceToSqr(mc.player))) near = w;
+        boolean there = near != null && near.moveNow() == want && near.moveT(0f) >= at;
+        if (!there && ++atWaited < 800) {
+            line--;
+            return true;
+        }
+        if (!there) HollowbellMod.LOG.info("autotest {}: gave up waiting", s);
+        atWaited = 0;
+        return false;
+    }
+
+    /** a fresh creative world, flat unless the script says "world normal" */
+    private static void newWorld(Minecraft mc) {
+        asked = true;
+        GameRules rules = new GameRules();
+        rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
+        rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
+        rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
+        LevelSettings ls = new LevelSettings(
+                "hbtest", GameType.CREATIVE, false, Difficulty.NORMAL, true, rules, WorldDataConfiguration.DEFAULT);
+        String type = script.stream()
+                .filter(l -> l.startsWith("world "))
+                .map(l -> l.substring(6).trim())
+                .findFirst()
+                .orElse("flat");
+        mc.createWorldOpenFlows()
+                .createFreshLevel(
+                        "hbtest" + System.currentTimeMillis() % 100000,
+                        ls,
+                        new WorldOptions(20260924L, false, false),
+                        ra -> type.equals("flat")
+                                ? ra.registryOrThrow(Registries.WORLD_PRESET)
+                                        .getHolderOrThrow(WorldPresets.FLAT)
+                                        .value()
+                                        .createWorldDimensions()
+                                : WorldPresets.createNormalWorldDimensions(ra),
+                        mc.screen);
+    }
+
+    /** what the crosshair is on, to the log */
+    private static void logPick(Minecraft mc) {
+        BellPick.afterPick(1f);
+        for (var en : mc.level.entitiesForRendering())
+            if (en instanceof HollowbellEntity hh) {
+                var cam = mc.getCameraEntity();
+                HollowbellMod.LOG.info(
+                        "autotest pick: eye {} look {} in box {} ready {} ray {}",
+                        cam.getEyePosition(),
+                        cam.getViewVector(1f),
+                        hh.bodyBox().contains(cam.getEyePosition()),
+                        hh.clientPoseReady(),
+                        hh.raycast(cam.getEyePosition(), cam.getViewVector(1f), 100));
+            }
+        var hb = BellPick.looking();
+        HollowbellMod.LOG.info(
+                "autotest pick: {} bone {} {}",
+                hb != null,
+                BellPick.bone,
+                hb != null && BellPick.bone >= 0 ? hb.rig.boneNames[BellPick.bone] : "-");
+    }
+
+    /** where each one is and how he is, on both sides, to the log */
+    private static void logStatus(Minecraft mc) {
+        for (var en : mc.level.entitiesForRendering())
+            if (en instanceof HollowbellEntity hh)
+                HollowbellMod.LOG.info(
+                        "autotest client sees him at {} (camera {}) fps {} hurtTime {} hp {}",
+                        hh.position(),
+                        mc.gameRenderer.getMainCamera().getPosition(),
+                        mc.getFps(),
+                        hh.hurtTime,
+                        hh.getHealth());
+        MinecraftServer sv = mc.getSingleplayerServer();
+        if (sv != null)
+            sv.execute(() -> {
+                for (var l : sv.getAllLevels())
+                    for (var hb : l.getEntities(ModEntities.HOLLOWBELL, x -> true))
+                        HollowbellMod.LOG.info(
+                                "autotest status: hp {}/{} pods {} move {} inside {} at {}",
+                                hb.healthNow(),
+                                hb.healthMax(),
+                                hb.podsLeft(),
+                                hb.moveNow(),
+                                hb.moves().insideCount(),
+                                hb.position());
+            });
+    }
+
+    /** how riding on him is going, to the log */
+    private static void logRide(Minecraft mc) {
+        SolidCarry c = SolidClient.CARRY;
+        String on = c.on == null
+                ? "-"
+                : ((HollowbellEntity) c.on).rig.boneNames[BellPieces.get().bone[c.on.solidShape().bone[c.frame]]];
+        HollowbellMod.LOG.info(
+                "autotest ridelog: riding {} frame {} air {} at {} frame fix at most {}"
+                        + " unstuck {} by server {} soft pushes {} onGround {}",
+                c.riding(),
+                on,
+                c.air,
+                mc.player.position(),
+                String.format("%.3f", SolidClient.frameFix),
+                SolidClient.unstuck,
+                Solid.unstuckServer,
+                SolidClient.softPushed,
+                mc.player.onGround());
+        SolidClient.frameFix = 0;
     }
 
     private static void standOn(Minecraft mc, String part) {

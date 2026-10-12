@@ -1,97 +1,21 @@
 package net.jj.hollowbell.entity;
 
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
-import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
-import net.jj.hollowbell.HollowbellMod;
-import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
-import net.jj.hollowbell.fx.BigFx;
-import net.jj.hollowbell.item.BellArmorItem;
-import net.jj.hollowbell.item.CodexItem;
-import net.jj.hollowbell.mixin.TridentAccess;
-import net.jj.hollowbell.net.BeingHimPayload;
-import net.jj.hollowbell.rig.BellAnim;
-import net.jj.hollowbell.rig.BellModel;
-import net.jj.hollowbell.rig.BellPieces;
-import net.jj.hollowbell.rig.BellRig;
-import net.jj.hollowbell.rig.BellState;
 import net.jj.hollowbell.solid.GiantHull;
-import net.jj.hollowbell.solid.Solid;
-import net.jj.hollowbell.solid.SolidBody;
-import net.jj.hollowbell.solid.SolidCache;
-import net.jj.hollowbell.solid.SolidShape;
 import net.jj.hollowbell.world.Away;
-import net.jj.hollowbell.world.BellWorld;
 import net.jj.hollowbell.world.NoWait;
-import net.jj.hollowbell.world.Shrine;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.FloatTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.TicketType;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
-import net.minecraft.world.BossEvent;
-import net.minecraft.world.Difficulty;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.OwnableEntity;
-import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
-import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.Snowball;
-import net.minecraft.world.entity.projectile.ThrownEgg;
-import net.minecraft.world.entity.projectile.ThrownTrident;
-import net.minecraft.world.entity.projectile.windcharge.AbstractWindCharge;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /** How he flies: drifting, cruising, coming when called, keeping off the ward and the other giants. */
@@ -177,7 +101,8 @@ final class BellFlight {
             hb.giantPlan = hb.targets.giantTargetPlan(t);
             hb.giantPlanFor = t;
         }
-        boolean still = hb.stay || hb.moves.holdsStill() || dying || hb.asleep || (hb.goal == null && hb.waitingForSomebody());
+        boolean still =
+                hb.stay || hb.moves.holdsStill() || dying || hb.asleep || (hb.goal == null && hb.waitingForSomebody());
         Vec3 want = wanted(t, still, s);
         if (hb.cruise < 0) hb.cruise = 6 * s + 1;
 
@@ -281,7 +206,8 @@ final class BellFlight {
 
         hb.setPos(hb.getX() + hb.vel.x, hb.getY() + hb.vel.y, hb.getZ() + hb.vel.z);
         hb.setDeltaMovement(Vec3.ZERO);
-        hb.getEntityData().set(HollowbellEntity.DATA_VEL, new Vector3f((float) hb.vel.x, (float) hb.vel.y, (float) hb.vel.z));
+        hb.getEntityData()
+                .set(HollowbellEntity.DATA_VEL, new Vector3f((float) hb.vel.x, (float) hb.vel.y, (float) hb.vel.z));
         if (hb.tickCount % 10 == 0 && BellConfig.V.griefing && hv.lengthSqr() > 0.001) hb.moves.flattenUnderStrands();
         // his strands slide over each other as he goes
         if (hb.tickCount % 50 == 0 && hv.length() > max * 0.3 && hb.getRandom().nextInt(2) == 0)
@@ -339,7 +265,8 @@ final class BellFlight {
                 if (--hb.wanderIn <= 0 || (hb.home != null && hb.horiz(hb.home) > wanderRange() * 1.3)) {
                     hb.wanderIn = 300 + hb.getRandom().nextInt(500);
                     Vec3 c = hb.isGuardian() && hb.home != null ? hb.home : hb.position();
-                    double a = hb.getRandom().nextDouble() * Math.PI * 2, d = hb.getRandom().nextDouble() * wanderRange();
+                    double a = hb.getRandom().nextDouble() * Math.PI * 2,
+                            d = hb.getRandom().nextDouble() * wanderRange();
                     hb.goal = null;
                     hb.wanderTo = c.add(Math.cos(a) * d, 0, Math.sin(a) * d);
                     // and a new height to drift at: low over the ground, or up high
@@ -366,8 +293,8 @@ final class BellFlight {
     }
 
     /** the height he's making for */
-    private double heightWanted(@Nullable LivingEntity t, boolean dying, boolean down, float s, double gC, double gAvg,
-            double hardMin) {
+    private double heightWanted(
+            @Nullable LivingEntity t, boolean dying, boolean down, float s, double gC, double gAvg, double hardMin) {
         double wy;
         if (hb.arriving > 0) {
             hb.arriving--;
@@ -401,7 +328,8 @@ final class BellFlight {
         if (hb.giantPlan != null && !down && !Double.isNaN(hb.giantPlan[0])) wy = Math.max(wy, hb.giantPlan[0]);
         wy = Math.max(wy, hardMin);
         // (no limit to how high he goes, but under the nether's roof he keeps all of him below it)
-        if (hb.level().dimensionType().hasCeiling()) wy = Math.min(wy, NoWait.ceiling(hb.level()) - (hb.rig.crownY + 4) * s);
+        if (hb.level().dimensionType().hasCeiling())
+            wy = Math.min(wy, NoWait.ceiling(hb.level()) - (hb.rig.crownY + 4) * s);
         if (!(hb.rider != null) && !(hb.stay)) hb.wantY = wy;
         return wy;
     }
@@ -460,7 +388,8 @@ final class BellFlight {
     }
 
     /** standing inside the circle: a spot outside its edge to make for; otherwise nothing */
-    @Nullable Vec3 wardEscape() {
+    @Nullable
+    Vec3 wardEscape() {
         if (!hb.warded(hb.getX(), hb.getZ())) return null;
         if (!(hb.level() instanceof ServerLevel sl)) return null;
         BlockPos at = WorldOne.get(sl.getServer()).wardSpot();
@@ -509,8 +438,11 @@ final class BellFlight {
      * other doesn't move itself out). Never through each other, whoever drifted into whom.
      */
     void giantsApart() {
-        if (!(hb.level() instanceof ServerLevel sl) || hb.isDeadOrDying() || hb.frozen || !BellSolid.ready() || hb.solidVer == 0)
-            return;
+        if (!(hb.level() instanceof ServerLevel sl)
+                || hb.isDeadOrDying()
+                || hb.frozen
+                || !BellSolid.ready()
+                || hb.solidVer == 0) return;
         if (hb.tickCount % 5 == 0) {
             hb.giantsNear.clear();
             for (Entity x : sl.getEntities(hb, hb.bodyBox().inflate(160), Giants::isGiant)) {
