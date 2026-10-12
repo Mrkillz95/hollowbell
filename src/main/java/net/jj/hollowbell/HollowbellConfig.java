@@ -28,6 +28,8 @@ public final class HollowbellConfig {
         public float mobDamage = 2.5f;
         /** How much of a blow from another of JJ's bosses (Pitchgut, Furrowmaw, Cerberus, the Lantern Willow) he takes. */
         public float giantArmor = 0.7f;
+        /** How much of a blast (TNT, a creeper, anything that isn't another giant) he takes. */
+        public float explosionArmor = 0.35f;
         /** He picks fights with JJ's other bosses ("/hollowbell giants on"). Off = he leaves them alone. */
         public boolean fightGiants = true;
         /**
@@ -193,6 +195,7 @@ public final class HollowbellConfig {
         v.damageMultiplier = clamp(v.damageMultiplier, 0f, 100f, 1f);
         v.mobDamage = clamp(v.mobDamage, 0f, 100f, 2.5f);
         v.giantArmor = clamp(v.giantArmor, 0f, 10f, 0.7f);
+        v.explosionArmor = clamp(v.explosionArmor, 0f, 10f, 0.35f);
         v.spawnEggScale = clamp(v.spawnEggScale, 0.03f, 2f, 1f);
         v.smallEggScale = clamp(v.smallEggScale, 0.03f, 2f, 0.2f);
         v.worldScale = clamp(v.worldScale, 0.03f, 2f, 1f);

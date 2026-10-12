@@ -182,6 +182,13 @@ public final class GiantsCommand {
     /** one action, asked of just the named giant's mod */
     private static int one(CommandContext<CommandSourceStack> c, String action, String arg) {
         String which = StringArgumentType.getString(c, "which").toLowerCase(java.util.Locale.ROOT);
+        // (the names of the mods' own commands, and their old ones, work too)
+        which = switch (which) {
+            case "lanternwillow" -> "willow";
+            case "mountain", "mountain_breathes" -> "pitchgut";
+            case "fire_ice_cerberus" -> "cerberus";
+            default -> which;
+        };
         int i = java.util.Arrays.asList(TP_NAMES).indexOf(which);
         if (i < 0) {
             c.getSource().sendFailure(Component.literal("No giant called " + which + ". Try one of: " + String.join(", ", TP_NAMES) + "."));

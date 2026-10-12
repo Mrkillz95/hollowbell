@@ -61,6 +61,8 @@ public final class BellPower {
 
     public static boolean busy(Player p) { return DOING.containsKey(p.getUUID()); }
     public static void clear() { DOING.clear(); }
+    /** whatever power a player is in the middle of stops (a command resetting their powers) */
+    public static void stop(Player p) { DOING.remove(p.getUUID()); }
 
     public static void tick(MinecraftServer server) {
         if (DOING.isEmpty()) return;
