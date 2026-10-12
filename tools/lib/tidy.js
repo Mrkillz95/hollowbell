@@ -127,4 +127,4 @@ function eggBitsAway(vox, bones, palette, pal) {
   return changes.length;
 }
 
-module.exports = { thinSpeckles, dropFloating, eggBitsAway };
+module.exports = { thinSpeckles, dropFloating, eggBitsAway, key, index };
