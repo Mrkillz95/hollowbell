@@ -53,7 +53,13 @@ public final class SolidClient {
                 break;
             }
         }
-        for (SolidBody b : Solid.bodies(true)) if (b.solidSelf().level() == p.level() && b.solidReady() && !b.solidIgnores(p) && Solid.softPush(b, p)) softPushed++;
+        // his strands don't shove you off the part you stand on (a pod hangs from one, right where you stand)
+        if (!CARRY.riding() || CARRY.air > 0) {
+            for (SolidBody b : Solid.bodies(true)) {
+                if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
+                if (Solid.softPush(b, p)) softPushed++;
+            }
+        }
         Solid.nanosClient += System.nanoTime() - t0;
     }
 

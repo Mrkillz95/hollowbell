@@ -508,7 +508,7 @@ public final class Solid {
             if (!near(b, e.getBoundingBox().expandTowards(0, -1.5, 0))) continue;
             Probe pr = probe(b, e, 0.08);
             if (pr.depth > 0.02) { if (unstick(b, e, 0.08)) unstuckServer++; continue; }
-            if (pr.soft) softPush(b, e);
+            if (pr.soft && pr.anchor < 0) softPush(b, e);
             if (pr.anchor >= 0) {
                 SolidCache fc = frames(b);
                 SolidShape sh = b.solidShape();
