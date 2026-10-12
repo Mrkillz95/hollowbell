@@ -4,7 +4,18 @@ Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.10.3
+## What's new in 1.11.0
+
+- **No heavy move in the first minute of a fight.** Big moves wait until a fight has gone on for a minute, so you can get your bearings. `/hollowbell heavydelay` (and `/giants heavydelay`) changes how long, 0 turns it off.
+- **Kills count.** Whoever brings him down gets the XP, even if he takes a while to sink. Anyone standing on him when he dies floats down unhurt.
+- **Tridents and arrows.** A trident or tipped arrow shot at him is never lost: it bounces off or drops. When he's set invulnerable, arrows don't hurt him either.
+- **Eggs.** One from a spawn egg has the health for his size, also with two players around.
+- **What he holds stays put.** A creature he's holding is saved with the world, and tree blocks left over from an old save drop as logs. He leaves alone what another one holds, and anything someone is riding.
+- **Orders.** An order to go somewhere he can't reach is turned down with a message. `/hollowbell hurt` takes off exactly what it says. Right-click his crown to wake it.
+- **Explosions** hurt him less (setting `explosionArmor`).
+- Many smaller fixes in the commands, the nether and the settings file.
+
+## What was new in 1.10.3
 
 - **He moves like he did in 1.9.8 again.** His big arms, his lights and the way he swims are back exactly as they were. The 1.10.0 pass that pushed his arms and strands apart is gone, so a strand can pass through an arm now and then again.
 - **His small tentacles are all alike.** Each one is a round tentacle, thick at the top and thinning to a point, in bone and calcite with copper bands and glowing dots. No ragged sheets or loose bits, and they go round his arms and pods instead of through them.
@@ -504,9 +515,10 @@ Top left you also see his health, and his **wind** and **grudge** bars, the same
 | `/hollowbell damage [multiplier]` | multiplies how hard he hits. `/hollowbell damage mobs [times]`: how much harder he hits creatures. |
 | `/hollowbell griefing [on/off]` | whether he pulls up trees and flattens plants. On its own it says which. |
 | `/hollowbell shake [on/off]` | screen shake. On its own it says which. |
+| `/hollowbell heavydelay [seconds]` | how long a fight goes before he may use a heavy move (60 to start, 0 = no wait). On its own it says how long. |
 | `/hollowbell sleep` | the nearest one goes to sleep, or wakes up |
 | `/hollowbell come [player]` | the nearest one comes to you (or to that player), wherever he is |
-| `/hollowbell paint [radius] [full/biome]` | the land round you becomes the Bell Hollows (the same as `/giants paint hollowbell`). Can't be undone. |
+| `/hollowbell paint [radius] [full [depth]/biome]` | the land round you becomes the Bell Hollows (the same as `/giants paint hollowbell`). depth is how many blocks down it goes. Can't be undone. |
 | `/hollowbell tp [number]` | takes you to the nearest one (or that one from `/hollowbell list`) |
 | `/hollowbell spare` | your safe list. `/hollowbell spare add <who>`, `spare remove <who>`, `spare add kind <type>`, `spare remove kind <type>` change it |
 | `/hollowbell carry` | he comes to you and a strand carries you up his side and over his dome onto his crown (if you're already up there, it carries you back down) |
@@ -557,6 +569,7 @@ Works the same in every one of JJ's boss mods. You only need one of them for it 
 | `/giants away [on/off]` | whether they step out of the world when nobody is near |
 | `/giants volume <0-2>` | how loud they are (1 is normal) |
 | `/giants shake [on/off]` | whether they shake your screen |
+| `/giants heavydelay <seconds>` | how long a fight goes before they may use a heavy move (0 = no wait) |
 | `/giants bossbar <blocks>` | how far away their boss bars show (0 works it out from size) |
 | `/giants griefing [on/off]` | whether they break blocks |
 | `/giants where` | where each one is (works without cheats) |
