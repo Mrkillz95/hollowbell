@@ -27,9 +27,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The nearest one's state, in the same shape as the other giants' commands: who he goes for, his wind, grudges, home,
- * cooldowns, freezing him, his speed, whether he can be hurt, a glow, a name, forgiving, sleep and wake, and the
- * players' own powers. (His older "/hollowbell set ..." forms still work too.)
+ * The nearest one's state: who he goes for, his wind, grudges, home, cooldowns, freezing him, his speed, whether he
+ * can be hurt, a glow, a name, forgiving, waking, and the players' own powers. The "/hollowbell set ..." forms work too.
  */
 public final class OpsCommand {
     private OpsCommand() {}
