@@ -62,6 +62,15 @@ A book about every giant you have. Right-click it to open it.
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
 
+## New in 1.4.10
+
+- Lots of bug fixes in every giant (spawn eggs, thrown tridents, held mobs on save, the Nether roof, kill credit).
+- Heavy moves wait a minute into a fight. Change it with `/giants heavydelay <seconds>`.
+- The Hollowbell moves like before again, with even small tentacles and lights that glow from every side.
+
+Inside: Pitchgut 1.34.0, Furrowmaw 1.14.8, Cerberus 2.15.0, Hollowbell 1.11.0, Lantern Willow 1.8.3, Wreckback 1.0.8,
+Swarmforge 1.3.2.
+
 ## New in 1.4.9
 
 - Pitchgut, the Cerberus, the Hollowbell and the Lantern Willow are solid now: you bump into them, stand on them and
