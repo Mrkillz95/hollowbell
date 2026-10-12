@@ -62,6 +62,16 @@ A book about every giant you have. Right-click it to open it.
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
 
+## New in 1.4.11
+
+- Pitchgut and the Cerberus work together again (with the newest single jars the game crashed on start).
+- Hollowbell: clean big-arm ends, no height limit. Wreckback: feet stay planted, no floating claw spines.
+- Swarmforge: robots and Commander orders survive a reload, the book's "Where is he?" and send-to-spot are back.
+- Lantern Willow: better impacts, look key, /lanternwillow help.
+
+Inside: Pitchgut 1.34.1, Furrowmaw 1.14.8, Cerberus 2.15.2, Hollowbell 1.11.1, Lantern Willow 1.9.0, Wreckback 1.1.1,
+Swarmforge 1.4.0.
+
 ## New in 1.4.10
 
 - Lots of bug fixes in every giant (spawn eggs, thrown tridents, held mobs on save, the Nether roof, kill credit).
