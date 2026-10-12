@@ -47,6 +47,10 @@ public final class AutoTest {
         try { script = new ArrayList<>(Files.readAllLines(Path.of(f))); }
         catch (Exception e) { HollowbellMod.LOG.error("autotest: cannot read {}", f, e); return; }
         ClientTickEvents.END_CLIENT_TICK.register(AutoTest::tick);
+        ClientTickEvents.START_CLIENT_TICK.register(c -> {
+            if (SolidClient.traceTicks > 0 && c.player != null)
+                HollowbellMod.LOG.info("trace pre pos {} v {}", c.player.position(), c.player.getDeltaMovement());
+        });
     }
 
     private static void tick(Minecraft mc) {
