@@ -8,17 +8,21 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.block.CrownBlock;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.world.Away;
+import net.jj.hollowbell.world.FarOrders;
 import net.jj.hollowbell.world.WorldOne;
+import net.jj.hollowbell.world.NoWait;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -273,7 +277,7 @@ public final class HollowbellCommand {
                 .then(Commands.literal("remove").requires(OP).executes(c -> {
                     var server = c.getSource().getServer();
                     WorldOne w = WorldOne.get(server);
-                    int out = Away.get(server).count();
+                    int out = Away.get(server).count() + FarOrders.removeLying(server);
                     for (Away.Rec r : Away.get(server).all()) w.removed(server.overworld(), r.id);
                     Away.get(server).forgetAll();
                     if (allOf(c.getSource()).isEmpty() && out > 0) { c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove"), true); return out; }
@@ -291,12 +295,26 @@ public final class HollowbellCommand {
                         .then(Commands.argument("multiplier", FloatArgumentType.floatArg(0f, 100f))
                                 .executes(c -> set(c, () -> HollowbellConfig.V.damageMultiplier = FloatArgumentType.getFloat(c, "multiplier"), "damage", FloatArgumentType.getFloat(c, "multiplier")))))
                 .then(toggle("griefing", "griefing", () -> HollowbellConfig.V.griefing, v -> HollowbellConfig.V.griefing = v))
+                .then(Commands.literal("heavydelay").requires(OP).executes(c -> heavyDelay(c, -1))
+                        .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
+                                .executes(c -> heavyDelay(c, IntegerArgumentType.getInteger(c, "seconds")))))
                 .then(toggle("shake", "screenShake", () -> HollowbellConfig.V.screenShake, v -> HollowbellConfig.V.screenShake = v))
                 .then(Commands.literal("reload").requires(OP).executes(c -> {
                     boolean ok = HollowbellConfig.load();
                     c.getSource().sendSuccess(() -> Component.translatable(ok ? "command.hollowbell.reloaded" : "command.hollowbell.reload_bad"), true);
                     return ok ? 1 : 0;
                 })));
+    }
+
+    /** how long into a fight before his first heavy move: said, or set (seconds >= 0) */
+    private static int heavyDelay(CommandContext<CommandSourceStack> c, int seconds) {
+        if (seconds >= 0) {
+            HollowbellConfig.V.heavyDelaySeconds = seconds;
+            HollowbellConfig.save();
+        }
+        int now = HollowbellConfig.V.heavyDelaySeconds;
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.heavydelay", now), seconds >= 0);
+        return 1;
     }
 
     /** "/hollowbell griefing [on|off]": bare says what it is; the old true/false form still works */
@@ -451,7 +469,7 @@ public final class HollowbellCommand {
             if (look.lengthSqr() < 1e-4) look = new Vec3(0, 0, 1);
             at = at.add(look.normalize().scale(100 * size + 6));
         }
-        h.moveTo(at.x, net.jj.hollowbell.world.NoWait.heightOrGuess(l, net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(at.x), (int) Math.floor(at.z)), at.z,
+        h.moveTo(at.x, NoWait.standOrGuess(l, Mth.floor(at.x), Mth.floor(at.z), Mth.floor(at.y)), at.z,
                 l.getRandom().nextFloat() * 360f, 0f);
         h.setBellScale(size);
         h.setVariant(mood);
@@ -685,26 +703,9 @@ public final class HollowbellCommand {
         for (net.minecraft.core.BlockPos p : net.minecraft.core.BlockPos.betweenClosed(at.offset(-16, -8, -16), at.offset(16, 8, 16)))
             if (lvl.getBlockState(p).is(net.jj.hollowbell.ModBlocks.CROWN)) { crown = p.immutable(); break; }
         if (crown == null) { c.getSource().sendFailure(Component.translatable("command.hollowbell.ward_no_crown")); return 0; }
-        if (HollowbellConfig.V.wardBlocks <= 0) {
-            c.getSource().sendFailure(Component.translatable("command.hollowbell.ward_no_blocks"));
-            return 0;
-        }
-        WorldOne w = WorldOne.get(c.getSource().getServer());
-        ServerLevel over = c.getSource().getServer().overworld();
-        if (w.warding(over)) {
-            var awake = w.wardSpot();
-            c.getSource().sendFailure(Component.translatable("command.hollowbell.ward_already", awake.getX(), awake.getZ(), w.wardLeft(over) / 20));
-            return 0;
-        }
-        if (w.wardRestLeft(over) > 0) {
-            c.getSource().sendFailure(Component.translatable("command.hollowbell.ward_resting", w.wardRestLeft(over) / 20));
-            return 0;
-        }
-        w.startWard(lvl, crown, Math.max(20, HollowbellConfig.V.wardSeconds * 20), Math.max(0, HollowbellConfig.V.wardRestSeconds * 20));
-        for (HollowbellEntity e : lvl.getEntities(ModEntities.HOLLOWBELL, x -> !x.isRemoved()))
-            if (e.warded(e.getX(), e.getZ())) e.pushedBackByWard();
-        final int bx = crown.getX(), bz = crown.getZ();
-        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.ward_wakes", bx, bz, (int) WorldOne.wardRange()), true);
+        CrownBlock.Woken w = CrownBlock.wake(lvl, crown);
+        if (!w.ok()) { c.getSource().sendFailure(w.said()); return 0; }
+        c.getSource().sendSuccess(w::said, true);
         return 1;
     }
 

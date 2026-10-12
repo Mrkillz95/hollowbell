@@ -7,10 +7,12 @@ import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.rig.BellRig;
+import net.jj.hollowbell.world.NoWait;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -21,6 +23,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -41,6 +44,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -48,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 
 /**
  * What each of his moves does to the world, the things he is holding, and the inside of his dome. Server only.
@@ -118,6 +123,9 @@ public final class BellMoves {
     private int tired;
     /** gametime a heavy move is his to use again, and each move's last use */
     private long heavyReadyAt = 300;
+    /** gametime this fight started (-1: not fighting), and how long he has had nobody to fight */
+    private long fightSince = -1;
+    private int calmFor;
     private int lastMove;
     /** the spore clouds drifting after what he's hunting */
     private final List<AreaEffectCloud> clouds = new ArrayList<>();
@@ -157,7 +165,36 @@ public final class BellMoves {
     public int treesInside() { int n = 0; for (Inside i : inside) if (i.tree != null) n++; return n; }
     public boolean isTired() { return tired > 0; }
     /** for the tests and the book: the heavy moves are his to use now */
-    public void restNow() { tired = 0; h.setTired(false); heavyReadyAt = 0; cooldown = 0; }
+    public void restNow() { tired = 0; h.setTired(false); heavyReadyAt = 0; cooldown = 0; fightSince = 0; }
+
+    /**
+     * Over half health he keeps his heavy moves for later: none until heavyDelaySeconds into a fight. Under half,
+     * only the usual wait after the last one.
+     */
+    public boolean heavyWaitOver() {
+        if (h.healthNow() <= h.healthMax() * 0.5f) return true;
+        long wait = Math.max(0, HollowbellConfig.V.heavyDelaySeconds) * 20L;
+        return fightSince >= 0 && h.level().getGameTime() - fightSince >= wait;
+    }
+
+    /** the fight clock: it starts when he goes for something and stops after half a minute with nobody */
+    private void fightClock() {
+        if (h.getTarget() != null) {
+            if (fightSince < 0) fightSince = h.level().getGameTime();
+            calmFor = 0;
+        } else if (fightSince >= 0 && ++calmFor > 600) fightSince = -1;
+    }
+
+    /** what's left of his waits, to save: until a heavy move, and how far into a fight he is (-1 none) */
+    long heavyIn() { return Math.max(0, heavyReadyAt - h.level().getGameTime()); }
+    long fightFor() { return fightSince < 0 ? -1 : h.level().getGameTime() - fightSince; }
+
+    /** loaded: the waits picked up again from now */
+    void resumeWaits(long heavyIn, long fightFor) {
+        long now = h.level().getGameTime();
+        heavyReadyAt = now + heavyIn;
+        fightSince = fightFor < 0 ? -1 : now - fightFor;
+    }
 
     /** he stays where he is for this (he still rises and sinks) */
     public boolean holdsStill() {
@@ -304,7 +341,7 @@ public final class BellMoves {
             case Moves.SWEEP -> { if (at == null && forcedSpot == null) aim = new Vector3f(1, 0, 0); }
             case Moves.SKY_DIVE -> {
                 double top = Math.max(h.getY(), at != null ? at.getY() : h.getY()) + 70 * s + 30;
-                diveTop = Math.min(top, h.level().getMaxBuildHeight() - (rig.crownY + 20) * s);
+                diveTop = Math.min(top, NoWait.ceiling(h.level()) - (rig.crownY + 20) * s);
                 diveOver = 0f;
             }
             case Moves.SUN_LANCES -> { for (int i = 0; i < 5; i++) lance[i] = null; }
@@ -361,7 +398,7 @@ public final class BellMoves {
     public void stopNow() { if (move != Moves.NONE) end(); }
 
     /** for the operator's commands: every wait between moves let off */
-    public void clearCooldowns() { cooldown = 0; heavyReadyAt = 0; tired = 0; h.setTired(false); }
+    public void clearCooldowns() { cooldown = 0; heavyReadyAt = 0; tired = 0; h.setTired(false); fightSince = 0; }
 
     private void end() {
         int was = move;
@@ -390,6 +427,7 @@ public final class BellMoves {
 
     public void tick() {
         giantAt.clear();
+        fightClock();
         insideTick();
         cloudsTick();
         if (tired > 0 && --tired == 0) h.setTired(false);
@@ -451,7 +489,7 @@ public final class BellMoves {
         boolean flying = tg instanceof Player p && (p.isFallFlying() || p.getAbilities().flying)
                 || tg.getY() - h.groundAt(tg.getX(), tg.getZ()) > 8 + 20 * s;
         int crowd = near(h.bodyBox().inflate(bell)).size();
-        boolean heavy = h.level().getGameTime() >= heavyReadyAt && !h.sunk();
+        boolean heavy = h.level().getGameTime() >= heavyReadyAt && heavyWaitOver() && !h.sunk();
         boolean night = h.level().getSkyDarken() > 6;
         List<int[]> opts = new ArrayList<>();
         // light
@@ -1320,6 +1358,11 @@ public final class BellMoves {
         Vec3 at = intoFrom.lerp(to, k * k * (3 - 2 * k));
         if (grabSeat != null) { grabSeat.follow(Seat.FREE, 0); grabSeat.moveTo(at.x, at.y, at.z); }
         if (grabbedTree != null) placeTree(grabbedTree, at);
+        if (k >= 1f && grabbed == null && grabbedTree == null) {
+            // let go of on the way up (the book's "let go"): nothing to keep in there
+            end();
+            return;
+        }
         if (k >= 1f) {
             Inside in = new Inside();
             in.e = grabbed; in.seat = grabSeat; in.tree = grabbedTree; in.slot = slot;
@@ -1667,7 +1710,7 @@ public final class BellMoves {
         if (grabbed != null) {
             LivingEntity e = grabbed;
             dropSeat(grabSeat);
-            e.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 100, 0));
+            h.floatDown(e);
             if (e instanceof ServerPlayer sp && fall) sp.displayClientMessage(Component.translatable("message.hollowbell.dropped"), true);
         }
         if (grabbedTree != null) dropTree(grabbedTree);
@@ -1699,7 +1742,7 @@ public final class BellMoves {
     private void letGoOfWrap() {
         if (wrapped != null) {
             dropSeat(wrapSeat);
-            wrapped.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 60, 0));
+            h.floatDown(wrapped);
         }
         wrapped = null; wrapSeat = null;
     }
@@ -1799,6 +1842,8 @@ public final class BellMoves {
             } else if (in.tree != null && in.age > 20 * 60 * 3) {
                 dropTree(in.tree);
                 it.remove();
+            } else if (in.tree == null) {
+                it.remove();
             }
         }
     }
@@ -1818,20 +1863,20 @@ public final class BellMoves {
             Inside in = it.next();
             if (in.e instanceof Player p) {
                 dropSeat(in.seat);
-                p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 300, 0));
+                h.floatDown(p);
                 if (p instanceof ServerPlayer sp) sp.displayClientMessage(Component.translatable("message.hollowbell.spat_out"), true);
                 it.remove();
             }
         }
     }
 
-    /** everything he holds goes, in or out. Trees drop as their blocks when he dies */
-    public void letGoOfEverything(boolean dying) {
+    /** everything he holds goes, in or out. Trees drop as their blocks, or (put away with his chunk) just go */
+    public void letGoOfEverything(boolean dropTrees) {
         letGoOfGrab(false);
         letGoOfWrap();
         for (Inside in : inside) {
-            if (in.e != null) { dropSeat(in.seat); in.e.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 300, 0)); }
-            if (in.tree != null) { if (dying) dropTree(in.tree); else removeTree(in.tree); }
+            if (in.e != null) { dropSeat(in.seat); h.floatDown(in.e); }
+            if (in.tree != null) { if (dropTrees) dropTree(in.tree); else removeTree(in.tree); }
         }
         inside.clear();
     }
@@ -1903,7 +1948,8 @@ public final class BellMoves {
             Vector3f off = new Vector3f(p.getX() - base.getX() - 0.5f, p.getY() - base.getY(), p.getZ() - base.getZ() - 0.5f).mul(tr.size);
             d.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(tr.size), new Quaternionf()));
             d.setPos(at.x + off.x, at.y + off.y, at.z + off.z);
-            d.addTag("hollowbell_tree");
+            d.addTag(TREE_TAG);
+            LIVE_TREES.add(d);
             l.addFreshEntity(d);
             tr.blocks.add(d); tr.offsets.add(off); tr.states.add(st);
             l.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
@@ -1937,6 +1983,22 @@ public final class BellMoves {
             d.discard();
         }
         tr.blocks.clear();
+    }
+
+    static final String TREE_TAG = "hollowbell_tree";
+    /** the blocks of the trees held right now; one loaded from a save has nobody holding it any more */
+    private static final Set<Display.BlockDisplay> LIVE_TREES = Collections.newSetFromMap(new WeakHashMap<>());
+
+    /** a block of a tree he held, loaded with its chunk after he was put away: it drops where it hangs */
+    public static void loadedTree(Entity e, ServerLevel l) {
+        if (!(e instanceof Display.BlockDisplay d) || !d.getTags().contains(TREE_TAG) || LIVE_TREES.contains(d)) return;
+        BlockState st = d.getBlockState();
+        // (not while the chunk is still being put in place)
+        l.getServer().tell(new TickTask(l.getServer().getTickCount(), () -> {
+            if (d.isRemoved()) return;
+            if (st.is(BlockTags.LOGS)) l.addFreshEntity(new ItemEntity(l, d.getX(), d.getY(), d.getZ(), new ItemStack(st.getBlock().asItem())));
+            d.discard();
+        }));
     }
 
     private void removeTree(Tree tr) { for (Display.BlockDisplay d : tr.blocks) d.discard(); tr.blocks.clear(); }

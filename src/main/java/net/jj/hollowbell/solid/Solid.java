@@ -1,12 +1,12 @@
 package net.jj.hollowbell.solid;
 
+import net.jj.hollowbell.world.NoWait;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -65,13 +65,14 @@ public final class Solid {
 
     /** what never bumps into anyone's parts */
     static boolean ignoresAll(Entity e) {
-        return e.noPhysics || e instanceof Projectile || e.isSpectator() || e.isPassenger() || e instanceof SolidBody;
+        // (a giant never bumps into another; a body that moves among them, like one of the Swarmforge's big robots, does)
+        return e.noPhysics || e instanceof Projectile || e.isSpectator() || e.isPassenger() || e instanceof SolidBody sb && !sb.solidBumpsBodies();
     }
 
     static boolean live(SolidBody b, Entity e) {
         Entity s = b.solidSelf();
         if (s.isRemoved()) { untrack(b); return false; }
-        return s.level() == e.level() && b.solidReady() && !b.solidIgnores(e);
+        return s != e && s.level() == e.level() && b.solidReady() && !b.solidIgnores(e);
     }
 
     // ------------------------------------------------------------------ his frames this tick
@@ -516,6 +517,9 @@ public final class Solid {
             Vec3 d = toWorld(fc, cd.frame, cd.rest).subtract(cd.was);
             if (d.lengthSqr() > 64) continue;
             Vec3 to = carriedTo(b, new Vec3(r.getX() + d.x, r.getY() + d.y, r.getZ() + d.z));
+            // never into the ground or a wall: where he goes under, it's left standing on top
+            AABB moved = r.getBoundingBox().move(to.x - r.getX(), to.y - r.getY(), to.z - r.getZ());
+            if (!level.noCollision(r, moved.deflate(0.01))) continue;
             r.setPos(to.x, to.y, to.z);
             float dy = Mth.wrapDegrees(yawOf(fc.toWorld[cd.frame]) - cd.yaw);
             if (Math.abs(dy) < 45f) {
@@ -528,11 +532,17 @@ public final class Solid {
         for (Entity e : level.getEntities(s, all, x -> !ignoresAll(x) && !b.solidIgnores(x) && !(x instanceof SolidBody))) {
             if (e instanceof Player p) {
                 if (p.isCreative() && p.getAbilities().flying) continue;
-                // their own game moves them out at once; this is for when it didn't
-                if (depthIn(b, e.getBoundingBox(), 0.3, null, true) > 0.3) {
+                // their own game moves them out at once; this is for when it didn't. (Measured on their whole box, as
+                // their game does: a box shrunk to a sliver looks at other columns than the ones they're in, and by
+                // his hollow dome it read nothing now and then, which started the count again every few ticks.)
+                double dp = depthIn(b, e.getBoundingBox(), 0.08, null, true);
+                if (dp > 0.3) {
                     int n = c.stuck.merge(e.getId(), 1, Integer::sum);
-                    if (n >= 10) { c.stuck.remove(e.getId()); if (unstick(b, e, 0.3)) unstuckServer++; }
-                } else c.stuck.remove(e.getId());
+                    if (n >= 10) {
+                        c.stuck.remove(e.getId());
+                        if (unstick(b, e, 0.08)) unstuckServer++;
+                    }
+                } else if (dp <= 0.02) c.stuck.remove(e.getId());
                 continue;
             }
             // (one look up the columns under it does for all three: is it in him, in his soft parts, on him)
@@ -617,8 +627,7 @@ public final class Solid {
      * loaded: hasChunk says yes for land still being made, and getHeight there stops the server until it is made.
      */
     public static double groundNow(net.minecraft.world.level.Level l, double x, double z, double or) {
-        int gx = Mth.floor(x), gz = Mth.floor(z);
-        var c = l.getChunkSource().getChunkNow(gx >> 4, gz >> 4);
-        return c == null ? or : c.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, gx & 15, gz & 15) + 1;
+        int y = NoWait.standY(l, Mth.floor(x), Mth.floor(z), Mth.floor(or));
+        return y == NoWait.NOT_YET ? or : y;
     }
 }

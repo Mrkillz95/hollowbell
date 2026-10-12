@@ -113,10 +113,11 @@ public final class BigFxClient {
         float a = Mth.lerp(partial, lastShake, shake);
         if (a <= 0.002f) return null;
         Minecraft mc = Minecraft.getInstance();
-        float t = (mc.level == null ? 0 : mc.level.getGameTime()) + partial;
-        float x = (Mth.sin(t * 2.9f) * 0.6f + Mth.sin(t * 7.7f) * 0.4f) * a * 0.32f;
-        float y = (Mth.sin(t * 4.1f + 1.3f) * 0.6f + Mth.sin(t * 9.3f) * 0.4f) * a * 0.26f;
-        float z = Mth.sin(t * 5.3f + 2.2f) * a * 0.12f;
+        // (kept small: the game's sine table stops turning once its angle passes about 200000)
+        double t = (mc.level == null ? 0L : mc.level.getGameTime() % 24000L) + partial;
+        float x = (float) (Math.sin(t * 2.9) * 0.6 + Math.sin(t * 7.7) * 0.4) * a * 0.32f;
+        float y = (float) (Math.sin(t * 4.1 + 1.3) * 0.6 + Math.sin(t * 9.3) * 0.4) * a * 0.26f;
+        float z = (float) Math.sin(t * 5.3 + 2.2) * a * 0.12f;
         return new float[]{x, y, z};
     }
 

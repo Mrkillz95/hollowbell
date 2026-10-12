@@ -53,6 +53,12 @@ public interface SolidBody {
      */
     default int solidCarryBone(int bone) { return bone; }
 
+    /**
+     * Whether this one, moving, bumps into other bodies (a robot walking into the Swarmforge does; a giant walking into
+     * another giant doesn't).
+     */
+    default boolean solidBumpsBodies() { return false; }
+
     /** a bump this high over your feet (world blocks) you walk up onto without jumping */
     default double solidStep() { return 1.3; }
 }

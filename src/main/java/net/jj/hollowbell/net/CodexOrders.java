@@ -287,7 +287,7 @@ public final class CodexOrders {
                 say(p, "codex_goto", net.minecraft.util.Mth.floor(pay.x()), net.minecraft.util.Mth.floor(pay.z()));
             }
             case CodexPayload.FORGIVE -> { m.forgiveAll(); say(p, "codex_forgive"); }
-            case CodexPayload.LET_GO -> { m.moves().letGoOfEverything(false); say(p, "codex_let_go"); }
+            case CodexPayload.LET_GO -> { m.moves().letGoOfEverything(true); say(p, "codex_let_go"); }
             case CodexPayload.COME -> { m.clearHitList(); m.orderTo(p.position(), p); say(p, "codex_come", (int) Math.sqrt(m.distanceToSqr(p))); }
             case CodexPayload.GO_THERE -> {
                 HitResult h = looking(p, 320);

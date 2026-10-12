@@ -2,6 +2,7 @@ package net.jj.hollowbell;
 
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.world.Away;
+import net.jj.hollowbell.world.FarOrders;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -22,7 +23,7 @@ public final class GiantsBridge {
     private static final String WHO = "Hollowbell: ";
 
     /**
-     * action: natural|limit|fight|meetings|meet (the other giant's UUID)|away|volume|shake|bossbar|griefing|where|list|kill|remove|status|goto ("x z")|tp (player UUID)|paint ("radius full|biome playerUUID").
+     * action: natural|limit|fight|meetings|meet (the other giant's UUID)|away|volume|shake|bossbar|griefing|heavydelay|where|list|kill|remove|status|goto ("x z")|tp (player UUID)|paint ("radius full|biome playerUUID").
      * arg: the value as text, or "". Returns lines to show the caller (prefixed with the boss's name, plain
      * words); empty list = nothing; null = unknown action.
      */
@@ -99,6 +100,13 @@ public final class GiantsBridge {
                 }
                 out.add(WHO + "boss bars show " + (V.bossBarRange > 0 ? V.bossBarRange + " blocks off." : "as far as his size says."));
             }
+            case "heavydelay" -> {
+                if (!a.isEmpty()) {
+                    try { V.heavyDelaySeconds = Mth.clamp(Integer.parseInt(a), 0, 600); HollowbellConfig.save(); }
+                    catch (NumberFormatException e) { out.add(WHO + "the wait has to be a number of seconds from 0 to 600."); return out; }
+                }
+                out.add(WHO + "heavy moves wait " + V.heavyDelaySeconds + " seconds into a fight.");
+            }
             case "griefing" -> {
                 Boolean on = onOff(a);
                 if (on != null) { V.griefing = on; HollowbellConfig.save(); }
@@ -137,7 +145,7 @@ public final class GiantsBridge {
                 out.add(WHO + (n == 0 ? "none to kill." : "killed " + n + "."));
             }
             case "remove" -> {
-                int n = Away.get(server).count();
+                int n = Away.get(server).count() + FarOrders.removeLying(server);
                 WorldOne w = WorldOne.get(server);
                 for (Away.Rec r : Away.get(server).all()) w.removed(server.overworld(), r.id);
                 Away.get(server).forgetAll();

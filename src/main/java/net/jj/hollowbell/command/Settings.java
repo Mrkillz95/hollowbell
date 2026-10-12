@@ -40,6 +40,13 @@ public final class Settings {
         try { return String.valueOf(f.get(HollowbellConfig.V)); } catch (IllegalAccessException e) { return null; }
     }
 
+    /** a number, never NaN or infinity */
+    private static double finite(String v) {
+        double d = Double.parseDouble(v);
+        if (!Double.isFinite(d)) throw new NumberFormatException(v);
+        return d;
+    }
+
     /** sets it; returns null when it worked, or what was wrong */
     public static String set(String key, String value) {
         Field f = field(key);
@@ -55,8 +62,8 @@ public final class Settings {
                 };
                 f.setBoolean(HollowbellConfig.V, b);
             } else if (t == int.class) f.setInt(HollowbellConfig.V, Integer.parseInt(v));
-            else if (t == float.class) f.setFloat(HollowbellConfig.V, Float.parseFloat(v));
-            else if (t == double.class) f.setDouble(HollowbellConfig.V, Double.parseDouble(v));
+            else if (t == float.class) f.setFloat(HollowbellConfig.V, (float) finite(v));
+            else if (t == double.class) f.setDouble(HollowbellConfig.V, finite(v));
             else return "that one can't be set from a command";
         } catch (NumberFormatException e) {
             return key + " needs a number";

@@ -30,6 +30,11 @@ public final class HollowbellConfig {
         public float giantArmor = 0.7f;
         /** He picks fights with JJ's other bosses ("/hollowbell giants on"). Off = he leaves them alone. */
         public boolean fightGiants = true;
+        /**
+         * Over half health, no heavy move until this many seconds into a fight (0 = at once, up to 600). Under half,
+         * only the usual wait after the last one ("/hollowbell heavydelay").
+         */
+        public int heavyDelaySeconds = 60;
         /** When he wanders near another of JJ's giants he fights it or keeps away from it (the same table in all five mods). */
         public boolean meetings = true;
         /** How far off he notices another giant, in blocks at full size (times his size, kept between 48 and 320). */
@@ -183,5 +188,25 @@ public final class HollowbellConfig {
         v.meetRange = Math.max(16, Math.min(1000, v.meetRange));
         v.yieldAt = Math.max(0f, Math.min(0.9f, v.yieldAt));
         v.meetCooldown = Math.max(0, Math.min(1440, v.meetCooldown));
+        v.heavyDelaySeconds = Math.max(0, Math.min(600, v.heavyDelaySeconds));
+        v.health = clamp(v.health, 10f, 1_000_000f, 6000f);
+        v.damageMultiplier = clamp(v.damageMultiplier, 0f, 100f, 1f);
+        v.mobDamage = clamp(v.mobDamage, 0f, 100f, 2.5f);
+        v.giantArmor = clamp(v.giantArmor, 0f, 10f, 0.7f);
+        v.spawnEggScale = clamp(v.spawnEggScale, 0.03f, 2f, 1f);
+        v.smallEggScale = clamp(v.smallEggScale, 0.03f, 2f, 0.2f);
+        v.worldScale = clamp(v.worldScale, 0.03f, 2f, 1f);
+        v.passiveHealPerMinute = clamp(v.passiveHealPerMinute, 0f, 100f, 1f);
+        v.podPopShare = clamp(v.podPopShare, 0f, 1f, 0.01f);
+        v.podsToSink = clamp(v.podsToSink, 0f, 1f, 0.34f);
+        v.grudgeRate = clamp(v.grudgeRate, 0f, 100f, 1f);
+        v.podRegrowSeconds = Math.max(0, v.podRegrowSeconds);
+        v.sunkSeconds = Math.max(0, v.sunkSeconds);
+        v.shedCount = Math.max(0, v.shedCount);
+    }
+
+    /** kept within lo..hi; a value that isn't a number at all goes back to the default */
+    private static float clamp(float x, float lo, float hi, float def) {
+        return Float.isNaN(x) ? def : Math.max(lo, Math.min(hi, x));
     }
 }
