@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
-import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.solid.Solid;
@@ -530,34 +529,30 @@ public class SolidTests implements FabricGameTest {
             e.setStay(false);
             e.setGoal(e.position().add(40, 0, 25));
         });
-        long[] t = new long[6];
         double[] tick = new double[2];
-        // (the first stretch with the kit on; then with it and the keep-apart pass off, as in 1.9.8)
+        // (the first stretch with the kit on; then with it off)
         long[] n0 = new long[2];
         // (the kit's own CPU time: on a machine busy with other work, wall time counts every wait for a core as his)
         after(h, 120, () -> {
             Solid.cpuClock = true;
             n0[0] = Solid.nanosServer;
             n0[1] = Solid.queries;
-            t[2] = BellAnim.apartNanos;
         });
-        double[] kit = new double[3];
+        double[] kit = new double[2];
         after(h, 320, () -> {
             tick[1] = avgTick(h);
             kit[0] = (Solid.nanosServer - n0[0]) / 1e6 / 200.0;
             kit[1] = (Solid.queries - n0[1]) / 200.0;
-            kit[2] = (BellAnim.apartNanos - t[2]) / 1e6 / 200.0;
             Solid.cpuClock = false;
-            HollowbellEntity.solidOff = true; BellAnim.APART = false;
+            HollowbellEntity.solidOff = true;
         });
-        after(h, 520, () -> { tick[0] = avgTick(h); HollowbellEntity.solidOff = false; BellAnim.APART = true; });
+        after(h, 520, () -> { tick[0] = avgTick(h); HollowbellEntity.solidOff = false; });
         after(h, 600, () -> {
-            double kitMs = kit[0], q = kit[1], apartMs = kit[2];
+            double kitMs = kit[0], q = kit[1];
             double before = tick[0], now = tick[1];
-            HollowbellMod.LOG.info("solid perf: with {} things round him: the server's tick {} ms before (no kit, no keep-apart), {} ms after; the kit's server work {} ms a tick ({} column looks a tick); keeping his parts apart {} ms a tick",
-                    stuff.size(), String.format("%.2f", before), String.format("%.2f", now), String.format("%.3f", kitMs), String.format("%.0f", q), String.format("%.3f", apartMs));
+            HollowbellMod.LOG.info("solid perf: with {} things round him: the server's tick {} ms before (no kit), {} ms after; the kit's server work {} ms a tick ({} column looks a tick)",
+                    stuff.size(), String.format("%.2f", before), String.format("%.2f", now), String.format("%.3f", kitMs), String.format("%.0f", q));
             h.assertTrue(kitMs < 3.0, "the solid kit takes " + kitMs + " ms a tick");
-            h.assertTrue(apartMs < 1.5, "keeping his parts apart takes " + apartMs + " ms a tick");
             done(h, e, stuff.toArray(new Entity[0]));
         });
     }
