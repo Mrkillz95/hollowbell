@@ -4,6 +4,10 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.client.render.BellMeshes;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.rig.BellPieces;
+import net.jj.hollowbell.solid.Solid;
+import net.jj.hollowbell.solid.SolidCarry;
+import net.jj.hollowbell.solid.client.SolidClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -16,6 +20,7 @@ import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import java.nio.file.Files;
@@ -182,11 +187,14 @@ public final class AutoTest {
             // ridelog: is the player being carried on him, how far a frame set them from where the tick had them, how
             // often they were moved out of him
             if (s.equals("ridelog")) {
-                var c = net.jj.hollowbell.solid.client.SolidClient.CARRY;
-                HollowbellMod.LOG.info("autotest ridelog: riding {} frame {} air {} at {} frame fix at most {} unstuck {} by server {} soft pushes {} onGround {}", c.riding(),
-                        c.on == null ? "-" : ((HollowbellEntity) c.on).rig.boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[c.on.solidShape().bone[c.frame]]], c.air,
-                        mc.player.position(), String.format("%.3f", net.jj.hollowbell.solid.client.SolidClient.frameFix), net.jj.hollowbell.solid.client.SolidClient.unstuck, net.jj.hollowbell.solid.Solid.unstuckServer, net.jj.hollowbell.solid.client.SolidClient.softPushed, mc.player.onGround());
-                net.jj.hollowbell.solid.client.SolidClient.frameFix = 0;
+                SolidCarry c = SolidClient.CARRY;
+                String on = c.on == null ? "-"
+                        : ((HollowbellEntity) c.on).rig.boneNames[BellPieces.get().bone[c.on.solidShape().bone[c.frame]]];
+                HollowbellMod.LOG.info("autotest ridelog: riding {} frame {} air {} at {} frame fix at most {}"
+                                + " unstuck {} by server {} soft pushes {} onGround {}",
+                        c.riding(), on, c.air, mc.player.position(), String.format("%.3f", SolidClient.frameFix),
+                        SolidClient.unstuck, Solid.unstuckServer, SolidClient.softPushed, mc.player.onGround());
+                SolidClient.frameFix = 0;
                 continue;
             }
             if (s.equals("quit")) { HollowbellMod.LOG.info("autotest done"); mc.stop(); return; }
@@ -194,41 +202,40 @@ public final class AutoTest {
     }
 
     private static void standOn(Minecraft mc, String part) {
-        // (the spot is found on your own game, as you see him: his arms, strands and pods swing a little differently
-        // there than on the server, and you stand on what you see)
         MinecraftServer srv = mc.getSingleplayerServer();
         if (srv == null || mc.player == null || mc.level == null) return;
-        {
-            var l = mc.level.getEntitiesOfClass(HollowbellEntity.class, mc.player.getBoundingBox().inflate(3000));
-            if (l.isEmpty()) return;
-            HollowbellEntity m = l.get(0);
-            var rig = m.rig;
-            var pc = net.jj.hollowbell.rig.BellPieces.get();
-            int[] slices = switch (part) {
-                case "crown" -> new int[]{pc.first[rig.crownBone]};
-                case "side" -> new int[]{pc.first[rig.index.get("bell_6")], pc.first[rig.index.get("bell_7")]};
-                case "spot" -> new int[]{pc.first[rig.index.get("spot_0")], pc.first[rig.index.get("spot_1")]};
-                case "pod" -> new int[]{pc.first[rig.pods[11].bone()], pc.first[rig.pods[0].bone()]};
-                case "arm" -> new int[]{pc.first[rig.arms[2].bones()[0]] + 2, pc.first[rig.arms[2].bones()[0]] + 4};
-                default -> new int[]{pc.first[rig.index.get("bell_2")], pc.first[rig.index.get("bell_3")]};
-            };
-            net.minecraft.world.phys.Vec3 at = null;
-            for (int b : slices) { at = m.topOfSlice(b); if (at != null) break; }
-            if (at == null) { HollowbellMod.LOG.warn("autotest standon {}: no spot", part); return; }
-            final net.minecraft.world.phys.Vec3 spot = at;
-            var look = m.position().add(0, 150 * m.bellScale(), 0).subtract(at);
-            float yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
-            final float fy = yaw;
-            srv.execute(() -> {
-                if (srv.getPlayerList().getPlayers().isEmpty()) return;
-                var pl = srv.getPlayerList().getPlayers().get(0);
-                pl.getAbilities().flying = false;
-                pl.onUpdateAbilities();
-                pl.teleportTo(pl.serverLevel(), spot.x, spot.y + 0.05, spot.z, fy + 150f, 35f);
-                pl.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-            });
-            HollowbellMod.LOG.info("autotest standon {}: at {}", part, at);
+        // the spot is found as this game draws him: his pods and arms swing a little differently on the server
+        var l = mc.level.getEntitiesOfClass(HollowbellEntity.class, mc.player.getBoundingBox().inflate(3000));
+        if (l.isEmpty()) return;
+        HollowbellEntity m = l.get(0);
+        var rig = m.rig;
+        var pc = BellPieces.get();
+        int[] slices = switch (part) {
+            case "crown" -> new int[]{pc.first[rig.crownBone]};
+            case "side" -> new int[]{pc.first[rig.index.get("bell_6")], pc.first[rig.index.get("bell_7")]};
+            case "spot" -> new int[]{pc.first[rig.index.get("spot_0")], pc.first[rig.index.get("spot_1")]};
+            case "pod" -> new int[]{pc.first[rig.pods[11].bone()], pc.first[rig.pods[0].bone()]};
+            case "arm" -> new int[]{pc.first[rig.arms[2].bones()[0]] + 2, pc.first[rig.arms[2].bones()[0]] + 4};
+            default -> new int[]{pc.first[rig.index.get("bell_2")], pc.first[rig.index.get("bell_3")]};
+        };
+        Vec3 at = null;
+        for (int b : slices) {
+            at = m.topOfSlice(b);
+            if (at != null) break;
         }
+        if (at == null) { HollowbellMod.LOG.warn("autotest standon {}: no spot", part); return; }
+        Vec3 spot = at;
+        Vec3 look = m.position().add(0, 150 * m.bellScale(), 0).subtract(at);
+        float yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z)) + 150f;
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var pl = srv.getPlayerList().getPlayers().get(0);
+            pl.getAbilities().flying = false;
+            pl.onUpdateAbilities();
+            pl.teleportTo(pl.serverLevel(), spot.x, spot.y + 0.05, spot.z, yaw, 35f);
+            pl.setDeltaMovement(Vec3.ZERO);
+        });
+        HollowbellMod.LOG.info("autotest standon {}: at {}", part, at);
     }
 
     private static void view(Minecraft mc, String args) {
