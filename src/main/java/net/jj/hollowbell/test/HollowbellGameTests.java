@@ -49,6 +49,7 @@ public class HollowbellGameTests implements FabricGameTest {
             h.getLevel().setChunkForced(cx, cz, true);
             h.getLevel().getChunk(cx, cz);
         }
+        runsEntities(h, x, z, rc - 2);
         int y = h.getLevel().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(h.getLevel());
         e.moveTo(x + 0.5, y, z + 0.5, 0f, 0f);
@@ -58,6 +59,26 @@ public class HollowbellGameTests implements FabricGameTest {
         e.skipArrival();
         h.getLevel().addFreshEntity(e);
         return e;
+    }
+
+    /**
+     * Waits until the forced land round x z (r chunks each way) runs its entities, by looking at the land itself, for
+     * at most half a minute of real time. A server that is behind finishes making forced land ready only in its
+     * spare time between ticks, and a loaded machine may give it none for a long while: what a test puts there then
+     * stands still, and a test that counts ticks from there fails for no fault of his. This pumps the same work the
+     * game's own wait for a chunk does.
+     */
+    static void runsEntities(GameTestHelper h, int x, int z, int r) {
+        var l = h.getLevel();
+        long until = System.nanoTime() + 30_000_000_000L;
+        for (int cx = (x >> 4) - Math.max(0, r); cx <= (x >> 4) + Math.max(0, r); cx++) {
+            for (int cz = (z >> 4) - Math.max(0, r); cz <= (z >> 4) + Math.max(0, r); cz++) {
+                BlockPos p = new BlockPos(cx << 4, 0, cz << 4);
+                while (!l.isPositionEntityTicking(p) && System.nanoTime() < until) {
+                    if (!l.getChunkSource().pollTask()) java.util.concurrent.locks.LockSupport.parkNanos(1_000_000L);
+                }
+            }
+        }
     }
 
     static void release(GameTestHelper h, HollowbellEntity e) {
@@ -413,6 +434,7 @@ public class HollowbellGameTests implements FabricGameTest {
         BlockPos o = h.absolutePos(BlockPos.ZERO);
         int x = o.getX() + 20000 + 95 * 400, z = o.getZ() + 5000;
         for (int cx = (x >> 4) - 3; cx <= (x >> 4) + 3; cx++) for (int cz = (z >> 4) - 3; cz <= (z >> 4) + 3; cz++) { h.getLevel().setChunkForced(cx, cz, true); h.getLevel().getChunk(cx, cz); }
+        runsEntities(h, x, z, 1);
         int y = h.getLevel().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(h.getLevel());
         e.moveTo(x + 0.5, y, z + 0.5, 0f, 0f);
@@ -1491,6 +1513,7 @@ public class HollowbellGameTests implements FabricGameTest {
             h.getLevel().setChunkForced(cx, cz, true);
             h.getLevel().getChunk(cx, cz);
         }
+        runsEntities(h, x, z, n - 2);
     }
 
     private static void unforceAround(GameTestHelper h, int x, int z, int n) {
@@ -3885,6 +3908,7 @@ public class HollowbellGameTests implements FabricGameTest {
             h.getLevel().setChunkForced(cx, cz, true);
             h.getLevel().getChunk(cx, cz);
         }
+        runsEntities(h, x, z, 1);
         return new Vec3(x + 0.5, top(h, x, z) + 1, z + 0.5);
     }
 

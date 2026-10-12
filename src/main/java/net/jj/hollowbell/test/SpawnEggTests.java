@@ -29,6 +29,7 @@ public class SpawnEggTests implements FabricGameTest {
             h.getLevel().setChunkForced(cx, cz, true);
             h.getLevel().getChunk(cx, cz);
         }
+        HollowbellGameTests.runsEntities(h, x, z, rc - 2);
         return new BlockPos(x, h.getLevel().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
     }
 

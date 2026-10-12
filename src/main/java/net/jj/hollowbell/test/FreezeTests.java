@@ -12,6 +12,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+
 import static net.jj.hollowbell.test.HollowbellGameTests.*;
 
 /**
@@ -27,7 +30,7 @@ public class FreezeTests implements FabricGameTest {
         return new BlockPos(o.getX() + 900000 + slot * 4000, 64, o.getZ() - 700000);
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "freeze_ground")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100000, batch = "freeze_ground")
     public void hisGroundNeverWaitsForLand(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, 0.1f, HollowbellEntity.CALM, 391);
         ServerLevel l = h.getLevel();
@@ -36,26 +39,36 @@ public class FreezeTests implements FabricGameTest {
             NoWait.ask(l, far.getX(), far.getZ(), 2);
             h.assertTrue(!NoWait.loaded(l, far.getX(), far.getZ()), "that land was loaded already");
             double under = e.groundAt(e.getX(), e.getZ());                 // (loaded: the last ground he saw)
-            long t0 = System.nanoTime();
+            // (the server thread's own time: a busy machine adds its waits for a core to the wall clock; and had the
+            // call waited for the land instead, the land would be there right after it)
+            ThreadMXBean threads = ManagementFactory.getThreadMXBean();
+            long t0 = threads.getCurrentThreadCpuTime();
             double g = e.groundAt(far.getX() + 0.5, far.getZ() + 0.5);
-            long ms = (System.nanoTime() - t0) / 1_000_000;
+            long ms = (threads.getCurrentThreadCpuTime() - t0) / 1_000_000;
             h.assertTrue(Math.abs(g - under) < 1e-6, "the ground of land not made yet should be taken as the last he saw (" + under + "), not " + g);
             h.assertTrue(ms < 50, "asking the ground of land not made yet took " + ms + " ms");
+            h.assertTrue(!NoWait.loaded(l, far.getX(), far.getZ()), "asking the ground made the land there");
         });
         boolean[] done = {false};
-        for (int t = 20; t < 1150; t += 10) {
-            h.runAfterDelay(t, () -> {
-                if (done[0]) return;
-                NoWait.ask(l, far.getX(), far.getZ(), 2);
-                if (!NoWait.loaded(l, far.getX(), far.getZ())) return;
-                done[0] = true;
-                double g = e.groundAt(far.getX() + 0.5, far.getZ() + 0.5);
-                int real = l.getHeight(Heightmap.Types.MOTION_BLOCKING, far.getX(), far.getZ());
-                h.assertTrue(Math.abs(g - real) < 1e-6, "the ground of loaded land reads " + g + ", not " + real);
-                release(h, e);
-                h.succeed();
-            });
-        }
+        // (land is made in real time, and a busy server makes it only in its spare time: wait by the clock)
+        long[] until = {0};
+        h.onEachTick(() -> {
+            if (done[0] || h.getTick() < 20) return;
+            if (until[0] == 0) until[0] = System.currentTimeMillis() + 90_000;
+            if (h.getTick() % 10 == 0) NoWait.ask(l, far.getX(), far.getZ(), 2);
+            if (!NoWait.loaded(l, far.getX(), far.getZ())) {
+                // (the same work the game does while it waits for a chunk, so a server with no spare time gets there)
+                l.getChunkSource().pollTask();
+                if (System.currentTimeMillis() > until[0]) { done[0] = true; release(h, e); h.fail("the land asked for was never made"); }
+                return;
+            }
+            done[0] = true;
+            double g = e.groundAt(far.getX() + 0.5, far.getZ() + 0.5);
+            int real = l.getHeight(Heightmap.Types.MOTION_BLOCKING, far.getX(), far.getZ());
+            release(h, e);
+            h.assertTrue(Math.abs(g - real) < 1e-6, "the ground of loaded land reads " + g + ", not " + real);
+            h.succeed();
+        });
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100000, batch = "freeze_trip")
