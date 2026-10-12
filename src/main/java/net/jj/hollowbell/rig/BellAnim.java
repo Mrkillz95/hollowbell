@@ -5,6 +5,7 @@ import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import java.util.Arrays;
 
 /**
  * How Hollowbell moves, with weight. Run once a tick on both sides (the server for hits and for where the things he
@@ -232,6 +233,7 @@ public final class BellAnim {
             int m = ch.points() - 1;
             rig.anchor(st, ch, mBody, mAnchor);
             targets(ch, st, mAnchor, raw);
+            boolean pin = !ch.arm && pins(ch, st, raw);
             if (first) {
                 System.arraycopy(raw, 0, tg, 0, raw.length);
                 System.arraycopy(raw, 0, p, 0, raw.length);
@@ -255,6 +257,7 @@ public final class BellAnim {
             System.arraycopy(tg, 0, old, 0, raw.length);
             tg[0] = raw[0]; tg[1] = raw[1]; tg[2] = raw[2];
             for (int i = 3; i < raw.length; i += 3) {
+                if (pin && pinned[i / 3]) { tg[i] = raw[i]; tg[i + 1] = raw[i + 1]; tg[i + 2] = raw[i + 2]; continue; }
                 float rx = raw[i] - raw[i - 3], ry = raw[i + 1] - raw[i - 2], rz = raw[i + 2] - raw[i - 1];
                 float nx = old[i] - old[i - 3], ny = old[i + 1] - old[i - 2], nz = old[i + 2] - old[i - 1];
                 float ex = nx + (rx - nx) * ease, ey = ny + (ry - ny) * ease, ez = nz + (rz - nz) * ease;
@@ -278,6 +281,7 @@ public final class BellAnim {
             q[0] = tg[0]; q[1] = tg[1]; q[2] = tg[2];
             for (int i = 1; i <= m; i++) {
                 int o = 3 * i;
+                if (pin && pinned[i]) { p[o] = q[o] = tg[o]; p[o + 1] = q[o + 1] = tg[o + 1]; p[o + 2] = q[o + 2] = tg[o + 2]; continue; }
                 // he moved: the water holds the joint where it was
                 p[o] -= in.shiftX; p[o + 1] -= in.shiftY; p[o + 2] -= in.shiftZ;
                 q[o] -= in.shiftX; q[o + 1] -= in.shiftY; q[o + 2] -= in.shiftZ;
@@ -303,6 +307,7 @@ public final class BellAnim {
             float gy = groundAt[c];
             for (int i = 1; i <= m; i++) {
                 int o = 3 * i;
+                if (pin && pinned[i]) continue;
                 // held at its length from the joint above (the length the moment asks for)
                 float lx = tg[o] - tg[o - 3], ly = tg[o + 1] - tg[o - 2], lz = tg[o + 2] - tg[o - 1];
                 float len = (float) Math.sqrt(lx * lx + ly * ly + lz * lz);
@@ -405,6 +410,7 @@ public final class BellAnim {
                     }
                 }
             }
+            if (pin) between(p, tg, m);
             // the strand's own stiffness: each joint's swing is blended a little with its neighbours', which takes out
             // any quick wobble between joints and leaves the slow, heavy swing
             float[] vel = velScratch;
@@ -417,6 +423,7 @@ public final class BellAnim {
                     float nv = vel[o + a] * 0.72f + avg * 0.28f;
                     q[o + a] = p[o + a] - nv;
                 }
+                if (pin && pinned[i]) { q[o] = p[o]; q[o + 1] = p[o + 1]; q[o + 2] = p[o + 2]; }
             }
             // a strand carrying somebody up onto his crown is laid out along the way they go (see CarryPath)
             if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
@@ -428,6 +435,92 @@ public final class BellAnim {
             if (apart == null) apart = new BellApart(rig);
             apart.apply(st, st.chain, prev, held, mBody);
             apartNanos += Solid.clock() - t0;
+            for (int c = 0; c < nc; c++) if (rig.chains[c].followAt != null) carried(rig.chains[c], st, st.chain[c], prev[c]);
+        }
+    }
+
+    private final Matrix4f mCarry = new Matrix4f();
+    /**
+     * The free joints between two held ones (its root, or carried joints) laid so each piece keeps its length as near
+     * as it can, from both ends (hung only from the top, the piece above a carried joint was pulled out long when what
+     * carries it moved off). Held too far apart for that, they lie evenly on the line between.
+     */
+    private void between(float[] p, float[] tg, int m) {
+        int a = 0;
+        for (int b = 1; b <= m; b++) {
+            if (!pinned[b]) continue;
+            if (b - a > 1) lay(p, tg, a, b);
+            a = b;
+        }
+    }
+
+    private static void lay(float[] p, float[] tg, int a, int b) {
+        float total = 0f;
+        for (int j = a; j < b; j++) total += dist(tg, j, j + 1);
+        if (dist(p, a, b) >= total) {
+            float acc = 0f;
+            for (int j = a + 1; j < b; j++) {
+                acc += dist(tg, j - 1, j);
+                float f = total > 1e-4f ? acc / total : 0f;
+                for (int k = 0; k < 3; k++) p[3 * j + k] = p[3 * a + k] + (p[3 * b + k] - p[3 * a + k]) * f;
+            }
+            return;
+        }
+        for (int it = 0; it < 6; it++) {
+            for (int j = b - 1; j > a; j--) toward(p, j, j + 1, dist(tg, j, j + 1));
+            for (int j = a + 1; j < b; j++) toward(p, j, j - 1, dist(tg, j - 1, j));
+        }
+    }
+
+    /** joint j put at length len from joint k, along the way it lies from it now */
+    private static void toward(float[] p, int j, int k, float len) {
+        float dx = p[3 * j] - p[3 * k], dy = p[3 * j + 1] - p[3 * k + 1], dz = p[3 * j + 2] - p[3 * k + 2];
+        float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (d < 1e-5f) return;
+        float f = len / d;
+        p[3 * j] = p[3 * k] + dx * f; p[3 * j + 1] = p[3 * k + 1] + dy * f; p[3 * j + 2] = p[3 * k + 2] + dz * f;
+    }
+
+    /** per joint of the chain being worked out: is it carried (see pins) */
+    private final boolean[] pinned = new boolean[64];
+
+    /**
+     * The joints of a strand's carried pieces (see BellRig.follows) put where what carries them takes them, in the
+     * shape asked for, and the joints below each moved along with the one above them, so the rest of the strand is
+     * asked to hang on from there. Says whether any joint is carried.
+     */
+    private boolean pins(BellRig.Chain ch, BellState st, float[] raw) {
+        int[] at = ch.followAt;
+        float[] u = ch.followU;
+        Arrays.fill(pinned, false);
+        if (at == null || u == null || !BellRig.follows(ch, st)) return false;
+        float dx = 0f, dy = 0f, dz = 0f;
+        for (int j = 0; j < at.length; j++) {
+            int o = 3 * j;
+            if (at[j] >= 0) {
+                rig.carriedBy(st, at[j], u[j], mCarry).transformPosition(tv.set(ch.joints[j]));
+                dx = tv.x - raw[o]; dy = tv.y - raw[o + 1]; dz = tv.z - raw[o + 2];
+                pinned[j] = true;
+            }
+            raw[o] += dx; raw[o + 1] += dy; raw[o + 2] += dz;
+        }
+        return true;
+    }
+
+    /**
+     * A strand whose pieces are carried by an arm, a pod or another strand (see BellRig.follows): the joints of those
+     * pieces are put where what carries them takes them, so the rest of the strand hangs on from there.
+     */
+    private void carried(BellRig.Chain ch, BellState st, float[] p, float[] q) {
+        int[] at = ch.followAt;
+        float[] u = ch.followU;
+        if (at == null || u == null || !BellRig.follows(ch, st)) return;
+        for (int j = 0; j < at.length; j++) {
+            if (at[j] < 0) continue;
+            rig.carriedBy(st, at[j], u[j], mCarry).transformPosition(tv.set(ch.joints[j]));
+            int o = 3 * j;
+            p[o] = tv.x; p[o + 1] = tv.y; p[o + 2] = tv.z;
+            q[o] = tv.x; q[o + 1] = tv.y; q[o + 2] = tv.z;
         }
     }
 

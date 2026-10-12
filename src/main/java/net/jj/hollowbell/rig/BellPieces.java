@@ -27,6 +27,8 @@ public final class BellPieces {
     /** per slice: its bone, its chain (-1 none), and how far along its piece its middle is (0 top joint, 1 bottom) */
     public final int[] bone, chain;
     public final float[] u;
+    /** per slice of a carried strand piece: the spot along the arm's or strand's piece carrying it that it goes with */
+    private final float[] along;
     /** per bone: its first slice and how many; per bone, per block: which slice the block is in */
     public final int[] first, num;
     public final int[][] sliceOf;
@@ -78,6 +80,12 @@ public final class BellPieces {
                 bb[3] = Math.max(bb[3], x + 1); bb[4] = Math.max(bb[4], y + 1); bb[5] = Math.max(bb[5], z + 1);
             }
         }
+        along = new float[total];
+        for (int k = 0; k < total; k++) {
+            int c = chain[k];
+            float[] pu = c >= 0 ? rig.chains[c].pieceU : null;
+            if (pu != null) along[k] = pu[rig.seg[bone[k]]];
+        }
     }
 
     /** is the block of bone b at (x, y, z) in slice s (a bone not cut into slices is all one) */
@@ -95,6 +103,13 @@ public final class BellPieces {
         Quaternionf brot = rig.bodyRotation(st, new Quaternionf());
         for (int s = 0; s < count; s++) {
             int b = bone[s];
+            int ab = rig.carrier(st, b);
+            if (ab >= 0) {
+                int ac = rig.chainOf[ab];
+                if (ac < 0 || num[ab] == 1) out[s].set(bones[ab]);
+                else rig.frame(st, ab, along[s], rig.seg[ab] == 0 && rig.chains[ac].parentBone >= 0 ? hang[ac] : null, brot, out[s]);
+                continue;
+            }
             if (num[b] == 1) { out[s].set(bones[b]); continue; }
             int c = chain[s];
             rig.frame(st, b, u[s], rig.seg[b] == 0 && rig.chains[c].parentBone >= 0 ? hang[c] : null, brot, out[s]);
