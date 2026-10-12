@@ -69,7 +69,8 @@ public final class BellRig {
     public final int bellBone;
 
     public record ArmDef(int k, int[] bones, Vector3f[] joints, Vector3f tip, Vector3f centre, float angle) {}
-    public record StrandDef(int k, int[] bones, Vector3f[] joints, Vector3f bottom, float top, float low) {}
+    /** hidden: not drawn (a bit that hung low on an arm); the moves leave it alone */
+    public record StrandDef(int k, int[] bones, Vector3f[] joints, Vector3f bottom, float top, float low, boolean hidden) {}
     public record BlobDef(int k, int bone, Vector3f centre, float radius) {}
     public record BandDef(int bone, float top, float bottom) { public float mid() { return (top + bottom) * 0.5f; } }
     public record SectorDef(int bone, float angle) {}
@@ -146,7 +147,7 @@ public final class BellRig {
         for (int i = 0; i < strands.length; i++) {
             JsonObject o = a.get(i).getAsJsonObject();
             strands[i] = new StrandDef(i, ints(o.getAsJsonArray("bones")), vecs(o.getAsJsonArray("joints")), vec(o.getAsJsonArray("bottom")),
-                    o.get("top").getAsFloat(), o.get("low").getAsFloat());
+                    o.get("top").getAsFloat(), o.get("low").getAsFloat(), o.has("hidden") && o.get("hidden").getAsBoolean());
         }
         pods = blobs(j.getAsJsonArray("pods"));
         eggs = blobs(j.getAsJsonArray("eggs"));

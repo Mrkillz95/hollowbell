@@ -1046,10 +1046,8 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         else wy = gAvg + cruise;
         if (giantPlan != null && !down && !Double.isNaN(giantPlan[0])) wy = Math.max(wy, giantPlan[0]);
         wy = Math.max(wy, hardMin);
-        // (under the nether's roof he keeps all of him below it)
-        double top = level().dimensionType().hasCeiling() ? NoWait.ceiling(level()) - (rig.crownY + 4) * s
-                : level().getMaxBuildHeight() + 40 - (rig.crownY + 20) * s;
-        wy = Math.min(wy, Math.min(top, gC + 220 * s + 90));
+        // (no limit to how high he goes, but under the nether's roof he keeps all of him below it)
+        if (level().dimensionType().hasCeiling()) wy = Math.min(wy, NoWait.ceiling(level()) - (rig.crownY + 4) * s);
         if (!(rider != null) && !(stay)) wantY = wy;
 
         // ---- up and down
