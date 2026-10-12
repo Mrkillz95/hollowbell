@@ -1,5 +1,7 @@
 package net.jj.hollowbell.entity;
 
+import net.jj.hollowbell.Adv;
+
 import com.mojang.math.Transformation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -14,7 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
@@ -247,7 +249,7 @@ public final class BellMoves {
      */
     public boolean heavyWaitOver() {
         if (h.healthNow() <= h.healthMax() * 0.5f) return true;
-        long wait = Math.max(0, HollowbellConfig.V.heavyDelaySeconds) * 20L;
+        long wait = Math.max(0, BellConfig.V.heavyDelaySeconds) * 20L;
         return fightSince >= 0 && h.level().getGameTime() - fightSince >= wait;
     }
 
@@ -464,7 +466,7 @@ public final class BellMoves {
                 if (a < 0) return false;
             }
             case Moves.SHED -> {
-                if (h.eggsLeft() == 0 || HollowbellConfig.V.shedCount <= 0) return false;
+                if (h.eggsLeft() == 0 || BellConfig.V.shedCount <= 0) return false;
             }
             case Moves.EGG_RAIN -> {
                 if (h.eggsLeft() == 0) return false;
@@ -657,7 +659,7 @@ public final class BellMoves {
         if (h.asleep()) return; // asleep: nothing is started
         LivingEntity tg = h.getTarget();
         if (tg == null) {
-            if (HollowbellConfig.V.harvest && --harvestIn <= 0) {
+            if (BellConfig.V.harvest && --harvestIn <= 0) {
                 harvestIn = 500 + h.getRandom().nextInt(900);
                 if (h.variant() != HollowbellEntity.CALM || h.getRandom().nextInt(3) == 0) start(Moves.HARVEST, null);
             }
@@ -688,7 +690,7 @@ public final class BellMoves {
         if (d < bell * 2) opts.add(new int[] {Moves.SPORES, 2});
         if (d < bell * 0.8 && h.podsLeft() > 0) opts.add(new int[] {Moves.POD_BURST, 2});
         if (d < bell * 2 && h.eggsLeft() > 0) opts.add(new int[] {Moves.EGG_RAIN, 2});
-        if (d < h.senseRange() && h.eggsLeft() > 0 && HollowbellConfig.V.shedCount > 0 && bellingsNear() < 8)
+        if (d < h.senseRange() && h.eggsLeft() > 0 && BellConfig.V.shedCount > 0 && bellingsNear() < 8)
             opts.add(new int[] {Moves.SHED, 1});
         // heavy: rare, and more likely the more there are to hit
         if (heavy) {
@@ -1704,7 +1706,7 @@ public final class BellMoves {
     }
 
     private boolean griefing() {
-        return HollowbellConfig.V.griefing && level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
+        return BellConfig.V.griefing && level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
     }
 
     /** the ground cracks under the slam: grass and dirt go to coarse dirt, plants go */
@@ -1758,7 +1760,7 @@ public final class BellMoves {
 
     /** an instant kick of the camera, for a blow the kit's own shake (SLAM, SHOCKWAVE, SHAKE) doesn't cover */
     private void thump(Vec3 c, float k) {
-        if (!HollowbellConfig.V.screenShake) return;
+        if (!BellConfig.V.screenShake) return;
         for (ServerPlayer p : level().players()) {
             if (p.distanceToSqr(c) > Mth.square(200 * s() + 80)) continue;
             ServerPlayNetworking.send(p, new ThumpPayload(c.x, c.y, c.z, k * Math.min(1.5f, 1.2f * s())));
@@ -1841,7 +1843,7 @@ public final class BellMoves {
         if (t == into0) {
             if (grabbed != null && grabSeat != null) intoFrom = grabSeat.position();
             // everything goes in the dome, if it fits
-            if (!domeFits() || !HollowbellConfig.V.insideDome || inside.size() >= slotCount()) {
+            if (!domeFits() || !BellConfig.V.insideDome || inside.size() >= slotCount()) {
                 // too small (or not allowed) to take it in: a squeeze, and it's let go
                 if (grabbed != null) blow(grabbed, 12f, h.position(), 0, 0);
                 letGoOfGrab(true);
@@ -1872,7 +1874,7 @@ public final class BellMoves {
             inside.add(in);
             if (grabbed instanceof ServerPlayer sp) {
                 sp.displayClientMessage(Component.translatable("message.hollowbell.inside"), false);
-                HollowbellMod.award(sp, "inside");
+                Adv.grant(sp, "inside");
             }
             grabbed = null;
             grabSeat = null;
@@ -2742,7 +2744,7 @@ public final class BellMoves {
     }
 
     private void shed() {
-        int want = Math.max(0, HollowbellConfig.V.shedCount);
+        int want = Math.max(0, BellConfig.V.shedCount);
         List<Integer> left = new ArrayList<>();
         for (int i = 0; i < rig.eggs.length; i++) if (!h.state.eggGone[i]) left.add(i);
         Collections.shuffle(left, new Random(h.getRandom().nextLong()));

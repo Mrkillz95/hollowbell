@@ -6,7 +6,7 @@ import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 import java.util.Map;
 import java.util.TreeMap;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.Giants;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -64,9 +64,9 @@ public class GiantHullTests implements FabricGameTest {
         double[] worst = {0, 0}, least = {Double.MAX_VALUE};
         int[] in = {0, 0};
         boolean[] on = {false};
-        boolean meet = HollowbellConfig.V.meetings;
+        boolean meet = BellConfig.V.meetings;
         after(h, 5, () -> {
-            HollowbellConfig.V.meetings = false;
+            BellConfig.V.meetings = false;
             // the other one brought over beside him, at his height
             b.moveTo(a.getX() + 45, a.getY(), a.getZ(), b.getYRot(), 0f);
             a.setStay(true);
@@ -108,7 +108,7 @@ public class GiantHullTests implements FabricGameTest {
                     a.jjHull().length / 6,
                     b.jjHull().length / 6);
             HollowbellMod.LOG.info("Giant against giant (two of him): {}; inside what: {}", what, HIT);
-            HollowbellConfig.V.meetings = meet;
+            BellConfig.V.meetings = meet;
             h.assertTrue(worst[0] < 1.0 && worst[1] < 1.0, "they went into each other: " + what);
             h.assertTrue(in[0] + in[1] <= 2, "bits of one were inside the other's real body: " + what);
             h.assertTrue(least[0] < 3, "he never got up to the other one: " + what);
@@ -122,12 +122,12 @@ public class GiantHullTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "giant_hull_standin")
     public void heFightsAnotherModsGiantByItsBodyNotItsFeet(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, SZ, HollowbellEntity.CALM, 512);
-        boolean fight = HollowbellConfig.V.fightGiants;
+        boolean fight = BellConfig.V.fightGiants;
         Giant[] g = new Giant[1];
         double[] worst = {0}, nearest = {Double.MAX_VALUE};
         boolean[] on = {false};
         after(h, 20, () -> {
-            HollowbellConfig.V.fightGiants = true;
+            BellConfig.V.fightGiants = true;
             // a stand-in for another mod's giant without a hull of its own: a giant zombie, tagged as a giant
             g[0] = EntityType.GIANT.create(h.getLevel());
             Vec3 gp = new Vec3(e.getX() + 45, e.groundAt(e.getX() + 45, e.getZ()), e.getZ());
@@ -179,7 +179,7 @@ public class GiantHullTests implements FabricGameTest {
                     off < 1.0 && fromFeet > 2.0,
                     String.format(
                             "his blow aims %.2f off its body and %.2f from its feet: not at its body", off, fromFeet));
-            HollowbellConfig.V.fightGiants = fight;
+            BellConfig.V.fightGiants = fight;
             gg.discard();
             release(h, e);
             h.succeed();

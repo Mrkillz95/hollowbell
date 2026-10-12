@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.Giants;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -129,6 +130,7 @@ public final class LookTrace {
                 m.setAccessible(true);
                 return Optional.of(m);
             } catch (Exception x) {
+                // meant to fail: most entities have no such method
                 return Optional.empty();
             }
         });
@@ -148,6 +150,7 @@ public final class LookTrace {
         try {
             return m.get().invoke(e) instanceof LivingEntity le ? le : null;
         } catch (Exception x) {
+            HollowbellMod.LOG.debug("owner of {} failed", e, x);
             return null;
         }
     }
@@ -159,6 +162,7 @@ public final class LookTrace {
         try {
             return m.get().invoke(seat) instanceof Integer i ? i : -1;
         } catch (Exception x) {
+            HollowbellMod.LOG.debug("ownerId of {} failed", seat, x);
             return -1;
         }
     }
@@ -174,6 +178,7 @@ public final class LookTrace {
         try {
             return find(BODY, e.getClass(), "bodyBox").get().invoke(e) instanceof AABB a ? a : null;
         } catch (Exception x) {
+            HollowbellMod.LOG.debug("bodyBox of {} failed", e, x);
             return null;
         }
     }
@@ -187,7 +192,8 @@ public final class LookTrace {
             Method t = hit.getClass().getMethod("t");
             t.setAccessible(true);
             return ((Number) t.invoke(hit)).doubleValue();
-        } catch (Throwable x) {
+        } catch (Exception x) {
+            HollowbellMod.LOG.debug("raycast of {} failed", e, x);
             return -1;
         }
     }

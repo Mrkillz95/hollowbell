@@ -135,7 +135,7 @@ public final class BellModel {
                     try {
                         get();
                     } catch (Exception e) {
-                        HollowbellMod.LOG.error("Hollowbell model failed to load", e);
+                        HollowbellMod.LOG.error("Model failed to load", e);
                     }
                 },
                 "Hollowbell model");

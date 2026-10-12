@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -231,7 +231,7 @@ public final class FarOrders {
 
     /** the wind an order costs, out of the saved body of one out of the world */
     private static boolean spendInBody(CompoundTag body, float cost) {
-        if (cost <= 0 || !HollowbellConfig.V.bookCosts) return true;
+        if (cost <= 0 || !BellConfig.V.bookCosts) return true;
         var mood = body.getCompound("Mood");
         float wind = mood.contains("Wind") ? mood.getFloat("Wind") : 1f;
         if (wind < cost) return false;

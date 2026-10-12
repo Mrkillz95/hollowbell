@@ -21,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
  * late-arriving sound. Nothing here touches the world.
  *
  * To copy it into another mod: this file and fx/client/*, change the package lines and NS below, call
- * {@link #register()} once in the mod's main init and BigFxClient.init(...) in its client init (see the spec).
+ * {@link #register()} once in the mod's main init and BigFxClient.init(...) in its client init.
  */
 public final class BigFx {
     private BigFx() {}

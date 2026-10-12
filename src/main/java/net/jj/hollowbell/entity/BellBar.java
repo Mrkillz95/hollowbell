@@ -12,11 +12,7 @@ import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
 
-/**
- * A boss bar with a fixed id for each Hollowbell. The game's own bars get a new random id every time, so if he was
- * unloaded and loaded again (while you were inside him, say) you ended up with his old bar stuck on screen next
- * to the new one. With the same id the new bar simply takes the old one's place.
- */
+/** A boss bar with a fixed id per Hollowbell, so a bar made again after a reload replaces the old one on screen. */
 public final class BellBar extends BossEvent {
     private final Set<ServerPlayer> players = new HashSet<>();
 

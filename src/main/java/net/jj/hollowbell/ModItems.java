@@ -58,12 +58,12 @@ public final class ModItems {
                             .withStyle(ChatFormatting.GRAY));
                     tip.add(Component.translatable(
                                     "item.hollowbell.hollowbell_crown.tip2",
-                                    HollowbellConfig.V.wardBlocks,
-                                    Math.max(1, HollowbellConfig.V.wardSeconds / 60))
+                                    BellConfig.V.wardBlocks,
+                                    Math.max(1, BellConfig.V.wardSeconds / 60))
                             .withStyle(ChatFormatting.DARK_AQUA));
                     tip.add(Component.translatable(
                                     "item.hollowbell.hollowbell_crown.tip3",
-                                    Math.max(0, HollowbellConfig.V.wardRestSeconds / 60))
+                                    Math.max(0, BellConfig.V.wardRestSeconds / 60))
                             .withStyle(ChatFormatting.DARK_GRAY));
                 }
             });

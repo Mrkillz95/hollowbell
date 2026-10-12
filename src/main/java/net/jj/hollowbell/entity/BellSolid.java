@@ -22,8 +22,8 @@ import net.jj.hollowbell.solid.SolidShape;
  * blocks that show a face, so whatever his blocks wall in is filled in too, each filled block going with the nearest
  * block of him; the inside of the dome is open underneath, so it stays a hollow you can be in.
  */
-public final class HollowSolid {
-    private HollowSolid() {}
+public final class BellSolid {
+    private BellSolid() {}
 
     private static volatile SolidShape shape;
     /** how many blocks were filled in, by kind (for the lab) */
@@ -32,7 +32,7 @@ public final class HollowSolid {
     public static SolidShape shape() {
         SolidShape s = shape;
         if (s != null) return s;
-        synchronized (HollowSolid.class) {
+        synchronized (BellSolid.class) {
             if (shape == null) shape = build();
             return shape;
         }
@@ -169,7 +169,7 @@ public final class HollowSolid {
                         .append(", ");
         report = filled + " filled in (" + rep + ")";
         HollowbellMod.LOG.info(
-                "Hollowbell: solid shape ready ({} frames, {} cells, {}; {} ms)",
+                "Solid shape ready ({} frames, {} cells, {}; {} ms)",
                 s.frames(),
                 s.cells,
                 report,
@@ -289,7 +289,7 @@ public final class HollowSolid {
                         shape();
                         hullBalls(hullUse());
                     } catch (Throwable e) {
-                        HollowbellMod.LOG.error("Hollowbell solid shape failed", e);
+                        HollowbellMod.LOG.error("Solid shape failed", e);
                     }
                 },
                 "Hollowbell solid shape");

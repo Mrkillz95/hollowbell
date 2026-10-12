@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import net.jj.hollowbell.command.Settings;
+import net.jj.hollowbell.command.OpsCommand;
 import net.jj.hollowbell.entity.Giants;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.world.Away;
@@ -40,7 +40,7 @@ public final class GiantsBridge {
      * (prefixed with the boss's name, plain words); empty list = nothing; null = unknown action.
      */
     public static List<String> giants(MinecraftServer server, String action, String arg) {
-        var V = HollowbellConfig.V;
+        var V = BellConfig.V;
         List<String> out = new ArrayList<>();
         String a = arg == null ? "" : arg.trim().toLowerCase(Locale.ROOT);
         switch (action) {
@@ -48,7 +48,7 @@ public final class GiantsBridge {
                 Boolean on = onOff(a);
                 if (on != null) {
                     V.oneInTheWorld = on;
-                    HollowbellConfig.save();
+                    BellConfig.save();
                 }
                 out.add(WHO + (V.oneInTheWorld ? "he rises on his own." : "he only comes when summoned."));
             }
@@ -56,7 +56,7 @@ public final class GiantsBridge {
                 if (!a.isEmpty()) {
                     try {
                         V.maxInWorld = Mth.clamp(Integer.parseInt(a), 0, 20);
-                        HollowbellConfig.save();
+                        BellConfig.save();
                     } catch (NumberFormatException e) {
                         out.add(WHO + "the limit has to be a number from 0 to 20.");
                         return out;
@@ -69,7 +69,7 @@ public final class GiantsBridge {
                 Boolean on = onOff(a);
                 if (on != null) {
                     V.fightGiants = on;
-                    HollowbellConfig.save();
+                    BellConfig.save();
                 }
                 out.add(WHO + (V.fightGiants ? "he fights the other bosses." : "he leaves the other bosses alone."));
             }
@@ -77,7 +77,7 @@ public final class GiantsBridge {
                 Boolean on = onOff(a);
                 if (on != null) {
                     V.meetings = on;
-                    HollowbellConfig.save();
+                    BellConfig.save();
                 }
                 out.add(WHO
                         + (V.meetings
@@ -91,7 +91,7 @@ public final class GiantsBridge {
                 try {
                     other = UUID.fromString(ids[0]);
                     if (ids.length > 1) mine = UUID.fromString(ids[1]);
-                } catch (Exception e) {
+                } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
                     out.add(WHO + "meet needs the other giant's id.");
                     return out;
                 }
@@ -122,7 +122,7 @@ public final class GiantsBridge {
                 Boolean on = onOff(a);
                 if (on != null) {
                     V.offscreenTravel = on;
-                    HollowbellConfig.save();
+                    BellConfig.save();
                 }
                 out.add(WHO
                         + (V.offscreenTravel
@@ -133,7 +133,7 @@ public final class GiantsBridge {
                 if (!a.isEmpty()) {
                     try {
                         V.soundVolume = Mth.clamp(Float.parseFloat(a), 0f, 2f);
-                        HollowbellConfig.save();
+                        BellConfig.save();
                     } catch (NumberFormatException e) {
                         out.add(WHO + "the volume has to be a number from 0 to 2.");
                         return out;
@@ -145,7 +145,7 @@ public final class GiantsBridge {
                 Boolean on = onOff(a);
                 if (on != null) {
                     V.screenShake = on;
-                    HollowbellConfig.save();
+                    BellConfig.save();
                 }
                 out.add(WHO + "screen shake " + (V.screenShake ? "on." : "off."));
             }
@@ -153,7 +153,7 @@ public final class GiantsBridge {
                 if (!a.isEmpty()) {
                     try {
                         V.bossBarRange = Mth.clamp(Integer.parseInt(a), 0, 100000);
-                        HollowbellConfig.save();
+                        BellConfig.save();
                     } catch (NumberFormatException e) {
                         out.add(WHO + "the boss bar range has to be a number of blocks.");
                         return out;
@@ -166,7 +166,7 @@ public final class GiantsBridge {
                 if (!a.isEmpty()) {
                     try {
                         V.heavyDelaySeconds = Mth.clamp(Integer.parseInt(a), 0, 600);
-                        HollowbellConfig.save();
+                        BellConfig.save();
                     } catch (NumberFormatException e) {
                         out.add(WHO + "the wait has to be a number of seconds from 0 to 600.");
                         return out;
@@ -178,7 +178,7 @@ public final class GiantsBridge {
                 Boolean on = onOff(a);
                 if (on != null) {
                     V.griefing = on;
-                    HollowbellConfig.save();
+                    BellConfig.save();
                 }
                 out.add(WHO + (V.griefing ? "he breaks blocks." : "he doesn't break blocks."));
             }
@@ -243,7 +243,7 @@ public final class GiantsBridge {
                 try {
                     x = Double.parseDouble(xz[0]);
                     z = Double.parseDouble(xz[1]);
-                } catch (Exception e) {
+                } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
                     out.add(WHO + "goto needs an x and a z.");
                     return out;
                 }
@@ -259,12 +259,12 @@ public final class GiantsBridge {
                 // "key" or "key value": only answers when this mod has that setting
                 String[] kv = arg == null ? new String[0] : arg.trim().split("\\s+", 2);
                 if (kv.length == 0 || kv[0].isEmpty()) {
-                    out.add(WHO + String.join(", ", Settings.keys()));
+                    out.add(WHO + String.join(", ", OpsCommand.keys()));
                     return out;
                 }
-                if (!Settings.has(kv[0])) return out;
-                String bad = kv.length > 1 ? Settings.set(kv[0], kv[1]) : null;
-                out.add(WHO + kv[0] + (bad != null ? " can't be set to " + kv[1] + "." : " = " + Settings.get(kv[0])));
+                if (!OpsCommand.has(kv[0])) return out;
+                String bad = kv.length > 1 ? OpsCommand.set(kv[0], kv[1]) : null;
+                out.add(WHO + kv[0] + (bad != null ? " can't be set to " + kv[1] + "." : " = " + OpsCommand.get(kv[0])));
             }
             case "paint" -> {
                 // "radius mode playerUUID depth=N" (an older /giants sends no depth: 5 then; a bare number after the
@@ -288,7 +288,8 @@ public final class GiantsBridge {
                         try {
                             p = server.getPlayerList().getPlayer(UUID.fromString(x));
                             sawPlayer = true;
-                        } catch (Exception ignored) {
+                        } catch (IllegalArgumentException notAPlayer) {
+                            // a word that is neither a setting nor a player: left out
                         }
                 }
                 if (p == null) {
@@ -306,7 +307,8 @@ public final class GiantsBridge {
                 ServerPlayer p = null;
                 try {
                     p = server.getPlayerList().getPlayer(UUID.fromString(arg.trim()));
-                } catch (Exception ignored) {
+                } catch (IllegalArgumentException notAPlayer) {
+                    // answered below: nobody to take there
                 }
                 if (p == null) {
                     out.add(WHO + "nobody to take there.");

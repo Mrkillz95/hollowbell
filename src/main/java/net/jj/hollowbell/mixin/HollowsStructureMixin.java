@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
  * isn't kept, so it has no pieces, no mobs and /locate doesn't find it. Deep ones stay. Other mods wrap this call too.
  */
 @Mixin(ChunkGenerator.class)
-public abstract class StructureStartMixin {
+public abstract class HollowsStructureMixin {
     @WrapOperation(
             method = "tryGenerateStructure",
             at =

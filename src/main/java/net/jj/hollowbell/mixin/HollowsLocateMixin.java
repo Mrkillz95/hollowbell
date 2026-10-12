@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /** the overworld can hold the Bell Hollows, so /locate biome looks for it */
 @Mixin(BiomeSource.class)
-public abstract class PossibleBiomesMixin {
+public abstract class HollowsLocateMixin {
     @ModifyReturnValue(method = "possibleBiomes", at = @At("RETURN"))
     private Set<Holder<Biome>> hollowbell$withHollows(Set<Holder<Biome>> original) {
         return BellGen.possible(this, original);

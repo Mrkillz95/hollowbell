@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntConsumer;
 import net.jj.hollowbell.fx.BigFx;
+import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -268,7 +269,8 @@ public final class FxWorld {
             }
             if (state.is(BlockTags.LEAVES))
                 c.sideTint = c.topTint = mc.getBlockColors().getColor(state, lv, at, 0);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            HollowbellMod.LOG.debug("no top or tint for {}", state, e);
         }
         c.x = c.px = x;
         c.y = c.py = y;

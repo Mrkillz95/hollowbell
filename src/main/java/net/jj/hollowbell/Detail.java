@@ -12,18 +12,18 @@ public final class Detail {
     public static final int FULL = 0, FAR = 1, TINY = 2;
 
     public static boolean on() {
-        return HollowbellConfig.V.simpleFarAway;
+        return BellConfig.V.simpleFarAway;
     }
 
     public static void set(boolean on) {
-        HollowbellConfig.V.simpleFarAway = on;
-        HollowbellConfig.save();
+        BellConfig.V.simpleFarAway = on;
+        BellConfig.save();
     }
 
     /** which version of him to draw, dist blocks from the camera, at size scale */
     public static int lod(double dist, float scale) {
         if (!on()) return FULL;
-        double at = HollowbellConfig.V.simpleFarAwayAt * Math.max(0.25f, scale);
+        double at = BellConfig.V.simpleFarAwayAt * Math.max(0.25f, scale);
         if ((scale < 0.06f && dist > 40) || dist > at * 4) return TINY;
         if (dist > at) return FAR;
         return FULL;

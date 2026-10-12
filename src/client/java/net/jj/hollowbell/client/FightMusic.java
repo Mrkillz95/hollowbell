@@ -1,10 +1,10 @@
 package net.jj.hollowbell.client;
 
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.entity.HollowbellEntity;
-import net.jj.hollowbell.sound.MusicBoard;
+import net.jj.hollowbell.MusicBoard;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -63,7 +63,7 @@ public final class FightMusic {
     }
 
     public static void tick(Minecraft mc) {
-        double d = HollowbellConfig.V.fightMusic ? fightNear(mc) : -1;
+        double d = BellConfig.V.fightMusic ? fightNear(mc) : -1;
         if (d >= 0) MusicBoard.want(HollowbellMod.MOD_ID, d);
         else MusicBoard.drop(HollowbellMod.MOD_ID);
         boolean mine =

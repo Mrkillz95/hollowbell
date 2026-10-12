@@ -11,7 +11,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.jj.hollowbell.Detail;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.ModEntities;
@@ -80,10 +80,10 @@ public class HollowbellClient implements ClientModInitializer {
                 }));
         // the big moments: dust and chunks of ground, splashes and waves, flashes, clouds, shake and late sound
         BigFxClient.init(
-                () -> HollowbellConfig.V.screenShake,
-                () -> HollowbellConfig.V.soundVolume,
-                () -> HollowbellConfig.V.simpleFarAway,
-                () -> HollowbellConfig.V.bigEffects);
+                () -> BellConfig.V.screenShake,
+                () -> BellConfig.V.soundVolume,
+                () -> BellConfig.V.simpleFarAway,
+                () -> BellConfig.V.bigEffects);
         ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> {
             CodexScreen.forgetEverything();
             BeingHim.set(-1, false);
@@ -147,8 +147,8 @@ public class HollowbellClient implements ClientModInitializer {
                     if (p.what() == DetailPayload.FAR) {
                         // how far off he can be seen: kept in this game's own settings too (on a server the server's
                         // decides who is sent)
-                        HollowbellConfig.V.farSightBlocks = Math.max(0, Math.min(4096, p.arg()));
-                        HollowbellConfig.save();
+                        BellConfig.V.farSightBlocks = Math.max(0, Math.min(4096, p.arg()));
+                        BellConfig.save();
                         return;
                     }
                     if (p.what() == DetailPayload.ON) Detail.set(true);

@@ -72,6 +72,7 @@ public final class GiantsCommand {
         try {
             return Class.forName(name, false, GiantsCommand.class.getClassLoader());
         } catch (Throwable t) {
+            // that giant's mod isn't installed
             return null;
         }
     }

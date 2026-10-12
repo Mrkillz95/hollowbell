@@ -24,7 +24,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 /**
  * What the world remembers for him: everybody's own safe list (the players and the kinds of creature each player
  * has told him to leave alone), and the names that go with them. Only the list of whoever is holding the book
- * counts at any one time, the same as the Mountain's.
+ * counts at any one time.
  */
 public final class BellWorld extends SavedData {
     private final Map<UUID, Set<UUID>> friends = new HashMap<>();

@@ -1,4 +1,4 @@
-package net.jj.hollowbell.sound;
+package net.jj.hollowbell;
 
 import java.util.Map;
 import java.util.Properties;

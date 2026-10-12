@@ -1,5 +1,9 @@
 package net.jj.hollowbell.command;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import net.jj.hollowbell.BellConfig;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -12,7 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.HollowbellEntity;
-import net.jj.hollowbell.item.BellPower;
+import net.jj.hollowbell.item.Powers;
 import net.jj.hollowbell.net.CodexOrders;
 import net.jj.hollowbell.net.CodexPayload;
 import net.jj.hollowbell.net.LookTrace;
@@ -42,7 +46,7 @@ public final class OpsCommand {
 
     private static Command<CommandSourceStack> on(Act a) {
         return c -> {
-            HollowbellEntity h = HollowbellCommand.nearest(c.getSource());
+            HollowbellEntity h = BellCommand.nearest(c.getSource());
             if (h == null) {
                 c.getSource().sendFailure(t("none"));
                 return 0;
@@ -197,7 +201,7 @@ public final class OpsCommand {
         for (ServerPlayer p : who) {
             p.getCooldowns().removeCooldown(ModItems.BELL_CHESTPLATE);
             p.getCooldowns().removeCooldown(ModItems.STINGER);
-            BellPower.stop(p);
+            Powers.stop(p);
         }
         Component name =
                 who.size() == 1 ? who.iterator().next().getName() : Component.literal(String.valueOf(who.size()));
@@ -227,5 +231,79 @@ public final class OpsCommand {
                     set.set(h, false);
                     return say(c, t(name + "_is_off"));
                 })));
+    }
+
+    // config/hollowbell.json by name, for /hollowbell config and /giants config: read one, or set it (checked and
+    // saved); numbers keep to the same limits the file does when it's read
+
+    /** every setting's name, in the file's order (the old renamed ones left out) */
+    public static List<String> keys() {
+        List<String> out = new ArrayList<>();
+        for (Field f : BellConfig.Values.class.getFields()) {
+            if (Modifier.isStatic(f.getModifiers())
+                    || f.getName().equals("configVersion")
+                    || f.getName().equals("maxHollowbells")) continue;
+            out.add(f.getName());
+        }
+        return out;
+    }
+
+    private static Field field(String key) {
+        for (Field f : BellConfig.Values.class.getFields())
+            if (f.getName().equalsIgnoreCase(key) && keys().contains(f.getName())) return f;
+        return null;
+    }
+
+    public static boolean has(String key) {
+        return field(key) != null;
+    }
+
+    /** what it's set to now, or null when there's no such setting */
+    public static String get(String key) {
+        Field f = field(key);
+        if (f == null) return null;
+        try {
+            return String.valueOf(f.get(BellConfig.V));
+        } catch (IllegalAccessException e) {
+            return null;
+        }
+    }
+
+    /** a number, never NaN or infinity */
+    private static double finite(String v) {
+        double d = Double.parseDouble(v);
+        if (!Double.isFinite(d)) throw new NumberFormatException(v);
+        return d;
+    }
+
+    /** sets it; returns null when it worked, or what was wrong */
+    public static String set(String key, String value) {
+        Field f = field(key);
+        if (f == null) return "there's no setting called " + key;
+        String v = value.trim().toLowerCase(Locale.ROOT);
+        try {
+            Class<?> t = f.getType();
+            if (t == boolean.class) {
+                boolean b = switch (v) {
+                    case "on", "true", "yes" -> true;
+                    case "off", "false", "no" -> false;
+                    default -> throw new IllegalArgumentException("on or off");
+                };
+                f.setBoolean(BellConfig.V, b);
+            } else if (t == int.class) f.setInt(BellConfig.V, Integer.parseInt(v));
+            else if (t == float.class) f.setFloat(BellConfig.V, (float) finite(v));
+            else if (t == double.class) f.setDouble(BellConfig.V, finite(v));
+            else return "that one can't be set from a command";
+        } catch (NumberFormatException e) {
+            return key + " needs a number";
+        } catch (IllegalArgumentException e) {
+            return key + " needs " + e.getMessage();
+        } catch (IllegalAccessException e) {
+            return "that one can't be set from a command";
+        }
+        // the same limits as reading the file
+        BellConfig.migrate(BellConfig.V);
+        BellConfig.save();
+        return null;
     }
 }

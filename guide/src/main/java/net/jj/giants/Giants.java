@@ -262,6 +262,7 @@ public final class Giants {
         try {
             return FabricLoader.getInstance().isModLoaded(g.modId());
         } catch (Throwable t) {
+            // no loader to ask (run outside the game)
             return false;
         }
     }

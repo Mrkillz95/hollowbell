@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import javax.imageio.ImageIO;
-import net.jj.hollowbell.entity.HollowSolid;
+import net.jj.hollowbell.entity.BellSolid;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
@@ -51,7 +51,7 @@ public final class SolidLab {
         PoseLab.model = BellModel.get();
         pc = BellPieces.get();
         long t0 = System.currentTimeMillis();
-        shape = HollowSolid.shape();
+        shape = BellSolid.shape();
         System.out.println("solid shape built in " + (System.currentTimeMillis() - t0) + " ms");
         List<String> want = Arrays.asList(args);
         try (PrintWriter log = new PrintWriter(new File(out, "solid.txt"))) {
@@ -77,7 +77,7 @@ public final class SolidLab {
                 log,
                 String.format(
                         "shape: %d frames, %d cells (%s), %d KB of look-up",
-                        shape.frames(), shape.cells, HollowSolid.report, shape.denseBytes / 1024));
+                        shape.frames(), shape.cells, BellSolid.report, shape.denseBytes / 1024));
         Map<String, int[]> by = new TreeMap<>();
         for (int f = 0; f < shape.frames(); f++) {
             BellRig.Kind k = rig.kind[pc.bone[shape.bone[f]]];
@@ -591,7 +591,7 @@ public final class SolidLab {
             PoseLab.rig = rig = BellRig.get();
             PoseLab.model = BellModel.get();
             pc = BellPieces.get();
-            shape = HollowSolid.shape();
+            shape = BellSolid.shape();
         }
         groups();
         PoseLab.Scene s = PoseLab.scenes().get(scene);

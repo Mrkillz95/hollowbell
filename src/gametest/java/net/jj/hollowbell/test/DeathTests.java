@@ -7,7 +7,7 @@ import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 import static net.jj.hollowbell.test.SolidTests.slice;
 
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.solid.SolidCarry;
@@ -40,12 +40,12 @@ public class DeathTests implements FabricGameTest {
             h.assertTrue(c.riding(), "the player put on his crown doesn't stand on him");
             at[0] = e.position();
             double over = pl[1].getY() - e.groundAt(pl[1].getX(), pl[1].getZ());
-            boolean was = HollowbellConfig.V.oneInTheWorld;
-            HollowbellConfig.V.oneInTheWorld = false;
+            boolean was = BellConfig.V.oneInTheWorld;
+            BellConfig.V.oneInTheWorld = false;
             try {
                 e.applyDamage(e.damageSources().playerAttack(pl[0]), e.healthMax() * 100f, -1, false);
             } finally {
-                HollowbellConfig.V.oneInTheWorld = was;
+                BellConfig.V.oneInTheWorld = was;
             }
             h.assertTrue(e.isDeadOrDying(), "he didn't die");
             MobEffectInstance slow = pl[1].getEffect(MobEffects.SLOW_FALLING);

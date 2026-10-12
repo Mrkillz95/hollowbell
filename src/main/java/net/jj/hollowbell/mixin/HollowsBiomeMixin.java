@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /** the overworld's biome source says bell_hollows for his ground's columns (the other giants stack here too) */
 @Mixin(MultiNoiseBiomeSource.class)
-public abstract class NoiseBiomeMixin {
+public abstract class HollowsBiomeMixin {
     @ModifyReturnValue(
             method = "getNoiseBiome(IIILnet/minecraft/world/level/biome/Climate$Sampler;)Lnet/minecraft/core/Holder;",
             at = @At("RETURN"))

@@ -1,5 +1,7 @@
 package net.jj.hollowbell.entity;
 
+import net.jj.hollowbell.Adv;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,7 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
@@ -29,7 +31,7 @@ import net.jj.hollowbell.solid.SolidCache;
 import net.jj.hollowbell.solid.SolidShape;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.BellWorld;
-import net.jj.hollowbell.world.LootShrine;
+import net.jj.hollowbell.world.Shrine;
 import net.jj.hollowbell.world.NoWait;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.core.BlockPos;
@@ -242,7 +244,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     private long huntLostAt = -1;
     private WeakReference<LivingEntity> huntRef = new WeakReference<>(null);
-    /** how long he looks for the one he was sent after once it's gone from sight (30 seconds) */
+    /** ticks he keeps looking for a target that went out of sight */
     public static final int HUNT_LOST_TICKS = 600;
     /** when he first turned up, kept through every save: it decides who is oldest when the world is full */
     private long bornAt = -1;
@@ -285,7 +287,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         this.xpReward = 500;
         this.noCulling = true;
         addTag(Giants.TAG);
-        addTag(Meetings.KIND + Meetings.ME);
+        addTag(Meeting.KIND + Meeting.ME);
         for (int i = 0; i < podHp.length; i++) podHp[i] = 1f;
     }
 
@@ -437,13 +439,13 @@ public class HollowbellEntity extends Monster implements SolidBody {
         s = Mth.clamp(s, MIN_SCALE, MAX_SCALE);
         float ratio = hp > 0 && healthMax() > 0 ? hp / healthMax() : 1f;
         entityData.set(DATA_SCALE, s);
-        baseMax = Math.max(40f, HollowbellConfig.V.health * s);
+        baseMax = Math.max(40f, BellConfig.V.health * s);
         setMax(baseMax * playerBoost(), ratio);
         refreshDimensions();
     }
 
     private float playerBoost() {
-        if (!HollowbellConfig.V.scaleToPlayers) return 1f;
+        if (!BellConfig.V.scaleToPlayers) return 1f;
         int n = Math.max(1, fighters.size());
         return Math.min(3f, 1f + 0.3f * (n - 1));
     }
@@ -598,7 +600,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     }
     /** how many popped pods bring him down */
     public int podsToSink() {
-        return Math.max(1, (int) Math.ceil(rig.pods.length * Mth.clamp(HollowbellConfig.V.podsToSink, 0.05f, 1f)));
+        return Math.max(1, (int) Math.ceil(rig.pods.length * Mth.clamp(BellConfig.V.podsToSink, 0.05f, 1f)));
     }
 
     @Override
@@ -631,8 +633,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     @Override
     public boolean shouldRenderAtSqrDistance(double d) {
-        double r = Math.min(HollowbellConfig.V.renderDistance, 400 * Math.max(0.1f, bellScale()) + 160);
-        r = Math.max(r, Math.min(4096, HollowbellConfig.V.farSightBlocks)); // never lost before far sight reaches
+        double r = Math.min(BellConfig.V.renderDistance, 400 * Math.max(0.1f, bellScale()) + 160);
+        r = Math.max(r, Math.min(4096, BellConfig.V.farSightBlocks)); // never lost before far sight reaches
         return d < r * r;
     }
 
@@ -1138,7 +1140,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         long now = level().getGameTime();
         if (sunk < 0.5f && popped >= need) {
             entityData.set(DATA_SUNK, 1f);
-            sunkUntil = now + Math.max(5, HollowbellConfig.V.sunkSeconds) * 20L;
+            sunkUntil = now + Math.max(5, BellConfig.V.sunkSeconds) * 20L;
             sound(position(), SoundEvents.ANVIL_LAND, 3f, 0.4f);
             for (ServerPlayer p : level() instanceof ServerLevel sl ? sl.players() : List.<ServerPlayer>of())
                 if (p.distanceToSqr(this) < Mth.square(120 * bellScale() + 60))
@@ -1500,7 +1502,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         setPos(getX() + vel.x, getY() + vel.y, getZ() + vel.z);
         setDeltaMovement(Vec3.ZERO);
         entityData.set(DATA_VEL, new Vector3f((float) vel.x, (float) vel.y, (float) vel.z));
-        if (tickCount % 10 == 0 && HollowbellConfig.V.griefing && hv.lengthSqr() > 0.001) moves.flattenUnderStrands();
+        if (tickCount % 10 == 0 && BellConfig.V.griefing && hv.lengthSqr() > 0.001) moves.flattenUnderStrands();
         // his strands slide over each other as he goes
         if (tickCount % 50 == 0 && hv.length() > max * 0.3 && random.nextInt(2) == 0)
             sound(
@@ -1567,7 +1569,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public @Nullable Player bookHolder() {
         Player best = null;
         double bd = Double.MAX_VALUE;
-        double r = HollowbellConfig.V.bookRange;
+        double r = BellConfig.V.bookRange;
         for (Player p : level().players()) {
             if (!CodexItem.carriedBy(p)) continue;
             double d = p.distanceToSqr(this);
@@ -1608,10 +1610,10 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     /** entity types he never picks up (the other giant bosses and their parts); mods can add to it */
     public static final TagKey<EntityType<?>> NOT_CARRIED =
-            TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("hollowbell", "not_carried"));
+            TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "not_carried"));
     /** small creatures from the other giant mods he may still pick up (Furrowmaw's furrowlings) */
     public static final TagKey<EntityType<?>> CARRIED_ANYWAY = TagKey.create(
-            Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("hollowbell", "carried_anyway"));
+            Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "carried_anyway"));
 
     /**
      * Whether his strands and arms can pick this up. Never the giants: Pitchgut, Cerberus, Furrowmaw, any boss, any
@@ -1638,10 +1640,10 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 && !moves.caught(e)
                 // (what another Hollowbell holds is his: two of them would pull it back and forth every tick)
                 && !(e.getVehicle() instanceof Seat st && st.ownerId() != getId())
-                // (another giant only if he's allowed to fight them: "/hollowbell giants off")
-                && (HollowbellConfig.V.fightGiants || !Giants.isGiant(e))
+                // giants only while fightGiants is on
+                && (BellConfig.V.fightGiants || !Giants.isGiant(e))
                 // (a giant that has backed down is left alone, and backing down he leaves every giant alone)
-                && !(Giants.isGiant(e) && (Meetings.yielding(e) || yielding()))
+                && !(Giants.isGiant(e) && (Meeting.yielding(e) || yielding()))
                 // anything standing where a woken crown holds him off is out of his reach
                 && !warded(e.getX(), e.getZ());
     }
@@ -1657,7 +1659,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         if (t != null
                 && (!fairGame(t)
                         || horiz(t.position())
-                                > (foe ? Meetings.range(bellScale()) * 2 + senseRange() : senseRange() * 1.6)
+                                > (foe ? Meeting.range(bellScale()) * 2 + senseRange() : senseRange() * 1.6)
                         || pastHisCircle(t.position())
                         || (isGuardian()
                                 && home != null
@@ -1677,7 +1679,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 huntSeen = le.position();
                 huntLostAt = -1;
                 // put on the safe list since, or a giant that has backed down: let go for good
-                if (spares(le) || (Giants.isGiant(le) && (Meetings.yielding(le) || yielding()))) {
+                if (spares(le) || (Giants.isGiant(le) && (Meeting.yielding(le) || yielding()))) {
                     if (getTarget() == le) setTarget(null);
                     dropHunt();
                 } else if (fairGame(le)) {
@@ -1687,7 +1689,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
             } else if (h != null) dropHunt(); // dead
             else if (!huntOrdered) hunted = null;
             else {
-                // out of sight (gone from the loaded world, or to another one): he looks for it a while, where it was
+                // out of sight: looked for a while where it was
                 if (huntLostAt < 0) huntLostAt = now;
                 else if (now - huntLostAt > HUNT_LOST_TICKS) dropHunt();
             }
@@ -1768,9 +1770,9 @@ public class HollowbellEntity extends Monster implements SolidBody {
         if (e instanceof HollowbellEntity) return "look_kin";
         if (e instanceof Player p && (p.isCreative() || p.isSpectator())) return "look_creative";
         if (Giants.isGiant(e)) {
-            if (!HollowbellConfig.V.fightGiants) return "look_giants_off";
+            if (!BellConfig.V.fightGiants) return "look_giants_off";
             if (yielding()) return "look_he_backed_down";
-            if (Meetings.yielding(e)) return "look_it_backed_down";
+            if (Meeting.yielding(e)) return "look_it_backed_down";
             if (meetFoe == null || !meetFoe.equals(e.getUUID())) {
                 long left = meetCooldownLeft(e.getUUID());
                 if (left > 0) return "look_cooldown:" + Math.max(1, (left + 1199) / 1200);
@@ -1779,7 +1781,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         if (warded(e.getX(), e.getZ())) return "look_warded";
         return null;
     }
-    /** the one a player sent him after, while he still is */
+    /** the target a player sent him after */
     public @Nullable UUID huntedByOrder() {
         return huntOrdered ? hunted : null;
     }
@@ -1931,13 +1933,13 @@ public class HollowbellEntity extends Monster implements SolidBody {
         float dealt = amount * worth(bone, inside);
         if (Giants.fromGiant(src, this)) {
             // another giant's blow (or its blast, or what it threw): by his armour against giants, wherever it lands
-            dealt = amount * HollowbellConfig.V.giantArmor * Giants.fightPace(bellScale(), 1f);
+            dealt = amount * BellConfig.V.giantArmor * Giants.fightPace(bellScale(), 1f);
             // a giant made of many parts (every ring of a Furrowmaw) lands one blow on him, not one per part: once
             // per giant per tick, the biggest
             dealt = onceATick(Giants.behind(src), dealt);
             if (dealt <= 0f) return false;
         } else if (src.is(DamageTypeTags.IS_EXPLOSION)) {
-            dealt = amount * HollowbellConfig.V.explosionArmor; // any other blast: the same for all the giants
+            dealt = amount * BellConfig.V.explosionArmor; // any other blast: the same for all the giants
         } else if (bone < 0 && !(att instanceof Player)) {
             // the weak-spot rule is for players with a sword: the Unmake's burning, a creature's blow that isn't
             // aimed at any one block of him lands in full
@@ -1995,7 +1997,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         hurtAt = level().getGameTime();
         wakeUp();
         lastHitBig = dealt > healthMax() * 0.02f;
-        if (DEBUG) HollowbellMod.LOG.info("Hollowbell hurt {} by {} ({})", dealt, src.getMsgId(), att);
+        if (DEBUG) HollowbellMod.LOG.info("Hurt {} by {} ({})", dealt, src.getMsgId(), att);
         hp = Math.max(0f, healthNow() - dealt);
         entityData.set(DATA_HP, hp);
         level().broadcastDamageEvent(this, src);
@@ -2026,7 +2028,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         } else if (att instanceof LivingEntity le && !spares(le)) {
             setLastHurtByMob(le);
             boolean giant = Giants.isGiant(le);
-            if (getTarget() == null && !(giant && (yielding() || Meetings.yielding(le)))) {
+            if (getTarget() == null && !(giant && (yielding() || Meeting.yielding(le)))) {
                 setTarget(le);
                 angerTicks = Math.max(angerTicks, 600);
             }
@@ -2037,10 +2039,10 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 && by != this
                 && Giants.isGiant(by)
                 && !yielding()
-                && HollowbellConfig.V.meetings
-                && HollowbellConfig.V.yieldAt > 0f
+                && BellConfig.V.meetings
+                && BellConfig.V.yieldAt > 0f
                 && hp > 0f
-                && hp < healthMax() * HollowbellConfig.V.yieldAt) {
+                && hp < healthMax() * BellConfig.V.yieldAt) {
             LivingEntity o = Giants.ownerOf(by);
             backDown(o != null ? o : by);
         }
@@ -2056,7 +2058,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         state.podPopped[i] = true;
         state.podGrowth[i] = 0f;
         podHp[i] = 0f;
-        podRegrowAt[i] = level().getGameTime() + Math.max(1, HollowbellConfig.V.podRegrowSeconds) * 20L;
+        podRegrowAt[i] = level().getGameTime() + Math.max(1, BellConfig.V.podRegrowSeconds) * 20L;
         partsDirty = true;
         Vec3 c = podWorld(i);
         sound(c, ModSounds.POD_POP, 3f, 1f);
@@ -2067,7 +2069,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         BigFx.send(level(), BigFx.SPARKS, c, (float) size, new Vec3(0, -1, 0), 0x9CFF6A);
         BigFx.send(level(), BigFx.CLOUD, new Vec3(c.x, groundAt(c.x, c.z), c.z), (float) size, Vec3.ZERO, 0x9CFF6A);
         // a pod out of his twenty-three is worth a piece of him
-        float worth = healthMax() * Mth.clamp(HollowbellConfig.V.podPopShare, 0f, 0.2f);
+        float worth = healthMax() * Mth.clamp(BellConfig.V.podPopShare, 0f, 0.2f);
         hp = Math.max(0f, healthNow() - worth);
         entityData.set(DATA_HP, hp);
         if (by instanceof ServerPlayer sp)
@@ -2234,7 +2236,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     private void barsTick() {
         if (tickCount % 10 != 0) return;
-        if (!HollowbellConfig.V.bossBar) {
+        if (!BellConfig.V.bossBar) {
             clearBars();
             return;
         }
@@ -2276,7 +2278,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 && why != RemovalReason.UNLOADED_TO_CHUNK
                 && why != RemovalReason.UNLOADED_WITH_PLAYER)
             HollowbellMod.LOG.info(
-                    "Hollowbell removed at {} ({})", blockPosition().toShortString(), why);
+                    "Removed at {} ({})", blockPosition().toShortString(), why);
         clearBars();
         if (!level().isClientSide && (why == RemovalReason.KILLED || why == RemovalReason.DISCARDED))
             lowerWhoeverStandsOnHim();
@@ -2298,7 +2300,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     /** how far off his boss bars still show */
     public static double barRange(float scale) {
-        int set = HollowbellConfig.V.bossBarRange;
+        int set = BellConfig.V.bossBarRange;
         return set > 0 ? set : 220 * scale + 200;
     }
 
@@ -2313,12 +2315,12 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     /** ticks with nobody anywhere near him */
     private int aloneOut;
-    /** he's just been put back: don't step straight out again */
+    /** just put back: don't step straight out again */
     private int justBack;
     /** the world already has him written down: remove() must not do anything more with him */
     private boolean steppedOut;
 
-    /** put back from being a sum, still going where he was going */
+    /** back from away, still heading where he was going */
     public void backFromAway(@Nullable Vec3 to, boolean stayPut) {
         justBack = 200;
         settled = true;
@@ -2334,7 +2336,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
             return;
         }
         if (!(level() instanceof ServerLevel sl) || isRemoved() || isDeadOrDying()) return;
-        // never while somebody has a stake in him being here
+        // not while riding, travelling, mid-move or meeting
         if (rider != null || comingForSomebody() || moveNow() != Moves.NONE || meetFoe != null) {
             aloneOut = 0;
             return;
@@ -2350,7 +2352,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         stepAside();
     }
 
-    /** hands him to the world as a sum and takes him out of the game */
+    /** steps him out of the world (see Away) */
     public boolean stepAside() {
         if (!(level() instanceof ServerLevel sl) || isRemoved() || isDeadOrDying()) return false;
         stopFetch();
@@ -2639,17 +2641,17 @@ public class HollowbellEntity extends Monster implements SolidBody {
             if (worldOne && (w.isTheOne(getUUID()) || w.oneId() == null)) {
                 w.died(sl, this);
                 worldOne = false; // saved mid-fold he is nobody's any more, so a reload can't bring him back
-            } else if (!worldOne && HollowbellConfig.V.oneInTheWorld && !w.aliveNow() && w.dueIn(sl) < 0) {
+            } else if (!worldOne && BellConfig.V.oneInTheWorld && !w.aliveNow() && w.dueIn(sl) < 0) {
                 w.died(sl, this); // no world one and nothing counting down: the count starts from here
             }
         }
         if (!level().isClientSide) {
             if (deathBy == null && (src.getEntity() instanceof Player || lastHurtByPlayer != null))
                 deathBy = src.getEntity() instanceof Player k ? k.getUUID() : lastHurtByPlayer.getUUID();
-            HollowbellMod.LOG.info("Hollowbell died at {} ({})", blockPosition().toShortString(), src.getMsgId());
+            HollowbellMod.LOG.info("Died at {} ({})", blockPosition().toShortString(), src.getMsgId());
             // killed by somebody wearing his own glass
             Entity killer = src.getEntity() instanceof ServerPlayer ? src.getEntity() : getKillCredit();
-            if (killer instanceof ServerPlayer sp && BellArmorItem.fullSet(sp)) HollowbellMod.award(sp, "own_glass");
+            if (killer instanceof ServerPlayer sp && BellArmorItem.fullSet(sp)) Adv.grant(sp, "own_glass");
             // his chunk keeps going until his death is over, even if everybody walks off: never left half dead
             if (level() instanceof ServerLevel sl)
                 sl.getChunkSource().addRegionTicket(DYING_TICKET, new ChunkPos(blockPosition()), 2, getId());
@@ -2733,8 +2735,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
                     caught = null;
                     if (!loot.isEmpty()) {
                         boolean grief =
-                                HollowbellConfig.V.griefing && sl.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
-                        BlockPos at = LootShrine.build(sl, getX(), getY(), getZ(), loot, grief);
+                                BellConfig.V.griefing && sl.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
+                        BlockPos at = Shrine.build(sl, getX(), getY(), getZ(), loot, grief);
                         HollowbellMod.LOG.info("His loot is in the cache at {}", at.toShortString());
                     }
                 }
@@ -2767,7 +2769,6 @@ public class HollowbellEntity extends Monster implements SolidBody {
         return true;
     }
 
-    // the game's own habits, none of which fit him
 
     @Override
     public void onClientRemoval() {
@@ -2875,7 +2876,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     @Override
     protected float getSoundVolume() {
-        return 2.5f * HollowbellConfig.V.soundVolume * Mth.clamp((float) Math.sqrt(bellScale()), 0.3f, 1.5f);
+        return 2.5f * BellConfig.V.soundVolume * Mth.clamp((float) Math.sqrt(bellScale()), 0.3f, 1.5f);
     }
 
     @Override
@@ -2895,7 +2896,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     /** a sound of his: a big one is louder (heard further off) and deeper, a small one quieter and higher */
     public void sound(Vec3 at, SoundEvent ev, float vol, float pitch) {
-        float v = vol * HollowbellConfig.V.soundVolume;
+        float v = vol * BellConfig.V.soundVolume;
         if (v <= 0f) return;
         float s = bellScale();
         float size = Mth.clamp((float) Math.sqrt(s), 0.25f, 1.6f);
@@ -2915,8 +2916,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public float dmg(float base, Entity to) {
         // the numbers in the moves are for full size; a small one hits a good deal less, a huge one more
         float size = Mth.clamp(0.2f + 0.8f * (float) Math.pow(bellScale(), 0.6), 0.25f, 1.5f);
-        float f = base * HollowbellConfig.V.damageMultiplier * size;
-        if (!(to instanceof Player)) f *= HollowbellConfig.V.mobDamage;
+        float f = base * BellConfig.V.damageMultiplier * size;
+        if (!(to instanceof Player)) f *= BellConfig.V.mobDamage;
         return f;
     }
 
@@ -3053,7 +3054,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     // meeting the other giants
 
-    /** the giant he is having a meeting fight with (see Meetings), or null */
+    /** the giant he is having a meeting fight with (see Meeting), or null */
     private @Nullable UUID meetFoe;
     /** the giant he is keeping out of the way of, and where it was last */
     private @Nullable UUID meetAvoid;
@@ -3069,7 +3070,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public static int meetEvery = 40;
 
     public boolean yielding() {
-        return getTags().contains(Meetings.YIELD);
+        return getTags().contains(Meeting.YIELD);
     }
 
     public @Nullable UUID meetFoe() {
@@ -3095,7 +3096,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
      * free to meet another giant: awake, under no order or trip, after nobody, not ridden or staying, not backing down
      */
     public boolean freeToMeet() {
-        return HollowbellConfig.V.meetings
+        return BellConfig.V.meetings
                 && !asleep
                 && !frozen
                 && !stay
@@ -3138,7 +3139,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     private void meetTick(long now) {
         if (!(level() instanceof ServerLevel sl)) return;
         if (yieldUntil > 0 && now >= yieldUntil) {
-            removeTag(Meetings.YIELD);
+            removeTag(Meeting.YIELD);
             yieldUntil = 0;
         }
         if (!metLately.isEmpty() && tickCount % 200 == 0) metLately.values().removeIf(t -> t < now);
@@ -3154,14 +3155,14 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 meetFoe = null;
                 if (getTarget() == foe) setTarget(null);
                 if (won) victory();
-            } else if (Meetings.yielding(foe)) {
+            } else if (Meeting.yielding(foe)) {
                 meetFoe = null; // it backed down: he won
                 if (getTarget() == foe) setTarget(null);
                 angerTicks = 0;
                 victory();
             } else if (!yielding()
-                    && HollowbellConfig.V.yieldAt > 0f
-                    && healthNow() < healthMax() * HollowbellConfig.V.yieldAt) {
+                    && BellConfig.V.yieldAt > 0f
+                    && healthNow() < healthMax() * BellConfig.V.yieldAt) {
                 backDown(foe);
             } else if (getTarget() != foe && fairGame(foe)) {
                 setTarget(foe);
@@ -3171,13 +3172,13 @@ public class HollowbellEntity extends Monster implements SolidBody {
         // keeping out of another giant's way, until they're well apart
         if (meetAvoid != null) {
             Entity o = sl.getEntity(meetAvoid);
-            if (o == null || !o.isAlive() || horiz(o.position()) > Meetings.range(bellScale()) * 1.5) {
+            if (o == null || !o.isAlive() || horiz(o.position()) > Meeting.range(bellScale()) * 1.5) {
                 meetAvoid = null;
                 avoidAt = null;
             } else avoidAt = o.position();
         }
         if (meetEvery <= 0 || tickCount % meetEvery != 0 || !freeToMeet() || meetAvoid != null) return;
-        double r = Meetings.range(bellScale());
+        double r = Meeting.range(bellScale());
         LivingEntity best = null;
         double bd = Double.MAX_VALUE;
         for (Entity e : sl.getEntities(
@@ -3185,7 +3186,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 new AABB(getX() - r, getY() - r, getZ() - r, getX() + r, getY() + r, getZ() + r),
                 x -> x != this && x.isAlive() && Giants.isGiant(x) && !(x instanceof Belling))) {
             LivingEntity g = giantOf(e);
-            if (g == null || g == this || Meetings.yielding(g) || meetCooldownLeft(g.getUUID()) > 0 || Giants.ridden(g))
+            if (g == null || g == this || Meeting.yielding(g) || meetCooldownLeft(g.getUUID()) > 0 || Giants.ridden(g))
                 continue;
             double d = horiz(g.position());
             if (d > r || d >= bd) continue;
@@ -3193,9 +3194,9 @@ public class HollowbellEntity extends Monster implements SolidBody {
             best = g;
         }
         if (best == null) return;
-        Meetings.Way way = Meetings.way(Meetings.ME, Meetings.kindOf(best));
-        if (way == Meetings.Way.FIGHT && HollowbellConfig.V.fightGiants) startMeeting(best);
-        else if (way == Meetings.Way.AVOID) {
+        Meeting.Way way = Meeting.way(Meeting.ME, Meeting.kindOf(best));
+        if (way == Meeting.Way.FIGHT && BellConfig.V.fightGiants) startMeeting(best);
+        else if (way == Meeting.Way.AVOID) {
             meetAvoid = best.getUUID();
             avoidAt = best.position();
             // (no cooldown for keeping away: if they drift close again later, he keeps away again)
@@ -3210,24 +3211,24 @@ public class HollowbellEntity extends Monster implements SolidBody {
         meetFoe = other.getUUID();
         meetAvoid = null;
         avoidAt = null;
-        metLately.put(other.getUUID(), now + HollowbellConfig.V.meetCooldown * 1200L);
+        metLately.put(other.getUUID(), now + BellConfig.V.meetCooldown * 1200L);
         setStay(false);
         setTarget(other);
         angerTicks = Math.max(angerTicks, 1200);
-        String them = Meetings.kindOf(other);
+        String them = Meeting.kindOf(other);
         // the one that starts it tells everyone near; the shared board stops the other one saying it too
-        boolean tell = Meetings.claimMeetingLine(getUUID(), other.getUUID(), now);
+        boolean tell = Meeting.claimMeetingLine(getUUID(), other.getUUID(), now);
         for (ServerPlayer p : sl.players()) {
             double dMe = p.distanceToSqr(this), dThem = p.distanceToSqr(other);
             if (tell && (dMe < 256 * 256 || dThem < 256 * 256))
                 p.sendSystemMessage(Component.translatable(
                         "message.hollowbell.giants_fight",
-                        Meetings.name(Meetings.ME, true),
-                        Meetings.name(them, false)));
+                        Meeting.name(Meeting.ME, true),
+                        Meeting.name(them, false)));
             // (the advancement for seeing it)
-            if (dMe < 128 * 128 || dThem < 128 * 128) HollowbellMod.award(p, "watch_giants");
+            if (dMe < 128 * 128 || dThem < 128 * 128) Adv.grant(p, "watch_giants");
         }
-        HollowbellMod.LOG.info("A Hollowbell meets {} and they fight", Meetings.name(them, false));
+        HollowbellMod.LOG.info("A Hollowbell meets {} and they fight", Meeting.name(them, false));
         return true;
     }
 
@@ -3235,7 +3236,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public void backDown(Entity from) {
         if (yielding() || !(level() instanceof ServerLevel sl)) return;
         long now = level().getGameTime();
-        addTag(Meetings.YIELD);
+        addTag(Meeting.YIELD);
         yieldUntil = now + 2400;
         fleeFrom = from.position();
         fleeUntil = now + 1200;
@@ -3243,15 +3244,15 @@ public class HollowbellEntity extends Monster implements SolidBody {
         clearHitList();
         stopFetch();
         moves.stopNow();
-        metLately.put(from.getUUID(), now + HollowbellConfig.V.meetCooldown * 1200L);
-        String them = Meetings.kindOf(from);
+        metLately.put(from.getUUID(), now + BellConfig.V.meetCooldown * 1200L);
+        String them = Meeting.kindOf(from);
         for (ServerPlayer p : sl.players())
             if (p.distanceToSqr(this) < 256 * 256 || p.distanceToSqr(from) < 256 * 256)
                 p.sendSystemMessage(Component.translatable(
                         "message.hollowbell.giant_yields",
-                        Meetings.name(Meetings.ME, true),
-                        Meetings.name(them, true)));
-        HollowbellMod.LOG.info("A Hollowbell backs down from {}", Meetings.name(them, false));
+                        Meeting.name(Meeting.ME, true),
+                        Meeting.name(them, true)));
+        HollowbellMod.LOG.info("A Hollowbell backs down from {}", Meeting.name(them, false));
     }
 
     /** he won: a big toll and a flare of his glow, then back to his own business */
@@ -3371,7 +3372,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         if (tag.contains("HollowbellEgg")) {
             int v = tag.getInt("HollowbellEgg");
             entityData.set(DATA_VARIANT, v == 3 ? HUNTER : v);
-            float sc = v == 3 ? HollowbellConfig.V.smallEggScale : HollowbellConfig.V.spawnEggScale;
+            float sc = v == 3 ? BellConfig.V.smallEggScale : BellConfig.V.spawnEggScale;
             entityData.set(DATA_SCALE, Mth.clamp(sc, MIN_SCALE, MAX_SCALE));
         }
         // an egg's tag also carries the fresh body's health (6000, base -1): his first tick works it out for his size
@@ -3442,7 +3443,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         fleeFor = tag.getLong("FleeFor");
         fleeFrom = tag.contains("FleeX") ? new Vec3(tag.getDouble("FleeX"), 0, tag.getDouble("FleeZ")) : null;
         // an old save from before the meetings: he's a giant of this kind too
-        addTag(Meetings.KIND + Meetings.ME);
+        addTag(Meeting.KIND + Meeting.ME);
         if (tag.contains("BoundR")) {
             boundX = tag.getDouble("BoundX");
             boundZ = tag.getDouble("BoundZ");
@@ -3452,7 +3453,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         // one saved with no base health (from an egg): his most health for his size, keeping how hurt he was
         if (hp >= 0f && baseMax <= 0f) {
             float ratio = healthMax() > 0 ? hp / healthMax() : 1f;
-            baseMax = Math.max(40f, HollowbellConfig.V.health * bellScale());
+            baseMax = Math.max(40f, BellConfig.V.health * bellScale());
             setMax(baseMax, Mth.clamp(ratio, 0f, 1f));
         }
         partsDirty = true;
@@ -3471,7 +3472,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
             sunkUntil += now;
             yieldUntil = yieldFor > 0 ? now + yieldFor : 0;
             fleeUntil = fleeFor > 0 ? now + fleeFor : 0;
-            if (yieldUntil == 0) removeTag(Meetings.YIELD);
+            if (yieldUntil == 0) removeTag(Meeting.YIELD);
             if (heavyIn >= 0) moves.resumeWaits(heavyIn, fightFor);
             for (var m : metLeft.entrySet()) metLately.put(m.getKey(), now + m.getValue());
             metLeft.clear();
@@ -3496,31 +3497,26 @@ public class HollowbellEntity extends Monster implements SolidBody {
         HollowbellMod.LOG.info(s);
     }
 
-    // the slow heal
-    /** his health last tick (to see a hurt by), and when he was last hurt */
+    /** health last tick and the last hurt, for the slow heal */
     private float healSeen = -1f;
 
     private long healHurtAt = Long.MIN_VALUE / 4;
-    /** after any hurt the slow heal waits this long (15 seconds) */
+    /** ticks the slow heal waits after any hurt */
     public static final int HEAL_PAUSE = 300;
 
-    /**
-     * A very slow heal: passiveHealPerMinute percent of his most health a minute (1 by default), given a little each
-     * second, never past his most and never while he's dying. Any hurt (from anything at all) stops it for 15
-     * seconds, so in a real fight it barely counts. Broken parts keep their own rules and are not mended by it.
-     */
+    /** passiveHealPerMinute percent of his most health a minute, a little each second, paused after any hurt */
     private void passiveHeal() {
         long now = level().getGameTime();
         float hpNow = healthNow(), max = healthMax();
         if (healSeen >= 0f && hpNow < healSeen - 0.001f) healHurtAt = now;
-        if (HollowbellConfig.V.passiveHeal
+        if (BellConfig.V.passiveHeal
                 && tickCount % 20 == 0
                 && !(isDeadOrDying())
                 && hpNow > 0f
                 && hpNow < max
                 && now - healHurtAt >= HEAL_PAUSE) {
             float v = Math.min(
-                    max, hpNow + max * Mth.clamp(HollowbellConfig.V.passiveHealPerMinute, 0f, 100f) / 100f / 60f);
+                    max, hpNow + max * Mth.clamp(BellConfig.V.passiveHealPerMinute, 0f, 100f) / 100f / 60f);
             hp = v;
             entityData.set(DATA_HP, v);
             hpNow = v;
@@ -3534,7 +3530,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     // solid (the solid kit's adapter)
 
-    /** his frames for the solid kit, this tick */
+    /** solid kit frames, this tick */
     final SolidCache solidCache = new SolidCache();
     /** bumped each step of his animation: the pose the kit reads is worked out again */
     private long solidVer, solidPoseVer = Long.MIN_VALUE;
@@ -3549,7 +3545,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     @Override
     public SolidShape solidShape() {
-        return HollowSolid.shape();
+        return BellSolid.shape();
     }
 
     @Override
@@ -3567,7 +3563,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 && (!isDeadOrDying() || lowering)
                 && solidVer > 0
                 && bellScale() >= 0.02f
-                && HollowSolid.ready()
+                && BellSolid.ready()
                 && (!level().isClientSide || tickCount > 1);
     }
 
@@ -3730,7 +3726,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     private double[] hullNow;
     private long hullTick = Long.MIN_VALUE;
     private final List<LivingEntity> giantsNear = new ArrayList<>();
-    /** the tests: how far other giants' bodies have pushed him in all */
+    /** how far other giants' bodies have pushed him in all */
     public double giantPushed;
 
     /**
@@ -3740,8 +3736,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public double[] jjHull() {
         long now = level().getGameTime();
         if (hullNow != null && hullTick == now) return hullNow;
-        if (!HollowSolid.ready() || isRemoved() || ghost || solidVer == 0) return new double[0];
-        hullNow = GiantHull.fromBody(this, HollowSolid.hullBalls(HollowSolid.hullUse()), HollowSolid.hullKinds());
+        if (!BellSolid.ready() || isRemoved() || ghost || solidVer == 0) return new double[0];
+        hullNow = GiantHull.fromBody(this, BellSolid.hullBalls(BellSolid.hullUse()), BellSolid.hullKinds());
         hullTick = now;
         return hullNow;
     }
@@ -3751,7 +3747,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         return 1 + 2 * bellScale();
     }
 
-    /** the gap between his body and this giant's (below 0: in each other), or null if either has no hull */
+    /** gap to that giant's hull (below 0: overlapping), or null if either has none */
     public @Nullable Double hullGapTo(Entity giant) {
         double[] me = jjHull(), them = GiantHull.of(giant, Giants.TAG);
         if (me.length == 0 || them.length == 0) return null;
@@ -3768,7 +3764,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
      * other doesn't move itself out). Never through each other, whoever drifted into whom.
      */
     private void giantsApart() {
-        if (!(level() instanceof ServerLevel sl) || isDeadOrDying() || frozen || !HollowSolid.ready() || solidVer == 0)
+        if (!(level() instanceof ServerLevel sl) || isDeadOrDying() || frozen || !BellSolid.ready() || solidVer == 0)
             return;
         if (tickCount % 5 == 0) {
             giantsNear.clear();

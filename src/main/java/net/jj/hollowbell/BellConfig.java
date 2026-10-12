@@ -10,7 +10,7 @@ import java.nio.file.StandardCopyOption;
 import net.fabricmc.loader.api.FabricLoader;
 
 /** config/hollowbell.json - written with defaults the first time the game starts. */
-public final class HollowbellConfig {
+public final class BellConfig {
     public static final class Values {
         /** Which version of these settings this file was written by (older files are brought up to date). */
         public int configVersion = 0;
@@ -179,7 +179,7 @@ public final class HollowbellConfig {
         V.configVersion = Math.max(V.configVersion, VERSION);
         try {
             write(new GsonBuilder().setPrettyPrinting().create().toJson(V));
-        } catch (Exception e) {
+        } catch (IOException e) {
             HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString());
         }
     }
@@ -216,7 +216,8 @@ public final class HollowbellConfig {
                     e.toString());
             try {
                 Files.copy(file(), file().resolveSibling("hollowbell.json.bad"), StandardCopyOption.REPLACE_EXISTING);
-            } catch (Exception ignored) {
+            } catch (IOException copyFailed) {
+                HollowbellMod.LOG.warn("Could not copy {} to hollowbell.json.bad: {}", file(), copyFailed.toString());
             }
             V = new Values();
             locked = true;

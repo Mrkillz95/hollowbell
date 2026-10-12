@@ -1,5 +1,7 @@
 package net.jj.hollowbell.item;
 
+import net.jj.hollowbell.Adv;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -29,8 +31,8 @@ import org.joml.Vector3f;
  * you. In the air: a glide, you drift along the way you're looking and come down slowly. The wait after either
  * shows on the chestplate (and on the little icon by the hotbar).
  */
-public final class BellPower {
-    private BellPower() {}
+public final class Powers {
+    private Powers() {}
 
     public static final int TOLL_COOLDOWN = 240, GLIDE_COOLDOWN = 140;
     public static final int RISE = 10, HANG = 6, SLAM_MAX = 40, GLIDE = 50;
@@ -65,7 +67,7 @@ public final class BellPower {
         if (p.getCooldowns().isOnCooldown(ModItems.BELL_CHESTPLATE) || DOING.containsKey(p.getUUID())) return null;
         Kind k = p.onGround() || p.isInWater() ? Kind.TOLL : Kind.GLIDE;
         DOING.put(p.getUUID(), new Doing(k));
-        HollowbellMod.award(p, "bell_toll");
+        Adv.grant(p, "bell_toll");
         p.getCooldowns().addCooldown(ModItems.BELL_CHESTPLATE, k == Kind.TOLL ? TOLL_COOLDOWN : GLIDE_COOLDOWN);
         ServerLevel l = p.serverLevel();
         if (k == Kind.TOLL)

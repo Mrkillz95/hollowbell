@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,8 +29,7 @@ import org.joml.Vector3f;
  * A giant without that method (an older version) is read from its own box and its part boxes. Each giant moves only
  * itself: where hulls overlap it steps out along the shortest way, its share by weight (all of it if the other can't
  * move itself out); a limb touching a limb doesn't count, a limb or body against a body does. Walking stops when the
- * hulls are about to touch, and blows aim at the nearest point of the other's hull, not its middle. See
- * scratchpad solid_spec.md, "Giant against giant".
+ * hulls are about to touch, and blows aim at the nearest point of the other's hull, not its middle.
  */
 public final class GiantHull {
     private GiantHull() {}
@@ -129,7 +129,8 @@ public final class GiantHull {
             try {
                 Method m = cl.getMethod("jjHull");
                 return m.getReturnType() == double[].class ? Optional.of(m) : Optional.empty();
-            } catch (Exception x) {
+            } catch (NoSuchMethodException x) {
+                // a giant that shows no hull
                 return Optional.empty();
             }
         });
@@ -145,7 +146,8 @@ public final class GiantHull {
             try {
                 Object o = m.get().invoke(giant);
                 if (o instanceof double[] d && d.length % STRIDE == 0) return d;
-            } catch (Exception ignored) {
+            } catch (Exception x) {
+                HollowbellMod.LOG.debug("jjHull of {} failed", giant, x);
             }
         }
         List<AABB> boxes = new ArrayList<>();
@@ -167,13 +169,15 @@ public final class GiantHull {
         var m = OWNER.computeIfAbsent(e.getClass(), c -> {
             try {
                 return Optional.of(c.getMethod("owner"));
-            } catch (Exception x) {
+            } catch (NoSuchMethodException x) {
+                // not a part box
                 return Optional.empty();
             }
         });
         try {
             return m.isPresent() ? m.get().invoke(e) : null;
         } catch (Exception x) {
+            HollowbellMod.LOG.debug("owner of {} failed", e, x);
             return null;
         }
     }

@@ -32,7 +32,7 @@ public final class GuideConfig {
             Files.createDirectories(f.getParent());
             Files.writeString(f, GSON.toJson(V));
         } catch (Exception e) {
-            GiantsGuideMod.LOG.warn("Giants Guide: could not read {}, using the defaults", f, e);
+            GiantsGuideMod.LOG.warn("Could not read {}, using the defaults", f, e);
         }
     }
 }

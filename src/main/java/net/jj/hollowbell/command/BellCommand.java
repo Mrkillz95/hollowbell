@@ -18,7 +18,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.block.CrownBlock;
@@ -55,9 +55,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-/** /hollowbell ... (cheats on), the same pattern as Furrowmaw's. */
-public final class HollowbellCommand {
-    private HollowbellCommand() {}
+/** /hollowbell ... (cheats on) */
+public final class BellCommand {
+    private BellCommand() {}
 
     /** everything but detail needs cheats on */
     private static final Predicate<CommandSourceStack> OP = s -> s.hasPermission(2);
@@ -70,7 +70,7 @@ public final class HollowbellCommand {
 
     /** /hollowbell detail far: how far off he can be seen coming */
     private static int farSay(CommandContext<CommandSourceStack> c) {
-        int b = HollowbellConfig.V.farSightBlocks;
+        int b = BellConfig.V.farSightBlocks;
         c.getSource()
                 .sendSuccess(
                         () -> b > 0
@@ -82,8 +82,8 @@ public final class HollowbellCommand {
 
     /** /hollowbell detail far <blocks>: set here, and passed on to the player's own game too */
     private static int farSet(CommandContext<CommandSourceStack> c, int blocks) {
-        HollowbellConfig.V.farSightBlocks = blocks;
-        HollowbellConfig.save();
+        BellConfig.V.farSightBlocks = blocks;
+        BellConfig.save();
         if (c.getSource().getPlayer() instanceof ServerPlayer p)
             ServerPlayNetworking.send(p, new DetailPayload(DetailPayload.FAR, blocks));
         c.getSource()
@@ -100,13 +100,13 @@ public final class HollowbellCommand {
     public static void register(CommandDispatcher<CommandSourceStack> d) {
         d.register(OpsCommand.addTo(Commands.literal("hollowbell")).then(windCommand()));
         d.register(Commands.literal("hollowbell")
-                // detail: anyone, cheats or not (it only changes how their own game draws him)
+                // no cheats needed: it only changes how their own game draws him
                 .then(Commands.literal("detail")
                         .executes(c -> detail(c, DetailPayload.ASK))
                         .then(Commands.literal("on").executes(c -> detail(c, DetailPayload.ON)))
                         .then(Commands.literal("off").executes(c -> detail(c, DetailPayload.OFF)))
                         .then(Commands.literal("far")
-                                .executes(HollowbellCommand::farSay)
+                                .executes(BellCommand::farSay)
                                 .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 4096))
                                         .requires(OP)
                                         .executes(c -> farSet(c, IntegerArgumentType.getInteger(c, "blocks"))))))
@@ -115,7 +115,7 @@ public final class HollowbellCommand {
                         .executes(c -> summon(c, HollowbellEntity.HUNTER, eggSize()))
                         .then(Commands.argument("mood", StringArgumentType.word())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggest(MOODS, b))
-                                .executes(HollowbellCommand::summonMoodOrSize)
+                                .executes(BellCommand::summonMoodOrSize)
                                 .then(Commands.argument(
                                                 "size",
                                                 FloatArgumentType.floatArg(
@@ -132,37 +132,37 @@ public final class HollowbellCommand {
                                                 .executes(c -> doMove(c, null, Vec3Argument.getVec3(c, "pos")))))
                                 .then(Commands.argument("target", EntityArgument.entity())
                                         .executes(c -> doMove(c, EntityArgument.getEntity(c, "target"), null)))))
-                .then(Commands.literal("list").requires(OP).executes(HollowbellCommand::list))
-                .then(Commands.literal("where").executes(HollowbellCommand::where))
+                .then(Commands.literal("list").requires(OP).executes(BellCommand::list))
+                .then(Commands.literal("where").executes(BellCommand::where))
                 .then(Commands.literal("away")
                         .requires(OP)
                         .executes(c -> awaySay(c))
                         .then(Commands.literal("on")
                                 .executes(c -> set(
-                                        c, () -> HollowbellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
+                                        c, () -> BellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
                         .then(Commands.literal("off")
                                 .executes(c -> set(
-                                        c, () -> HollowbellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
+                                        c, () -> BellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
                         .then(Commands.literal("blocks")
                                 .then(Commands.argument("n", IntegerArgumentType.integer(0, 100000))
                                         .executes(c -> set(
                                                 c,
-                                                () -> HollowbellConfig.V.awayBlocks =
+                                                () -> BellConfig.V.awayBlocks =
                                                         IntegerArgumentType.getInteger(c, "n"),
                                                 "awayBlocks",
                                                 IntegerArgumentType.getInteger(c, "n")))))
-                        .then(Commands.literal("now").executes(HollowbellCommand::awayNow)))
+                        .then(Commands.literal("now").executes(BellCommand::awayNow)))
                 .then(Commands.literal("bossbar")
                         .requires(OP)
-                        .executes(HollowbellCommand::bossbarSay)
+                        .executes(BellCommand::bossbarSay)
                         .then(Commands.literal("on")
-                                .executes(c -> set(c, () -> HollowbellConfig.V.bossBar = true, "bossBar", true)))
+                                .executes(c -> set(c, () -> BellConfig.V.bossBar = true, "bossBar", true)))
                         .then(Commands.literal("off")
-                                .executes(c -> set(c, () -> HollowbellConfig.V.bossBar = false, "bossBar", false)))
+                                .executes(c -> set(c, () -> BellConfig.V.bossBar = false, "bossBar", false)))
                         .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
                                 .executes(c -> set(
                                         c,
-                                        () -> HollowbellConfig.V.bossBarRange =
+                                        () -> BellConfig.V.bossBarRange =
                                                 IntegerArgumentType.getInteger(c, "blocks"),
                                         "bossBarRange",
                                         IntegerArgumentType.getInteger(c, "blocks")))))
@@ -229,9 +229,9 @@ public final class HollowbellCommand {
                 // config: any setting from the file, by name
                 .then(Commands.literal("config")
                         .requires(OP)
-                        .executes(HollowbellCommand::configList)
+                        .executes(BellCommand::configList)
                         .then(Commands.argument("key", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(Settings.keys(), b))
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(OpsCommand.keys(), b))
                                 .executes(c -> configGet(c, StringArgumentType.getString(c, "key")))
                                 .then(Commands.argument("value", StringArgumentType.word())
                                         .executes(c -> configSet(
@@ -349,8 +349,8 @@ public final class HollowbellCommand {
                                 .executes(c -> tp(c, IntegerArgumentType.getInteger(c, "which")))))
                 .then(Commands.literal("ground")
                         .requires(OP)
-                        .executes(HollowbellCommand::groundSay)
-                        .then(Commands.literal("new").executes(HollowbellCommand::groundNew))
+                        .executes(BellCommand::groundSay)
+                        .then(Commands.literal("new").executes(BellCommand::groundNew))
                         // check: goes over his whole ground on the real world and says what came out wrong (a map in
                         // the world folder)
                         .then(Commands.literal("check")
@@ -367,13 +367,13 @@ public final class HollowbellCommand {
                 // sleep: he drifts down and sleeps, or wakes up (a toggle)
                 .then(Commands.literal("sleep")
                         .requires(OP)
-                        .executes(HollowbellCommand::sleepToggle)
+                        .executes(BellCommand::sleepToggle)
                         .then(Commands.literal("on").executes(c -> near(c, HollowbellEntity::goToSleep, "sleep")))
                         .then(Commands.literal("off").executes(c -> near(c, HollowbellEntity::wakeUp, "sleep"))))
                 // the safe list of whoever runs it: players, single creatures, or whole kinds
                 .then(Commands.literal("spare")
                         .requires(OP)
-                        .executes(HollowbellCommand::spareList)
+                        .executes(BellCommand::spareList)
                         .then(Commands.literal("add")
                                 .then(Commands.literal("kind")
                                         .then(Commands.argument("type", ResourceLocationArgument.id())
@@ -428,18 +428,18 @@ public final class HollowbellCommand {
                 }))
                 .then(Commands.literal("natural")
                         .requires(OP)
-                        .executes(HollowbellCommand::naturalSay)
+                        .executes(BellCommand::naturalSay)
                         .then(Commands.literal("on").executes(c -> setNatural(c, true)))
                         .then(Commands.literal("off").executes(c -> setNatural(c, false))))
                 .then(Commands.literal("limit")
                         .requires(OP)
-                        .executes(HollowbellCommand::limitSay)
+                        .executes(BellCommand::limitSay)
                         .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20))
-                                .executes(HollowbellCommand::setLimit)))
+                                .executes(BellCommand::setLimit)))
                 .then(Commands.literal("ward")
                         .requires(OP)
-                        .executes(HollowbellCommand::wardSay)
-                        .then(Commands.literal("on").executes(HollowbellCommand::wardOn))
+                        .executes(BellCommand::wardSay)
+                        .then(Commands.literal("on").executes(BellCommand::wardOn))
                         .then(Commands.literal("off").executes(c -> {
                             WorldOne.get(c.getSource().getServer()).forgetWard();
                             c.getSource()
@@ -450,8 +450,8 @@ public final class HollowbellCommand {
                                 .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 1440))
                                         .executes(c -> {
                                             int v = IntegerArgumentType.getInteger(c, "minutes");
-                                            HollowbellConfig.V.wardSeconds = v * 60;
-                                            HollowbellConfig.save();
+                                            BellConfig.V.wardSeconds = v * 60;
+                                            BellConfig.save();
                                             c.getSource()
                                                     .sendSuccess(
                                                             () -> Component.translatable(
@@ -463,8 +463,8 @@ public final class HollowbellCommand {
                                 .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 1440))
                                         .executes(c -> {
                                             int v = IntegerArgumentType.getInteger(c, "minutes");
-                                            HollowbellConfig.V.wardRestSeconds = v * 60;
-                                            HollowbellConfig.save();
+                                            BellConfig.V.wardRestSeconds = v * 60;
+                                            BellConfig.save();
                                             c.getSource()
                                                     .sendSuccess(
                                                             () -> v == 0
@@ -479,8 +479,8 @@ public final class HollowbellCommand {
                                 .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 20000))
                                         .executes(c -> {
                                             int v = IntegerArgumentType.getInteger(c, "blocks");
-                                            HollowbellConfig.V.wardBlocks = v;
-                                            HollowbellConfig.save();
+                                            BellConfig.V.wardBlocks = v;
+                                            BellConfig.save();
                                             c.getSource()
                                                     .sendSuccess(
                                                             () -> v == 0
@@ -493,19 +493,19 @@ public final class HollowbellCommand {
                                         }))))
                 .then(Commands.literal("area")
                         .requires(OP)
-                        .executes(HollowbellCommand::areaSay)
-                        .then(Commands.literal("off").executes(HollowbellCommand::areaFree))
+                        .executes(BellCommand::areaSay)
+                        .then(Commands.literal("off").executes(BellCommand::areaFree))
                         .then(Commands.argument("x", FloatArgumentType.floatArg())
                                 .then(Commands.argument("z", FloatArgumentType.floatArg())
                                         .then(Commands.argument("radius", IntegerArgumentType.integer(32, 100000))
-                                                .executes(HollowbellCommand::areaBind)))))
+                                                .executes(BellCommand::areaBind)))))
                 .then(Commands.literal("giants")
                         .requires(OP)
                         .executes(c -> {
                             c.getSource()
                                     .sendSuccess(
                                             () -> Component.translatable(
-                                                    HollowbellConfig.V.fightGiants
+                                                    BellConfig.V.fightGiants
                                                             ? "command.hollowbell.giants_is_on"
                                                             : "command.hollowbell.giants_is_off"),
                                             false);
@@ -513,26 +513,26 @@ public final class HollowbellCommand {
                         })
                         .then(Commands.literal("on")
                                 .executes(
-                                        c -> set(c, () -> HollowbellConfig.V.fightGiants = true, "fightGiants", true)))
+                                        c -> set(c, () -> BellConfig.V.fightGiants = true, "fightGiants", true)))
                         .then(Commands.literal("off")
                                 .executes(c ->
-                                        set(c, () -> HollowbellConfig.V.fightGiants = false, "fightGiants", false))))
+                                        set(c, () -> BellConfig.V.fightGiants = false, "fightGiants", false))))
                 .then(Commands.literal("meetings")
                         .requires(OP)
                         .executes(c -> {
                             c.getSource()
                                     .sendSuccess(
                                             () -> Component.translatable(
-                                                    HollowbellConfig.V.meetings
+                                                    BellConfig.V.meetings
                                                             ? "command.hollowbell.meetings_is_on"
                                                             : "command.hollowbell.meetings_is_off"),
                                             false);
                             return 1;
                         })
                         .then(Commands.literal("on")
-                                .executes(c -> set(c, () -> HollowbellConfig.V.meetings = true, "meetings", true)))
+                                .executes(c -> set(c, () -> BellConfig.V.meetings = true, "meetings", true)))
                         .then(Commands.literal("off")
-                                .executes(c -> set(c, () -> HollowbellConfig.V.meetings = false, "meetings", false))))
+                                .executes(c -> set(c, () -> BellConfig.V.meetings = false, "meetings", false))))
                 .then(Commands.literal("volume")
                         .requires(OP)
                         .executes(c -> {
@@ -540,16 +540,16 @@ public final class HollowbellCommand {
                                     .sendSuccess(
                                             () -> Component.translatable(
                                                     "command.hollowbell.volume_is",
-                                                    String.valueOf(HollowbellConfig.V.soundVolume)),
+                                                    String.valueOf(BellConfig.V.soundVolume)),
                                             false);
                             return 1;
                         })
                         .then(Commands.literal("off")
-                                .executes(c -> set(c, () -> HollowbellConfig.V.soundVolume = 0f, "soundVolume", 0f)))
+                                .executes(c -> set(c, () -> BellConfig.V.soundVolume = 0f, "soundVolume", 0f)))
                         .then(Commands.argument("volume", FloatArgumentType.floatArg(0f, 2f))
                                 .executes(c -> set(
                                         c,
-                                        () -> HollowbellConfig.V.soundVolume = FloatArgumentType.getFloat(c, "volume"),
+                                        () -> BellConfig.V.soundVolume = FloatArgumentType.getFloat(c, "volume"),
                                         "soundVolume",
                                         FloatArgumentType.getFloat(c, "volume")))))
                 .then(Commands.literal("kill").requires(OP).executes(c -> {
@@ -578,37 +578,37 @@ public final class HollowbellCommand {
                 }))
                 .then(Commands.literal("health")
                         .requires(OP)
-                        .executes(c -> say(c, "health", HollowbellConfig.V.health))
+                        .executes(c -> say(c, "health", BellConfig.V.health))
                         .then(Commands.argument("health", FloatArgumentType.floatArg(10f, 1_000_000f))
                                 .executes(c -> set(
                                         c,
-                                        () -> HollowbellConfig.V.health = FloatArgumentType.getFloat(c, "health"),
+                                        () -> BellConfig.V.health = FloatArgumentType.getFloat(c, "health"),
                                         "health",
                                         FloatArgumentType.getFloat(c, "health")))))
                 .then(Commands.literal("damage")
                         .requires(OP)
-                        .executes(c -> say(c, "damage", HollowbellConfig.V.damageMultiplier))
+                        .executes(c -> say(c, "damage", BellConfig.V.damageMultiplier))
                         .then(Commands.literal("mobs")
-                                .executes(c -> say(c, "mobDamage", HollowbellConfig.V.mobDamage))
+                                .executes(c -> say(c, "mobDamage", BellConfig.V.mobDamage))
                                 .then(Commands.argument("times", FloatArgumentType.floatArg(0f, 100f))
                                         .executes(c -> set(
                                                 c,
-                                                () -> HollowbellConfig.V.mobDamage =
+                                                () -> BellConfig.V.mobDamage =
                                                         FloatArgumentType.getFloat(c, "times"),
                                                 "mobDamage",
                                                 FloatArgumentType.getFloat(c, "times")))))
                         .then(Commands.argument("multiplier", FloatArgumentType.floatArg(0f, 100f))
                                 .executes(c -> set(
                                         c,
-                                        () -> HollowbellConfig.V.damageMultiplier =
+                                        () -> BellConfig.V.damageMultiplier =
                                                 FloatArgumentType.getFloat(c, "multiplier"),
                                         "damage",
                                         FloatArgumentType.getFloat(c, "multiplier")))))
                 .then(toggle(
                         "griefing",
                         "griefing",
-                        () -> HollowbellConfig.V.griefing,
-                        v -> HollowbellConfig.V.griefing = v))
+                        () -> BellConfig.V.griefing,
+                        v -> BellConfig.V.griefing = v))
                 .then(Commands.literal("heavydelay")
                         .requires(OP)
                         .executes(c -> heavyDelay(c, -1))
@@ -617,10 +617,10 @@ public final class HollowbellCommand {
                 .then(toggle(
                         "shake",
                         "screenShake",
-                        () -> HollowbellConfig.V.screenShake,
-                        v -> HollowbellConfig.V.screenShake = v))
+                        () -> BellConfig.V.screenShake,
+                        v -> BellConfig.V.screenShake = v))
                 .then(Commands.literal("reload").requires(OP).executes(c -> {
-                    boolean ok = HollowbellConfig.load();
+                    boolean ok = BellConfig.load();
                     c.getSource()
                             .sendSuccess(
                                     () -> Component.translatable(
@@ -634,16 +634,16 @@ public final class HollowbellCommand {
     private static LiteralArgumentBuilder<CommandSourceStack> windCommand() {
         return Commands.literal("wind")
                 .requires(OP)
-                .executes(HollowbellCommand::windSay)
+                .executes(BellCommand::windSay)
                 .then(Commands.literal("on")
-                        .executes(c -> set(c, () -> HollowbellConfig.V.bookCosts = true, "bookCosts", "on")))
+                        .executes(c -> set(c, () -> BellConfig.V.bookCosts = true, "bookCosts", "on")))
                 .then(Commands.literal("off")
-                        .executes(c -> set(c, () -> HollowbellConfig.V.bookCosts = false, "bookCosts", "off")))
+                        .executes(c -> set(c, () -> BellConfig.V.bookCosts = false, "bookCosts", "off")))
                 .then(Commands.literal("seconds")
                         .then(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600))
                                 .executes(c -> set(
                                         c,
-                                        () -> HollowbellConfig.V.windSeconds =
+                                        () -> BellConfig.V.windSeconds =
                                                 IntegerArgumentType.getInteger(c, "seconds"),
                                         "windSeconds",
                                         IntegerArgumentType.getInteger(c, "seconds")))))
@@ -651,7 +651,7 @@ public final class HollowbellCommand {
                         .then(Commands.argument("rate", FloatArgumentType.floatArg(0f, 10f))
                                 .executes(c -> set(
                                         c,
-                                        () -> HollowbellConfig.V.grudgeRate = FloatArgumentType.getFloat(c, "rate"),
+                                        () -> BellConfig.V.grudgeRate = FloatArgumentType.getFloat(c, "rate"),
                                         "grudgeRate",
                                         FloatArgumentType.getFloat(c, "rate")))))
                 .then(Commands.argument("share", FloatArgumentType.floatArg(0f, 1f))
@@ -670,14 +670,14 @@ public final class HollowbellCommand {
     private static int windSay(CommandContext<CommandSourceStack> c) {
         HollowbellEntity h = nearest(c.getSource());
         int now = h == null ? 100 : Math.round(h.mood().wind() * 100);
-        String key = HollowbellConfig.V.bookCosts ? "command.hollowbell.wind_on" : "command.hollowbell.wind_off";
+        String key = BellConfig.V.bookCosts ? "command.hollowbell.wind_on" : "command.hollowbell.wind_off";
         c.getSource()
                 .sendSuccess(
                         () -> Component.translatable(
                                 key,
                                 now,
-                                HollowbellConfig.V.windSeconds,
-                                String.valueOf(HollowbellConfig.V.grudgeRate)),
+                                BellConfig.V.windSeconds,
+                                String.valueOf(BellConfig.V.grudgeRate)),
                         false);
         return 1;
     }
@@ -685,10 +685,10 @@ public final class HollowbellCommand {
     /** how long into a fight before his first heavy move: said, or set (seconds >= 0) */
     private static int heavyDelay(CommandContext<CommandSourceStack> c, int seconds) {
         if (seconds >= 0) {
-            HollowbellConfig.V.heavyDelaySeconds = seconds;
-            HollowbellConfig.save();
+            BellConfig.V.heavyDelaySeconds = seconds;
+            BellConfig.save();
         }
-        int now = HollowbellConfig.V.heavyDelaySeconds;
+        int now = BellConfig.V.heavyDelaySeconds;
         c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.heavydelay", now), seconds >= 0);
         return 1;
     }
@@ -737,15 +737,15 @@ public final class HollowbellCommand {
     }
 
     private static float eggSize() {
-        return Mth.clamp(HollowbellConfig.V.spawnEggScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE);
+        return Mth.clamp(BellConfig.V.spawnEggScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE);
     }
 
     private static int bossbarSay(CommandContext<CommandSourceStack> c) {
-        int r = HollowbellConfig.V.bossBarRange;
+        int r = BellConfig.V.bossBarRange;
         c.getSource()
                 .sendSuccess(
                         () -> Component.translatable(
-                                HollowbellConfig.V.bossBar
+                                BellConfig.V.bossBar
                                         ? "command.hollowbell.bossbar_on"
                                         : "command.hollowbell.bossbar_off",
                                 r > 0 ? String.valueOf(r) : (int) HollowbellEntity.barRange(1f) + " (auto)"),
@@ -851,9 +851,9 @@ public final class HollowbellCommand {
 
     private static int configList(CommandContext<CommandSourceStack> c) {
         StringBuilder b = new StringBuilder();
-        for (String k : Settings.keys()) {
+        for (String k : OpsCommand.keys()) {
             if (b.length() > 0) b.append(", ");
-            b.append(k).append(" ").append(Settings.get(k));
+            b.append(k).append(" ").append(OpsCommand.get(k));
         }
         String all = b.toString();
         c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.config_all", all), false);
@@ -861,7 +861,7 @@ public final class HollowbellCommand {
     }
 
     private static int configGet(CommandContext<CommandSourceStack> c, String key) {
-        String v = Settings.get(key);
+        String v = OpsCommand.get(key);
         if (v == null) {
             c.getSource().sendFailure(Component.translatable("command.hollowbell.config_none", key));
             return 0;
@@ -871,12 +871,12 @@ public final class HollowbellCommand {
     }
 
     private static int configSet(CommandContext<CommandSourceStack> c, String key, String value) {
-        String bad = Settings.set(key, value);
+        String bad = OpsCommand.set(key, value);
         if (bad != null) {
             c.getSource().sendFailure(Component.translatable("command.hollowbell.config_bad", bad));
             return 0;
         }
-        String now = Settings.get(key);
+        String now = OpsCommand.get(key);
         c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.set", key, now), true);
         return 1;
     }
@@ -951,10 +951,9 @@ public final class HollowbellCommand {
         h.setVariant(mood);
         h.setHome(h.position());
         l.addFreshEntity(h);
-        // (far in front of a big one the land may not be there yet: it's held until it is, so he gets going)
+        // the land may not be made yet that far out: held until it is, then kept ticking a few seconds so he takes
+        // his first ticks there (a ticket that only loads the land never ticks him)
         NoWait.hold(l, (int) Math.floor(at.x), (int) Math.floor(at.z), 1200);
-        // and kept running a few seconds once it is, so he takes his first ticks there even far from everybody (he
-        // steps out of the world, or is written down where he lies); a ticket that only loads the land never ticks him
         NoWait.settle(l, (int) Math.floor(at.x), (int) Math.floor(at.z), 200);
         src.sendSuccess(
                 () -> Component.translatable(
@@ -1021,7 +1020,7 @@ public final class HollowbellCommand {
         return all.size() + out.size() + lying.size();
     }
 
-    /** one put away with his chunk where nobody was near: still out there, just not loaded */
+    /** one saved with his unloaded chunk */
     private static void lyingLine(CommandContext<CommandSourceStack> c, Away.Parked k, int num) {
         Component line = Component.translatable(
                 "command.hollowbell.where_lying", (int) Math.floor(k.x()), (int) Math.floor(k.z()), k.dim());
@@ -1057,7 +1056,7 @@ public final class HollowbellCommand {
         c.getSource().sendSuccess(() -> num > 0 ? Component.literal(num + ". ").append(line) : line, false);
     }
 
-    /** where every one of them is: in the world, or out of it and where the sum says */
+    /** where each one is, loaded or away */
     private static int where(CommandContext<CommandSourceStack> c) {
         List<HollowbellEntity> all = allOf(c.getSource());
         List<Away.Rec> out = Away.get(c.getSource().getServer()).all();
@@ -1082,11 +1081,11 @@ public final class HollowbellCommand {
     }
 
     private static int awaySay(CommandContext<CommandSourceStack> c) {
-        int b = HollowbellConfig.V.awayBlocks;
+        int b = BellConfig.V.awayBlocks;
         c.getSource()
                 .sendSuccess(
                         () -> Component.translatable(
-                                HollowbellConfig.V.offscreenTravel
+                                BellConfig.V.offscreenTravel
                                         ? "command.hollowbell.away_is_on"
                                         : "command.hollowbell.away_is_off",
                                 b > 0
@@ -1097,7 +1096,7 @@ public final class HollowbellCommand {
         return 1;
     }
 
-    /** every one with nobody near steps out right now */
+    /** every one with nobody near steps out now */
     private static int awayNow(CommandContext<CommandSourceStack> c) {
         int n = 0;
         for (HollowbellEntity h : allOf(c.getSource())) {
@@ -1137,7 +1136,7 @@ public final class HollowbellCommand {
 
     private static int set(CommandContext<CommandSourceStack> c, Runnable r, String what, Object v) {
         r.run();
-        HollowbellConfig.save();
+        BellConfig.save();
         c.getSource()
                 .sendSuccess(
                         () -> Component.translatable("command.hollowbell.set", plain(what), String.valueOf(v)), true);
@@ -1168,7 +1167,7 @@ public final class HollowbellCommand {
     /** /hollowbell natural: does the world keep one of him out there, and where things stand (the finder's words) */
     private static int naturalSay(CommandContext<CommandSourceStack> c) {
         ServerLevel over = c.getSource().getServer().overworld();
-        Component msg = HollowbellConfig.V.oneInTheWorld
+        Component msg = BellConfig.V.oneInTheWorld
                 ? Component.translatable(
                         "command.hollowbell.natural_is_on",
                         FinderItem.tell(over, c.getSource().getPosition()))
@@ -1213,8 +1212,8 @@ public final class HollowbellCommand {
     }
 
     private static int setNatural(CommandContext<CommandSourceStack> c, boolean on) {
-        HollowbellConfig.V.oneInTheWorld = on;
-        HollowbellConfig.save();
+        BellConfig.V.oneInTheWorld = on;
+        BellConfig.save();
         c.getSource()
                 .sendSuccess(
                         () -> Component.translatable(
@@ -1229,7 +1228,7 @@ public final class HollowbellCommand {
     }
 
     private static int limitSay(CommandContext<CommandSourceStack> c) {
-        int max = HollowbellConfig.V.maxInWorld;
+        int max = BellConfig.V.maxInWorld;
         int now = countAll(c.getSource());
         c.getSource()
                 .sendSuccess(
@@ -1242,8 +1241,8 @@ public final class HollowbellCommand {
 
     private static int setLimit(CommandContext<CommandSourceStack> c) {
         int v = IntegerArgumentType.getInteger(c, "how many");
-        HollowbellConfig.V.maxInWorld = v;
-        HollowbellConfig.save();
+        BellConfig.V.maxInWorld = v;
+        BellConfig.save();
         c.getSource()
                 .sendSuccess(
                         () -> v == 0
@@ -1272,8 +1271,8 @@ public final class HollowbellCommand {
             msg = Component.translatable(
                     "command.hollowbell.ward_none",
                     (int) WorldOne.wardRange(),
-                    Math.max(1, HollowbellConfig.V.wardSeconds / 60),
-                    Math.max(0, HollowbellConfig.V.wardRestSeconds / 60));
+                    Math.max(1, BellConfig.V.wardSeconds / 60),
+                    Math.max(0, BellConfig.V.wardRestSeconds / 60));
         c.getSource().sendSuccess(() -> msg, false);
         return 1;
     }

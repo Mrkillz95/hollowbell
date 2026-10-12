@@ -13,10 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * A swing at him goes to the server as a hit on the block you were looking at, not as the game's own attack: the
- * game would measure your reach to the small box at his middle and throw the swing away.
- */
+/** A swing at him goes to the server as a HitPayload; the game's own attack would fail its reach check. */
 @Mixin(MultiPlayerGameMode.class)
 public abstract class AttackMixin {
     @Shadow

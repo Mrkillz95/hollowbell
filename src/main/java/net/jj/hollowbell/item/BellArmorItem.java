@@ -1,5 +1,7 @@
 package net.jj.hollowbell.item;
 
+import net.jj.hollowbell.Adv;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +28,7 @@ import net.minecraft.world.item.TooltipFlag;
 /**
  * Bell glass armor. As tough as diamond and light, and the full set carries his own gifts: poison and his toll's
  * dizziness never touch you, falling fast wakes slow falling (the way he lets things down), and hurt low, the glass
- * rings once on its own. The "Armour power" key does the Bell toll or a glide (see BellPower).
+ * rings once on its own. The "Armour power" key does the Bell toll or a glide (see Powers).
  */
 public class BellArmorItem extends ArmorItem {
     public BellArmorItem(Holder<ArmorMaterial> material, Type type, Properties p) {
@@ -54,7 +56,7 @@ public class BellArmorItem extends ArmorItem {
 
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(BellArmorItem::tick);
-        ServerTickEvents.END_SERVER_TICK.register(BellPower::tick);
+        ServerTickEvents.END_SERVER_TICK.register(Powers::tick);
         // hurt low in the full set: the glass rings once, throwing back what's close and giving you a moment's cover
         ServerLivingEntityEvents.AFTER_DAMAGE.register((e, src, base, taken, blocked) -> {
             if (e instanceof ServerPlayer p && p.isAlive() && taken > 0) lastRing(p);
@@ -97,7 +99,7 @@ public class BellArmorItem extends ArmorItem {
         Long was = RANG.get(p.getUUID());
         if (was != null && now - was < LAST_RING_WAIT && now >= was) return false;
         RANG.put(p.getUUID(), now);
-        BellPower.ring(p, 0.5f);
+        Powers.ring(p, 0.5f);
         p.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 200, 0, true, true, true));
         return true;
     }
@@ -109,7 +111,7 @@ public class BellArmorItem extends ArmorItem {
     /** one pass of the set's gifts */
     public static void abilities(ServerPlayer p) {
         if (p.isSpectator() || !fullSet(p)) return;
-        HollowbellMod.award(p, "bell_glass_set");
+        Adv.grant(p, "bell_glass_set");
         if (p.hasEffect(MobEffects.POISON)) p.removeEffect(MobEffects.POISON);
         // his toll's ringing in your head (nausea) doesn't get through the glass either
         if (p.hasEffect(MobEffects.CONFUSION)) p.removeEffect(MobEffects.CONFUSION);

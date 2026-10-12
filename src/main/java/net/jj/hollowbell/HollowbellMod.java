@@ -12,14 +12,14 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.jj.hollowbell.command.GiantsCommand;
-import net.jj.hollowbell.command.HollowbellCommand;
+import net.jj.hollowbell.command.BellCommand;
 import net.jj.hollowbell.entity.BellMoves;
 import net.jj.hollowbell.entity.Belling;
-import net.jj.hollowbell.entity.HollowSolid;
+import net.jj.hollowbell.entity.BellSolid;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.item.BellArmorItem;
-import net.jj.hollowbell.item.BellPower;
+import net.jj.hollowbell.item.Powers;
 import net.jj.hollowbell.net.ArmourPowerPayload;
 import net.jj.hollowbell.net.BeingHimPayload;
 import net.jj.hollowbell.net.CodexOrders;
@@ -62,7 +62,7 @@ public class HollowbellMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        HollowbellConfig.load();
+        BellConfig.load();
         ModBlocks.init();
         ModSounds.init();
         ModEntities.init();
@@ -91,7 +91,7 @@ public class HollowbellMod implements ModInitializer {
                 SafeDropPayload.TYPE,
                 (pay, ctx) -> ctx.server().execute(() -> CodexOrders.dropFromSafeList(ctx.player(), pay.id())));
         ServerPlayNetworking.registerGlobalReceiver(
-                ArmourPowerPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> BellPower.use(ctx.player())));
+                ArmourPowerPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> Powers.use(ctx.player())));
         ServerPlayNetworking.registerGlobalReceiver(
                 HitPayload.TYPE,
                 (pay, ctx) -> ctx.server().execute(() -> {
@@ -150,7 +150,7 @@ public class HollowbellMod implements ModInitializer {
         BellArmorItem.init();
 
         CommandRegistrationCallback.EVENT.register((d, access, env) -> {
-            HollowbellCommand.register(d);
+            BellCommand.register(d);
             // one of the giant mods registers /giants for everyone (see GiantsCommand)
             if (GiantsCommand.elected()) GiantsCommand.register(d);
         });
@@ -181,8 +181,7 @@ public class HollowbellMod implements ModInitializer {
                             || why == Entity.RemovalReason.UNLOADED_WITH_PLAYER)) away.noteParked(h);
             else away.unpark(h.getUUID());
         });
-        // every one still loaded is written down where he is as the server stops: the game saves him with his chunk
-        // without putting him away, and after a restart nothing may load that chunk again
+        // the game saves him with his chunk, which nothing may load again after a restart: note where each one is
         ServerLifecycleEvents.SERVER_STOPPING.register(Away::noteAllLoaded);
         // the cap: only for freshly made ones. A saved one loading with its chunk is nobody arriving.
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
@@ -211,20 +210,12 @@ public class HollowbellMod implements ModInitializer {
 
         BellRig rig = BellRig.get();
         BellModel.preload();
-        HollowSolid.preload();
+        BellSolid.preload();
         LOG.info(
-                "Hollowbell is ready: {} bones, {} strands, {} pods, {} eggs",
+                "Hollowbell loaded: {} bones, {} strands, {} pods, {} eggs",
                 rig.boneCount(),
                 rig.strands.length,
                 rig.pods.length,
                 rig.eggs.length);
-    }
-
-    /** gives one of the mod's advancements */
-    public static void award(ServerPlayer p, String name) {
-        var adv = p.server.getAdvancements().get(ResourceLocation.fromNamespaceAndPath(MOD_ID, name));
-        if (adv == null) return;
-        var progress = p.getAdvancements().getOrStartProgress(adv);
-        for (String c : progress.getRemainingCriteria()) p.getAdvancements().award(adv, c);
     }
 }

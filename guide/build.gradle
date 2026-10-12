@@ -12,15 +12,15 @@ repositories {
 loom {
     splitEnvironmentSourceSets()
 }
-// The game tests and the autotest live in their own source sets, so they never go in the jar.
+// the game tests and the autotest live in their own source sets, so they never go in the jar
 sourceSets {
     gametest {
-        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
-        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+        compileClasspath += main.compileClasspath + main.output
+        runtimeClasspath += main.runtimeClasspath + main.output
     }
-    dev {
-        compileClasspath += sourceSets.client.compileClasspath + sourceSets.main.output + sourceSets.client.output
-        runtimeClasspath += sourceSets.client.runtimeClasspath + sourceSets.main.output + sourceSets.client.output
+    gametestClient {
+        compileClasspath += client.compileClasspath + client.output + main.output + gametest.output
+        runtimeClasspath += client.runtimeClasspath + client.output + main.output + gametest.output
     }
 }
 loom {
@@ -31,16 +31,14 @@ loom {
         }
         "jj_giants-gametest" {
             sourceSet sourceSets.gametest
-        }
-        "jj_giants-dev" {
-            sourceSet sourceSets.dev
+            sourceSet sourceSets.gametestClient
         }
     }
     runs {
         gametest {
             server()
-            source sourceSets.gametest
             name "Game Test"
+            source sourceSets.gametest
             vmArg "-Dfabric-api.gametest"
             vmArg "-Xmx3G"
             vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest-report.xml"
@@ -48,8 +46,8 @@ loom {
         }
         autotest {
             client()
-            source sourceSets.dev
             name "Auto Test"
+            source sourceSets.gametestClient
             vmArg "-Djj_giants.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "tools/autotest.txt")
             vmArg "-Xmx4G"
             programArgs "--width", "1280", "--height", "720"
@@ -62,11 +60,11 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    // -Pgiants: the six giants loaded too (copies of their released jars in run-mods/, made by
-    // tools/giant_mods.py without their own game tests), for the tests and pictures that need them.
+    // -Pgiants: the giants loaded too (copies of their released jars in run-mods/, made by tools/giant_mods.py
+    // without their own game tests), for the tests and pictures that need them
     if (project.hasProperty('giants')) fileTree(dir: 'run-mods', include: '*.jar').each { modLocalRuntime files(it) }
 }
-tasks.matching { it.name in ['processResources', 'processGametestResources', 'processDevResources'] }.configureEach {
+tasks.matching { it.name in ['processResources', 'processGametestResources'] }.configureEach {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": project.version }
 }
@@ -77,7 +75,7 @@ java {
 }
 jar { from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } } }
 
-// Maven Central rate-limits the cloud machine, so use Google's mirror of it instead.
+// Google's mirror of Maven Central, in place of the main one
 afterEvaluate {
     repositories.removeIf { it instanceof MavenArtifactRepository && it.url.toString().contains("repo.maven.apache.org") }
 }

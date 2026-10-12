@@ -10,9 +10,8 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * What your crosshair is on. The game only knows him as one small box at his middle, so after it has picked, this
- * looks along your view through the blocks he is actually made of and, if one of them is nearer, points you at him.
- * The bone you are on goes with the swing (see HitPayload).
+ * What your crosshair is on: after the game picks, this traces your view through his blocks and, if one is nearer,
+ * points you at him. The bone goes with the swing (see HitPayload).
  */
 public final class BellPick {
     private BellPick() {}

@@ -65,7 +65,8 @@ public final class LiveNews {
             for (Object o : l) if (o != null) out.add(o.toString());
             return out;
         } catch (Throwable t) {
-            GiantsGuideMod.LOG.debug("Giants Guide: no {} news from {}: {}", action, g.key(), t.toString());
+            // a call into another giant's mod
+            GiantsGuideMod.LOG.debug("No {} news from {}: {}", action, g.key(), t.toString());
             return null;
         }
     }
