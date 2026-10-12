@@ -76,68 +76,70 @@ import org.joml.Vector3f;
  * hits is set at full size and scaled by his size and the damage setting in {@link HollowbellEntity#dmg}.
  */
 public final class BellMoves {
-    private final HollowbellEntity h;
-    private final BellRig rig;
+    final HollowbellEntity h;
+    final BellRig rig;
+    final BellHolds holds;
+    final BellHeavyMoves heavy;
 
-    private int move, t, arg = -1, lastArg = -1, cooldown = 60, harvestIn = 400;
-    private @Nullable LivingEntity target;
+    int move, t, arg = -1, lastArg = -1, cooldown = 60, harvestIn = 400;
+    @Nullable LivingEntity target;
     /** what the move running now is aimed at (null between moves) */
     public @Nullable LivingEntity moveTarget() {
         return target;
     }
     /** the strand grabbing: who, on which seat, how far up, how many hits it has taken */
-    private @Nullable LivingEntity grabbed;
+    @Nullable LivingEntity grabbed;
 
-    private @Nullable Tree grabbedTree;
-    private @Nullable Seat grabSeat;
-    private float lift;
-    private float strandHits;
-    private boolean gentle;
-    private Vec3 intoFrom = Vec3.ZERO;
+    @Nullable Tree grabbedTree;
+    @Nullable Seat grabSeat;
+    float lift;
+    float strandHits;
+    boolean gentle;
+    Vec3 intoFrom = Vec3.ZERO;
     /**
      * Carrying somebody up onto his crown (a gentle grab, see runCarry): back once the strand is on its way back down
      * (they're on the crown, or were let go); ticks into the
      * way up and how long it takes; ticks into the strand going back down, how long that takes and from how far up;
      * how far up it is now (0-1).
      */
-    private boolean back;
+    boolean back;
     /**
      * Setting whoever rides the crown down (G): who asked, the strand and the spot on the ground chosen, how long
      * he's been sinking to it; then, as a gentle grab with down set, the strand going up empty (phase UP) and coming
      * back down with them (phase DOWN).
      */
-    private @Nullable LivingEntity downWho;
+    @Nullable LivingEntity downWho;
 
-    private int downStrand = -1, downWait, carryPhase;
-    private @Nullable Vec3 downSpot;
-    private boolean down;
-    private static final int PHASE_UP = 1, PHASE_DOWN = 2;
-    private int reachHurt;
-    private int carryT, carryLen, backT, backLen;
-    private float backFrom, carryU;
+    int downStrand = -1, downWait, carryPhase;
+    @Nullable Vec3 downSpot;
+    boolean down;
+    static final int PHASE_UP = 1, PHASE_DOWN = 2;
+    int reachHurt;
+    int carryT, carryLen, backT, backLen;
+    float backFrom, carryU;
     /** coming to pick somebody up: the strand that will do it, a pause after a miss, how long he's been at it */
-    private int fetchStrand = -1, fetchPause, fetchWait, fetchThere;
+    int fetchStrand = -1, fetchPause, fetchWait, fetchThere;
     /** where the one being reached for stood, and their health, when the strand set out */
-    private Vec3 reachFrom = Vec3.ZERO;
+    Vec3 reachFrom = Vec3.ZERO;
 
-    private float reachHp;
+    float reachHp;
     /** the arm wrap */
-    private @Nullable LivingEntity wrapped;
+    @Nullable LivingEntity wrapped;
 
-    private @Nullable Seat wrapSeat;
-    private float armHits;
+    @Nullable Seat wrapSeat;
+    float armHits;
     /** whatever is inside the dome */
-    private final List<Inside> inside = new ArrayList<>();
+    final List<Inside> inside = new ArrayList<>();
 
-    private float hurtInside;
+    float hurtInside;
     private final Map<UUID, Integer> stingAt = new HashMap<>();
-    private final Set<UUID> struckThisMove = new HashSet<>();
+    final Set<UUID> struckThisMove = new HashSet<>();
     /** per creature, the tick it was last hurt by the move of the moment (for moves that hurt over and over) */
-    private final Map<UUID, Integer> hitAt = new HashMap<>();
+    final Map<UUID, Integer> hitAt = new HashMap<>();
 
-    private @Nullable BlockPos treeAt;
+    @Nullable BlockPos treeAt;
     /** the slam's arm has come down (it only hits once); which of the storm's arms have */
-    private boolean landed;
+    boolean landed;
 
     private int stormLanded;
     private final int[] landedAt = new int[8];
@@ -149,15 +151,15 @@ public final class BellMoves {
     private long fightSince = -1;
 
     private int calmFor;
-    private int lastMove;
+    int lastMove;
     /** the spore clouds drifting after what he's hunting */
-    private final List<AreaEffectCloud> clouds = new ArrayList<>();
+    final List<AreaEffectCloud> clouds = new ArrayList<>();
     /** the sky dive: how high he goes, how far over he has turned, where he'll come down */
     private double diveTop;
 
-    private float diveOver;
+    float diveOver;
     /** the sun lances: where each beam touches the ground */
-    private final Vec3[] lance = new Vec3[5];
+    final Vec3[] lance = new Vec3[5];
 
     private static final class Inside {
         @Nullable
@@ -183,6 +185,8 @@ public final class BellMoves {
     BellMoves(HollowbellEntity h) {
         this.h = h;
         this.rig = h.rig;
+        holds = new BellHolds(this);
+        heavy = new BellHeavyMoves(this);
     }
 
     public int move() {
@@ -344,7 +348,7 @@ public final class BellMoves {
         return new Vec3(across.x, -(0.9 + 1.6 * s), across.z);
     }
 
-    private double groundUnder() {
+    double groundUnder() {
         return h.groundAt(h.getX(), h.getZ());
     }
 
@@ -376,11 +380,11 @@ public final class BellMoves {
         return false;
     }
 
-    private ServerLevel level() {
+    ServerLevel level() {
         return (ServerLevel) h.level();
     }
 
-    private float s() {
+    float s() {
         return h.bellScale();
     }
 
@@ -405,7 +409,7 @@ public final class BellMoves {
         }
     }
 
-    private @Nullable Vec3 forcedSpot;
+    @Nullable Vec3 forcedSpot;
 
     private boolean start(int which, @Nullable LivingEntity at) {
         if (h.sunk()
@@ -433,13 +437,13 @@ public final class BellMoves {
             case Moves.HARVEST -> {
                 if (grabbed != null || grabbedTree != null) return false;
                 LivingEntity mob =
-                        at != null && !(at instanceof Player) && HollowbellEntity.canCarry(at) ? at : findHarvestMob();
+                        at != null && !(at instanceof Player) && HollowbellEntity.canCarry(at) ? at : holds.findHarvestMob();
                 if (mob != null) {
                     target = mob;
                     aim = h.toModel(mob.position());
                     a = nearestStrand(mob.position());
                 } else {
-                    BlockPos tree = findTree();
+                    BlockPos tree = holds.findTree();
                     if (tree == null) return false;
                     aim = h.toModel(Vec3.atBottomCenterOf(tree));
                     a = nearestStrand(Vec3.atBottomCenterOf(tree));
@@ -503,7 +507,7 @@ public final class BellMoves {
     }
 
     /** what you see and hear as a move begins: the tell, so you can get out of the way */
-    private void warn(int which, int a) {
+    void warn(int which, int a) {
         float s = s();
         Vec3 mid = h.position().add(0, (rig.rimY + 20) * s, 0);
         switch (which) {
@@ -561,14 +565,14 @@ public final class BellMoves {
 
     private void end() {
         int was = move;
-        if (move == Moves.GRAB || move == Moves.HARVEST) letGoOfGrab(false);
+        if (move == Moves.GRAB || move == Moves.HARVEST) holds.letGoOfGrab(false);
         gentle = false;
         back = false;
         down = false;
         carryU = 0f;
         carryPhase = 0;
         carryWho = null;
-        if (move == Moves.WRAP) letGoOfWrap();
+        if (move == Moves.WRAP) holds.letGoOfWrap();
         move = Moves.NONE;
         t = 0;
         arg = -1;
@@ -595,8 +599,8 @@ public final class BellMoves {
     public void tick() {
         giantAt.clear();
         fightClock();
-        insideTick();
-        cloudsTick();
+        holds.insideTick();
+        heavy.cloudsTick();
         if (tired > 0 && --tired == 0) h.setTired(false);
         if (h.isDeadOrDying()) return;
         if (fetchPause > 0) fetchPause--;
@@ -609,7 +613,7 @@ public final class BellMoves {
                 downWait++;
                 // (right down at the ground, so the strand reaches it without stretching; or he's tried a good while)
                 boolean there = downSpot != null && Math.abs(h.getY() - downSpot.y) < 0.3 + 1.5 * s();
-                if ((there && downWait > 10) || downWait > 20 * 30) startCarryDown();
+                if ((there && downWait > 10) || downWait > 20 * 30) holds.startCarryDown();
                 return;
             }
         }
@@ -627,7 +631,7 @@ public final class BellMoves {
             fetchThere = 0;
         } else if (!h.resting() && fetchPause == 0) {
             // he comes alongside: the one who asked just outside his arms, in line with the strand that will carry them
-            Vec3 spot = fetchSpot(fetch);
+            Vec3 spot = holds.fetchSpot(fetch);
             float s = s();
             fetchWait++;
             boolean near = h.horiz(spot) < 1.5 + 3 * s;
@@ -635,7 +639,7 @@ public final class BellMoves {
             boolean level = Math.abs(h.getY() - fetch.getY()) < 0.3 + 1.5 * s || fetchThere > 200;
             // (if he somehow can't get to the spot, he tries from where he is after a good while)
             boolean waited = fetchWait > 20 * 45 && h.horiz(fetch.position()) < h.bellRadius() * 1.4;
-            if (((near && level) || waited) && startCarry(fetch)) {
+            if (((near && level) || waited) && holds.startCarry(fetch)) {
                 fetchWait = 0;
                 fetchThere = 0;
                 return;
@@ -729,7 +733,7 @@ public final class BellMoves {
      * A blow: it lands even straight after another (a creature's moment of safety after a hit is taken away first),
      * and throws what it hits away from from, out and up.
      */
-    private void blow(LivingEntity e, float base, Vec3 from, double out, double up) {
+    void blow(LivingEntity e, float base, Vec3 from, double out, double up) {
         if (!h.fightingGiant(e)) return; // a giant he isn't fighting is left alone
         e.invulnerableTime = 0;
         e.hurt(h.damageSources().mobAttack(h), h.dmg(base, e));
@@ -741,7 +745,7 @@ public final class BellMoves {
     }
 
     /** hurts e at most once every gap ticks during a move */
-    private boolean every(LivingEntity e, int gap) {
+    boolean every(LivingEntity e, int gap) {
         Integer last = hitAt.get(e.getUUID());
         if (last != null && t - last < gap) return false;
         hitAt.put(e.getUUID(), t);
@@ -749,7 +753,7 @@ public final class BellMoves {
     }
 
     /** it knocks flying players out of the air */
-    private void knockDown(LivingEntity e) {
+    void knockDown(LivingEntity e) {
         if (e instanceof ServerPlayer p && (p.isFallFlying() || p.getAbilities().flying)) {
             p.stopFallFlying();
             if (!p.isCreative() && p.getAbilities().flying) {
@@ -767,11 +771,11 @@ public final class BellMoves {
         float s = s();
         double bell = h.bellRadius();
         switch (move) {
-            case Moves.GRAB, Moves.HARVEST -> runGrab();
+            case Moves.GRAB, Moves.HARVEST -> holds.runGrab();
             case Moves.CURTAIN -> runCurtain(s);
             case Moves.SWEEP -> runSweep(s, bell);
             case Moves.SLAM -> runSlam(s);
-            case Moves.WRAP -> runWrap();
+            case Moves.WRAP -> holds.runWrap();
             case Moves.PULSE -> runPulse(s, bell);
             case Moves.DROP -> runDrop(s, bell);
             case Moves.SHED -> {
@@ -783,20 +787,20 @@ public final class BellMoves {
             case Moves.LASH -> runLash(s, bell);
             case Moves.FLASH -> runFlash(s);
             case Moves.SPORES -> {
-                if (t == Moves.SPORES_AT) spores();
+                if (t == Moves.SPORES_AT) heavy.spores();
             }
-            case Moves.POD_BURST -> podBurst();
-            case Moves.EGG_RAIN -> eggRain();
-            case Moves.WHIRLPOOL -> whirlpool();
-            case Moves.SKY_DIVE -> skyDive();
-            case Moves.DEEP_TOLL -> deepToll();
+            case Moves.POD_BURST -> heavy.podBurst();
+            case Moves.EGG_RAIN -> heavy.eggRain();
+            case Moves.WHIRLPOOL -> heavy.whirlpool();
+            case Moves.SKY_DIVE -> heavy.skyDive();
+            case Moves.DEEP_TOLL -> heavy.deepToll();
             case Moves.ARM_STORM -> runArmStorm(s);
             case Moves.STINGER_STORM -> {
                 if (t == Moves.RAIN_FROM - 10) h.sound(h.position().add(0, 30 * s, 0), ModSounds.CLICK, 4f, 0.8f);
-                if (t >= Moves.RAIN_FROM && t < Moves.RAIN_TO && t % 2 == 0) stingerRain();
+                if (t >= Moves.RAIN_FROM && t < Moves.RAIN_TO && t % 2 == 0) heavy.stingerRain();
             }
-            case Moves.SUN_LANCES -> sunLances();
-            case Moves.UNDERTOW -> undertow();
+            case Moves.SUN_LANCES -> heavy.sunLances();
+            case Moves.UNDERTOW -> heavy.undertow();
             default -> {}
         }
     }
@@ -931,7 +935,7 @@ public final class BellMoves {
             fx(BigFx.SHOCKWAVE, under(), bell * 2.4 + px(0, 10));
             if (griefing()) crack(BlockPos.containing(c.x, groundUnder(), c.z), (int) Math.ceil(bell * 0.8));
         }
-        bellTone(hit);
+        heavy.bellTone(hit);
         // he swims back up: a beat, and the downdraft as he lifts off, then two more
         int up = hit + Moves.DROP_DOWN;
         if (t == up || t == up + 40 || t == up + 80) h.pulse(1.3f);
@@ -1092,7 +1096,7 @@ public final class BellMoves {
         }
     }
 
-    private final Set<String> slapped = new HashSet<>();
+    final Set<String> slapped = new HashSet<>();
 
     /** the sting volley: the strand ends nearest you flick stingers at you */
     private void volley() {
@@ -1119,607 +1123,24 @@ public final class BellMoves {
         level().addFreshEntity(sh);
     }
 
-    /** the spore cloud: the egg clumps burst into drifting clouds of poison that follow what he's after */
-    private void spores() {
-        float s = s();
-        List<Vec3> at = new ArrayList<>();
-        for (int i = 0; i < rig.eggs.length && at.size() < 4; i++)
-            if (!h.state.eggGone[(i * 7) % rig.eggs.length]) at.add(h.eggWorld((i * 7) % rig.eggs.length));
-        if (target != null) at.add(target.position());
-        if (at.isEmpty()) at.add(h.position());
-        for (Vec3 p : at) {
-            double gy = h.groundAt(p.x, p.z);
-            AreaEffectCloud c = new AreaEffectCloud(level(), p.x, Math.max(gy, Math.min(p.y, gy + 4 * s + 1)), p.z);
-            c.setRadius(3f + 5f * s);
-            c.setDuration(260);
-            c.setWaitTime(0);
-            c.setRadiusPerTick(0f);
-            c.setPotionContents(new PotionContents(Potions.POISON));
-            c.setOwner(h);
-            level().addFreshEntity(c);
-            clouds.add(c);
-            fx(BigFx.CLOUD, new Vec3(p.x, gy, p.z), px(6, 4), Vec3.ZERO, 0x7FBF3F);
-            h.particles(
-                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.defaultBlockState()),
-                    p,
-                    30,
-                    2 * s + 0.5,
-                    0.2);
-        }
-        h.sound(h.position().add(0, 50 * s, 0), ModSounds.SPORES, 3f, 0.7f);
-        h.sound(h.position().add(0, 50 * s, 0), ModSounds.EGG_BURST, 3f, 0.6f);
-    }
-
-    /** the clouds drift after what he's hunting, and whatever is in one is hurt as well as poisoned */
-    private void cloudsTick() {
-        if (clouds.isEmpty()) return;
-        float s = s();
-        LivingEntity tg = h.getTarget();
-        for (Iterator<AreaEffectCloud> it = clouds.iterator(); it.hasNext(); ) {
-            AreaEffectCloud c = it.next();
-            if (c.isRemoved()) {
-                it.remove();
-                continue;
-            }
-            if (tg != null && tg.isAlive()) {
-                Vec3 d = tg.position().subtract(c.position()).multiply(1, 0, 1);
-                if (d.length() > 1) {
-                    Vec3 step = d.normalize().scale(0.05 + 0.06 * s);
-                    double gy = h.groundAt(c.getX() + step.x, c.getZ() + step.z);
-                    c.setPos(c.getX() + step.x, Math.max(gy, c.getY() + (gy + 1 - c.getY()) * 0.1), c.getZ() + step.z);
-                }
-            }
-            if (c.tickCount % 10 == 0) {
-                double r = c.getRadius();
-                for (LivingEntity e : level().getEntitiesOfClass(
-                                LivingEntity.class,
-                                new AABB(c.position(), c.position()).inflate(r, 3 + 3 * s, r),
-                                x -> h.fairGame(x) && h.fightingGiant(x))) {
-                    if (Math.hypot(e.getX() - c.getX(), e.getZ() - c.getZ()) > r) continue;
-                    e.invulnerableTime = 0;
-                    e.hurt(h.damageSources().indirectMagic(c, h), h.dmg(5f, e));
-                    e.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 1));
-                }
-            }
-        }
-    }
-
-    /** the pod burst: every pod left swells and sprays poison goo straight down */
-    private void podBurst() {
-        float s = s();
-        if (t < Moves.POD_AT || t > Moves.POD_AT + 16 || t % 2 != 0) return;
-        if (t == Moves.POD_AT) {
-            h.sound(h.position().add(0, 40 * s, 0), ModSounds.GOO, 4f, 0.6f);
-            for (int i = 0; i < rig.pods.length; i++) {
-                if (h.isPodPopped(i)) continue;
-                Vec3 pod = h.podWorld(i);
-                fx(BigFx.SPARKS, pod, px(4, 2), new Vec3(0, -1, 0), 0x9CFF6A);
-                fx(BigFx.CLOUD, new Vec3(pod.x, h.groundAt(pod.x, pod.z), pod.z), 5 * s + 3, Vec3.ZERO, 0x9CFF6A);
-            }
-        }
-        double r = 5 * s + 3;
-        for (int i = 0; i < rig.pods.length; i++) {
-            if (h.isPodPopped(i)) continue;
-            Vec3 c = h.podWorld(i);
-            for (int k = 0; k < 6; k++) {
-                double ox = (h.getRandom().nextDouble() - 0.5) * r,
-                        oz = (h.getRandom().nextDouble() - 0.5) * r;
-                level().sendParticles(
-                                ParticleTypes.ITEM_SLIME,
-                                c.x + ox * 0.3,
-                                c.y,
-                                c.z + oz * 0.3,
-                                0,
-                                ox * 0.06,
-                                -1.0,
-                                oz * 0.06,
-                                1.0);
-            }
-            level().sendParticles(ParticleTypes.SNEEZE, c.x, c.y - 2 * s, c.z, 4, r * 0.3, 1, r * 0.3, 0.02);
-            double gy = h.groundAt(c.x, c.z);
-            for (LivingEntity e : near(new AABB(c.x - r, gy - 1, c.z - r, c.x + r, c.y, c.z + r))) {
-                if (struckThisMove.contains(e.getUUID()) || Math.hypot(at(e).x - c.x, at(e).z - c.z) > r) continue;
-                struckThisMove.add(e.getUUID());
-                blow(e, 18f, c, 0, 0);
-                e.addEffect(new MobEffectInstance(MobEffects.POISON, 120, 1));
-                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 2));
-            }
-        }
-    }
-
-    /**
-     * Egg rain. The wind-up (to EGG_AT): he tips his mouth toward you, his glow builds and the clumps rattle, with a
-     * rising shiver of glass and a toll just before. Then he flings his strands and the clumps come off one after
-     * another, each with a ring on the ground where it will land.
-     */
-    private void eggRain() {
-        float s = s();
-        if (t < Moves.EGG_AT && t % 5 == 0 && level() instanceof ServerLevel sl) {
-            // the clumps glow as it builds, seen from well off
-            int n = 0;
-            for (int i = 0; i < rig.eggs.length && n < 10; i++) {
-                if (h.state.eggGone[i]) continue;
-                n++;
-                Vec3 c = h.eggWorld(i);
-                for (ServerPlayer p : sl.players())
-                    if (p.distanceToSqr(c) < 160 * 160)
-                        sl.sendParticles(
-                                p,
-                                ParticleTypes.GLOW,
-                                true,
-                                c.x,
-                                c.y,
-                                c.z,
-                                2 + t / 10,
-                                2 * s + 0.4,
-                                2 * s + 0.4,
-                                2 * s + 0.4,
-                                0.02);
-            }
-        }
-        if (t == Moves.EGG_AT - 8) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.TOLL, 3f, 1.35f);
-        if (t == Moves.EGG_AT) fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), px(20, 6), Vec3.ZERO, GLOW);
-        if (t >= Moves.EGG_AT && t <= Moves.EGG_AT + 24 && (t - Moves.EGG_AT) % 4 == 0) dropEgg();
-    }
-
-    /** egg rain: an egg clump comes off and drops toward what he's after, splatting where it lands */
-    private void dropEgg() {
-        float s = s();
-        List<Integer> left = new ArrayList<>();
-        for (int i = 0; i < rig.eggs.length; i++) if (!h.state.eggGone[i]) left.add(i);
-        if (left.isEmpty()) return;
-        int i = left.get(h.getRandom().nextInt(left.size()));
-        Vec3 from = h.eggWorld(i);
-        h.eggGone(i);
-        Vec3 to = target != null && target.isAlive()
-                ? target.position()
-                : forcedSpot != null ? forcedSpot : eggSpot != null ? eggSpot : h.position();
-        double spread = 6 * s + 2;
-        to = to.add(
-                (h.getRandom().nextDouble() - 0.5) * 2 * spread,
-                0,
-                (h.getRandom().nextDouble() - 0.5) * 2 * spread);
-        double gy = h.groundAt(to.x, to.z);
-        // the way it really falls (a step, then the air slows it, then it drops faster): how many ticks to the
-        // ground, and how far across it gets for each block a tick it starts with, so it lands on its marker
-        double y = from.y, vy = 0, across = 0, k = 1;
-        int n = 0;
-        while (y > gy && n < 400) {
-            y += vy;
-            across += k;
-            k *= 0.99;
-            vy = vy * 0.99 - 0.05;
-            n++;
-        }
-        across = Math.max(1, across);
-        float r = 2.5f + 3f * s;
-        Shot sh = new Shot(level(), h, Shot.EGG, 14f, r);
-        sh.setPos(from.x, from.y, from.z);
-        sh.setDeltaMovement((to.x - from.x) / across, 0, (to.z - from.z) / across);
-        sh.setEgg(i, s, new Vec3(to.x, gy, to.z));
-        level().addFreshEntity(sh);
-        h.sound(from, ModSounds.EGG_BURST, 2f, 1.1f);
-        lastEggs.add(sh);
-    }
-
     /** where the eggs go when there's nobody to aim at (set with the move) */
-    private @Nullable Vec3 eggSpot;
+    @Nullable Vec3 eggSpot;
     /** the eggs of the last egg rain */
     public final List<Shot> lastEggs = new ArrayList<>();
 
-    /** the whirlpool: he spins, and his strands drag everything in a wide ring in toward the middle under him */
-    private void whirlpool() {
-        float s = s();
-        double bell = h.bellRadius();
-        if (t == Moves.WHIRL_UP) h.sound(h.position(), ModSounds.CHURN, 4f, 0.6f);
-        if (t == Moves.WHIRL_UP)
-            fx(BigFx.WHIRL, under(), h.bellRadius() * 1.9 + px(0, 6), Vec3.ZERO, Moves.WHIRL_CRUSH - Moves.WHIRL_UP);
-        if (t > Moves.WHIRL_UP && t < Moves.WHIRL_CRUSH) {
-            if (t % 20 == 0) h.sound(h.position(), ModSounds.CHURN, 3f, 0.7f);
-            double R = bell * 1.9 + 6;
-            Vec3 c = h.position();
-            for (LivingEntity e :
-                    near(h.bodyBox().inflate(R - bell + 4, 0, R - bell + 4).setMaxY(h.getY() + rig.rimY * s))) {
-                Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
-                double d = in.length();
-                if (d > R || d < 0.5) continue;
-                Vec3 n = in.normalize();
-                Vec3 round = new Vec3(-n.z, 0, n.x);
-                double pull = (0.10 + 0.06 * s) * (0.5 + 0.5 * d / R);
-                e.setDeltaMovement(e.getDeltaMovement()
-                        .scale(0.85)
-                        .add(n.scale(pull))
-                        .add(round.scale(0.12 + 0.05 * s))
-                        .add(0, 0.02, 0));
-                e.hurtMarked = true;
-                if (d < bell && every(e, 20)) {
-                    blow(e, 6f, c, 0, 0);
-                    sting(e);
-                }
-            }
-            if (t % 3 == 0) {
-                double a = t * 0.4;
-                for (int k = 0; k < 16; k++) {
-                    double aa = a + k * Math.PI / 8, rr = R * (0.3 + 0.7 * ((k * 37 + t) % 16) / 16.0);
-                    level().sendParticles(
-                                    ParticleTypes.BUBBLE_POP,
-                                    c.x + Math.cos(aa) * rr,
-                                    groundUnder() + 0.5,
-                                    c.z + Math.sin(aa) * rr,
-                                    2,
-                                    0.5,
-                                    0.2,
-                                    0.5,
-                                    0.05);
-                }
-            }
-        }
-        if (t == Moves.WHIRL_CRUSH) {
-            Vec3 c = h.position();
-            double r = bell * 0.75 + 4;
-            for (LivingEntity e : near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s))) {
-                if (h.horiz(at(e)) > r) continue;
-                blow(e, 55f, c, 1.2, 1.6);
-            }
-            h.sound(c, ModSounds.SLAM, 4f, 0.5f);
-            h.sound(c, ModSounds.SPLASH, 4f, 0.5f);
-            fx(heavy(r), under(), r);
-        }
-        bellTone(Moves.WHIRL_CRUSH);
-    }
-
-    /** the sky dive: up very high, over he turns, bell first down he comes, and a huge shock wave where he lands */
-    private void skyDive() {
-        float s = s();
-        int turn = Moves.DIVE_CLIMB, fall = Moves.DIVE_CLIMB + Moves.DIVE_TURN, back = fall + Moves.DIVE_FALL;
-        // follow it while he climbs
-        if (t < fall && target != null && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
-        if (t == turn - 10) h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.WARN_DIVE, 5f, 0.9f);
-        if (t >= turn && t < fall) diveOver = Moves.smooth((t - turn) / (float) Moves.DIVE_TURN);
-        if (t == fall) h.sound(h.position(), ModSounds.SWOOP, 5f, 0.6f);
-        if (t == turn) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 20);
-        if (t >= fall && t < back && !landed) {
-            // down, bell first: he's landed when the lowest of him reaches the ground
-            Vec3 crown = h.crownWorld();
-            double gy = h.groundAt(crown.x, crown.z);
-            // (the air he pushes ahead flattens the ground first)
-            if (!diveWarned && crown.y - gy < px(40, 10)) {
-                diveWarned = true;
-                fx(BigFx.DUST_RING, new Vec3(crown.x, gy, crown.z), px(60, 12));
-            }
-            if (crown.y <= gy + 1.5 * s + 0.5 || t == back - 1) {
-                landed = true;
-                double R = 75 * s + 24;
-                Vec3 c = new Vec3(crown.x, gy, crown.z);
-                diveAt = c;
-                h.sound(c, ModSounds.SHOCK, 5f, 0.5f);
-                h.sound(c, ModSounds.SLAM, 5f, 0.4f);
-                h.sound(c, ModSounds.SPLASH, 4f, 0.5f);
-                h.particles(ParticleTypes.EXPLOSION_EMITTER, c.add(0, 1, 0), 3, 6 * s, 0);
-                h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 250, R * 0.5, 0.25);
-                fx(heavy(px(45, 12)), c, px(45, 12));
-                fx(BigFx.SHOCKWAVE, c, R, Vec3.ZERO, DIVE_RING);
-                fx(BigFx.FLASH, c.add(0, 4 * s, 0), px(30, 8), Vec3.ZERO, GLOW);
-                // crown first: his own glass and calcite fly
-                fx(BigFx.DEBRIS, c, px(25, 6), new Vec3(0, 1, 0), Block.getId(Blocks.CALCITE.defaultBlockState()));
-                fx(BigFx.SPARKS, c, px(30, 6), new Vec3(0, 1, 0), GLASS);
-                if (griefing()) crack(BlockPos.containing(c), (int) Math.ceil(R * 0.6));
-                // on to the turn back up
-                h.rewindMove(back);
-                t = back;
-            }
-        }
-        // the blow runs out from where he landed as a ring
-        if (landed && diveAt != null && t >= back && t <= back + DIVE_RING) {
-            double R = 75 * s + 24, r = R * (t - back) / DIVE_RING;
-            Vec3 c = diveAt;
-            for (LivingEntity e : near(new AABB(c, c).inflate(R, 30 * s + 12, R))) {
-                if (struckThisMove.contains(e.getUUID())) continue;
-                double d = Math.hypot(at(e).x - c.x, at(e).z - c.z);
-                if (d > r) continue;
-                struckThisMove.add(e.getUUID());
-                blow(e, 70f * (float) (1 - 0.5 * d / R), c, 3.0, 1.4);
-                knockDown(e);
-            }
-        }
-        if (landed) bellTone(back);
-        if (t >= back) diveOver = 1f - Moves.smooth((t - back - 8) / (float) (Moves.DIVE_BACK - 8));
-        h.setLift(diveOver);
-    }
-
     /** how many ticks the sky dive's blow takes to run out to its edge */
-    private static final int DIVE_RING = 12;
+    static final int DIVE_RING = 12;
 
-    private static final int GLASS = 0xA8E6B0;
-    private boolean diveWarned;
-    private @Nullable Vec3 diveAt;
+    static final int GLASS = 0xA8E6B0;
+    boolean diveWarned;
+    @Nullable Vec3 diveAt;
 
-    /**
-     * His glass bell hitting the ground at tick at: a low note of the bell itself, then the glass ringing on.
-     */
-    private void bellTone(int at) {
-        Vec3 c = h.position().add(0, rig.rimY * s(), 0);
-        if (t == at) h.sound(c, ModSounds.TOLL, 4f, 0.5f);
-        if (t == at + 6) h.sound(c, SoundEvents.AMETHYST_BLOCK_RESONATE, 4f, 0.5f);
-    }
-
-    /** the deep toll: three tolls, louder each time, then a massive shock ring that throws everything far */
-    private void deepToll() {
-        float s = s();
-        Vec3 mid = h.position().add(0, (rig.rimY + 20) * s, 0);
-        if (t == 1 || t == 37 || t == 73) {
-            int k = t / 36;
-            h.pulse(1.2f + 0.2f * k);
-            h.sound(mid, ModSounds.TOLL, 3f + 1.5f * k, 0.8f);
-            for (LivingEntity e : near(h.bodyBox().inflate(40 * s + 20)))
-                e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80 + 40 * k, 0));
-            fx(BigFx.DUST_RING, under(), h.bellRadius() * (1.2 + 0.3 * k));
-            fx(BigFx.SHAKE, h.position(), px(20 + 10 * k, 8));
-            h.sound(mid, SoundEvents.AMETHYST_BLOCK_CHIME, 3f, 0.6f);
-        }
-        if (t == 74) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 36);
-        int big = Moves.TOLL_BIG;
-        if (t == big) {
-            h.pulse(1.8f);
-            h.sound(mid, ModSounds.TOLL_BIG, 6f, 1f);
-            h.sound(mid, ModSounds.SHOCK, 5f, 0.4f);
-            // (the big toll: a flash of his light and the ring the players see, running out with the real one)
-            fx(BigFx.FLASH, mid, px(60, 16), Vec3.ZERO, GLOW);
-            fx(BigFx.SHOCKWAVE, under(), px(120, 40), Vec3.ZERO, 25);
-            fx(BigFx.SPARKS, mid, px(30, 6), new Vec3(0, 1, 0), GLASS);
-            // (under the big note, the bell's own low one, and the glass ringing on after)
-            h.sound(mid, ModSounds.TOLL, 4f, 0.5f);
-        }
-        if (t == big + 4 || t == big + 10) h.sound(mid, SoundEvents.AMETHYST_BLOCK_RESONATE, 4f, 0.5f);
-        if (t >= big && t <= big + 25) {
-            // (from right under him out, at the pace of the ring the players see)
-            double R = 120 * s + 40, r0 = h.bellRadius();
-            double r = (t - big) / 25.0 * R, rIn = (t - big - 1) / 25.0 * R;
-            Vec3 c = h.position();
-            for (LivingEntity e : near(h.bodyBox().inflate(R - r0 + 4, 100 * s + 40, R - r0 + 4))) {
-                if (struckThisMove.contains(e.getUUID())) continue;
-                double d = h.horiz(at(e));
-                if (d > r) continue;
-                struckThisMove.add(e.getUUID());
-                blow(e, 50f * (float) (1 - 0.4 * d / R), c, 3.4, 1.1);
-                e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 200, 0));
-                knockDown(e);
-            }
-            if (griefing()) shatter(c, Math.max(0, rIn), r, 40 * s + 12);
-        }
-    }
-
-    /** the big toll's ring breaks glass and leaves as it passes (a limited number of blocks each tick) */
-    private void shatter(Vec3 c, double r0, double r1, double height) {
-        ServerLevel l = level();
-        int broken = 0;
-        double mid = (r0 + r1) * 0.5;
-        int n = (int) Math.min(1200, Math.max(16, 2 * Math.PI * mid));
-        for (int i = 0; i < n && broken < 300; i++) {
-            double a = i * 2 * Math.PI / n;
-            for (double r = Math.max(0, r0); r <= r1 && broken < 300; r += 1) {
-                int x = Mth.floor(c.x + Math.cos(a) * r), z = Mth.floor(c.z + Math.sin(a) * r);
-                if (!NoWait.loaded(l, new BlockPos(x, 0, z))) continue;
-                int top = l.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-                int y0 = Math.max(l.getMinBuildHeight(), top - 12), y1 = Math.min(top + 2, (int) (c.y + height));
-                for (int y = y1; y >= y0 && broken < 300; y--) {
-                    BlockPos p = new BlockPos(x, y, z);
-                    BlockState st = l.getBlockState(p);
-                    if (st.is(BlockTags.LEAVES)
-                            || st.is(BlockTags.IMPERMEABLE)
-                            || st.getBlock() instanceof IronBarsBlock && st.getSoundType() == SoundType.GLASS) {
-                        l.destroyBlock(p, false);
-                        broken++;
-                    }
-                }
-            }
-        }
-    }
-
-    /** the stinger storm: every strand flicks stingers up and out, and they rain down over a wide area */
-    private void stingerRain() {
-        float s = s();
-        double R = 90 * s + 24;
-        Vec3 c = h.position();
-        List<LivingEntity> near =
-                near(h.bodyBox().inflate(R - h.bellRadius() + 4, 40 * s + 16, R - h.bellRadius() + 4));
-        int n = 3 + (int) (3 * s);
-        for (int k = 0; k < n; k++) {
-            int strand = h.getRandom().nextInt(rig.strands.length);
-            if (rig.strands[strand].hidden()) continue;
-            Vec3 from = h.strandTipWorld(strand).add(0, 2 + 3 * s, 0);
-            Vec3 to;
-            if (!near.isEmpty() && h.getRandom().nextInt(3) > 0) {
-                LivingEntity e = near.get(h.getRandom().nextInt(near.size()));
-                double sp = 2 * s + 1.5;
-                // (at another giant: at the bit of it that's in reach)
-                to = at(e).add(
-                                (h.getRandom().nextDouble() - 0.5) * sp,
-                                giantAt.containsKey(e) ? 0 : e.getBbHeight() * 0.5,
-                                (h.getRandom().nextDouble() - 0.5) * sp);
-            } else {
-                double a = h.getRandom().nextDouble() * Math.PI * 2,
-                        d = Math.sqrt(h.getRandom().nextDouble()) * R;
-                double x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
-                to = new Vec3(x, h.groundAt(x, z), z);
-            }
-            // up first and over: a lob
-            Vec3 d = to.subtract(from);
-            double horiz = Math.hypot(d.x, d.z);
-            Shot sh = new Shot(level(), h, Shot.STINGER, 10f, 1f);
-            sh.setPos(from.x, from.y, from.z);
-            double speed = 1.3 + 0.7 * s;
-            double time = Math.max(8, horiz / speed);
-            sh.setDeltaMovement(d.x / time, d.y / time + 0.5 * 0.02 * time, d.z / time);
-            level().addFreshEntity(sh);
-            if (k == 0 && t % 10 == 0) fx(BigFx.SPARKS, to, px(3, 1), Vec3.ZERO, 0xD8FFE0);
-        }
-        if (t % 6 == 0)
-            h.sound(
-                    c.add(0, 20 * s, 0),
-                    ModSounds.VOLLEY,
-                    3f,
-                    0.8f + h.getRandom().nextFloat() * 0.3f);
-    }
-
-    /** the sun lances: a beam of light from each glowing spot to the ground, sweeping out round him and burning */
-    private void sunLances() {
-        float s = s();
-        double bell = h.bellRadius();
-        int from = Moves.LANCE_FROM, to = Moves.LANCE_TO;
-        if (t < from || t > to) {
-            if (t == from - 12)
-                for (int i = 0; i < 5; i++) h.particles(ParticleTypes.END_ROD, h.spotWorld(i), 30, 3 * s + 0.5, 0.05);
-            return;
-        }
-        float frac = (t - from) / (float) (to - from);
-        if (t == from) for (int i = 0; i < 5; i++) fx(BigFx.FLASH, h.spotWorld(i), px(10, 3), Vec3.ZERO, 0xFFF2B0);
-        if (t % 20 == 0) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.BEAM, 3f, 0.7f + 0.3f * frac);
-        double beamR = 2.5 + 2.5 * s;
-        for (int i = 0; i < 5; i++) {
-            Vec3 top = h.spotWorld(i);
-            Vec3 ground;
-            if (i < 4) {
-                // spiralling out from under him, each from its own side
-                double a0 = Math.atan2(rig.spots[i].centre().z, rig.spots[i].centre().x) - h.getYRot() * Mth.DEG_TO_RAD;
-                double a = a0 + frac * 2.4;
-                double r = bell * (0.35 + 1.35 * frac);
-                double x = h.getX() + Math.cos(a) * r, z = h.getZ() + Math.sin(a) * r;
-                ground = new Vec3(x, h.groundAt(x, z), z);
-            } else {
-                // the vase's beam hunts what he's after
-                Vec3 want = target != null && target.isAlive() ? target.position() : h.position();
-                Vec3 was = lance[4] == null ? new Vec3(h.getX(), groundUnder(), h.getZ()) : lance[4];
-                Vec3 d = want.subtract(was).multiply(1, 0, 1);
-                double step = 0.25 + 0.35 * s;
-                Vec3 nx = d.length() > step ? was.add(d.normalize().scale(step)) : was.add(d);
-                ground = new Vec3(nx.x, h.groundAt(nx.x, nx.z), nx.z);
-            }
-            lance[i] = ground;
-            if (t == from) fx(BigFx.SPARKS, ground, px(3, 1.5), Vec3.ZERO, 0);
-            if (t % 2 == 0) {
-                Vec3 line = ground.subtract(top);
-                for (int k = 0; k <= 12; k++) {
-                    Vec3 p = top.add(line.scale(k / 12.0));
-                    level().sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.3 * s, 0.3 * s, 0.3 * s, 0);
-                }
-                level().sendParticles(
-                                ParticleTypes.FLAME,
-                                ground.x,
-                                ground.y + 0.2,
-                                ground.z,
-                                8,
-                                beamR * 0.4,
-                                0.1,
-                                beamR * 0.4,
-                                0.02);
-                level().sendParticles(
-                                ParticleTypes.LAVA,
-                                ground.x,
-                                ground.y + 0.2,
-                                ground.z,
-                                1,
-                                beamR * 0.3,
-                                0.1,
-                                beamR * 0.3,
-                                0);
-            }
-            if (t % 10 == i * 2) {
-                fx(BigFx.EMBERS, ground, beamR * 1.6 + 1, Vec3.ZERO, 14);
-                fx(BigFx.SMOKE, ground, beamR * 1.4 + 1);
-            }
-            for (LivingEntity e : near(new AABB(
-                    ground.x - beamR, ground.y - 2, ground.z - beamR, ground.x + beamR, top.y, ground.z + beamR))) {
-                if (Math.hypot(at(e).x - ground.x, at(e).z - ground.z) > beamR || !every(e, 10)) continue;
-                blow(e, 16f, ground, 0.3, 0.2);
-                e.igniteForSeconds(4);
-            }
-            if (griefing() && h.getRandom().nextInt(5) == 0) {
-                BlockPos p = BlockPos.containing(
-                        ground.x + (h.getRandom().nextDouble() - 0.5) * beamR,
-                        ground.y,
-                        ground.z + (h.getRandom().nextDouble() - 0.5) * beamR);
-                if (level().getBlockState(p).isAir()
-                        && level().getBlockState(p.below()).isFaceSturdy(level(), p.below(), Direction.UP))
-                    level().setBlockAndUpdate(p, Blocks.FIRE.defaultBlockState());
-            }
-        }
-    }
-
-    /** the undertow: every strand spreads wide and drags everything round him in, then slams it down */
-    private void undertow() {
-        float s = s();
-        double bell = h.bellRadius();
-        Vec3 c = h.position();
-        if (t >= Moves.UNDERTOW_PULL && t < Moves.UNDERTOW_SLAM) {
-            double R = bell * 2.2 + 8;
-            if (t == Moves.UNDERTOW_PULL) h.sound(c, ModSounds.CHURN, 4f, 0.5f);
-            if (t == Moves.UNDERTOW_PULL)
-                fx(BigFx.WHIRL, under(), R, Vec3.ZERO, Moves.UNDERTOW_SLAM - Moves.UNDERTOW_PULL);
-            for (LivingEntity e : near(h.bodyBox().inflate(R - bell + 4, 20 * s + 8, R - bell + 4))) {
-                Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
-                double d = in.length();
-                if (d > R || d < 0.5) continue;
-                e.setDeltaMovement(e.getDeltaMovement()
-                        .scale(0.8)
-                        .add(in.normalize().scale(0.16 + 0.1 * s))
-                        .add(0, 0.05, 0));
-                e.hurtMarked = true;
-                if (every(e, 20)) sting(e);
-            }
-            // dust dragged in by the strand ends round his edge
-            if (t % 4 == 2 && t < Moves.UNDERTOW_SLAM - 2) {
-                for (int k = 0; k < 8; k++) {
-                    Vec3 tip = h.strandTipWorld(Math.floorMod(k * 10 + 3, rig.strands.length));
-                    Vec3 to = c.subtract(tip).multiply(1, 0, 1);
-                    fx(
-                            BigFx.TRAIL,
-                            new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z),
-                            px(5, 2),
-                            to.lengthSqr() > 1e-6 ? to.normalize() : Vec3.ZERO,
-                            0);
-                }
-            }
-            if (t % 2 == 0) {
-                for (int k = 0; k < 12; k++) {
-                    double a = h.getRandom().nextDouble() * Math.PI * 2,
-                            r = R * (0.5 + 0.5 * h.getRandom().nextDouble());
-                    level().sendParticles(
-                                    ParticleTypes.BUBBLE_COLUMN_UP,
-                                    c.x + Math.cos(a) * r,
-                                    groundUnder() + 1,
-                                    c.z + Math.sin(a) * r,
-                                    0,
-                                    -Math.cos(a),
-                                    0.2,
-                                    -Math.sin(a),
-                                    0.6);
-                }
-            }
-        }
-        if (t == Moves.UNDERTOW_SLAM) {
-            double r = bell * 0.95 + 5;
-            for (LivingEntity e : near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s))) {
-                if (h.horiz(at(e)) > r) continue;
-                blow(e, 52f, c, 0.8, 0);
-                e.setDeltaMovement(e.getDeltaMovement().x, -1.5, e.getDeltaMovement().z);
-                knockDown(e);
-            }
-            h.sound(c, ModSounds.SLAM, 4f, 0.5f);
-            h.sound(c, ModSounds.SPLASH, 4f, 0.6f);
-            h.particles(ParticleTypes.CLOUD, new Vec3(c.x, groundUnder() + 1, c.z), 150, r * 0.5, 0.1);
-            fx(heavy(px(40, 6)), under(), px(40, 6));
-            fx(BigFx.DUST_RING, under(), bell * 0.95 + px(0, 5));
-        }
-        bellTone(Moves.UNDERTOW_SLAM);
-    }
-
-    private boolean griefing() {
+    boolean griefing() {
         return BellConfig.V.griefing && level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
     }
 
     /** the ground cracks under the slam: grass and dirt go to coarse dirt, plants go */
-    private void crack(BlockPos c, int r) {
+    void crack(BlockPos c, int r) {
         ServerLevel l = level();
         r = Math.min(r, 48);
         for (int dx = -r; dx <= r; dx++)
@@ -1741,31 +1162,31 @@ public final class BellMoves {
      * A size for the kit that shrinks with him: a * s + b at full size and over, but the b part shrinks too for a
      * small one (a 6-block jelly doesn't throw a 30-block ring).
      */
-    private double px(double a, double b) {
+    double px(double a, double b) {
         float s = s();
         return a * s + b * Math.sqrt(Math.min(1f, s));
     }
 
     /** a heavy blow for a big one, a stomp for a small one */
-    private static int heavy(double size) {
+    static int heavy(double size) {
         return size >= 12 ? BigFx.SLAM : BigFx.STOMP;
     }
 
-    private void fx(int kind, Vec3 at, double size) {
+    void fx(int kind, Vec3 at, double size) {
         BigFx.send(level(), kind, at, (float) size);
     }
 
-    private void fx(int kind, Vec3 at, double size, Vec3 dir, int extra) {
+    void fx(int kind, Vec3 at, double size, Vec3 dir, int extra) {
         BigFx.send(level(), kind, at, (float) size, dir, extra);
     }
 
     /** the ground (or water) right under him */
-    private Vec3 under() {
+    Vec3 under() {
         return new Vec3(h.getX(), groundUnder(), h.getZ());
     }
 
     /** his glow, for the flashes */
-    private static final int GLOW = 0xBFFFD8;
+    static final int GLOW = 0xBFFFD8;
 
     /** an instant kick of the camera, for a blow the kit's own shake (SLAM, SHOCKWAVE, SHAKE) doesn't cover */
     private void thump(Vec3 c, float k) {
@@ -1778,195 +1199,10 @@ public final class BellMoves {
 
     // grab and harvest
 
-    private void runGrab() {
-        if (gentle) {
-            runCarry();
-            return;
-        }
-        float s = s();
-        Vec3 tip = h.strandTipWorld(arg);
-        if (t < Moves.REACH) {
-            // it follows what it's reaching for
-            if (target != null && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
-            if (target == null && treeAt == null) {
-                end();
-                return;
-            }
-            return;
-        }
-        if (t == Moves.REACH) {
-            if (target != null) {
-                // got it if it's within reach of the strand's end (or right under it)
-                double reach = 14 * s + 4;
-                if (!target.isAlive()
-                        || !HollowbellEntity.canCarry(target)
-                        || (target.position().distanceTo(tip) > reach && h.horiz(target.position()) > h.bellRadius())) {
-                    end();
-                    return;
-                }
-                grabbed = target;
-                grabSeat = seat(grabbed, tip);
-                h.sound(tip, ModSounds.GRAB, 2.5f, 0.8f);
-                if (grabbed instanceof ServerPlayer sp)
-                    sp.displayClientMessage(
-                            Component.translatable(
-                                    gentle ? "message.hollowbell.lifting_you" : "message.hollowbell.grabbed"),
-                            true);
-            } else if (treeAt != null) {
-                BlockPos base = treeAt;
-                int wood = Block.getId(level().getBlockState(base));
-                grabbedTree = pullUpTree(treeAt, tip);
-                treeAt = null;
-                if (grabbedTree == null) {
-                    end();
-                    return;
-                }
-                // the roots tear out
-                Vec3 b = Vec3.atBottomCenterOf(base);
-                fx(BigFx.DEBRIS, b, px(4, 2), new Vec3(0, 1, 0), wood);
-                fx(BigFx.DUST, b, px(5, 2));
-            }
-            intoFrom = tip;
-        }
-        int into0 = Moves.REACH + Moves.LIFT;
-        if (t < into0) {
-            lift = Mth.clamp((t - Moves.REACH) / (float) Moves.LIFT, 0f, 1f);
-            h.setLift(lift);
-            // everything is carried after the pose (afterPose); here only the sting of being held
-            if (grabbed != null && !gentle && t % 30 == 0 && !(grabbed instanceof Player p && p.isCreative())) {
-                if (grabbed instanceof Player) {
-                    blow(grabbed, 4f, tip, 0, 0);
-                    sting(grabbed);
-                } else {
-                    // a creature is squeezed hard but kept alive until it's in the dome, so you see it taken in
-                    float d = Math.min(h.dmg(7f, grabbed), grabbed.getHealth() - 1f);
-                    grabbed.invulnerableTime = 0;
-                    if (d > 0) grabbed.hurt(h.damageSources().mobAttack(h), d);
-                    grabbed.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
-                    h.sound(grabbed.position(), ModSounds.STING, 1f, 1f);
-                }
-            }
-            if (t % 20 == 0) h.sound(tip, ModSounds.STRAND, 1.5f, 0.7f);
-            return;
-        }
-        if (t == into0) {
-            if (grabbed != null && grabSeat != null) intoFrom = grabSeat.position();
-            // everything goes in the dome, if it fits
-            if (!domeFits() || !BellConfig.V.insideDome || inside.size() >= slotCount()) {
-                // too small (or not allowed) to take it in: a squeeze, and it's let go
-                if (grabbed != null) blow(grabbed, 12f, h.position(), 0, 0);
-                letGoOfGrab(true);
-                end();
-                return;
-            }
-        }
-        int slot = freeSlot();
-        float k = Mth.clamp((t - into0) / (float) Moves.INTO, 0f, 1f);
-        Vec3 to = slotWorld(slot, grabbed);
-        Vec3 at = intoFrom.lerp(to, k * k * (3 - 2 * k));
-        if (grabSeat != null) {
-            grabSeat.follow(Seat.FREE, 0);
-            grabSeat.moveTo(at.x, at.y, at.z);
-        }
-        if (grabbedTree != null) placeTree(grabbedTree, at);
-        if (k >= 1f && grabbed == null && grabbedTree == null) {
-            // let go of on the way up (the book's "let go"): nothing to keep in there
-            end();
-            return;
-        }
-        if (k >= 1f) {
-            Inside in = new Inside();
-            in.e = grabbed;
-            in.seat = grabSeat;
-            in.tree = grabbedTree;
-            in.slot = slot;
-            inside.add(in);
-            if (grabbed instanceof ServerPlayer sp) {
-                sp.displayClientMessage(Component.translatable("message.hollowbell.inside"), false);
-                Adv.grant(sp, "inside");
-            }
-            grabbed = null;
-            grabSeat = null;
-            grabbedTree = null;
-            h.sound(at, ModSounds.ECHO, 2.5f, 1f);
-            end();
-        }
-    }
-
-    private boolean domeFits() {
-        return 60 * s() >= 4f;
-    }
-
     // carrying somebody up onto his crown
 
-    /**
-     * "Ride him": a strand reaches out and takes the one who asked round the middle (its end right on them, so they
-     * never jump to it), then carries them up his side, round the rim and over the dome, and lets them down onto
-     * the crown, where they stay on the same seat. Then the strand goes back the way it came and hangs again.
-     * The way (CarryPath) keeps them a set distance from every part of him. Both sides lay the strand out from the
-     * same numbers (the grab's phase, 2 + how far up, and the carry's size in DATA_CARRY); the seat follows the end
-     * of the strand on each side.
-     */
-    private boolean startCarry(LivingEntity who) {
-        if (h.sunk()
-                || h.isDeadOrDying()
-                || grabbed != null
-                || grabbedTree != null
-                || !HollowbellEntity.canCarry(who)
-                || who.isPassenger() && !(who.getVehicle() instanceof Seat)) return false;
-        int k = fetchStrand >= 0 ? fetchStrand : bestCarryStrand(who, -1);
-        if (k < 0) return false;
-        if (move != Moves.NONE) end();
-        target = who;
-        struckThisMove.clear();
-        hitAt.clear();
-        slapped.clear();
-        move = Moves.GRAB;
-        t = 0;
-        arg = k;
-        lastArg = k;
-        landed = false;
-        lastMove = Moves.GRAB;
-        grabbed = null;
-        lift = 0f;
-        strandHits = 0f;
-        gentle = true;
-        back = false;
-        carryT = 0;
-        carryLen = 0;
-        backT = 0;
-        backLen = 0;
-        carryU = 0f;
-        reachFrom = who.position();
-        reachHp = who.getHealth();
-        reachHurt = who.hurtTime;
-        h.setMove(Moves.GRAB, k, h.toModel(middle(who)));
-        h.setLift(Moves.CARRY_PHASE);
-        h.setCarry(carryD(who), carryEnd(who));
-        warn(Moves.GRAB, k);
-        return true;
-    }
-
-    /**
-     * Lets go of one creature, however he has it (a player leaving the game): a strand holding it lets go (one
-     * carrying it up onto his crown goes back down the way it came), an arm unwraps, and it's taken out of his dome.
-     */
     public void letGo(LivingEntity e) {
-        if (grabbed == e) {
-            letGoOfGrab(false);
-            if (!gentle) end();
-        }
-        if (wrapped == e) letGoOfWrap();
-        for (Iterator<Inside> it = inside.iterator(); it.hasNext(); ) {
-            Inside in = it.next();
-            if (in.e != e) continue;
-            dropSeat(in.seat);
-            it.remove();
-        }
-        if (gentle && move == Moves.GRAB && target == e) {
-            if (t <= Moves.REACH) end();
-            else target = null;
-        }
+        holds.letGo(e);
     }
 
     /** true while a strand is taking somebody up to his crown (not once they're on it) */
@@ -1974,152 +1210,28 @@ public final class BellMoves {
         return gentle && move == Moves.GRAB && !back;
     }
 
-    /** stop a carry up to the crown: whoever is on the way up is let go gently, and the strand goes back */
     public void cancelCarry() {
-        if (!gentle || move != Moves.GRAB || back) return;
-        if (t < Moves.REACH) {
-            end();
-            return;
-        }
-        if (grabbed != null) letGoOfGrab(true);
+        holds.cancelCarry();
     }
 
-    private static Vec3 middle(LivingEntity e) {
+    static Vec3 middle(LivingEntity e) {
         return e.position().add(0, e.getBbHeight() * 0.5, 0);
     }
 
-    private float carryD(LivingEntity who) {
+    float carryD(LivingEntity who) {
         return CarryPath.clearance(who.getBbWidth(), who.getBbHeight(), s());
     }
     /** how high over the crown seat the middle of the one carried is once they sit on it (model blocks) */
-    private float carryEnd(LivingEntity who) {
+    float carryEnd(LivingEntity who) {
         return (float) (-h.carryDrop(who) / s());
     }
 
-    private CarryPath carryPath(int k, LivingEntity who) {
+    CarryPath carryPath(int k, LivingEntity who) {
         return CarryPath.get(rig, k, carryD(who));
     }
 
-    /** where he goes to pick somebody up: them just outside his arms, in line with the strand that will carry them */
     public Vec3 fetchSpot(LivingEntity who) {
-        if (fetchStrand < 0 || h.tickCount % 20 == 0) fetchStrand = bestCarryStrand(who, fetchStrand);
-        return fetchStrand < 0 ? who.position() : spotFor(fetchStrand, who);
-    }
-
-    private Vec3 spotFor(int k, LivingEntity who) {
-        var cp = carryPath(k, who);
-        float s = s();
-        float r = cp.radiusAt((float) (who.getBbHeight() * 0.5 / s));
-        Vec3 off = h.toWorld(new Vector3f(r * (float) Math.cos(cp.theta), 0, r * (float) Math.sin(cp.theta)))
-                .subtract(h.position());
-        return new Vec3(who.getX() - off.x, who.getY(), who.getZ() - off.z);
-    }
-
-    /**
-     * of the strands that can carry somebody, the one he has least far to go to use (keeping the one he has unless
-     * another is a lot nearer)
-     */
-    private int bestCarryStrand(LivingEntity who, int now) {
-        int best = -1;
-        double bd = Double.MAX_VALUE, nowD = Double.MAX_VALUE;
-        for (int k : CarryPath.candidates(rig)) {
-            double d = h.horiz(spotFor(k, who));
-            if (k == now) nowD = d;
-            if (d < bd) {
-                bd = d;
-                best = k;
-            }
-        }
-        if (now >= 0 && nowD < bd + 5 + 10 * s()) return now;
-        return best;
-    }
-
-    private void runCarry() {
-        if (down) {
-            runSetDown();
-            return;
-        }
-        LivingEntity who = target;
-        float s = s();
-        if (t <= Moves.REACH) {
-            if (who == null
-                    || !who.isAlive()
-                    || who.isRemoved()
-                    || who.level() != h.level()
-                    || !HollowbellEntity.canCarry(who)) {
-                end();
-                return;
-            }
-            // it misses if they walk off, and lets go if they're hurt while it reaches: he tries again in a moment
-            boolean moved = who.position().distanceTo(reachFrom) > 2.5 + 5 * s;
-            boolean hurt = who.getHealth() < reachHp - 0.01f || who.hurtTime > reachHurt;
-            reachHurt = who.hurtTime;
-            if (moved || hurt) {
-                if (who instanceof ServerPlayer sp)
-                    sp.displayClientMessage(
-                            Component.translatable(
-                                    hurt ? "message.hollowbell.carry_hurt" : "message.hollowbell.carry_moved"),
-                            true);
-                fetchPause = 60;
-                end();
-                return;
-            }
-            // the end of the strand goes to the middle of them (the pose this tick puts it right there at REACH)
-            h.setAim(h.toModel(middle(who)));
-            if (t < Moves.REACH) return;
-            // got them: they sit on a seat right where they are, so they don't move at all as it closes round them
-            grabbed = who;
-            Seat st = new Seat(level(), h);
-            Vec3 at = who.position().add(0, who.getVehicleAttachmentPoint(st).y, 0);
-            st.setPos(at.x, at.y, at.z);
-            st.follow(Seat.CARRY, arg);
-            level().addFreshEntity(st);
-            who.stopRiding();
-            who.startRiding(st, true);
-            grabSeat = st;
-            // how long the way up takes: about a block a tick at his full size, slower when he's small
-            var cp = carryPath(arg, who);
-            h.ensurePose();
-            float len = cp.new Run(h.restOf(h.toModel(middle(who))), rig.crownY + 1 + carryEnd(who)).length() * s;
-            carryLen = Mth.clamp(Mth.ceil(len / (0.12f + 1.0f * s)), 60, 20 * 30);
-            carryT = 0;
-            carryU = 0f;
-            h.sound(middle(who), ModSounds.GRAB, 2f, 1.1f);
-            if (who instanceof ServerPlayer sp)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.lifting_you"), true);
-            return;
-        }
-        if (!back) {
-            if (grabbed == null
-                    || !grabbed.isAlive()
-                    || grabbed.isRemoved()
-                    || grabSeat == null
-                    || grabSeat.isRemoved()
-                    || grabbed.getVehicle() != grabSeat) {
-                // they're gone (or were let go): the strand goes back down from where it got to
-                if (grabbed != null) letGoOfGrab(true);
-                goBack();
-                return;
-            }
-            carryT++;
-            carryU = ease(carryT / (float) carryLen);
-            h.setLift(Moves.CARRY_PHASE + carryU);
-            if (carryT % 20 == 0) h.sound(h.strandTipWorld(arg), ModSounds.STRAND, 1.2f, 0.8f);
-            if (carryT >= carryLen) {
-                // on the crown: the seat they came up on becomes the crown seat
-                LivingEntity rideOn = grabbed;
-                Seat keep = grabSeat;
-                grabbed = null;
-                grabSeat = null;
-                h.seatOnCrown(rideOn, keep);
-                goBack();
-            }
-            return;
-        }
-        backT++;
-        carryU = backFrom * (1f - ease(backT / (float) backLen));
-        h.setLift(Moves.CARRY_PHASE + carryU);
-        if (backT >= backLen) end();
+        return holds.fetchSpot(who);
     }
 
     // setting the rider down again
@@ -2134,283 +1246,24 @@ public final class BellMoves {
         return downWho != null && move == Moves.NONE && downSpot != null ? downSpot.y : null;
     }
 
-    /** starts setting the rider down: picks the strand and the spot on the ground for them. False if there's nowhere */
     public boolean startSetDown(LivingEntity who) {
-        if (h.sunk() || h.isDeadOrDying()) return false;
-        float s = s();
-        double best = Double.MAX_VALUE;
-        downStrand = -1;
-        downSpot = null;
-        Vec3 look = who.getLookAngle();
-        for (int k : CarryPath.candidates(rig)) {
-            var cp = carryPath(k, who);
-            float r = cp.radiusAt((float) (who.getBbHeight() * 0.5 / s));
-            Vec3 off = h.toWorld(new Vector3f(r * (float) Math.cos(cp.theta), 0, r * (float) Math.sin(cp.theta)))
-                    .subtract(h.position());
-            double x = h.getX() + off.x, z = h.getZ() + off.z;
-            BlockPos col = BlockPos.containing(x, h.getY(), z);
-            if (!NoWait.loaded(level(), col)) continue;
-            double y = level().getHeight(Heightmap.Types.MOTION_BLOCKING, col.getX(), col.getZ());
-            AABB box = who.getDimensions(Pose.STANDING).makeBoundingBox(x, y, z);
-            if (!level().noCollision(who, box)
-                    || level().containsAnyLiquid(box)
-                    || level().containsAnyLiquid(box.move(0, -1, 0))) continue;
-            // the side they're looking at, on ground as level with where he is as can be
-            double score = Math.abs(y - h.groundAt(h.getX(), h.getZ())) * 4
-                    - off.normalize().dot(new Vec3(look.x, 0, look.z)) * 10;
-            if (score < best) {
-                best = score;
-                downStrand = k;
-                downSpot = new Vec3(x, y, z);
-            }
-        }
-        if (downStrand < 0) return false;
-        downWho = who;
-        downWait = 0;
-        if (who instanceof ServerPlayer sp)
-            sp.displayClientMessage(Component.translatable("message.hollowbell.setting_down"), true);
-        return true;
-    }
-
-    private void startCarryDown() {
-        LivingEntity who = downWho;
-        downWho = null;
-        if (who == null || downSpot == null || downStrand < 0) return;
-        target = null;
-        struckThisMove.clear();
-        hitAt.clear();
-        slapped.clear();
-        move = Moves.GRAB;
-        t = 0;
-        arg = downStrand;
-        lastArg = downStrand;
-        landed = false;
-        lastMove = Moves.GRAB;
-        grabbed = null;
-        grabSeat = null;
-        lift = 0f;
-        strandHits = 0f;
-        gentle = true;
-        down = true;
-        back = false;
-        carryT = 0;
-        carryLen = 0;
-        backT = 0;
-        backLen = 0;
-        carryU = 0f;
-        carryPhase = 0;
-        downWho = who;
-        // the strand's end goes to where the middle of them will be, standing on the spot; he stays at this height
-        h.holdHeight();
-        h.setMove(Moves.GRAB, arg, h.toModel(downSpot.add(0, who.getBbHeight() * 0.5, 0)));
-        h.setLift(Moves.CARRY_PHASE);
-        h.setCarry(carryD(who), carryEnd(who));
-        warn(Moves.GRAB, arg);
-        downWho = null;
-        carryWho = who;
+        return holds.startSetDown(who);
     }
 
     /** the one the strand is going up to fetch down (still on his crown until it gets there) */
-    private @Nullable LivingEntity carryWho;
+    @Nullable LivingEntity carryWho;
 
-    private void runSetDown() {
-        float s = s();
-        if (carryPhase == 0) {
-            // reaching out to the spot on the ground first
-            if (carryWho == null || h.rider() != carryWho) {
-                end();
-                return;
-            }
-            if (t < Moves.REACH) return;
-            var cp = carryPath(arg, carryWho);
-            h.ensurePose();
-            float len = cp.new Run(h.restOf(h.aim()), rig.crownY + 1 + carryEnd(carryWho)).length() * s;
-            carryLen = Mth.clamp(Mth.ceil(len / (0.12f + 1.0f * s)), 60, 20 * 30);
-            carryPhase = PHASE_UP;
-            carryT = 0;
-            return;
-        }
-        if (carryPhase == PHASE_UP && !back) {
-            // up his side, round the rim and over the dome to the crown, empty
-            int upLen = carryLen;
-            carryT++;
-            carryU = ease(carryT / (float) upLen);
-            h.setLift(Moves.CARRY_PHASE + carryU);
-            if (carryT % 20 == 0) h.sound(h.strandTipWorld(arg), ModSounds.STRAND, 1.2f, 0.8f);
-            if (carryT < upLen) return;
-            // at the crown: the seat they ride on becomes the strand's, so they're never taken off it
-            LivingEntity who = carryWho;
-            Seat st = who != null && h.rider() == who ? h.handRiderToStrand() : null;
-            carryWho = null;
-            if (st == null) {
-                goBack();
-                return;
-            }
-            grabbed = who;
-            grabSeat = st;
-            st.follow(Seat.CARRY, arg);
-            carryPhase = PHASE_DOWN;
-            carryT = 0;
-            h.sound(h.crownWorld(), ModSounds.GRAB, 2f, 1.1f);
-            return;
-        }
-        if (carryPhase == PHASE_DOWN && !back) {
-            if (grabbed == null
-                    || !grabbed.isAlive()
-                    || grabbed.isRemoved()
-                    || grabSeat == null
-                    || grabSeat.isRemoved()
-                    || grabbed.getVehicle() != grabSeat) {
-                if (grabbed != null) letGoOfGrab(true);
-                goBack();
-                return;
-            }
-            // back down the way they came up, and on to their feet on the spot
-            carryT++;
-            carryU = 1f - ease(carryT / (float) carryLen);
-            h.setLift(Moves.CARRY_PHASE + carryU);
-            if (carryT % 20 == 0) h.sound(h.strandTipWorld(arg), ModSounds.STRAND, 1.2f, 0.8f);
-            if (carryT < carryLen) return;
-            LivingEntity who = grabbed;
-            Seat st = grabSeat;
-            grabbed = null;
-            grabSeat = null;
-            dropSeat(st);
-            who.fallDistance = 0;
-            who.setDeltaMovement(Vec3.ZERO);
-            who.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, false, false));
-            if (who instanceof ServerPlayer sp)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.set_down"), true);
-            end();
-            return;
-        }
-        // the strand going back down empty (they got off some other way)
-        backT++;
-        carryU = backFrom * (1f - ease(backT / (float) backLen));
-        h.setLift(Moves.CARRY_PHASE + carryU);
-        if (backT >= backLen) end();
-    }
-
-    private void goBack() {
-        back = true;
-        backFrom = carryU;
-        backT = 0;
-        backLen = Math.max(30, Math.round(carryLen * 0.7f * backFrom));
-    }
-
-    /** how far along a carry is at k (0-1) of its time: easing in and out, steady in the middle */
-    static float ease(float k) {
-        k = Mth.clamp(k, 0f, 1f);
-        float a = 0.15f;
-        float v = 1f / (1f - a);
-        if (k < a) return 0.5f * v * k * k / a;
-        if (k > 1f - a) {
-            float r = 1f - k;
-            return 1f - 0.5f * v * r * r / a;
-        }
-        return 0.5f * v * a + v * (k - a);
-    }
-
-    /** hits on the strand that has hold of something: enough and it lets go */
     public void strandHit(int strand, float amount, @Nullable Entity by) {
-        if ((move != Moves.GRAB && move != Moves.HARVEST) || strand != arg || t < Moves.REACH) return;
-        if (gentle) return;
-        strandHits += 1f + amount / 10f;
-        h.sound(h.strandTipWorld(strand), ModSounds.STRAND, 2f, 1.1f);
-        if (strandHits >= 4f) {
-            if (by instanceof ServerPlayer sp)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.strand_let_go"), true);
-            letGoOfGrab(true);
-            end();
-        }
+        holds.strandHit(strand, amount, by);
     }
 
     public void armHit(int arm, float amount, @Nullable Entity by) {
-        if (move != Moves.WRAP || arm != arg || wrapped == null) return;
-        armHits += 1f + amount / 10f;
-        if (armHits >= 4f) {
-            if (by instanceof ServerPlayer sp)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.arm_let_go"), true);
-            letGoOfWrap();
-            end();
-        }
-    }
-
-    private void letGoOfGrab(boolean fall) {
-        if (grabbed != null) {
-            LivingEntity e = grabbed;
-            dropSeat(grabSeat);
-            h.floatDown(e);
-            if (e instanceof ServerPlayer sp && fall)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.dropped"), true);
-        }
-        if (grabbedTree != null) dropTree(grabbedTree);
-        grabbed = null;
-        grabSeat = null;
-        grabbedTree = null;
-        lift = 0f;
+        holds.armHit(arm, amount, by);
     }
 
     // the arm wrap
 
-    private void runWrap() {
-        Vec3 tip = h.armTipWorld(arg);
-        if (t < Moves.WRAP_REACH) {
-            if (target != null && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
-            return;
-        }
-        if (t == Moves.WRAP_REACH) {
-            if (target == null
-                    || !target.isAlive()
-                    || !HollowbellEntity.canCarry(target)
-                    || target.position().distanceTo(tip) > 30 * s() + 6) {
-                end();
-                return;
-            }
-            wrapped = target;
-            wrapSeat = seat(wrapped, tip);
-            h.sound(tip, ModSounds.GRAB, 2.5f, 0.6f);
-        }
-        if (t >= Moves.WRAP_REACH + Moves.WRAP_HOLD) {
-            letGoOfWrap();
-            return;
-        }
-        if (wrapped != null && t % 20 == 0) {
-            blow(wrapped, 8f, tip, 0, 0);
-            wrapped.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
-            h.sound(tip, SoundEvents.COPPER_STEP, 2f, 0.5f);
-            fx(BigFx.SPARKS, tip, px(2, 1), Vec3.ZERO, 0);
-        }
-    }
-
-    private void letGoOfWrap() {
-        if (wrapped != null) {
-            dropSeat(wrapSeat);
-            h.floatDown(wrapped);
-        }
-        wrapped = null;
-        wrapSeat = null;
-    }
-
     // holding things: seats follow the pose
-
-    private Seat seat(LivingEntity e, Vec3 at) {
-        Seat st = new Seat(level(), h);
-        st.setPos(at.x, at.y - e.getBbHeight() * 0.5, at.z);
-        level().addFreshEntity(st);
-        e.stopRiding();
-        e.startRiding(st, true);
-        return st;
-    }
-
-    private void dropSeat(@Nullable Seat st) {
-        if (st == null) return;
-        for (Entity e : st.getPassengers()) {
-            e.stopRiding();
-            e.fallDistance = 0;
-        }
-        st.discard();
-    }
 
     /** after the pose is worked out each tick: move the seats and trees to where the strands and arms are now */
     public void afterPose() {
@@ -2431,7 +1284,7 @@ public final class BellMoves {
                     grabbed.fallDistance = 0;
                 }
                 if (grabbedTree != null)
-                    placeTree(grabbedTree, h.strandTipWorld(arg).add(0, -1, 0));
+                    holds.placeTree(grabbedTree, h.strandTipWorld(arg).add(0, -1, 0));
             }
         }
         if (wrapSeat != null && wrapped != null && arg >= 0) {
@@ -2449,262 +1302,38 @@ public final class BellMoves {
                 if (in.e.getVehicle() != in.seat) in.e.startRiding(in.seat, true);
                 in.e.fallDistance = 0;
             }
-            if (in.tree != null) placeTree(in.tree, at);
+            if (in.tree != null) holds.placeTree(in.tree, at);
         }
     }
 
     // inside the dome
 
-    private static final int SLOTS = HollowbellEntity.SLOTS;
+    static final int SLOTS = HollowbellEntity.SLOTS;
 
-    private int slotCount() {
+    int slotCount() {
         return SLOTS;
     }
 
-    private Vec3 slotWorld(int i, @Nullable LivingEntity who) {
+    Vec3 slotWorld(int i, @Nullable LivingEntity who) {
         return h.slotWorld(i);
     }
 
-    private int freeSlot() {
-        boolean[] used = new boolean[SLOTS];
-        for (Inside in : inside) if (in.slot >= 0 && in.slot < SLOTS) used[in.slot] = true;
-        // players get the places in reach of the glowing spots, the rest go further out
-        boolean player = grabbed instanceof Player;
-        if (player) for (int i = 0; i < 8; i++) if (!used[i]) return i;
-        for (int i = 8; i < SLOTS; i++) if (!used[i]) return i;
-        for (int i = 0; i < SLOTS; i++) if (!used[i]) return i;
-        return 0;
-    }
-
-    private void insideTick() {
-        for (Iterator<Inside> it = inside.iterator(); it.hasNext(); ) {
-            Inside in = it.next();
-            in.age++;
-            if (in.e != null) {
-                if (!in.e.isAlive() || in.e.isRemoved() || in.e.level() != h.level()) {
-                    if (in.seat != null) in.seat.discard();
-                    it.remove();
-                    continue;
-                }
-                // it hurts in here: he's digesting whatever he takes in. A creature doesn't last long; a player has
-                // time to fight back from inside
-                boolean player = in.e instanceof Player;
-                if (in.age % (player ? 40 : 20) == 0 && !(in.e instanceof Player p && p.isCreative())) {
-                    in.e.invulnerableTime = 0;
-                    in.e.hurt(h.damageSources().mobAttack(h), h.dmg(player ? 4f : 8f, in.e));
-                    in.e.addEffect(new MobEffectInstance(MobEffects.POISON, 60, player ? 0 : 1));
-                }
-            } else if (in.tree != null && in.age > 20 * 60 * 3) {
-                dropTree(in.tree);
-                it.remove();
-            } else if (in.tree == null) {
-                it.remove();
-            }
-        }
-    }
-
-    /** a hit from inside: hurt him enough and he lets go of everyone in there */
     public void hurtFromInside(float dealt) {
-        hurtInside += dealt;
-        if (hurtInside >= h.healthMax() * 0.04f) {
-            hurtInside = 0f;
-            h.sound(h.position().add(0, rig.rimY * s(), 0), ModSounds.HURT_HEAVY, 3f, 1f);
-            dropEveryoneInside();
-        }
+        holds.hurtFromInside(dealt);
     }
 
-    public void dropEveryoneInside() {
-        for (Iterator<Inside> it = inside.iterator(); it.hasNext(); ) {
-            Inside in = it.next();
-            if (in.e instanceof Player p) {
-                dropSeat(in.seat);
-                h.floatDown(p);
-                if (p instanceof ServerPlayer sp)
-                    sp.displayClientMessage(Component.translatable("message.hollowbell.spat_out"), true);
-                it.remove();
-            }
-        }
-    }
-
-    /** everything he holds goes, in or out. Trees drop as their blocks, or (put away with his chunk) just go */
     public void letGoOfEverything(boolean dropTrees) {
-        letGoOfGrab(false);
-        letGoOfWrap();
-        for (Inside in : inside) {
-            if (in.e != null) {
-                dropSeat(in.seat);
-                h.floatDown(in.e);
-            }
-            if (in.tree != null) {
-                if (dropTrees) dropTree(in.tree);
-                else removeTree(in.tree);
-            }
-        }
-        inside.clear();
+        holds.letGoOfEverything(dropTrees);
     }
 
     // trees
 
-    private @Nullable LivingEntity findHarvestMob() {
-        double r = h.bellRadius() * 1.1;
-        List<LivingEntity> l = level().getEntitiesOfClass(
-                        LivingEntity.class,
-                        h.bodyBox().setMaxY(h.getY() + 20 * s() + 4),
-                        e -> (e instanceof Animal
-                                        || e instanceof AbstractVillager
-                                        || (e instanceof Mob
-                                                && !(e instanceof HollowbellEntity)
-                                                && !(e instanceof Belling)))
-                                && h.fairGame(e)
-                                && HollowbellEntity.canCarry(e)
-                                && h.horiz(e.position()) < r
-                                && !e.isPassenger());
-        if (l.isEmpty()) return null;
-        return l.get(h.getRandom().nextInt(l.size()));
-    }
-
-    private @Nullable BlockPos findTree() {
-        if (!griefing()) return null;
-        ServerLevel l = level();
-        double r = h.bellRadius();
-        for (int tries = 0; tries < 40; tries++) {
-            double a = h.getRandom().nextDouble() * Math.PI * 2,
-                    d = Math.sqrt(h.getRandom().nextDouble()) * r;
-            BlockPos col = BlockPos.containing(h.getX() + Math.cos(a) * d, h.getY(), h.getZ() + Math.sin(a) * d);
-            if (!NoWait.loaded(l, col)) continue; // (never waits for land being made)
-            BlockPos top = l.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, col);
-            // look down through the leaves for a trunk
-            for (int dy = 0; dy < 12; dy++) {
-                BlockPos p = top.below(dy);
-                if (!NoWait.loaded(l, p)) break;
-                BlockState st = l.getBlockState(p);
-                if (st.is(BlockTags.LOGS)) {
-                    BlockPos base = p;
-                    while (l.getBlockState(base.below()).is(BlockTags.LOGS) && base.getY() > l.getMinBuildHeight())
-                        base = base.below();
-                    return base;
-                }
-                if (!st.is(BlockTags.LEAVES) && !st.isAir()) break;
-            }
-        }
-        return null;
-    }
-
-    /** takes the tree out of the ground as a set of block displays, at most 96 blocks of it */
-    private @Nullable Tree pullUpTree(BlockPos base, Vec3 at) {
-        ServerLevel l = level();
-        if (!l.getBlockState(base).is(BlockTags.LOGS)) return null;
-        List<BlockPos> found = new ArrayList<>();
-        Set<BlockPos> seen = new HashSet<>();
-        ArrayDeque<BlockPos> q = new ArrayDeque<>();
-        q.add(base);
-        seen.add(base);
-        while (!q.isEmpty() && found.size() < 96) {
-            BlockPos p = q.poll();
-            BlockState st = l.getBlockState(p);
-            if (!(st.is(BlockTags.LOGS) || st.is(BlockTags.LEAVES))) continue;
-            found.add(p);
-            for (int dx = -1; dx <= 1; dx++)
-                for (int dy = -1; dy <= 1; dy++)
-                    for (int dz = -1; dz <= 1; dz++) {
-                        BlockPos n = p.offset(dx, dy, dz);
-                        if (n.getY() < base.getY()
-                                || Math.abs(n.getX() - base.getX()) > 5
-                                || Math.abs(n.getZ() - base.getZ()) > 5
-                                || n.getY() - base.getY() > 14) continue;
-                        if (seen.add(n)) q.add(n);
-                    }
-        }
-        if (found.isEmpty()) return null;
-        Tree tr = new Tree();
-        // a tree is a lot bigger than a small Hollowbell's dome: it shrinks to fit
-        tr.size = Mth.clamp(s() * 2.5f, 0.12f, 1f);
-        for (BlockPos p : found) {
-            BlockState st = l.getBlockState(p);
-            Display.BlockDisplay d = new Display.BlockDisplay(EntityType.BLOCK_DISPLAY, l);
-            d.setBlockState(st);
-            d.setPosRotInterpolationDuration(3);
-            Vector3f off = new Vector3f(
-                            p.getX() - base.getX() - 0.5f, p.getY() - base.getY(), p.getZ() - base.getZ() - 0.5f)
-                    .mul(tr.size);
-            d.setTransformation(
-                    new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(tr.size), new Quaternionf()));
-            d.setPos(at.x + off.x, at.y + off.y, at.z + off.z);
-            d.addTag(TREE_TAG);
-            LIVE_TREES.add(d);
-            l.addFreshEntity(d);
-            tr.blocks.add(d);
-            tr.offsets.add(off);
-            tr.states.add(st);
-            l.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
-        }
-        h.sound(Vec3.atCenterOf(base), SoundEvents.ROOTED_DIRT_BREAK, 3f, 0.5f);
-        h.particles(
-                new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
-                Vec3.atCenterOf(base),
-                40,
-                2,
-                0.1);
-        return tr;
-    }
-
-    private void placeTree(Tree tr, Vec3 at) {
-        for (int i = 0; i < tr.blocks.size(); i++) {
-            Display.BlockDisplay d = tr.blocks.get(i);
-            if (d.isRemoved()) continue;
-            Vector3f o = tr.offsets.get(i);
-            // hung from the top: the base hangs lowest
-            d.setPos(at.x + o.x, at.y + o.y - 14 * tr.size, at.z + o.z);
-        }
-    }
-
-    /** the tree comes down as the blocks it was made of */
-    private void dropTree(Tree tr) {
-        ServerLevel l = level();
-        Vec3 c = h.position();
-        for (int i = 0; i < tr.blocks.size(); i++) {
-            Display.BlockDisplay d = tr.blocks.get(i);
-            BlockState st = tr.states.get(i);
-            if (st.is(BlockTags.LOGS) || h.getRandom().nextInt(6) == 0) {
-                double x = c.x + (h.getRandom().nextDouble() - 0.5) * 6,
-                        z = c.z + (h.getRandom().nextDouble() - 0.5) * 6;
-                l.addFreshEntity(new ItemEntity(
-                        l,
-                        x,
-                        h.groundAt(x, z) + 0.5,
-                        z,
-                        new ItemStack(st.getBlock().asItem())));
-            }
-            d.discard();
-        }
-        tr.blocks.clear();
-    }
-
     static final String TREE_TAG = "hollowbell_tree";
     /** the blocks of the trees held right now; one loaded from a save has nobody holding it any more */
-    private static final Set<Display.BlockDisplay> LIVE_TREES = Collections.newSetFromMap(new WeakHashMap<>());
+    static final Set<Display.BlockDisplay> LIVE_TREES = Collections.newSetFromMap(new WeakHashMap<>());
 
-    /** a block of a tree he held, loaded with its chunk after he was put away: it drops where it hangs */
     public static void loadedTree(Entity e, ServerLevel l) {
-        if (!(e instanceof Display.BlockDisplay d) || !d.getTags().contains(TREE_TAG) || LIVE_TREES.contains(d)) return;
-        BlockState st = d.getBlockState();
-        // (not while the chunk is still being put in place)
-        l.getServer().tell(new TickTask(l.getServer().getTickCount(), () -> {
-            if (d.isRemoved()) return;
-            if (st.is(BlockTags.LOGS))
-                l.addFreshEntity(new ItemEntity(
-                        l,
-                        d.getX(),
-                        d.getY(),
-                        d.getZ(),
-                        new ItemStack(st.getBlock().asItem())));
-            d.discard();
-        }));
-    }
-
-    private void removeTree(Tree tr) {
-        for (Display.BlockDisplay d : tr.blocks) d.discard();
-        tr.blocks.clear();
+        BellHolds.loadedTree(e, l);
     }
 
     /** his strand ends flatten plants as he drags them along */
@@ -2786,7 +1415,7 @@ public final class BellMoves {
      * where its body is, not at its middle). Nothing of his digs, so a part more than a block down under the ground
      * is out of his reach.
      */
-    private List<LivingEntity> near(AABB box) {
+    List<LivingEntity> near(AABB box) {
         List<LivingEntity> out = level().getEntitiesOfClass(
                         LivingEntity.class, box, e -> h.fairGame(e) || (e == grabbed && !gentle) || e == wrapped);
         Vec3 mid = box.getCenter();
@@ -2836,9 +1465,9 @@ public final class BellMoves {
     /**
      * where the nearest bit of it is: its own spot, or for another giant, the nearest of its part boxes found this tick
      */
-    private final Map<LivingEntity, Vec3> giantAt = new HashMap<>();
+    final Map<LivingEntity, Vec3> giantAt = new HashMap<>();
 
-    private Vec3 at(LivingEntity e) {
+    Vec3 at(LivingEntity e) {
         Vec3 p = giantAt.get(e);
         return p != null ? p : e.position();
     }
