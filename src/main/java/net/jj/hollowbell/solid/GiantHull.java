@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Giant against giant: two giants never pass through each other. Each giant shows the others its rough body, its
  * "hull": a handful of upright round columns over its body and big limbs, in the world, as plain numbers, so the
- * giants of JJ's different mods read each other's with no code shared between them:
+ * giants of different mods read each other's with no code shared between them:
  *
  * <pre>
  *   public double[] jjHull()      on the giant entity: 6 numbers a column,

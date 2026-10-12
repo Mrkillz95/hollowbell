@@ -7,7 +7,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 
 import static net.jj.hollowbell.test.HollowbellGameTests.*;
 
-/** The slow heal all of JJ's giants share: 1% of his most health a minute left alone, nothing while he's being hit. */
+/** The slow heal every giant shares: 1% of his most health a minute left alone, nothing while he's being hit. */
 public class HealTests implements FabricGameTest {
     private static final float S = 0.1f;
 

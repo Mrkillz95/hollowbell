@@ -32,7 +32,7 @@ import static net.jj.hollowbell.test.HollowbellGameTests.release;
 import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 
 /**
- * The solid kit on him (1.10): his dome, rim, crown, glowing spots, pods, egg clumps and the roots of his arms are
+ * The solid kit on him: his dome, rim, crown, glowing spots, pods, egg clumps and the roots of his arms are
  * solid, his strands and the ends of his arms push you aside. People and things stand on him and stay on while he
  * drifts and pulses; whatever is put inside him is out within two ticks, unhurt; what he moves into is pushed, never
  * left inside; dropped things land on him; the inside of his dome stays a place you can be; his parts don't pass
@@ -474,7 +474,7 @@ public class SolidTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 4000, batch = "solid_overlap")
     public void hisPartsDoNotPassThroughEachOtherInHisMoves(GameTestHelper h) {
         // (the solid lab's count: model cells where one part is right inside another, away from where they join, in
-        // the worst key pose; measured before the keep-apart pass (1.9.8) and after it (1.10.0), the limit a bit over after)
+        // the worst key pose, with a little room over what was measured)
         String[][] want = {{"climb", "4600"}, {"curtain", "4800"}, {"sky_dive", "3200"}, {"drop", "3600"}, {"sweep", "1600"}, {"grab", "1100"}, {"carry", "1500"}, {"idle", "1000"}};
         StringBuilder sb = new StringBuilder();
         try {

@@ -57,7 +57,7 @@ public final class SolidCache {
         gridStamp = builds;
     }
 
-    /** frame f's box in the world now (for the tests) */
+    /** frame f's box in the world now */
     public float[] boxOf(int f) { float[] b = box[f]; return new float[]{(float) (b[0] + ox), (float) (b[1] + oy), (float) (b[2] + oz), (float) (b[3] + ox), (float) (b[4] + oy), (float) (b[5] + oz)}; }
 
     /** the adapter calls this whenever his pose is worked out again */

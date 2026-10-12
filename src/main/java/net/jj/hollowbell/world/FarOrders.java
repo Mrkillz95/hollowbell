@@ -197,7 +197,7 @@ public final class FarOrders {
     }
     private static final List<Fetch> fetches = new ArrayList<>();
 
-    /** for the tests: is anybody still being fetched out of an unloaded chunk? */
+    /** is anybody still being fetched out of an unloaded chunk? */
     public static int fetching() { return fetches.size(); }
 
     /** every tick: the ones being fetched, once their chunk has brought them in, step out of the world and go */
@@ -294,7 +294,7 @@ public final class FarOrders {
         }
     }
 
-    /** for the tests: the first fetch under way (its id and where it's going), or null */
+    /** the first fetch under way (its id and where it's going), or null */
     public static @Nullable Object[] firstFetch() {
         if (fetches.isEmpty()) return null;
         Fetch f = fetches.get(0);

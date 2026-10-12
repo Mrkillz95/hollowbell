@@ -305,9 +305,8 @@ public final class BellAnim {
             held[c] += ((scripted ? 1f : 0f) - held[c]) * (scripted ? 0.3f : 0.06f);
             float ease = scripted ? (ch.arm ? 0.55f : 0.35f) : 0.07f + 0.05f * (1f - held[c]);
             // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs. A
-            // strand's piece eases from the way it pointed a tick ago (before 1.9.3 this took the joint above's new
-            // place, so when what it hangs from moved fast, an arm's end swinging round, every piece grew longer and
-            // longer), and keeps the length asked for
+            // strand's piece eases from the way it pointed a tick ago (from the joint above's new place, every piece
+            // grows longer when what it hangs from moves fast), and keeps the length asked for
             float[] old = oldScratch;
             System.arraycopy(tg, 0, old, 0, raw.length);
             tg[0] = raw[0]; tg[1] = raw[1]; tg[2] = raw[2];
@@ -545,7 +544,7 @@ public final class BellAnim {
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    /** was this chain knocked by the ground or his bell in the last few ticks (for the tests) */
+    /** was this chain knocked by the ground or his bell in the last few ticks */
     public boolean knocked(int c) {
         for (int k = c; k >= 0; k = rig.chains[k].parentChain) if (steps - 1 - knockedAt[k] <= 8) return true;
         return false;
@@ -662,7 +661,7 @@ public final class BellAnim {
         float open = free * Math.max(st.sink, st.spread);
         if (open > 0f) local.premul(swing(qTmp, ox, oz, open * (sg == 0 ? 0.3f : 0.12f)));
         // laid out round him when the bell comes down: swung out from the root and curving on out, flat along the
-        // ground (the ground takes the rest). Before 1.9.3 they buckled in a zig zag, folding right back on themselves
+        // ground (the ground takes the rest), never folding back on themselves
         if (st.splay > 0f) {
             float z = sg == 0 ? 0.75f : sg <= 2 ? 0.35f : 0f;
             local.premul(swing(qTmp, ox, oz, z * st.splay));

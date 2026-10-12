@@ -88,7 +88,7 @@ public class BellArmorItem extends ArmorItem {
     }
     public static void forgetRings() { RANG.clear(); }
 
-    /** one pass of the set's gifts (the tests call this straight) */
+    /** one pass of the set's gifts */
     public static void abilities(ServerPlayer p) {
         if (p.isSpectator() || !fullSet(p)) return;
         net.jj.hollowbell.HollowbellMod.award(p, "bell_glass_set");

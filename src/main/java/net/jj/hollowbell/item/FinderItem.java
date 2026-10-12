@@ -47,7 +47,7 @@ public class FinderItem extends Item {
         return InteractionResultHolder.sidedSuccess(stack, lvl.isClientSide);
     }
 
-    /** what the finder says to this player, in chat (the tests call this straight) */
+    /** what the finder says to this player, in chat */
     public static Component answer(ServerLevel sl, Player player) {
         Component msg = comingTo(sl, player);
         if (msg == null) msg = tell(sl, player.position());
@@ -71,7 +71,7 @@ public class FinderItem extends Item {
     public static int tens(double d) { return (int) (Math.round(d / 10.0) * 10); }
 
     /**
-     * The one sentence all five finders use (the same words in the book's "Where is he?" and /hollowbell natural):
+     * The one sentence every giant's finder uses (the same words in the book's "Where is he?" and /hollowbell natural):
      * where he is from here, or when and where the next one comes down.
      */
     public static Component tell(ServerLevel sl, Vec3 from) {

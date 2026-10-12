@@ -1162,9 +1162,9 @@ public class HollowbellGameTests implements FabricGameTest {
         h.succeed();
     }
 
-    // ------------------------------------------------------------------ the other giants (JJ's other bosses)
+    // ------------------------------------------------------------------ the other giants
 
-    /** a stand-in for another of JJ's bosses: anything tagged as a giant counts as one */
+    /** a stand-in for another giant boss: anything tagged as a giant counts as one */
     static net.minecraft.world.entity.monster.Zombie fakeGiant(GameTestHelper h, Vec3 at) {
         net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(h.getLevel());
         z.moveTo(at.x, at.y, at.z, 0f, 0f);
@@ -3094,7 +3094,7 @@ public class HollowbellGameTests implements FabricGameTest {
         w.clearForTests();
         BlockPos c = groundSpot(h, 226);
         var chunk = plainChunk(h, c);
-        // the painted ground of 1.5, over land already made
+        // an old painted ground, over land already made
         w.claimOldHome(c.getX() - 100, c.getZ(), 0x5EED0200L, 2);
         java.util.List<net.minecraft.world.level.block.state.BlockState> before = new java.util.ArrayList<>();
         for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
@@ -3348,7 +3348,7 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
-    // ================================================================== 1.6: sleeping, the safe list with creatures,
+    // ================================================================== sleeping, the safe list with creatures,
     // orders at any distance, taking you to him, and the commands and words matching the other giants
 
     /** a player's own command source (for the commands that act on the one running them) */
@@ -3892,7 +3892,7 @@ public class HollowbellGameTests implements FabricGameTest {
         });
     }
 
-    // ------------------------------------------------------------------ 1.7.0: the stinger harpoon, the armour power
+    // ------------------------------------------------------------------ the stinger harpoon, the armour power
 
     /** a spot on the flat ground of this test, dx/dz blocks from its corner, standing on the top block */
     private static Vec3 onGround(GameTestHelper h, int dx, int dz) {
@@ -4097,7 +4097,7 @@ public class HollowbellGameTests implements FabricGameTest {
         h.succeed();
     }
 
-    // ------------------------------------------------------------------ 1.7.0: operator commands
+    // ------------------------------------------------------------------ operator commands
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "ops_set")
     public void operatorsCanSetEverything(GameTestHelper h) {

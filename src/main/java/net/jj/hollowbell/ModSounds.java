@@ -37,7 +37,7 @@ public final class ModSounds {
             WARN_TOLL = reg("warn_toll"), WARN_ARMS = reg("warn_arms"), WARN_STINGERS = reg("warn_stingers"), WARN_LANCES = reg("warn_lances"),
             WARN_UNDERTOW = reg("warn_undertow");
 
-    /** every one of them, for the test that checks they're all there */
+    /** every one of them */
     public static final SoundEvent[] ALL = {HUM, DRIFT, PULSE, PULSE_WATER, RIPPLE, HURT, HURT_HEAVY, DEATH, DEATH_FALL, TIRED,
             STRAND, GRAB, STING, POD_POP, EGG_BURST, GOO, SPORES, EGG_WIND, EGG_SPLAT, EGG_HATCH, BELLING, BELLING_HURT, BELLING_DEATH, HEARTBEAT, ECHO,
             TOLL, TOLL_BIG, SLAM, SHOCK, FLASH, WHIP, VOLLEY, BEAM, SPLASH, CHURN, SWOOP, CLICK,

@@ -42,7 +42,7 @@ public final class BellPower {
     private static final class Doing { Kind kind; int t; boolean rung; Doing(Kind k) { kind = k; } }
     private static final Map<UUID, Doing> DOING = new HashMap<>();
 
-    /** what the key does right now (the tests call this straight); null when nothing happened */
+    /** what the key does right now; null when nothing happened */
     public static Kind use(ServerPlayer p) {
         if (p.isSpectator() || p.isPassenger() || !BellArmorItem.fullSet(p)) {
             if (!BellArmorItem.fullSet(p)) p.displayClientMessage(Component.translatable("message.hollowbell.power_no_set"), true);

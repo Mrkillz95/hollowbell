@@ -29,10 +29,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 1.9.8: one summoned far from every player is always found. He used to be put down in land that was loaded but
- * not running, so he never took a tick and was never written down anywhere: /giants where said none, /giants tp went
- * somewhere else. Now the summon holds his land running for a few seconds, and when his chunk is put away he's
- * written down where he lies. And a tp to land that isn't made yet never makes the server wait for it.
+ * One summoned far from every player is always found: the summon holds his land running for a few seconds, and when
+ * his chunk is put away he's written down where he lies. A tp to land that isn't made yet never makes the server
+ * wait for it.
  */
 public class FarFindTests implements FabricGameTest {
 

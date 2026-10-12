@@ -222,7 +222,7 @@ public class MoreGameTests implements FabricGameTest {
 
     // ------------------------------------------------------------------ giants meeting
 
-    /** a stand-in for another of JJ's giants, of that mod's kind */
+    /** a stand-in for another giant, of that mod's kind */
     static net.minecraft.world.entity.monster.Zombie giantOfKind(GameTestHelper h, Vec3 at, String kind) {
         var z = fakeGiant(h, at);
         z.addTag(net.jj.hollowbell.entity.Meetings.KIND + kind);

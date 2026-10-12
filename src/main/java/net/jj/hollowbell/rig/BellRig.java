@@ -23,7 +23,7 @@ import java.util.Map;
  * server (hits, where he holds things, where his arm lands) and the client (drawing).
  * Model space: 1 unit = 1 block at size 1, y = 0 is the ground under his strands, x and z are centred on the crown.
  *
- * Since 1.1 the dome is cut into bands by height (it squeezes in more at the rim than at the top) and the rim into
+ * The dome is cut into bands by height (it squeezes in more at the rim than at the top) and the rim into
  * sectors (a ripple runs round it). The arms and strands are chains: where each joint is comes from {@link BellAnim},
  * which swings them with weight, and the pose here just lays each segment along its piece of the chain.
  */

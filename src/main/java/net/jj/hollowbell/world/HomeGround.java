@@ -98,7 +98,7 @@ public final class HomeGround {
 
     // ------------------------------------------------------------------ making a chunk his
 
-    /** for the tests: what the last chunk was asked to become, and where its ground was before */
+    /** what the last chunk was asked to become, and where its ground was before */
     public static volatile BellPlan.Out lastOut;
     public static volatile int[] lastY0;
 
@@ -112,7 +112,7 @@ public final class HomeGround {
         return p.plan;
     }
 
-    /** the plan of the ground claimed now (for the tests and the commands), or null */
+    /** the plan of the ground claimed now (for the commands), or null */
     public static BellPlan plan() {
         BellGen.Snap s = BellGen.SNAP;
         return s == null || !s.claimed ? null : planFor(s);
@@ -334,7 +334,7 @@ public final class HomeGround {
         return sv;
     }
 
-    /** for the tests: what this chunk would become, worked out without changing anything but what stands on it */
+    /** what this chunk would become, worked out without changing anything but what stands on it */
     public static BellPlan.Out preview(WorldGenLevel level, ChunkAccess chunk, BellGen.Snap s, int[] y0Out) {
         BellPlan p = planFor(s);
         Survey sv = survey(level, chunk, p, false, null);

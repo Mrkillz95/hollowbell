@@ -329,7 +329,7 @@ public final class CodexOrders {
     /**
      * "Go after what I look at". pay.arg() is the creature the player's screen found (its id; 0 or less: the server
      * looks itself). He goes after it from any distance, asleep (he wakes), out of the world (his trip is aimed at it
-     * and he takes it up when he's back), ridden or not. What it said, as a message key (for the tests).
+     * and he takes it up when he's back), ridden or not. What it said, as a message key.
      */
     public static String attackLooked(ServerPlayer p, CodexPayload pay, boolean already) {
         LookOrder.Found f = LookOrder.find(p, pay.arg());

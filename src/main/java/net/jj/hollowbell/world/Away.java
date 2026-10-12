@@ -244,7 +244,7 @@ public final class Away extends SavedData {
     public void unpark(UUID id) { if (parked.remove(id) != null) setDirty(); }
     public Map<UUID, Parked> parked() { return java.util.Collections.unmodifiableMap(parked); }
 
-    /** for the tests: one written down as lying at this spot */
+    /** one written down as lying at this spot */
     public void noteParked(UUID id, String dim, double x, double z, float scale) { parked.put(id, new Parked(dim, x, z, 0, scale)); setDirty(); }
 
     public void forgetParked() { if (!parked.isEmpty()) { parked.clear(); setDirty(); } }
@@ -282,7 +282,7 @@ public final class Away extends SavedData {
                 a.noteParked(h);
     }
 
-    /** for the tests: the world's copy swapped for one read back from a save */
+    /** the world's copy swapped for one read back from a save */
     public static void reloadForTests(MinecraftServer server) {
         server.overworld().getDataStorage().set("hollowbell_away", load(get(server).save(new CompoundTag(), server.registryAccess()), server.registryAccess()));
     }

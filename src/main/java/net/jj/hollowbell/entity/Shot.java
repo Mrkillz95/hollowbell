@@ -48,7 +48,7 @@ public class Shot extends ThrowableItemProjectile {
     public static final int FALLING = 0, SPLAT = 1, HATCHING = 2;
     /** how long a splat lies there, and how long a hatching egg shakes before the Belling comes out */
     public static final int SPLAT_TICKS = 50, HATCH_TICKS = 26;
-    /** the share of eggs that hatch (the tests set it to 1 or 0) */
+    /** the share of eggs that hatch */
     public static float hatchChance = 0.65f;
     private float damage = 4f, radius = 2f;
     private int life = 200;

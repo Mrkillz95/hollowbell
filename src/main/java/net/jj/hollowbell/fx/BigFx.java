@@ -103,7 +103,7 @@ public final class BigFx {
             if (pl.distanceToSqr(x, y, z) < r * r && ServerPlayNetworking.canSend(pl, Payload.TYPE)) ServerPlayNetworking.send(pl, p);
     }
 
-    // ------------------------------------------------------------------ for the tests: what was sent lately
+    // ------------------------------------------------------------------ what was sent lately
 
     public record Sent(long time, int kind, double x, double y, double z, float size) {}
     private static final java.util.ArrayDeque<Sent> recent = new java.util.ArrayDeque<>();

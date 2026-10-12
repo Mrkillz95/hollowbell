@@ -18,10 +18,10 @@ import net.minecraft.world.item.Rarity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** JJ's Giants: the Giants Guide. The giants themselves are their own mods, nested in the same jar. */
+/** The Giants Guide. The giants themselves are their own mods, nested in the same jar. */
 public class GiantsGuideMod implements ModInitializer {
     public static final String ID = "jj_giants";
-    public static final Logger LOG = LoggerFactory.getLogger("JJ's Giants");
+    public static final Logger LOG = LoggerFactory.getLogger("Giants Guide");
     public static final Item GUIDE = new GuideItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON));
 
     @Override

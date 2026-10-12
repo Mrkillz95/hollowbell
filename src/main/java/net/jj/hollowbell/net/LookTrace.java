@@ -72,7 +72,7 @@ public final class LookTrace {
         if (!e.isAlive() || e.isSpectator() || e.isRemoved()) return false;
         if (e instanceof LivingEntity) return !(e instanceof net.minecraft.world.entity.decoration.ArmorStand);
         if (e instanceof net.minecraft.world.entity.boss.EnderDragonPart) return true;
-        // the part boxes of JJ's giants (and anything else with an owner() that is a creature)
+        // the part boxes of the giants (and anything else with an owner() that is a creature)
         return e.getClass().getName().startsWith("net.jj.") ? hasOwner(e) || Giants.isGiant(e) : hasOwner(e);
     }
 

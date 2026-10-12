@@ -5,8 +5,8 @@ import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Giants meeting in the world: when two of JJ's bosses wander near each other they either fight or keep away. The
- * same table and rules in all five mods, keyed by the other's mod id (read from its {@link #KIND} tag first, then
+ * Giants meeting in the world: when two giant bosses wander near each other they either fight or keep away. The
+ * same table and rules in every giant mod, keyed by the other's mod id (read from its {@link #KIND} tag first, then
  * from its entity type).
  */
 public final class Meetings {
@@ -22,7 +22,7 @@ public final class Meetings {
 
     /** the seven, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback, Swarmforge */
     static final String[] KINDS = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge"};
-    /** f fight, a avoid (the same table in all six mods) */
+    /** f fight, a avoid (the same table in every giant mod) */
     private static final String[] TABLE = {
             // P    F    C    H    W    WB
             "-ffaaff",   // Pitchgut
@@ -40,7 +40,7 @@ public final class Meetings {
     }
 
     /**
-     * Who says "X and Y are fighting!": the one that starts the fight, once. A board shared by all five mods in the
+     * Who says "X and Y are fighting!": the one that starts the fight, once. A board shared by all the giant mods in the
      * same server (kept in the JVM's system properties, so no mod needs the others) stops the second one saying it
      * again within 6000 ticks. True for the first claim on a pair.
      */
@@ -63,7 +63,7 @@ public final class Meetings {
         return TABLE[a].charAt(b) == 'f' ? Way.FIGHT : Way.AVOID;
     }
 
-    /** which of the five this is (its kind tag first, then its entity type's mod), or null for anything else */
+    /** which giant this is (its kind tag first, then its entity type's mod), or null for anything else */
     public static @Nullable String kindOf(@Nullable Entity e) {
         if (e == null) return null;
         for (String t : e.getTags()) if (t.startsWith(KIND)) return t.substring(KIND.length());

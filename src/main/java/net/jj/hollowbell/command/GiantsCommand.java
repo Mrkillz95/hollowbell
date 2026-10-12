@@ -20,7 +20,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * /giants: one command for all of JJ's bosses at once. Every one of the seven mods carries this class, but only
+ * /giants: one command for all the bosses at once. Every one of the seven mods carries this class, but only
  * one registers it: the first of the seven bridges (in this fixed order) that is actually loaded. This
  * mod's bridge sorts first, so with the Cerberus installed it is this class that answers.
  *

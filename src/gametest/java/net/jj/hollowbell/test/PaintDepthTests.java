@@ -21,7 +21,7 @@ import static net.jj.hollowbell.test.HollowbellGameTests.drop;
 import static net.jj.hollowbell.test.HollowbellGameTests.player;
 
 /**
- * /giants paint [depth] (1.9.3): a painted column is his ground's own layers from its new top down to the depth asked
+ * /giants paint [depth]: a painted column is his ground's own layers from its new top down to the depth asked
  * (5 unless told), and the block under that is left as it was. The test world is flat and only three blocks deep,
  * so these paint on a deep land of stone made for the test (the plan is told the land's top is there).
  */
