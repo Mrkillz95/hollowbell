@@ -1,10 +1,15 @@
-# Hollowbell (Java mod) — version 1.11.0
+# Hollowbell (Java mod) — version 1.11.1
 
 Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish, about 200 blocks wide and 200 tall at full size, and he swims through the air.
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
-## What's new in 1.11.0
+## What's new in 1.11.1
+
+- **Clean arm ends.** The bits of strand that stuck out of the ends and sides of his big arms are gone, and no small tentacles hang off his arms any more. The arms move just as before.
+- **No height limit.** Ride him, send him or tell him with `/hollowbell height` and he goes as high as you like. In the Nether he stays under the roof.
+
+## What was new in 1.11.0
 
 - **No heavy move in the first minute of a fight.** Big moves wait until a fight has gone on for a minute, so you can get your bearings. `/hollowbell heavydelay` (and `/giants heavydelay`) changes how long, 0 turns it off.
 - **Kills count.** Whoever brings him down gets the XP, even if he takes a while to sink. Anyone standing on him when he dies floats down unhurt.
