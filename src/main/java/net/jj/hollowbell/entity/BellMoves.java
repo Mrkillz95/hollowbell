@@ -1960,7 +1960,10 @@ public final class BellMoves {
 
     // ------------------------------------------------------------------ the sting and the shed
 
-    public void sting(LivingEntity e) {
+    public void sting(LivingEntity e) { sting(e, true); }
+
+    /** knock false: stung where it stands, not knocked off (it stands on him: a knock throws it off his pod) */
+    public void sting(LivingEntity e, boolean knock) {
         if (e instanceof Player p && (p.isCreative() || p.isSpectator())) return;
         if (!h.fightingGiant(e)) return;                  // a giant he isn't fighting is left alone
         long now = h.level().getGameTime();
@@ -1970,7 +1973,14 @@ public final class BellMoves {
         if (stingAt.size() > 200) stingAt.clear();
         e.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 0));
         e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
+        Vec3 v = e.getDeltaMovement();
+        boolean marked = e.hurtMarked;
         e.hurt(h.damageSources().mobAttack(h), h.dmg(3f, e));
+        if (!knock) {
+            // (a hit also sends a player the speed the server has for them, which isn't how they really move)
+            e.setDeltaMovement(v);
+            e.hurtMarked = marked;
+        }
         h.sound(e.position(), ModSounds.STING, 1f, 1f);
     }
 

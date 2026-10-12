@@ -220,6 +220,51 @@ public class SolidTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 700, batch = "solid_ride_big")
     public void aBigOneCarriesYouToo(GameTestHelper h) { rideCase(h, 1.5f, 502, false); }
 
+    /**
+     * A pod hangs from its strand right where you stand on top of it, and the strand stings you there: stung, but
+     * never knocked off (a knock is sent to the player's own game, which would throw them off the pod).
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "solid_pod")
+    public void standingOnAPodYouAreStungButNotThrownOff(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, SZ, HollowbellEntity.CALM, 513);
+        after(h, 60, () -> {
+            e.setStay(true);
+            Vec3 at = e.topOfSlice(BellPieces.get().first[e.rig.pods[11].bone()]);
+            h.assertTrue(at != null, "no spot to stand on the pod");
+            ServerPlayer p = player(h, at.add(0, 0.01, 0));
+            SolidCarry c = new SolidCarry();
+            c.step(p, Solid.bodies(false));
+            h.assertTrue(c.riding(), "a player put on the pod stands on him: " + p.position());
+            int[] stung = {0}, knocked = {0}, off = {0};
+            for (int k = 1; k <= 200; k++) {
+                after(h, k, () -> {
+                    if (p.hurtTime > 0) {
+                        stung[0]++;
+                        // (a hit sends the player's game the speed the server has for them: any sideways speed throws)
+                        if (Math.hypot(p.getDeltaMovement().x, p.getDeltaMovement().z) > 0.2) knocked[0]++;
+                        // (a test player isn't ticked by a game of its own: the hit wears off here instead)
+                        p.hurtTime = 0;
+                        p.invulnerableTime = 0;
+                    }
+                    p.setDeltaMovement(Vec3.ZERO);
+                    c.step(p, Solid.bodies(false));
+                    if (!c.riding()) {
+                        off[0]++;
+                        p.setPos(p.getX(), p.getY() - 0.4, p.getZ());
+                        c.step(p, Solid.bodies(false));
+                    }
+                });
+            }
+            after(h, 202, () -> {
+                HollowbellMod.LOG.info("solid pod: stung {} times, knocked {}, off {} ticks", stung[0], knocked[0], off[0]);
+                h.assertTrue(stung[0] >= 2, "the strand the pod hangs from stings whoever stands on it: " + stung[0]);
+                h.assertTrue(knocked[0] == 0, "a sting knocked the player off the pod " + knocked[0] + " of " + stung[0] + " times");
+                h.assertTrue(off[0] <= 20, "the player came off the pod for " + off[0] + " ticks");
+                done(h, e, p);
+            });
+        });
+    }
+
     // ------------------------------------------------------------------ never inside
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "solid_inside")

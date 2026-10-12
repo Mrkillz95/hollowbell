@@ -1,5 +1,6 @@
 package net.jj.hollowbell.entity;
 
+import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
@@ -1568,7 +1569,8 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
                 for (int b : S.bones()) if (rig.touches(pose, slicesNow(), b, m, pad, inv)) { hit = true; break; }
                 if (hit) break;
             }
-            if (hit) moves.sting(e);
+            // (a pod hangs from its strand right where you stand on it: you're stung there, but not knocked off)
+            if (hit) moves.sting(e, !Solid.onTop(this, e, 1.5, 1.5));
         }
     }
 
