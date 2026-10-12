@@ -1677,7 +1677,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     @Override
     public void remove(RemovalReason why) {
         if (!level().isClientSide && !steppedOut && why != RemovalReason.UNLOADED_TO_CHUNK && why != RemovalReason.UNLOADED_WITH_PLAYER)
-            HollowbellMod.LOG.info("Hollowbell removed at {} ({})", position(), why);
+            HollowbellMod.LOG.info("Hollowbell removed at {} ({})", blockPosition().toShortString(), why);
         clearBars();
         if (!level().isClientSide && (why == RemovalReason.KILLED || why == RemovalReason.DISCARDED)) lowerWhoeverStandsOnHim();
         net.jj.hollowbell.solid.Solid.untrack(this);
@@ -1978,7 +1978,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         if (!level().isClientSide) {
             if (deathBy == null && (src.getEntity() instanceof Player || lastHurtByPlayer != null))
                 deathBy = src.getEntity() instanceof Player k ? k.getUUID() : lastHurtByPlayer.getUUID();
-            HollowbellMod.LOG.info("Hollowbell died at {} ({})", position(), src.getMsgId());
+            HollowbellMod.LOG.info("Hollowbell died at {} ({})", blockPosition().toShortString(), src.getMsgId());
             // killed by somebody wearing his own glass
             Entity killer = src.getEntity() instanceof ServerPlayer ? src.getEntity() : getKillCredit();
             if (killer instanceof ServerPlayer sp && net.jj.hollowbell.item.BellArmorItem.fullSet(sp)) HollowbellMod.award(sp, "own_glass");
@@ -2047,7 +2047,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
                     if (!loot.isEmpty()) {
                         boolean grief = HollowbellConfig.V.griefing && sl.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
                         BlockPos at = net.jj.hollowbell.world.LootShrine.build(sl, getX(), getY(), getZ(), loot, grief);
-                        HollowbellMod.LOG.info("His loot is in the cache at {}", at);
+                        HollowbellMod.LOG.info("His loot is in the cache at {}", at.toShortString());
                     }
                 }
             }
