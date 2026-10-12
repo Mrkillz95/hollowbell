@@ -256,9 +256,11 @@ public class SolidTests implements FabricGameTest {
                 });
             }
             after(h, 202, () -> {
-                HollowbellMod.LOG.info("solid pod: stung {} times, knocked {}, off {} ticks", stung[0], knocked[0], off[0]);
+                HollowbellMod.LOG.info("solid pod: stung {} times, knocked {}, off {} ticks",
+                        stung[0], knocked[0], off[0]);
                 h.assertTrue(stung[0] >= 2, "the strand the pod hangs from stings whoever stands on it: " + stung[0]);
-                h.assertTrue(knocked[0] == 0, "a sting knocked the player off the pod " + knocked[0] + " of " + stung[0] + " times");
+                h.assertTrue(knocked[0] == 0,
+                        "a sting knocked the player off the pod " + knocked[0] + " of " + stung[0] + " times");
                 h.assertTrue(off[0] <= 20, "the player came off the pod for " + off[0] + " ticks");
                 done(h, e, p);
             });
