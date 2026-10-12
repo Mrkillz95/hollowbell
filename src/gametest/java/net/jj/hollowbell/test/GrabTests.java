@@ -92,22 +92,29 @@ public class GrabTests implements FabricGameTest {
     public void theStrandsSting(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 32);
         Pig[] z = new Pig[1];
-        h.runAfterDelay(20, () -> {
-            e.setStay(true);
-            // right on one of the blocks of a strand's lowest piece
+        // the strand sways, so the pig is kept on the same block of it until it's stung
+        Runnable onStrand = () -> {
             var S = e.rig.strands[e.rig.strands.length / 2];
             int bone = S.bones()[S.bones().length - 1];
             BellModel m = BellModel.get();
             int k = m.count(bone) / 2;
             Vec3 tip = e.boneWorld(bone, new Vector3f(m.x[bone][k] + 0.5f, m.y[bone][k] + 0.5f, m.z[bone][k] + 0.5f));
+            z[0].moveTo(tip.x, tip.y - 0.45, tip.z, 0, 0);
+            z[0].setDeltaMovement(Vec3.ZERO);
+        };
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
             z[0] = EntityType.PIG.create(h.getLevel());
-            z[0].moveTo(tip.x, tip.y - 0.9, tip.z, 0, 0);
+            onStrand.run();
             z[0].setNoGravity(true);
             z[0].setNoAi(true);
             z[0].setPersistenceRequired();
             h.getLevel().addFreshEntity(z[0]);
         });
-        h.runAfterDelay(40, () -> {
+        h.onEachTick(() -> {
+            if (z[0] != null && !z[0].hasEffect(MobEffects.POISON)) onStrand.run();
+        });
+        h.runAfterDelay(60, () -> {
             h.assertTrue(
                     z[0].hasEffect(MobEffects.POISON) && z[0].hasEffect(MobEffects.MOVEMENT_SLOWDOWN),
                     "touching a strand didn't sting");
