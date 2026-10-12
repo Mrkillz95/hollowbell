@@ -57,7 +57,7 @@ public final class LootBeamsClient {
 
     public static void clear() { beams = new ArrayList<>(); beamsFor = null; drawnByCache.clear(); }
 
-    /** how many beams the server has told us about (for the tests and the curious) */
+    /** how many beams the server has told us about */
     public static int count() { return beams.size(); }
 
     public static void startFrame() {

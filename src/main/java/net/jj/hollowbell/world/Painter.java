@@ -95,7 +95,7 @@ public final class Painter {
 
     public static boolean busy() { return !jobs.isEmpty(); }
 
-    /** for the tests: drop every paint waiting */
+    /** drop every paint waiting */
     public static void forget() { jobs.clear(); }
 
     /** every tick: a chunk or two, about 8 ms at most */
@@ -115,7 +115,7 @@ public final class Painter {
         }
     }
 
-    /** for the tests: every paint waiting is done now */
+    /** every paint waiting is done now */
     public static void finishAll(MinecraftServer server) {
         while (!jobs.isEmpty()) {
             Job j = jobs.remove(0);

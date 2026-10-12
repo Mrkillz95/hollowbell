@@ -137,7 +137,7 @@ public final class NoWait {
         TRIPS.put(p.getUUID(), new Trip(l.dimension(), x, z, arrive, System.currentTimeMillis() + TRIP_WAIT * 50L));
     }
 
-    /** for the tests: every trip's wait has run out, as if a minute had gone by */
+    /** every trip's wait has run out, as if a minute had gone by */
     public static void runOutForTests() { TRIPS.replaceAll((k, t) -> new Trip(t.dim(), t.x(), t.z(), t.arrive(), 0L)); }
 
     /** is this player waiting on a trip? (the tests ask) */

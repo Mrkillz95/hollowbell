@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 
 /**
- * The giants: JJ's seven bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback
+ * The giants: the seven bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback
  * and the Swarmforge). They all follow the same rules with each other: a blow from one giant lands on another by the
  * other's own armour against giants, and none of them ever picks another up, swallows it or drags it about. Each one
  * tags itself {@link #TAG}; the ids below catch the others even from older versions that don't.

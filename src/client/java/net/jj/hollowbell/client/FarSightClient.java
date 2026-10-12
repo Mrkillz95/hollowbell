@@ -122,7 +122,7 @@ public final class FarSightClient {
         }
     }
 
-    /** how many are being drawn far off right now (for the tests and the curious) */
+    /** how many are being drawn far off right now */
     public static int count() { return ghosts.size(); }
 
     public static void clear() { ghosts.clear(); real.clear(); realSeen.clear(); }

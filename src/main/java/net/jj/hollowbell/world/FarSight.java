@@ -21,8 +21,8 @@ import java.util.List;
 
 /**
  * Seeing him from far off. The game only sends a player the creatures within a few hundred blocks, and with
- * nobody near him he steps out of the world altogether, so walking toward him you used to see nothing until you
- * were nearly under him. Now, once a second, each player is told about every Hollowbell within farSightBlocks that
+ * nobody near him he steps out of the world altogether, so walking toward him you would see nothing until you
+ * were nearly under him. So once a second each player is told about every Hollowbell within farSightBlocks that
  * they aren't already being sent (loaded but too far, or out of the world as a sum), and their game draws him
  * simply out there until the real one comes into range.
  */

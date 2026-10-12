@@ -20,7 +20,7 @@ import static net.jj.hollowbell.test.HollowbellGameTests.release;
 import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 
 /**
- * Giant against giant (1.10): two giants never pass through each other. Two of him drifted into each other for a
+ * Giant against giant: two giants never pass through each other. Two of him drifted into each other for a
  * minute, and him going for a giant from "another mod" (a stand-in that shows no hull: its box is its body): bodies
  * stay out of each other, he comes up to it (over it: his strands hang down on it), and his blows aim at its body,
  * not its feet.

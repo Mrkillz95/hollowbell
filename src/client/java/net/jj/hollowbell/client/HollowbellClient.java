@@ -76,9 +76,8 @@ public class HollowbellClient implements ClientModInitializer {
             @Override public ResourceLocation getFabricId() { return ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "model_reload"); }
             @Override public void onResourceManagerReload(ResourceManager rm) { BellMeshes.INSTANCE.invalidate(); }
         });
-        // /hollowbell detail [on|off]: the server passes it on, and the setting is kept on this computer only.
-        // (It used to be a command of the client's own, but then the client took every /hollowbell command for its
-        // own and never sent the rest to the server.)
+        // /hollowbell detail [on|off]: the server passes it on, and the setting is kept on this computer only (a
+        // client command of the same name would take every /hollowbell command and never send the rest on)
         ClientPlayNetworking.registerGlobalReceiver(net.jj.hollowbell.net.DetailPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> {
             if (p.what() == net.jj.hollowbell.net.DetailPayload.FAR) {
                 // how far off he can be seen: kept in this game's own settings too (on a server the server's decides who is sent)

@@ -47,7 +47,7 @@ public class WorldOne extends SavedData {
     private int homeX, homeZ, homeRadius;
     private long homeSeed;
     private boolean homeClaimed;
-    /** 1: the first, smaller Hollows (1.4); 2: painted over loaded land (1.5); 3: made by the world's generation (1.6 on) */
+    /** 1: the first, smaller Hollows; 2: painted over loaded land; 3: made by the world's generation */
     private int groundVersion = GROUND_VERSION;
     public static final int GROUND_VERSION = 3;
 
@@ -62,7 +62,7 @@ public class WorldOne extends SavedData {
     public static int configRadius() { return Mth.clamp(HollowbellConfig.V.homeRadius, 200, 2000); }
 
     /**
-     * A ground from before 1.6 keeps its centre and seed and grows to the new size if it was smaller. The land the
+     * A ground of an older groundVersion keeps its centre and seed and grows to the new size if it was smaller. The land the
      * world had already made stays exactly as it is (painted bits and all); only land not made yet comes out as his
      * ground from now on. /hollowbell ground new claims a whole fresh one. Returns whether anything changed.
      */
@@ -79,7 +79,7 @@ public class WorldOne extends SavedData {
         return changed;
     }
 
-    /** for the tests: a ground claimed with a seed of their choosing, so it can be made twice the same */
+    /** a ground claimed with a seed of their choosing, so it can be made twice the same */
     public void claimHome(ServerLevel level, int atX, int atZ, long seed) {
         claimHome(level, atX, atZ);
         homeSeed = seed;
@@ -87,7 +87,7 @@ public class WorldOne extends SavedData {
         BellGen.publish(this);
     }
 
-    /** for the tests: a ground as an older version left it */
+    /** a ground as an older version left it */
     public void claimOldHome(int atX, int atZ, long seed, int version) {
         homeX = atX; homeZ = atZ; homeRadius = 320; homeSeed = seed; homeClaimed = true;
         groundVersion = version;
@@ -107,7 +107,7 @@ public class WorldOne extends SavedData {
         HollowbellMod.LOG.info("The Bell Hollows lie at {}, {}", atX, atZ);
     }
 
-    /** for the tests: the ground let go again, so nothing more is made as his */
+    /** the ground let go again, so nothing more is made as his */
     public void dropHome() {
         homeClaimed = false;
         groundVersion = GROUND_VERSION;
@@ -115,7 +115,7 @@ public class WorldOne extends SavedData {
         BellGen.publish(this);
     }
 
-    /** for the tests: a world that has picked nothing yet, no ground, no ward */
+    /** a world that has picked nothing yet, no ground, no ward */
     public void clearForTests() {
         placed = false; alive = false; dueAt = -1; x = 0; z = 0; oneId = null;
         cooldown = 0;
@@ -414,7 +414,7 @@ public class WorldOne extends SavedData {
         if (isTheOne(was)) { oneId = now; setDirty(); }
     }
 
-    /** for the tests: the world told outright where things stand */
+    /** the world told outright where things stand */
     public void noteSpot(int atX, int atZ, boolean isAlive, long due) {
         x = atX; z = atZ; placed = true; alive = isAlive; dueAt = due;
         setDirty();
@@ -498,7 +498,7 @@ public class WorldOne extends SavedData {
         joinedNow(h, world);
     }
 
-    /** as joined(), for the tests, which put several of him down on purpose */
+    /** as joined(), for putting several of him down on purpose */
     public static void joinedNow(HollowbellEntity h, ServerLevel world) {
         MinecraftServer server = world.getServer();
         if (server == null || h.isRemoved() || h.isDeadOrDying()) return;   // one saved mid-death is already counted as dead

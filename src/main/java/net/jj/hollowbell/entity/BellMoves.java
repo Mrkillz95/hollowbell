@@ -165,7 +165,7 @@ public final class BellMoves {
     public List<LivingEntity> insideNow() { List<LivingEntity> l = new ArrayList<>(); for (Inside i : inside) if (i.e != null) l.add(i.e); return l; }
     public int treesInside() { int n = 0; for (Inside i : inside) if (i.tree != null) n++; return n; }
     public boolean isTired() { return tired > 0; }
-    /** for the tests and the book: the heavy moves are his to use now */
+    /** the heavy moves are his to use now */
     public void restNow() { tired = 0; h.setTired(false); heavyReadyAt = 0; cooldown = 0; fightSince = 0; }
 
     /**
@@ -1008,7 +1008,7 @@ public final class BellMoves {
 
     /** where the eggs go when there's nobody to aim at (set with the move) */
     private @Nullable Vec3 eggSpot;
-    /** for the tests: the eggs of the last egg rain */
+    /** the eggs of the last egg rain */
     public final List<Shot> lastEggs = new ArrayList<>();
 
     /** the whirlpool: he spins, and his strands drag everything in a wide ring in toward the middle under him */
@@ -2178,7 +2178,7 @@ public final class BellMoves {
     // ------------------------------------------------------------------ helpers
 
     /**
-     * What's in the box. JJ's other giants are mostly made of part boxes that aren't creatures themselves: any of those
+     * What's in the box. The other giants are mostly made of part boxes that aren't creatures themselves: any of those
      * in the box counts as that giant, and {@link #at} then gives where the nearest bit of it is (a giant is struck
      * where its body is, not at its middle). Nothing of his digs, so a part more than a block down under the ground
      * is out of his reach.

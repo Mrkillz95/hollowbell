@@ -21,7 +21,7 @@ public final class HollowbellConfig {
         public float smallEggScale = 0.2f;
         /** His health at full size. Smaller ones get less. */
         public float health = 6000f;
-        /** A very slow heal of his own, the same for all of JJ's giants: on or off. */
+        /** A very slow heal of his own: on or off. */
         public boolean passiveHeal = true;
         /** How much of his most health that slow heal gives back a minute, in percent. It waits 15 seconds after every hurt. */
         public float passiveHealPerMinute = 1.0f;
@@ -29,18 +29,18 @@ public final class HollowbellConfig {
         public float damageMultiplier = 1.0f;
         /** His hits on anything that isn't a player are multiplied by this. */
         public float mobDamage = 2.5f;
-        /** How much of a blow from another of JJ's bosses (Pitchgut, Furrowmaw, Cerberus, the Lantern Willow) he takes. */
+        /** How much of a blow from another giant boss he takes. */
         public float giantArmor = 0.7f;
         /** How much of a blast (TNT, a creeper, anything that isn't another giant) he takes. */
         public float explosionArmor = 0.35f;
-        /** He picks fights with JJ's other bosses ("/hollowbell giants on"). Off = he leaves them alone. */
+        /** He picks fights with the other giant bosses ("/hollowbell giants on"). Off = he leaves them alone. */
         public boolean fightGiants = true;
         /**
          * Over half health, no heavy move until this many seconds into a fight (0 = at once, up to 600). Under half,
          * only the usual wait after the last one ("/hollowbell heavydelay").
          */
         public int heavyDelaySeconds = 60;
-        /** When he wanders near another of JJ's giants he fights it or keeps away from it (the same table in all five mods). */
+        /** When he wanders near another giant he fights it or keeps away from it. */
         public boolean meetings = true;
         /** How far off he notices another giant, in blocks at full size (times his size, kept between 48 and 320). */
         public int meetRange = 160;
@@ -70,7 +70,7 @@ public final class HollowbellConfig {
         public boolean chunkLoading = true;
         /** How many of him the world holds at once. Summon another past this and the oldest one goes. 0 = no limit. */
         public int maxInWorld = 1;
-        /** Before 1.6 "maxInWorld" was called this; an old file's number is moved over, then this is dropped. */
+        /** maxInWorld under its old name: an old file's number is moved over, then this is dropped. */
         public Integer maxHollowbells = null;
         /** The world keeps one of him out there, rising on his own ("/hollowbell natural on|off"). */
         public boolean oneInTheWorld = true;
@@ -182,18 +182,18 @@ public final class HollowbellConfig {
 
     /** brings settings saved by an older version up to date; only values still at an old default are changed */
     public static void migrate(Values v) {
-        // 1.1: he hits creatures much harder (1.0 barely killed them)
+        // (2: he hits creatures much harder)
         if (v.configVersion < 2) v.mobDamage = Math.max(v.mobDamage, 2.5f);
-        // 1.3: pods take longer to grow back, so they can't be farmed
+        // (3: pods take longer to grow back, so they can't be farmed)
         if (v.configVersion < 3 && v.podRegrowSeconds == 90) v.podRegrowSeconds = 150;
-        // 1.3.4: all the bosses take a bit more from each other, so their fights don't drag on
+        // (4: the bosses take a bit more from each other, so their fights don't drag on)
         if (v.configVersion < 4 && Math.abs(v.giantArmor - 0.55f) < 1e-4f) v.giantArmor = 0.7f;
-        // 1.4: the world holds one of him by default (0 still means "no limit" if somebody sets it back).
-        // Nobody already out there is removed for it: the limit only acts when a new one is made, or on /hollowbell limit.
+        // (5: the world holds one of him by default; nobody already out there is removed for it, the limit only acts
+        // when a new one is made, or on /hollowbell limit)
         if (v.configVersion < 5 && v.maxHollowbells != null && v.maxHollowbells == 0) v.maxHollowbells = 1;
-        // 1.6: the same name in all five mods
+        // (the old name)
         if (v.maxHollowbells != null) { v.maxInWorld = v.maxHollowbells; v.maxHollowbells = null; }
-        // 1.5: his ground is much bigger, and he can be seen from much further off
+        // (6: his ground is much bigger, and he can be seen from much further off)
         if (v.configVersion < 6 && (v.homeRadius == 0 || v.homeRadius == 320)) v.homeRadius = 900;
         if (v.configVersion < 6 && v.farSightBlocks == 0) v.farSightBlocks = 1024;
         v.homeRadius = Math.max(200, Math.min(2000, v.homeRadius));

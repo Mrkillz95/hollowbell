@@ -937,7 +937,7 @@ public final class BellPlan {
 
     // ================================================================== for the painter
 
-    /** the column that marks his den's apex, so the tests can find it */
+    /** the column that marks his den's apex */
     public int apexY() { return denY() + DOME_H; }
 
     public double breakAngle() { return breakAngle; }

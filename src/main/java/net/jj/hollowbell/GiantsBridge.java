@@ -13,8 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * What /giants asks of this mod. The same shape in all five of JJ's boss mods, so whichever of them runs the
- * command can call every one that is loaded, by name, without knowing any of them.
+ * What /giants asks of this mod. The same shape in every giant mod, so whichever one runs the command can call
+ * every one that is loaded, by name, without knowing any of them.
  */
 public final class GiantsBridge {
     private GiantsBridge() {}

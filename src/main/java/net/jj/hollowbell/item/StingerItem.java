@@ -59,7 +59,7 @@ public class StingerItem extends SwordItem {
         if (!level.isClientSide) throwIt(p, stack, Math.min(1f, held / 14f), p.isShiftKeyDown());
     }
 
-    /** the throw itself (the tests call this straight); power 0..1 from how long it was held */
+    /** the throw itself; power 0..1 from how long it was held */
     public static StingerHook throwIt(Player p, ItemStack stack, float power, boolean meAlways) {
         Level level = p.level();
         // one strand out at a time

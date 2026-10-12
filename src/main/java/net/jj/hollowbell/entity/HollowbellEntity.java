@@ -67,8 +67,8 @@ import java.util.HashMap;
 import java.util.UUID;
 
 /**
- * Hollowbell: JJ's KillzAI build brought to life. A huge green jellyfish of glass, copper and bone that drifts over
- * the land on its hanging strands and pulls things up into its hollow dome.
+ * Hollowbell, my KillzAI build: a huge green jellyfish of glass, copper and bone that drifts over the land on his
+ * hanging strands and pulls things up into his hollow dome.
  *
  * The body is drawn from the build block for block (see the client's BellRenderer). The server keeps the same pose
  * the client draws, so a hit lands on exactly the block you swung at: see {@link #hitBy}. His own health is kept
@@ -147,7 +147,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     private int arriving;
     private boolean settled;
 
-    /** for the tests: a fresh one starts where it's put, not up in the sky */
+    /** a fresh one starts where it's put, not up in the sky */
     public void skipArrival() { settled = true; }
     public boolean arriving() { return arriving > 0; }
 
@@ -467,7 +467,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     }
 
     /**
-     * For the tests: the name of a part of him that has a block (any of it more than a sliver) inside this box in the
+     * The name of a part of him that has a block (any of it more than a sliver) inside this box in the
      * world, or null. skipStrand is a strand not to count (the one holding whatever the box is round).
      */
     public @Nullable String partIn(AABB box, int skipStrand) {
@@ -660,10 +660,10 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         return (float) ((level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) - getY()) / bellScale());
     }
 
-    /** for the tests: the joints of one of his chains (an arm or strand) as they are this tick, model space */
+    /** the joints of one of his chains (an arm or strand) as they are this tick, model space */
     public float[] chainNow(int chain) { return anim.now().chain[chain]; }
 
-    /** for the tests: was this arm or strand knocked by the ground or his bell just now */
+    /** was this arm or strand knocked by the ground or his bell just now */
     public boolean chainKnocked(int c) { return anim.knocked(c); }
 
     /** the client's pose, for its own drawing of hits and aiming (the renderer makes its own) */
@@ -1207,13 +1207,13 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     /** entity types he never picks up (the other giant bosses and their parts); mods can add to it */
     public static final net.minecraft.tags.TagKey<EntityType<?>> NOT_CARRIED =
             net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ENTITY_TYPE, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("hollowbell", "not_carried"));
-    /** JJ's own small creatures he may still pick up (Furrowmaw's furrowlings) */
+    /** small creatures from the other giant mods he may still pick up (Furrowmaw's furrowlings) */
     public static final net.minecraft.tags.TagKey<EntityType<?>> CARRIED_ANYWAY =
             net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ENTITY_TYPE, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("hollowbell", "carried_anyway"));
 
     /**
      * Whether his strands and arms can pick this up. Never the giants: Pitchgut, Cerberus, Furrowmaw, any boss, any
-     * part of one, anything from JJ's other boss mods (so future ones are covered too), or anything simply huge.
+     * part of one, anything from the other giant mods (so future ones are covered too), or anything simply huge.
      */
     public static boolean canCarry(@Nullable Entity e) {
         // (nothing with somebody on it: a ridden horse would take its rider up with it)
@@ -2600,7 +2600,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
 
     public static void logOnce(String s) { HollowbellMod.LOG.info(s); }
 
-    // ------------------------------------------------------------------ the slow heal (the same for all of JJ's giants)
+    // ------------------------------------------------------------------ the slow heal
     /** his health last tick (to see a hurt by), and when he was last hurt */
     private float healSeen = -1f;
     private long healHurtAt = Long.MIN_VALUE / 4;
@@ -2623,7 +2623,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         }
         healSeen = hpNow;
     }
-    /** for the tests: ticks since he was last hurt, as the slow heal sees it */
+    /** ticks since he was last hurt, as the slow heal sees it */
     public long sinceHurtForHeal() { return level().getGameTime() - healHurtAt; }
 
     // ------------------------------------------------------------------ solid (the solid kit's adapter)
@@ -2638,7 +2638,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     @Override public Entity solidSelf() { return this; }
     @Override public net.jj.hollowbell.solid.SolidShape solidShape() { return HollowSolid.shape(); }
     @Override public net.jj.hollowbell.solid.SolidCache solidCache() { return solidCache; }
-    /** the tests only: the solid kit off, to measure what it costs */
+    /** the solid kit off, to measure what it costs */
     public static boolean solidOff;
 
     @Override public boolean solidReady() {
@@ -2708,7 +2708,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     }
 
     /**
-     * A spot on the top of one of his slices (for the tests and the autotest): over where the middle of its blocks is
+     * A spot on the top of one of his slices: over where the middle of its blocks is
      * now, the highest top of it there with room to stand over it; or null.
      */
     public @Nullable Vec3 topOfSlice(int slice) {
@@ -2777,7 +2777,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
     public double giantPushed;
 
     /**
-     * His rough body for the other giants (every giant of JJ's has this, found by name): 6 numbers a column, x, z,
+     * His rough body for the other giants (every giant has this, found by name): 6 numbers a column, x, z,
      * radius, bottom y, top y, kind (0 body, 1 limb), in the world. Worked out at most once a tick, when asked.
      */
     public double[] jjHull() {

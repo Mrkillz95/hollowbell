@@ -3,8 +3,8 @@ package net.jj.hollowbell.sound;
 import java.util.Map;
 
 /**
- * Only one giant's fight theme plays at a time, across all five of JJ's boss mods. They share a board in the
- * system properties (the same code in all five): every client tick a mod that wants its theme puts
+ * Only one giant's fight theme plays at a time, across all the giants. They share a board in the
+ * system properties (the same code in all of them): every client tick a mod that wants its theme puts
  * {distance squared to the nearest fighting boss, the time now} under its mod id, and takes it off when it doesn't.
  * A mod plays only if no other entry newer than two seconds is nearer (a tie goes to the smaller mod id).
  */

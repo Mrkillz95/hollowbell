@@ -98,7 +98,7 @@ public class HollowbellMod implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((d, access, env) -> {
             HollowbellCommand.register(d);
-            // one mod of the five registers /giants for everyone (see GiantsCommand)
+            // one of the giant mods registers /giants for everyone (see GiantsCommand)
             if (net.jj.hollowbell.command.GiantsCommand.elected()) net.jj.hollowbell.command.GiantsCommand.register(d);
         });
         ServerTickEvents.END_SERVER_TICK.register(CodexOrders::serverTick);
