@@ -1,7 +1,5 @@
 package net.jj.hollowbell.entity;
 
-import net.jj.hollowbell.Adv;
-
 import com.mojang.math.Transformation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -16,8 +14,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
-import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;

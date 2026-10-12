@@ -144,9 +144,7 @@ public final class BellSounds {
             if (--echoIn <= 0) {
                 echoIn = 60 + mc.level.random.nextInt(100);
                 mc.player.playSound(
-                        ModSounds.ECHO,
-                        0.7f * BellConfig.V.soundVolume,
-                        0.8f + mc.level.random.nextFloat() * 0.4f);
+                        ModSounds.ECHO, 0.7f * BellConfig.V.soundVolume, 0.8f + mc.level.random.nextFloat() * 0.4f);
             }
         } else if (heartbeat != null) {
             heartbeat.end();

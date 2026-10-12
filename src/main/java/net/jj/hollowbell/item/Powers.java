@@ -1,11 +1,9 @@
 package net.jj.hollowbell.item;
 
-import net.jj.hollowbell.Adv;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.entity.HollowbellEntity;

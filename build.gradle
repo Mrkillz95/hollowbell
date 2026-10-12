@@ -67,7 +67,23 @@ dependencies {
 // the game test classes; ./gradlew runGametest -Ponly=SolidTests,HeightTests runs just those
 def allTests = [
     'net.jj.hollowbell.test.HollowbellGameTests',
-    'net.jj.hollowbell.test.MoreGameTests',
+    'net.jj.hollowbell.test.MoveTests',
+    'net.jj.hollowbell.test.KillTests',
+    'net.jj.hollowbell.test.GrabTests',
+    'net.jj.hollowbell.test.PodTests',
+    'net.jj.hollowbell.test.FlightTests',
+    'net.jj.hollowbell.test.AwayTests',
+    'net.jj.hollowbell.test.GiantsTests',
+    'net.jj.hollowbell.test.CarryTests',
+    'net.jj.hollowbell.test.WorldOneTests',
+    'net.jj.hollowbell.test.GearTests',
+    'net.jj.hollowbell.test.GroundTests',
+    'net.jj.hollowbell.test.FarSightTests',
+    'net.jj.hollowbell.test.OrdersTests',
+    'net.jj.hollowbell.test.OpsTests',
+    'net.jj.hollowbell.test.RestartTests',
+    'net.jj.hollowbell.test.LootTests',
+    'net.jj.hollowbell.test.SoundTests',
     'net.jj.hollowbell.test.PaintDepthTests',
     'net.jj.hollowbell.test.LookOrderTests',
     'net.jj.hollowbell.test.HealTests',
@@ -80,7 +96,6 @@ def allTests = [
     'net.jj.hollowbell.test.DeathTests',
     'net.jj.hollowbell.test.HeavyDelayTests',
     'net.jj.hollowbell.test.HeldTests',
-    'net.jj.hollowbell.test.OrderTests',
     'net.jj.hollowbell.test.HeightTests'
 ]
 def onlyTests = project.findProperty('only')

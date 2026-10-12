@@ -1,7 +1,5 @@
 package net.jj.hollowbell.entity;
 
-import net.jj.hollowbell.Adv;
-
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
+import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
@@ -31,8 +30,8 @@ import net.jj.hollowbell.solid.SolidCache;
 import net.jj.hollowbell.solid.SolidShape;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.BellWorld;
-import net.jj.hollowbell.world.Shrine;
 import net.jj.hollowbell.world.NoWait;
+import net.jj.hollowbell.world.Shrine;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -1609,8 +1608,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
             Boolean.getBoolean("hollowbell.debug") || System.getProperty("hollowbell.autotest") != null;
 
     /** entity types he never picks up (the other giant bosses and their parts); mods can add to it */
-    public static final TagKey<EntityType<?>> NOT_CARRIED =
-            TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "not_carried"));
+    public static final TagKey<EntityType<?>> NOT_CARRIED = TagKey.create(
+            Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "not_carried"));
     /** small creatures from the other giant mods he may still pick up (Furrowmaw's furrowlings) */
     public static final TagKey<EntityType<?>> CARRIED_ANYWAY = TagKey.create(
             Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "carried_anyway"));
@@ -2277,8 +2276,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 && !steppedOut
                 && why != RemovalReason.UNLOADED_TO_CHUNK
                 && why != RemovalReason.UNLOADED_WITH_PLAYER)
-            HollowbellMod.LOG.info(
-                    "Removed at {} ({})", blockPosition().toShortString(), why);
+            HollowbellMod.LOG.info("Removed at {} ({})", blockPosition().toShortString(), why);
         clearBars();
         if (!level().isClientSide && (why == RemovalReason.KILLED || why == RemovalReason.DISCARDED))
             lowerWhoeverStandsOnHim();
@@ -2769,7 +2767,6 @@ public class HollowbellEntity extends Monster implements SolidBody {
         return true;
     }
 
-
     @Override
     public void onClientRemoval() {
         super.onClientRemoval();
@@ -3160,9 +3157,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 if (getTarget() == foe) setTarget(null);
                 angerTicks = 0;
                 victory();
-            } else if (!yielding()
-                    && BellConfig.V.yieldAt > 0f
-                    && healthNow() < healthMax() * BellConfig.V.yieldAt) {
+            } else if (!yielding() && BellConfig.V.yieldAt > 0f && healthNow() < healthMax() * BellConfig.V.yieldAt) {
                 backDown(foe);
             } else if (getTarget() != foe && fairGame(foe)) {
                 setTarget(foe);
@@ -3222,9 +3217,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
             double dMe = p.distanceToSqr(this), dThem = p.distanceToSqr(other);
             if (tell && (dMe < 256 * 256 || dThem < 256 * 256))
                 p.sendSystemMessage(Component.translatable(
-                        "message.hollowbell.giants_fight",
-                        Meeting.name(Meeting.ME, true),
-                        Meeting.name(them, false)));
+                        "message.hollowbell.giants_fight", Meeting.name(Meeting.ME, true), Meeting.name(them, false)));
             // (the advancement for seeing it)
             if (dMe < 128 * 128 || dThem < 128 * 128) Adv.grant(p, "watch_giants");
         }
@@ -3249,9 +3242,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         for (ServerPlayer p : sl.players())
             if (p.distanceToSqr(this) < 256 * 256 || p.distanceToSqr(from) < 256 * 256)
                 p.sendSystemMessage(Component.translatable(
-                        "message.hollowbell.giant_yields",
-                        Meeting.name(Meeting.ME, true),
-                        Meeting.name(them, true)));
+                        "message.hollowbell.giant_yields", Meeting.name(Meeting.ME, true), Meeting.name(them, true)));
         HollowbellMod.LOG.info("A Hollowbell backs down from {}", Meeting.name(them, false));
     }
 
@@ -3515,8 +3506,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 && hpNow > 0f
                 && hpNow < max
                 && now - healHurtAt >= HEAL_PAUSE) {
-            float v = Math.min(
-                    max, hpNow + max * Mth.clamp(BellConfig.V.passiveHealPerMinute, 0f, 100f) / 100f / 60f);
+            float v = Math.min(max, hpNow + max * Mth.clamp(BellConfig.V.passiveHealPerMinute, 0f, 100f) / 100f / 60f);
             hp = v;
             entityData.set(DATA_HP, v);
             hpNow = v;

@@ -138,17 +138,16 @@ public final class BellCommand {
                         .requires(OP)
                         .executes(c -> awaySay(c))
                         .then(Commands.literal("on")
-                                .executes(c -> set(
-                                        c, () -> BellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
+                                .executes(c ->
+                                        set(c, () -> BellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
                         .then(Commands.literal("off")
-                                .executes(c -> set(
-                                        c, () -> BellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
+                                .executes(c ->
+                                        set(c, () -> BellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
                         .then(Commands.literal("blocks")
                                 .then(Commands.argument("n", IntegerArgumentType.integer(0, 100000))
                                         .executes(c -> set(
                                                 c,
-                                                () -> BellConfig.V.awayBlocks =
-                                                        IntegerArgumentType.getInteger(c, "n"),
+                                                () -> BellConfig.V.awayBlocks = IntegerArgumentType.getInteger(c, "n"),
                                                 "awayBlocks",
                                                 IntegerArgumentType.getInteger(c, "n")))))
                         .then(Commands.literal("now").executes(BellCommand::awayNow)))
@@ -162,8 +161,7 @@ public final class BellCommand {
                         .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
                                 .executes(c -> set(
                                         c,
-                                        () -> BellConfig.V.bossBarRange =
-                                                IntegerArgumentType.getInteger(c, "blocks"),
+                                        () -> BellConfig.V.bossBarRange = IntegerArgumentType.getInteger(c, "blocks"),
                                         "bossBarRange",
                                         IntegerArgumentType.getInteger(c, "blocks")))))
                 .then(Commands.literal("mood")
@@ -512,11 +510,9 @@ public final class BellCommand {
                             return 1;
                         })
                         .then(Commands.literal("on")
-                                .executes(
-                                        c -> set(c, () -> BellConfig.V.fightGiants = true, "fightGiants", true)))
+                                .executes(c -> set(c, () -> BellConfig.V.fightGiants = true, "fightGiants", true)))
                         .then(Commands.literal("off")
-                                .executes(c ->
-                                        set(c, () -> BellConfig.V.fightGiants = false, "fightGiants", false))))
+                                .executes(c -> set(c, () -> BellConfig.V.fightGiants = false, "fightGiants", false))))
                 .then(Commands.literal("meetings")
                         .requires(OP)
                         .executes(c -> {
@@ -593,8 +589,7 @@ public final class BellCommand {
                                 .then(Commands.argument("times", FloatArgumentType.floatArg(0f, 100f))
                                         .executes(c -> set(
                                                 c,
-                                                () -> BellConfig.V.mobDamage =
-                                                        FloatArgumentType.getFloat(c, "times"),
+                                                () -> BellConfig.V.mobDamage = FloatArgumentType.getFloat(c, "times"),
                                                 "mobDamage",
                                                 FloatArgumentType.getFloat(c, "times")))))
                         .then(Commands.argument("multiplier", FloatArgumentType.floatArg(0f, 100f))
@@ -604,21 +599,13 @@ public final class BellCommand {
                                                 FloatArgumentType.getFloat(c, "multiplier"),
                                         "damage",
                                         FloatArgumentType.getFloat(c, "multiplier")))))
-                .then(toggle(
-                        "griefing",
-                        "griefing",
-                        () -> BellConfig.V.griefing,
-                        v -> BellConfig.V.griefing = v))
+                .then(toggle("griefing", "griefing", () -> BellConfig.V.griefing, v -> BellConfig.V.griefing = v))
                 .then(Commands.literal("heavydelay")
                         .requires(OP)
                         .executes(c -> heavyDelay(c, -1))
                         .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
                                 .executes(c -> heavyDelay(c, IntegerArgumentType.getInteger(c, "seconds")))))
-                .then(toggle(
-                        "shake",
-                        "screenShake",
-                        () -> BellConfig.V.screenShake,
-                        v -> BellConfig.V.screenShake = v))
+                .then(toggle("shake", "screenShake", () -> BellConfig.V.screenShake, v -> BellConfig.V.screenShake = v))
                 .then(Commands.literal("reload").requires(OP).executes(c -> {
                     boolean ok = BellConfig.load();
                     c.getSource()
@@ -643,8 +630,7 @@ public final class BellCommand {
                         .then(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600))
                                 .executes(c -> set(
                                         c,
-                                        () -> BellConfig.V.windSeconds =
-                                                IntegerArgumentType.getInteger(c, "seconds"),
+                                        () -> BellConfig.V.windSeconds = IntegerArgumentType.getInteger(c, "seconds"),
                                         "windSeconds",
                                         IntegerArgumentType.getInteger(c, "seconds")))))
                 .then(Commands.literal("grudge")
@@ -674,10 +660,7 @@ public final class BellCommand {
         c.getSource()
                 .sendSuccess(
                         () -> Component.translatable(
-                                key,
-                                now,
-                                BellConfig.V.windSeconds,
-                                String.valueOf(BellConfig.V.grudgeRate)),
+                                key, now, BellConfig.V.windSeconds, String.valueOf(BellConfig.V.grudgeRate)),
                         false);
         return 1;
     }

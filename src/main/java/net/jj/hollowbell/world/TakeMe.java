@@ -89,11 +89,7 @@ public final class TakeMe {
         }
         if (pick instanceof Lying k) {
             Component c = land(
-                    p,
-                    level(server, k.at().dim()),
-                    k.at().x(),
-                    k.at().z(),
-                    k.at().sizeOr(BellConfig.V.worldScale));
+                    p, level(server, k.at().dim()), k.at().x(), k.at().z(), k.at().sizeOr(BellConfig.V.worldScale));
             if (NoWait.onTheWay(p)) return c;
             return Component.translatable(
                     "command.hollowbell.tp_waiting", Mth.floor(k.at().x()), Mth.floor(k.at().z()));
