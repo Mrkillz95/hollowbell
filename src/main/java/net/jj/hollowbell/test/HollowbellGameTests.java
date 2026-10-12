@@ -1758,7 +1758,7 @@ public class HollowbellGameTests implements FabricGameTest {
         return h.getLevel().getServer().createCommandSourceStack().withPosition(at).withLevel(h.getLevel()).withPermission(4).withSuppressedOutput();
     }
 
-    private static void run(GameTestHelper h, Vec3 at, String cmd) {
+    static void run(GameTestHelper h, Vec3 at, String cmd) {
         h.getLevel().getServer().getCommands().performPrefixedCommand(op(h, at), cmd);
     }
 
@@ -4168,7 +4168,7 @@ public class HollowbellGameTests implements FabricGameTest {
         Vec3 at = onGround(h, 3, 3);
         java.util.List<ItemStack> loot = new java.util.ArrayList<>();
         loot.add(new ItemStack(ModItems.POD, 3));
-        BlockPos c = net.jj.hollowbell.world.LootShrine.build(h.getLevel(), at.x, at.z, loot);
+        BlockPos c = net.jj.hollowbell.world.LootShrine.build(h.getLevel(), at.x, at.y, at.z, loot, true);
         ServerPlayer p = player(h, new Vec3(c.getX() + 600.5, c.getY() + 4, c.getZ() + 0.5));
         h.runAfterDelay(3, () -> {
             var list = net.jj.hollowbell.world.LootBeams.listFor(p);
@@ -4206,7 +4206,7 @@ public class HollowbellGameTests implements FabricGameTest {
         Vec3 at = onGround(h, 3, 3);
         java.util.List<ItemStack> loot = new java.util.ArrayList<>();
         for (int i = 0; i < 30; i++) loot.add(new ItemStack(ModItems.STINGER));       // 30 won't stack into 27 slots
-        BlockPos c = net.jj.hollowbell.world.LootShrine.build(h.getLevel(), at.x, at.z, loot);
+        BlockPos c = net.jj.hollowbell.world.LootShrine.build(h.getLevel(), at.x, at.y, at.z, loot, true);
         var be = (net.jj.hollowbell.block.LootCacheBlockEntity) h.getLevel().getBlockEntity(c);
         h.assertTrue(be != null, "no cache");
         int in = 0;
