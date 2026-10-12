@@ -28,7 +28,7 @@ final class BellApart {
     private int[] rc, rs;
     private float[] bx0, bx1, by0, by1, bz0, bz1;
     private final float[][] podAt;
-    /** the pods, then the egg clumps */
+    /** the pods */
     private final BellRig.BlobDef[] blobs;
     private final Matrix4f m = new Matrix4f(), inv = new Matrix4f();
     private final Quaternionf q = new Quaternionf();
@@ -58,11 +58,11 @@ final class BellApart {
                 rad[ch.id][i] = Math.max(0.8f, d[(int) (d.length * 0.7f)]);
             }
         }
-        int np = rig.pods.length + rig.eggs.length;
+        int np = rig.pods.length;
         podR = new float[np]; podChain = new int[np]; podSeg = new int[np]; podBone = new int[np]; podU = new float[np];
         podAt = new float[np][3];
         blobs = new BellRig.BlobDef[np];
-        for (int k = 0; k < np; k++) blobs[k] = k < rig.pods.length ? rig.pods[k] : rig.eggs[k - rig.pods.length];
+        System.arraycopy(rig.pods, 0, blobs, 0, np);
         for (int k = 0; k < np; k++) {
             BellRig.BlobDef P = blobs[k];
             int b = P.bone();
@@ -231,15 +231,10 @@ final class BellApart {
 
     private static int cell(float v) { int c = (int) Math.floor(v / CELL) + G / 2; return c < 0 ? 0 : c >= G ? G - 1 : c; }
 
-    private boolean gone(BellState st, int k) {
-        int np = rig.pods.length;
-        return k < np ? st.podPopped[k] : st.eggGone[k - np];
-    }
+    private boolean gone(BellState st, int k) { return st.podPopped[k]; }
 
-    /** how big a pod or egg clump is now (a pod growing back is smaller) */
-    private float blobR(BellState st, int k) {
-        return k < rig.pods.length ? podR[k] * (0.3f + 0.7f * st.podGrowth[k]) : podR[k];
-    }
+    /** how big a pod is now (one growing back is smaller) */
+    private float blobR(BellState st, int k) { return podR[k] * (0.3f + 0.7f * st.podGrowth[k]); }
     /** how far into each other two things may go before they're eased apart (of the two thicknesses) */
     static final float LEAVE = 0.8f;
     static final float RATE = Float.parseFloat(System.getProperty("hollowbell.apartRate", "1.0"));

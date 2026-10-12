@@ -26,14 +26,19 @@ public final class BellModel {
     public final byte[][] faces;
     /** per voxel fade (0-255) for bones that fade out, else null (none do now) */
     public final byte[][] alpha;
+    /** per bone: how many slices it is drawn in (see {@link BellPieces}), and per block its slice (null for one) */
+    public final int[] slices;
+    public final byte[][] slice;
     /** each bone's blocks at rest, for hit tests */
     private final LongOpenHashSet[] occupied;
     /** each bone's box at rest: minx miny minz maxx maxy maxz (block corners) */
     public final float[][] bounds;
 
-    private BellModel(String[] palette, String[] boneNames, short[][] x, short[][] y, short[][] z, short[][] pal, byte[][] faces, byte[][] alpha) {
+    private BellModel(String[] palette, String[] boneNames, short[][] x, short[][] y, short[][] z, short[][] pal,
+                      byte[][] faces, byte[][] alpha, int[] slices, byte[][] slice) {
         this.palette = palette; this.boneNames = boneNames;
         this.x = x; this.y = y; this.z = z; this.pal = pal; this.faces = faces; this.alpha = alpha;
+        this.slices = slices; this.slice = slice;
         int nb = boneNames.length;
         occupied = new LongOpenHashSet[nb];
         bounds = new float[nb][];
@@ -67,14 +72,16 @@ public final class BellModel {
             byte[] mg = new byte[4];
             d.readFully(mg);
             if (!new String(mg).equals("HBEL")) throw new IllegalStateException("bad model file " + path);
-            d.readInt();
+            int version = d.readInt();
+            if (version < 2) throw new IllegalStateException("old model file " + path + ", run tools/convert.js");
             int np = d.readInt();
             String[] palette = new String[np];
             for (int i = 0; i < np; i++) palette[i] = d.readUTF();
             int nb = d.readInt();
             String[] names = new String[nb];
             short[][] x = new short[nb][], y = new short[nb][], z = new short[nb][], pal = new short[nb][];
-            byte[][] faces = new byte[nb][], alpha = new byte[nb][];
+            byte[][] faces = new byte[nb][], alpha = new byte[nb][], slice = new byte[nb][];
+            int[] slices = new int[nb];
             for (int b = 0; b < nb; b++) {
                 names[b] = d.readUTF();
                 int n = d.readInt();
@@ -84,8 +91,10 @@ public final class BellModel {
                     pal[b][i] = d.readShort(); faces[b][i] = d.readByte();
                 }
                 if (d.readByte() != 0) { alpha[b] = new byte[n]; d.readFully(alpha[b]); }
+                slices[b] = d.readUnsignedByte();
+                if (slices[b] > 1) { slice[b] = new byte[n]; d.readFully(slice[b]); }
             }
-            return new BellModel(palette, names, x, y, z, pal, faces, alpha);
+            return new BellModel(palette, names, x, y, z, pal, faces, alpha, slices, slice);
         } catch (Exception e) {
             throw new RuntimeException("Hollowbell: could not read " + path, e);
         }
