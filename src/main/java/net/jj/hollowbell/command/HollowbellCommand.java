@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /** /hollowbell ... (cheats on), the same pattern as Furrowmaw's. */
 public final class HollowbellCommand {
@@ -367,9 +368,22 @@ public final class HollowbellCommand {
     }
 
     private static int say(CommandContext<CommandSourceStack> c, String key, Object v) {
-        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.is", key, String.valueOf(v)), false);
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.is", plain(key), String.valueOf(v)), false);
         return 1;
     }
+
+    /** what a setting is called in chat (its name in the file means little to a player) */
+    private static final Map<String, String> PLAIN = Map.ofEntries(
+            Map.entry("health", "His full-size health"), Map.entry("damage", "His hits"),
+            Map.entry("mobDamage", "His hits on creatures"), Map.entry("griefing", "Breaking blocks"),
+            Map.entry("screenShake", "Screen shake"), Map.entry("soundVolume", "His volume"),
+            Map.entry("meetings", "Meeting other giants"), Map.entry("fightGiants", "Fighting other giants"),
+            Map.entry("bossBar", "His boss bars"), Map.entry("bossBarRange", "How far off his boss bars show"),
+            Map.entry("bookCosts", "The book tiring him"), Map.entry("windSeconds", "Seconds to get his wind back"),
+            Map.entry("grudgeRate", "How fast he holds a grudge"), Map.entry("offscreenTravel", "Travelling while nobody is near"),
+            Map.entry("awayBlocks", "How far off nobody counts as near"));
+
+    private static String plain(String key) { return PLAIN.getOrDefault(key, key); }
 
     private static float eggSize() {
         return net.minecraft.util.Mth.clamp(HollowbellConfig.V.spawnEggScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE);
@@ -647,7 +661,7 @@ public final class HollowbellCommand {
     private static int set(CommandContext<CommandSourceStack> c, Runnable r, String what, Object v) {
         r.run();
         HollowbellConfig.save();
-        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.set", what, String.valueOf(v)), true);
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.set", plain(what), String.valueOf(v)), true);
         return 1;
     }
 
