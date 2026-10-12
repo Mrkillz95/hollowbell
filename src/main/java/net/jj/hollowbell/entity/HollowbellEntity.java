@@ -1287,8 +1287,10 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         Vec3 c = isGuardian() && home != null ? home : position();
         LivingEntity mob = null; double md = Double.MAX_VALUE;
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, new AABB(c, c).inflate(mr, 60 * bellScale() + 30, mr),
-                // (another giant is met by the meeting rules, not picked like any monster: see meetTick)
-                e -> e instanceof net.minecraft.world.entity.monster.Enemy && !(e instanceof Player) && !Giants.isGiant(e) && fairGame(e) && !pastHisCircle(e.position()))) {
+                // (another giant is met by the meeting rules, not picked like any monster: see meetTick; nor is its
+                // helper, which he only fights when it goes for him)
+                e -> e instanceof net.minecraft.world.entity.monster.Enemy && !(e instanceof Player) && !Giants.isGiant(e)
+                        && !e.getTags().contains(Giants.KIN) && fairGame(e) && !pastHisCircle(e.position()))) {
             double d = horiz(e.position());
             if (d < md) { md = d; mob = e; }
         }
@@ -1764,6 +1766,8 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
 
     public @Nullable LivingEntity rider() { return rider; }
     public boolean carrying() { return rider != null; }
+    /** somebody rides him (every giant has this, found by name: see Giants.ridden) */
+    public boolean jjRidden() { return rider != null; }
 
     public boolean usesSeat(Seat s) { return s == riderSeat || moves.usesSeat(s); }
 
@@ -2291,7 +2295,9 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         if (meetFoe != null) {
             Entity f = sl.getEntity(meetFoe);
             LivingEntity foe = f == null ? null : giantOf(f);
-            if (foe == null || !foe.isAlive() || foe.isRemoved()) {
+            if (f == null && tickCount < 200) {
+                // (just loaded: the other one's land may come in a little after his)
+            } else if (foe == null || !foe.isAlive() || foe.isRemoved()) {
                 // gone (dead, or out of reach): if it died, he won
                 boolean won = foe != null && foe.isDeadOrDying();
                 meetFoe = null;
@@ -2318,7 +2324,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         for (Entity e : sl.getEntities((Entity) null, new AABB(getX() - r, getY() - r, getZ() - r, getX() + r, getY() + r, getZ() + r),
                 x -> x != this && x.isAlive() && Giants.isGiant(x) && !(x instanceof Belling))) {
             LivingEntity g = giantOf(e);
-            if (g == null || g == this || Meetings.yielding(g) || meetCooldownLeft(g.getUUID()) > 0) continue;
+            if (g == null || g == this || Meetings.yielding(g) || meetCooldownLeft(g.getUUID()) > 0 || Giants.ridden(g)) continue;
             double d = horiz(g.position());
             if (d > r || d >= bd) continue;
             bd = d; best = g;
@@ -2801,6 +2807,16 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             if (them.length == 0) continue;
             double[] p = net.jj.hollowbell.solid.GiantHull.pushOut(me, them);
             if (p[2] <= 1e-3) continue;
+            // never toward the other's middle, or both can be pushed the same way and never come apart
+            Vec3 mc = net.jj.hollowbell.solid.GiantHull.box(me).getCenter();
+            Vec3 tc = net.jj.hollowbell.solid.GiantHull.box(them).getCenter();
+            double ax = mc.x - tc.x;
+            double az = mc.z - tc.z;
+            double al = Math.hypot(ax, az);
+            if (al > 1e-3 && p[0] * ax + p[1] * az < 0) {
+                p[0] = ax / al;
+                p[1] = az / al;
+            }
             double share = 1;
             if (net.jj.hollowbell.solid.GiantHull.shows(o)) {
                 double a = net.jj.hollowbell.solid.GiantHull.mass(me), b = net.jj.hollowbell.solid.GiantHull.mass(them);
