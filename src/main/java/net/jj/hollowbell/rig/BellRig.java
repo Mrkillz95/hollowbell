@@ -69,12 +69,7 @@ public final class BellRig {
     public final int bellBone;
 
     public record ArmDef(int k, int[] bones, Vector3f[] joints, Vector3f tip, Vector3f centre, float angle) {}
-    /**
-     * follow: per piece, the bone that carries it (an arm, a strand hung before it or a pod; -1: it hangs), or null;
-     * carryAt: per carried piece, the middle of where it touches that (or null)
-     */
-    public record StrandDef(int k, int[] bones, Vector3f[] joints, Vector3f bottom, float top, float low, int @Nullable [] follow,
-                            Vector3f @Nullable [] carryAt) {}
+    public record StrandDef(int k, int[] bones, Vector3f[] joints, Vector3f bottom, float top, float low) {}
     public record BlobDef(int k, int bone, Vector3f centre, float radius) {}
     public record BandDef(int bone, float top, float bottom) { public float mid() { return (top + bottom) * 0.5f; } }
     public record SectorDef(int bone, float angle) {}
@@ -91,14 +86,6 @@ public final class BellRig {
         public final float[] restLen;
         /** the chain this one hangs from (a branch strand), or -1, the segment, and how far along it */
         public int parentChain = -1, parentSeg = -1;
-        /** per piece, the bone that carries it, or -1 (null: none of it is carried) */
-        public int @Nullable [] follow;
-        /** per joint, the bone that carries it and how far along that bone it lies (with follow) */
-        public int @Nullable [] followAt;
-        public float @Nullable [] followU;
-        /** per carried piece, the spot along what carries it that it goes with, and the middle of where it touches it */
-        public float @Nullable [] pieceU;
-        public Vector3f @Nullable [] carryAt;
         public float parentFrac;
         Chain(int id, boolean arm, int index, int[] bones, Vector3f[] joints, int parentBone) {
             this.id = id; this.arm = arm; this.index = index; this.bones = bones; this.joints = joints; this.parentBone = parentBone;
@@ -159,8 +146,7 @@ public final class BellRig {
         for (int i = 0; i < strands.length; i++) {
             JsonObject o = a.get(i).getAsJsonObject();
             strands[i] = new StrandDef(i, ints(o.getAsJsonArray("bones")), vecs(o.getAsJsonArray("joints")), vec(o.getAsJsonArray("bottom")),
-                    o.get("top").getAsFloat(), o.get("low").getAsFloat(), o.has("follow") ? ints(o.getAsJsonArray("follow")) : null,
-                    o.has("carryAt") ? spots(o.getAsJsonArray("carryAt")) : null);
+                    o.get("top").getAsFloat(), o.get("low").getAsFloat());
         }
         pods = blobs(j.getAsJsonArray("pods"));
         eggs = blobs(j.getAsJsonArray("eggs"));
@@ -207,7 +193,6 @@ public final class BellRig {
         for (int i = 0; i < chains.length; i++) {
             Chain o = cs.get(i);
             chains[i] = new Chain(i, o.arm, o.index, o.bones, o.joints, o.parentBone);
-            if (!o.arm) { chains[i].follow = strands[o.index].follow(); chains[i].carryAt = strands[o.index].carryAt(); }
             for (int b : o.bones) chainOf[b] = i;
         }
         for (Chain ch : chains) {
@@ -225,32 +210,6 @@ public final class BellRig {
                 if (ch.parentChain >= ch.id) throw new IllegalStateException("chain " + ch.id + " hangs from a later one");
             }
         }
-        for (Chain ch : chains) {
-            int[] f = ch.follow;
-            if (f == null) continue;
-            int m = ch.bones.length;
-            ch.followAt = new int[m + 1];
-            ch.followU = new float[m + 1];
-            // each carried piece goes with one spot of what carries it, all of it alike: where it touches it (carried
-            // along the arm's bend instead, a wide piece was sheared apart)
-            float[] pieceU = new float[m];
-            Vector3f[] at = ch.carryAt;
-            for (int i = 0; i < m; i++) {
-                int ab = f[i];
-                if (ab < 0 || chainOf[ab] < 0) continue;
-                Vector3f p = at != null && at[i] != null ? at[i] : new Vector3f(ch.joints[i]).add(ch.joints[i + 1]).mul(0.5f);
-                pieceU[i] = along(ab, p);
-            }
-            ch.pieceU = pieceU;
-            for (int t = 0; t <= m; t++) {
-                int i = t < m && f[t] >= 0 ? t : t > 0 && f[t - 1] >= 0 ? t - 1 : -1;
-                int ab = i < 0 ? -1 : f[i];
-                int by = ab < 0 ? -1 : chainOf[ab] >= 0 ? chainOf[ab] : parent[ab] >= 0 ? chainOf[parent[ab]] : -1;
-                if (by >= ch.id) throw new IllegalStateException("chain " + ch.id + " is carried by a later one");
-                ch.followAt[t] = ab;
-                ch.followU[t] = i < 0 ? 0f : pieceU[i];
-            }
-        }
         hangU = new float[chains.length];
         java.util.Arrays.fill(hangU, Float.NaN);
         for (Chain ch : chains) if (ch.parentBone >= 0 && chainOf[ch.parentBone] >= 0) hangU[ch.id] = along(ch.parentBone, ch.joints[0]);
@@ -258,32 +217,6 @@ public final class BellRig {
         armChain = new int[arms.length];
         strandChain = new int[strands.length];
         for (Chain ch : chains) { if (ch.arm) armChain[ch.index] = ch.id; else strandChain[ch.index] = ch.id; }
-    }
-
-    /**
-     * Is this strand carried right now: its pieces that lie along an arm, or are grown on to a pod or a strand hung
-     * before it, move with that, so they never come away from it. A strand a move has hold of hangs free.
-     */
-    public static boolean follows(Chain ch, BellState st) {
-        return ch.follow != null && ch.index != st.grabStrand && ch.index != st.lashStrand && ch.index != st.carryStrand;
-    }
-
-    /** the bone that carries bone b now, or -1 */
-    public int carrier(BellState st, int b) {
-        int c = chainOf[b];
-        if (c < 0) return -1;
-        Chain ch = chains[c];
-        return ch.follow != null && follows(ch, st) ? ch.follow[seg[b]] : -1;
-    }
-
-    /** how carrying bone ab moves what is u along it (a pod, or the bell: all of it alike) */
-    public Matrix4f carriedBy(BellState st, int ab, float u, Matrix4f out) {
-        Poser p = anchorPosers.get();
-        p.start(st, null);
-        int c = chainOf[ab];
-        if (c < 0) return out.set(p.bone(ab));
-        Matrix4f h = seg[ab] == 0 && chains[c].parentBone >= 0 ? p.hang(c) : null;
-        return frame(st, ab, u, h, p.brot, out);
     }
 
     /** how far along chain bone b (0 its top joint, 1 its bottom one) a rest point lies, kept within it */
@@ -400,12 +333,6 @@ public final class BellRig {
 
     private static Vector3f vec(JsonArray a) { return new Vector3f(a.get(0).getAsFloat(), a.get(1).getAsFloat(), a.get(2).getAsFloat()); }
     private static Vector3f[] vecs(JsonArray a) { Vector3f[] v = new Vector3f[a.size()]; for (int i = 0; i < v.length; i++) v[i] = vec(a.get(i).getAsJsonArray()); return v; }
-    /** points, some of them missing (null) */
-    private static Vector3f[] spots(JsonArray a) {
-        Vector3f[] v = new Vector3f[a.size()];
-        for (int i = 0; i < v.length; i++) v[i] = a.get(i).isJsonNull() ? null : vec(a.get(i).getAsJsonArray());
-        return v;
-    }
     private static int[] ints(JsonArray a) { int[] v = new int[a.size()]; for (int i = 0; i < v.length; i++) v[i] = a.get(i).getAsInt(); return v; }
 
     private static BellRig load() {
@@ -542,11 +469,7 @@ public final class BellRig {
                 case RIM -> sector(st, part[b], body, out);
                 case CROWN -> band(st, crownY - 3, body, out);
                 case SPOT -> spot(st, part[b], body, out);
-                case ARM, STRAND -> {
-                    int ab = carrier(st, b);
-                    if (ab >= 0) out.set(bone(ab));
-                    else segmentPose(chains[chainOf[b]], seg[b], st.chain[chainOf[b]], brot, out, s);
-                }
+                case ARM, STRAND -> segmentPose(chains[chainOf[b]], seg[b], st.chain[chainOf[b]], brot, out, s);
                 case POD, EGG -> {
                     // hung where it touches its strand or arm, just as that is drawn there
                     Matrix4f base = Float.isNaN(blobU[b]) ? new Matrix4f(bone(parent[b])) : smooth(parent[b], blobU[b], new Matrix4f());
