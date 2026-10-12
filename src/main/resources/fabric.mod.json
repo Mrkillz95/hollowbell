@@ -30,7 +30,8 @@
       "net.jj.hollowbell.test.ThrownTests",
       "net.jj.hollowbell.test.DeathTests",
       "net.jj.hollowbell.test.HeavyDelayTests",
-      "net.jj.hollowbell.test.HeldTests"
+      "net.jj.hollowbell.test.HeldTests",
+      "net.jj.hollowbell.test.OrderTests"
     ]
   },
   "depends": {

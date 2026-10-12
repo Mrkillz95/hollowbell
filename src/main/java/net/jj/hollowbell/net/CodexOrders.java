@@ -223,10 +223,17 @@ public final class CodexOrders {
 
     public static void handle(ServerPlayer p, CodexPayload pay) { handle(p, pay, false); }
 
+    /** a spot sent by a player's game is a real place in their world */
+    static boolean spotOk(ServerPlayer p, double x, double z) {
+        return Double.isFinite(x) && Double.isFinite(z) && p.serverLevel().getWorldBorder().isWithinBounds(x, z);
+    }
+
     private static void handle(ServerPlayer p, CodexPayload pay, boolean already) {
         int action = pay.action();
         if (!(p.level() instanceof ServerLevel)) return;
         if (!CodexItem.carriedBy(p)) { say(p, "codex_lost"); return; }
+        // (a spot from a modified client: never NaN, endless or past the world's edge)
+        if (action == CodexPayload.GO_TO_XZ && !spotOk(p, pay.x(), pay.z())) { say(p, "codex_none"); return; }
         HollowbellEntity m = his(p);
         switch (action) {
             case CodexPayload.SPARE_LOOK -> { spareLooked(p); return; }

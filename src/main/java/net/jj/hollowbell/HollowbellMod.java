@@ -141,7 +141,7 @@ public class HollowbellMod implements ModInitializer {
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents.LOAD.register((server, world) -> {
             if (world.dimension() == net.minecraft.world.level.Level.OVERWORLD) net.jj.hollowbell.world.WorldOne.worldLoaded(world);
         });
-        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.NoWait.forget(); net.jj.hollowbell.world.BellGen.forget(); net.jj.hollowbell.world.FarOrders.forget(); net.jj.hollowbell.world.GroundCheck.forget(); net.jj.hollowbell.solid.Solid.forgetAll(false); });
+        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.world.NoWait.forget(); net.jj.hollowbell.world.Painter.forget(); net.jj.hollowbell.world.BellGen.forget(); net.jj.hollowbell.world.FarOrders.forget(); net.jj.hollowbell.world.GroundCheck.forget(); net.jj.hollowbell.solid.Solid.forgetAll(false); });
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 CodexOrders.forgetPlayer(handler.getPlayer().getUUID()));
 

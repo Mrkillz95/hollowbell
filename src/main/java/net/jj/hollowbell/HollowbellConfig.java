@@ -5,6 +5,9 @@ import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.io.IOException;
 import java.nio.file.Path;
 
 /** config/hollowbell.json - written with defaults the first time the game starts. */
@@ -136,8 +139,19 @@ public final class HollowbellConfig {
         // an unreadable file is never written over (the settings still change for this session)
         if (locked) { HollowbellMod.LOG.warn("Not writing {}: it couldn't be read, so it is left as it is until it reads cleanly", file()); return; }
         V.configVersion = Math.max(V.configVersion, VERSION);
-        try { Files.writeString(file(), new GsonBuilder().setPrettyPrinting().create().toJson(V)); }
+        try { write(new GsonBuilder().setPrettyPrinting().create().toJson(V)); }
         catch (Exception e) { HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString()); }
+    }
+
+    /** written beside it first, then put in its place, so a crash halfway never leaves half a file */
+    private static void write(String json) throws IOException {
+        Path tmp = file().resolveSibling("hollowbell.json.tmp");
+        Files.writeString(tmp, json);
+        try {
+            Files.move(tmp, file(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tmp, file(), StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     /** reads the file (at start, and on /hollowbell reload); true when it read cleanly (or there was none yet) */

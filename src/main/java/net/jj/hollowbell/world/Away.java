@@ -411,13 +411,19 @@ public final class Away extends SavedData {
     public static Away load(CompoundTag tag, HolderLookup.Provider p) {
         Away a = new Away();
         ListTag l = tag.getList("Away", Tag.TAG_COMPOUND);
+        // (one bad entry costs that entry, never the whole note: the game would start an empty one and write it over)
         for (int i = 0; i < l.size(); i++) {
-            Rec r = Rec.load(l.getCompound(i));
-            a.recs.put(r.id, r);
+            try {
+                Rec r = Rec.load(l.getCompound(i));
+                a.recs.put(r.id, r);
+            } catch (RuntimeException e) {
+                HollowbellMod.LOG.warn("Skipping a bad entry in the Hollowbell note: {}", e.toString());
+            }
         }
         ListTag pk = tag.getList("Parked", Tag.TAG_COMPOUND);
         for (int i = 0; i < pk.size(); i++) {
             CompoundTag c = pk.getCompound(i);
+            if (!c.hasUUID("Id")) continue;
             a.parked.put(c.getUUID("Id"), new Parked(c.getString("Dim"), c.getDouble("X"), c.getDouble("Z"), c.getDouble("Speed"), c.getFloat("Scale")));
         }
         // orders on their way to one in land nobody has loaded: carried on after a restart
