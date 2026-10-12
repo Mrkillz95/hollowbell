@@ -58,7 +58,7 @@ public class Shot extends ThrowableItemProjectile {
     public Shot(Level level, HollowbellEntity owner, int kind, float damage, float radius) {
         super(ModEntities.SHOT, owner, level);
         entityData.set(DATA_KIND, kind);
-        setItem(new ItemStack(kind == EGG ? Items.GRAY_CONCRETE : ModItems.STINGER));
+        setItem(new ItemStack(kind == EGG ? Items.BONE_BLOCK : ModItems.STINGER));
         this.damage = damage;
         this.radius = radius;
     }

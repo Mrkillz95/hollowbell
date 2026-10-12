@@ -534,13 +534,20 @@ public class SolidTests implements FabricGameTest {
         double[] tick = new double[2];
         // (the first stretch with the kit on; then with it and the keep-apart pass off, as in 1.9.8)
         long[] n0 = new long[2];
-        after(h, 120, () -> { n0[0] = Solid.nanosServer; n0[1] = Solid.queries; t[2] = BellAnim.apartNanos; });
+        // (the kit's own CPU time: on a machine busy with other work, wall time counts every wait for a core as his)
+        after(h, 120, () -> {
+            Solid.cpuClock = true;
+            n0[0] = Solid.nanosServer;
+            n0[1] = Solid.queries;
+            t[2] = BellAnim.apartNanos;
+        });
         double[] kit = new double[3];
         after(h, 320, () -> {
             tick[1] = avgTick(h);
             kit[0] = (Solid.nanosServer - n0[0]) / 1e6 / 200.0;
             kit[1] = (Solid.queries - n0[1]) / 200.0;
             kit[2] = (BellAnim.apartNanos - t[2]) / 1e6 / 200.0;
+            Solid.cpuClock = false;
             HollowbellEntity.solidOff = true; BellAnim.APART = false;
         });
         after(h, 520, () -> { tick[0] = avgTick(h); HollowbellEntity.solidOff = false; BellAnim.APART = true; });

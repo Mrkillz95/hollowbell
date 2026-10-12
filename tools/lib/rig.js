@@ -596,6 +596,27 @@ function buildRig(M, C) {
     if (!gone[k] && boneOf[k] >= 0 && bones[boneOf[k]].name.startsWith('egg_')) { gone[k] = 1; eggBlocks++; }
   }
 
+  // a light set into an arm's skin (three or more blocks of one arm round it) lights the arm, not the strand that
+  // runs past it, or it swings off the arm with the strand
+  let armLights = 0;
+  {
+    const moveTo = [];
+    for (let k = 0; k < n; k++) {
+      if (gone[k] || boneOf[k] < 0 || !bones[boneOf[k]].name.startsWith('strand_')) continue;
+      if (!LIGHT.test(C.P[C.PAL[k]])) continue;
+      const by = new Map();
+      for (const [a, b, c] of N26) {
+        const j = C.find(X[k] + a, Y[k] + b, Z[k] + c);
+        if (j === undefined || gone[j] || boneOf[j] < 0 || !bones[boneOf[j]].name.startsWith('arm_')) continue;
+        by.set(boneOf[j], (by.get(boneOf[j]) || 0) + 1);
+      }
+      let best = -1, most = 2;
+      for (const [b, m] of by) if (m > most) { best = b; most = m; }
+      if (best >= 0) moveTo.push([k, best]);
+    }
+    for (const [k, b] of moveTo) { boneOf[k] = b; armLights++; }
+  }
+
   // ---------------- the dome's shape, for the inside: the inner wall's radius at each height, and its outside
   const inner = {}, outer = {};
   for (let k = 0; k < n; k++) {
@@ -627,9 +648,9 @@ function buildRig(M, C) {
       bands: bandDefs, sectors: sectorDefs,
     },
     stats: {
-      recut, podBitsBack: fixed.podBits, armBitsBack: fixed.armBits, eggBlocks, rehung, piecesMoved: earlyBits,
-      piecesMovedBlocks: earlyVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length,
-      branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose,
+      recut, podBitsBack: fixed.podBits, armBitsBack: fixed.armBits, armLights, eggBlocks, rehung,
+      piecesMoved: earlyBits, piecesMovedBlocks: earlyVox, strands: strandDefs.length, pods: podDefs.length,
+      eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose,
       looseEggs: eggs.loose,
     },
   };
@@ -742,14 +763,6 @@ function takeBack(C, strandOf, pods, gone) {
           const j = find(X[k] + a, Y[k] + b, Z[k] + c);
           if (j !== undefined && isArm(j)) { arm = lab[j]; break; }
         }
-      } else if (LIGHT.test(mat(k))) {
-        // a light set into an arm's skin (three or more arm blocks round it) lights the arm, not the strand by it
-        const by = new Map();
-        for (const [a, b, c] of N26) {
-          const j = find(X[k] + a, Y[k] + b, Z[k] + c);
-          if (j !== undefined && isArm(j)) by.set(lab[j], (by.get(lab[j]) || 0) + 1);
-        }
-        for (const [a, m] of by) if (m >= 3) arm = a;
       }
       for (const d of DIRS) {
         if (arm >= 0) break;

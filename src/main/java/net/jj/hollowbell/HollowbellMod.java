@@ -145,7 +145,7 @@ public class HollowbellMod implements ModInitializer {
         BellRig rig = BellRig.get();
         BellModel.preload();
         net.jj.hollowbell.entity.HollowSolid.preload();
-        LOG.info("Hollowbell is ready: {} bones, {} strands, {} pods, {} egg clumps", rig.boneCount(), rig.strands.length,
+        LOG.info("Hollowbell is ready: {} bones, {} strands, {} pods, {} eggs", rig.boneCount(), rig.strands.length,
                 rig.pods.length, rig.eggs.length);
     }
 
