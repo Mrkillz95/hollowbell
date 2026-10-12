@@ -252,7 +252,9 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         float sl = e.state.sleep;
         // asleep: the glow sinks to a dim, slow breathing
         float pulse = 0.88f + 0.12f * Mth.sin(t * Mth.lerp(sl, 0.045f, 0.02f) + rig.part[b] * 1.9f + rig.kind[b].ordinal());
-        float k = (pulse + 0.6f * e.state.glow) * (1f - 0.62f * sl);
+        // each squeeze of the bell brightens him a little, each refill dims him
+        float beat = Mth.clamp(e.state.squeeze, -0.4f, 1.6f);
+        float k = (pulse + 0.18f * beat + 0.6f * e.state.glow) * (1f - 0.62f * sl);
         return Mth.lerp(e.state.death, k, lit * 0.5f);
     }
 

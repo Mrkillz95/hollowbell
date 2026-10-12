@@ -1547,6 +1547,10 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         sound(c, ModSounds.POD_POP, 3f, 1f);
         sound(c, net.minecraft.sounds.SoundEvents.GLASS_BREAK, 2f, 0.5f);
         particles(net.minecraft.core.particles.ParticleTypes.SQUID_INK, c, 40, rig.pods[i].radius() * bellScale() * 0.6, 0.2);
+        float ps = bellScale();
+        double size = 4 * ps + 2 * Math.sqrt(Math.min(1f, ps));
+        BigFx.send(level(), BigFx.SPARKS, c, (float) size, new Vec3(0, -1, 0), 0x9CFF6A);
+        BigFx.send(level(), BigFx.CLOUD, new Vec3(c.x, groundAt(c.x, c.z), c.z), (float) size, Vec3.ZERO, 0x9CFF6A);
         // a pod out of his twenty-three is worth a piece of him
         float worth = healthMax() * Mth.clamp(HollowbellConfig.V.podPopShare, 0f, 0.2f);
         hp = Math.max(0f, healthNow() - worth);
@@ -2026,6 +2030,11 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
         if (deathBy != null && level().getPlayerByUUID(deathBy) instanceof Player killer) setLastHurtByPlayer(killer);
         float s = bellScale();
         ensurePose();
+        double small = Math.sqrt(Math.min(1f, s));
+        // his light goes out, then two weak spasms of the bell
+        if (deathTime == 1) BigFx.send(level(), BigFx.FLASH, crownWorld(), (float) (30 * s + 8 * small), Vec3.ZERO, 0xBFFFD8);
+        if (deathTime == 8) pulse(0.6f);
+        if (deathTime == 28) pulse(0.35f);
         if (deathTime == 60 || deathTime == 100 || deathTime == 130) {
             for (int i = 0; i < 6; i++) {
                 var S = rig.strands[random.nextInt(rig.strands.length)];
@@ -2040,11 +2049,14 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             // (he comes down: the whole bell on the ground, dust or a splash and a wave, a ring running out)
             Vec3 g = new Vec3(c.x, groundAt(c.x, c.z), c.z);
             // (the fixed parts shrink too for a small one: see BellMoves.px)
-            double small = Math.sqrt(Math.min(1f, s));
             float slam = (float) (70 * s + 8 * small);
             BigFx.send(level(), slam >= 12 ? BigFx.SLAM : BigFx.STOMP, g, slam);
             BigFx.send(level(), BigFx.SHOCKWAVE, g, (float) (140 * s + 20 * small), Vec3.ZERO, 30);
+            // his glass breaking, and the bell's own low note with the glass ringing on
+            BigFx.send(level(), BigFx.SPARKS, g, (float) (20 * s + 4 * small), new Vec3(0, 1, 0), 0xA8E6B0);
+            sound(c, ModSounds.TOLL, 4f, 0.5f);
         }
+        if (deathTime == 146) sound(position(), net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_RESONATE, 4f, 0.5f);
         if (deathTime > 190 && deathTime % 8 == 0)
             particles(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK,
                     net.minecraft.world.level.block.Blocks.OXIDIZED_COPPER.defaultBlockState()), position().add(0, 1, 0), 60, 70 * s, 0.2);
