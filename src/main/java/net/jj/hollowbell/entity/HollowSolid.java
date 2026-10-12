@@ -14,7 +14,7 @@ import java.util.BitSet;
  * bends with them just as they are drawn.
  *
  * Solid (you bump into it and stand on it): the dome and its rim, the crown, the glowing spots and the vase inside,
- * the pods and the egg clumps, and his arms where they leave the rim (their first two pieces). Soft (it only pushes you
+ * the pods, and his arms where they leave the rim (their first two pieces). Soft (it only pushes you
  * aside, never holds you, never stood on): every strand, and the far half of each arm. The model file only keeps the
  * blocks that show a face, so whatever his blocks wall in is filled in too, each filled block going with the nearest
  * block of him; the inside of the dome is open underneath, so it stays a hollow you can be in.

@@ -2654,7 +2654,7 @@ public class HollowbellEntity extends Monster implements net.jj.hollowbell.solid
             for (int f = 0; f < sh.frames(); f++) {
                 switch (rig.kind[pc.bone[sh.bone[f]]]) {
                     case BELL, RIM, CROWN, SPOT -> { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.BODY; }
-                    // (his pods and egg clumps: solid, hung from his strands, so like limbs)
+                    // (his pods: solid, hung from his strands, so like limbs)
                     case POD, EGG -> { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.LIMB; }
                     // (the arms where they leave the rim, the solid part of them: their soft ends may brush another giant)
                     case ARM -> { if (rig.seg[pc.bone[sh.bone[f]]] <= 1) { use[f] = true; kind[f] = net.jj.hollowbell.solid.GiantHull.LIMB; } }

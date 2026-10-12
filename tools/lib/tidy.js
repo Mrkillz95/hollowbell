@@ -98,4 +98,33 @@ function dropFloating(vox, bones) {
   return dropped;
 }
 
-module.exports = { thinSpeckles, dropFloating };
+/**
+ * The egg clumps are left off him, but a few of their blocks were grown into the strands and arms round them (grey
+ * concrete, honeycomb, dripstone): each becomes the block of its own part most common round it.
+ */
+function eggBitsAway(vox, bones, palette, pal) {
+  const at = index(vox);
+  const name = i => palette[vox[i][3]].replace('minecraft:', '');
+  const EGG = /^(gray_concrete|light_gray_concrete|honeycomb_block|dripstone_block|cyan_terracotta)$/;
+  const FALLBACK = { strand: 'bone_block', arm: 'weathered_copper', pod: 'white_stained_glass' };
+  const changes = [];
+  for (let i = 0; i < vox.length; i++) {
+    const [x, y, z, , b] = vox[i];
+    const kind = bones[b].name.split('_')[0];
+    if (!FALLBACK[kind] || !EGG.test(name(i))) continue;
+    const counts = {};
+    for (let r = 1; r <= 3 && !Object.keys(counts).length; r++) {
+      for (let a = -r; a <= r; a++) for (let c = -r; c <= r; c++) for (let e = -r; e <= r; e++) {
+        const j = at.get(key(x + a, y + c, z + e));
+        if (j === undefined || vox[j][4] !== b || EGG.test(name(j))) continue;
+        counts[name(j)] = (counts[name(j)] || 0) + 1;
+      }
+    }
+    const best = Object.entries(counts).sort((p, q) => q[1] - p[1])[0];
+    changes.push([i, pal('minecraft:' + (best ? best[0] : FALLBACK[kind]))]);
+  }
+  for (const [i, p] of changes) vox[i][3] = p;
+  return changes.length;
+}
+
+module.exports = { thinSpeckles, dropFloating, eggBitsAway };

@@ -1,34 +1,37 @@
 package net.jj.hollowbell.client.render;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.math.Axis;
 import net.jj.hollowbell.entity.Shot;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * What he throws. A stinger is drawn as the item. An egg clump is drawn as the very clump that came off his strands,
+ * What he throws. A stinger is drawn as the item. An egg is a pale ball of his strands' blocks with froglight in it,
  * at his size (never smaller than about three blocks across, so it can be seen from far off), glowing and tumbling
  * as it falls, with a ring on the ground where it will land that closes in as it comes down. Landed, it lies
  * squashed in a splat; a hatching one shakes and swells until the Belling comes out.
@@ -57,7 +60,7 @@ public class ShotRenderer extends EntityRenderer<Shot> {
     public void render(Shot e, float yaw, float partial, PoseStack ps, MultiBufferSource buf, int light) {
         if (e.kind() != Shot.EGG) { item.render(e, yaw, partial, ps, buf, light); return; }
         if (e.stage() == Shot.FALLING) marker(e, partial, ps, buf);
-        egg(e, partial, ps);
+        egg(e, partial, ps, buf);
     }
 
     /** how wide the ring round the landing spot is, at the widest (just dropped) */
@@ -107,14 +110,15 @@ public class ShotRenderer extends EntityRenderer<Shot> {
         return Math.abs(y - near) > 12 ? near : y;
     }
 
-    /** the clump itself, drawn from his own blocks */
-    private void egg(Shot e, float partial, PoseStack ps) {
-        BellMeshes meshes = BellMeshes.INSTANCE;
-        if (!meshes.ensureReady()) return;
+    /**
+     * The egg itself: a knobbly pale ball of his strands' own blocks (bone and calcite) with verdant froglight glowing
+     * through it, about as big as the clump that hung on his strand there.
+     */
+    private void egg(Shot e, float partial, PoseStack ps, MultiBufferSource buf) {
         BellRig rig = BellRig.get();
         int i = Mth.clamp(e.egg(), 0, rig.eggs.length - 1);
-        var E = rig.eggs[i];
-        float radius = Math.max(1f, E.radius());
+        // (a clump's radius reaches its furthest knob, so the round egg is drawn smaller than that)
+        float radius = Mth.clamp(rig.eggs[i].radius() * 0.45f, 1.5f, 4.5f);
         float s = Math.max(e.size(), 1.6f / radius);
         float t = e.tickCount + partial;
         float sx = s, sy = s, sz = s, sink = 0f;
@@ -140,34 +144,45 @@ public class ShotRenderer extends EntityRenderer<Shot> {
                 sy *= 1f - 0.8f * fade;
             }
         }
-        Vector3f c = E.centre();
-        Matrix4f base = new Matrix4f(ps.last().pose());
-        if (e.stage() != Shot.FALLING) base.translate(0, radius * sy * 0.9f - sink * radius * s * 0.3f, 0);
-        base.rotateY(e.getId() * 1.7f + spin).rotateX(spin * 0.6f).scale(sx, sy, sz).translate(-c.x, -c.y, -c.z);
-        Matrix4f view = new Matrix4f(RenderSystem.getModelViewMatrix());
-        Matrix4f mv = new Matrix4f();
-        // it glows a little of its own, so it shows against the sky and in the dark
-        float lit = e.stage() == Shot.FALLING ? 1f : 0.85f;
-        for (int pass = 0; pass < 3; pass++) {
-            RenderType rt = pass == 2 ? RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS) : RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
-            rt.setupRenderState();
-            ShaderInstance shader = RenderSystem.getShader();
-            if (shader == null) { rt.clearRenderState(); continue; }
-            shader.setDefaultUniforms(VertexFormat.Mode.QUADS, view, RenderSystem.getProjectionMatrix(), Minecraft.getInstance().getWindow());
-            shader.apply();
-            int kind = pass == 0 ? BellMeshes.SOLID : pass == 1 ? BellMeshes.GLOW : BellMeshes.CLEAR;
-            float kk = pass == 1 ? 1.2f : lit;
-            if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(kk, kk, kk, 1f); shader.COLOR_MODULATOR.upload(); }
-            mv.set(view).mul(base);
-            if (shader.MODEL_VIEW_MATRIX != null) { shader.MODEL_VIEW_MATRIX.set(mv); shader.MODEL_VIEW_MATRIX.upload(); }
-            // (an egg clump or pod is one slice of the full meshes)
-            BellMeshes.Mesh m = meshes.mesh(BellMeshes.FULL, kind, net.jj.hollowbell.rig.BellPieces.get().first[E.bone()]);
-            if (m != null) { m.vb.bind(); m.vb.draw(); }
-            shader.clear();
-            com.mojang.blaze3d.vertex.VertexBuffer.unbind();
-            rt.clearRenderState();
+        ps.pushPose();
+        if (e.stage() != Shot.FALLING) ps.translate(0, radius * sy * 0.9f - sink * radius * s * 0.3f, 0);
+        ps.mulPose(Axis.YP.rotation(e.getId() * 1.7f + spin));
+        ps.mulPose(Axis.XP.rotation(spin * 0.6f));
+        ps.scale(sx, sy, sz);
+        float block = radius / SAC_R;
+        ps.scale(block, block, block);
+        var blocks = Minecraft.getInstance().getBlockRenderer();
+        for (int[] c : SAC) {
+            ps.pushPose();
+            ps.translate(c[0] - 0.5f, c[1] - 0.5f, c[2] - 0.5f);
+            BlockState st = SAC_BLOCKS[c[3]];
+            // it glows a little of its own, so it shows against the sky and in the dark
+            int light = c[3] == 2 ? LightTexture.FULL_BRIGHT : LightTexture.pack(12, 15);
+            blocks.renderSingleBlock(st, ps, buf, light, OverlayTexture.NO_OVERLAY);
+            ps.popPose();
         }
-        Lighting.setupLevel();
+        ps.popPose();
+    }
+
+    /** the egg's blocks: a ball SAC_R blocks round, x y z and which block (0 bone, 1 calcite, 2 froglight) */
+    private static final float SAC_R = 2.5f;
+    private static final int[][] SAC = sac();
+    private static final BlockState[] SAC_BLOCKS = {
+            Blocks.BONE_BLOCK.defaultBlockState(),
+            Blocks.CALCITE.defaultBlockState(),
+            Blocks.VERDANT_FROGLIGHT.defaultBlockState()};
+
+    private static int[][] sac() {
+        List<int[]> l = new ArrayList<>();
+        for (int x = -2; x <= 2; x++) for (int y = -2; y <= 2; y++) for (int z = -2; z <= 2; z++) {
+            int d = x * x + y * y + z * z;
+            if (d > 6) continue;
+            // (the middle is never seen)
+            if (d <= 2) continue;
+            int h = Math.floorMod(x * 7 + y * 13 + z * 29 + x * y * 3, 10);
+            l.add(new int[]{x, y, z, h < 3 ? 2 : h < 6 ? 1 : 0});
+        }
+        return l.toArray(new int[0][]);
     }
 
     /** the client's sparkle for an egg (see Shot.eggFx): a glowing trail as it falls, and the ring of motes round its mark */

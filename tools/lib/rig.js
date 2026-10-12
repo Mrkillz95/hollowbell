@@ -220,6 +220,8 @@ function buildRig(M, C) {
     if (!left) break;
   }
 
+  const fixed = takeBack(C, strandOf, pods, gone);
+
   // ---------------- 1.9.3: every part in one piece, before any bones are made. A bit of a strand (or of a pod, an
   // egg clump, an arm) that only touches the rest of its part through some other part goes with the part it touches
   // most: left where it was, it would float off when the two swing apart, and a strand in pieces would hang its top
@@ -403,6 +405,34 @@ function buildRig(M, C) {
     strandDefs[id] = { bones: names.map(b => boneIndex.get(b)), joints, bottom: centre(bot), top: y1, low: y0, size: ks.length };
   }
 
+  // each block of an arm or strand goes to the piece it lies across from, cut where the chain bends (the plane through
+  // each joint halfway between the two pieces' ways), not by height: cut flat across a slanting piece, blocks side by
+  // side ended up far apart along the chain, so they came apart as soon as it bent
+  let recut = 0;
+  const chainsMade = [...armDefs.map(D => [D.bones, [...D.joints, D.tip]]),
+    ...strandDefs.map(D => [D.bones, [...D.joints, D.bottom]])];
+  for (const [bs, pts] of chainsMade) {
+    const m = bs.length;
+    if (m < 2) continue;
+    const planes = [];
+    for (let j = 1; j < m; j++) {
+      const a = pts[j - 1], b = pts[j], c = pts[j + 1];
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - b[0], c[1] - b[1], c[2] - b[2]];
+      const lu = Math.hypot(...u) || 1, lw = Math.hypot(...w) || 1;
+      planes.push([b, [u[0] / lu + w[0] / lw, u[1] / lu + w[1] / lw, u[2] / lu + w[2] / lw]]);
+    }
+    const mine = new Map(bs.map((b, i) => [b, i]));
+    for (let k = 0; k < n; k++) {
+      if (gone[k] || !mine.has(boneOf[k])) continue;
+      let s = 0;
+      for (const [p, nv] of planes) {
+        if ((X[k] + 0.5 - p[0]) * nv[0] + (Y[k] + 0.5 - p[1]) * nv[1] + (Z[k] + 0.5 - p[2]) * nv[2] < 0) break;
+        s++;
+      }
+      if (bs[s] !== boneOf[k]) { boneOf[k] = bs[s]; recut++; }
+    }
+  }
+
   // pods and eggs hang from the strand segment they touch most (or the nearest one)
   function hang(lump, prefix, list) {
     for (let i = 0; i < lump.count; i++) {
@@ -559,6 +589,13 @@ function buildRig(M, C) {
     for (const D of [...podDefs, ...eggDefs]) D.bone = to[D.bone];
   }
 
+  // ---------------- the egg clumps are left off him: each keeps its place on its strand or arm (where it breaks off
+  // and falls from), but none of its blocks
+  let eggBlocks = 0;
+  for (let k = 0; k < n; k++) {
+    if (!gone[k] && boneOf[k] >= 0 && bones[boneOf[k]].name.startsWith('egg_')) { gone[k] = 1; eggBlocks++; }
+  }
+
   // ---------------- the dome's shape, for the inside: the inner wall's radius at each height, and its outside
   const inner = {}, outer = {};
   for (let k = 0; k < n; k++) {
@@ -589,8 +626,157 @@ function buildRig(M, C) {
       dome: profile,
       bands: bandDefs, sectors: sectorDefs,
     },
-    stats: { rehung, piecesMoved: earlyBits, piecesMovedBlocks: earlyVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length, branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose, looseEggs: eggs.loose },
+    stats: {
+      recut, podBitsBack: fixed.podBits, armBitsBack: fixed.armBits, eggBlocks, rehung, piecesMoved: earlyBits,
+      piecesMovedBlocks: earlyVox, strands: strandDefs.length, pods: podDefs.length, eggs: eggDefs.length,
+      branches: branched, eggsTakenOff: eggs.removed, floatingTakenOff: floatingOff + orphans, loosePods: pods.loose,
+      looseEggs: eggs.loose,
+    },
   };
+}
+
+// Bits of a pod or an arm that the strands took when the build was sorted, given back:
+//  - the glass head of each pod (its shell, eyes and glowing bottom): the strands round it took whole sides of it,
+//    so the pod was drawn cut in half and its other half swung off with the strand;
+//  - the lime loops' glowing middles and the copper of an arm: a strand that touched a loop ran along its middle,
+//    so the lights came off the arm as soon as it moved. A strand bit lying between two bits of the same arm
+//    (within a few blocks either way) is part of the arm's skin.
+const SHELL = new RegExp('^(white_stained_glass|glass|light_gray_stained_glass|tinted_glass|black_concrete|'
+  + 'yellow_stained_glass|lime_stained_glass|ochre_froglight|shroomlight|sea_lantern)$');
+const HEAD = /^(white_stained_glass|glass|tinted_glass|black_concrete)$/;
+const ARM_SKIN = /^(weathered_copper|oxidized_copper|lime_stained_glass)$/;
+const POD_HEAD_R = 9;
+
+function takeBack(C, strandOf, pods, gone) {
+  const { n, X, Y, Z, lab, label, find } = C;
+  const mat = k => C.P[C.PAL[k]];
+  const isArm = k => label[k] === null && lab[k] >= 0 && lab[k] < 8 && !gone[k];
+  const isStrand = k => strandOf[k] >= 0 && !gone[k];
+  let podBits = 0, armBits = 0;
+
+  // pod heads: the middle of each pod's glass, then its shell flooded back in from the pod, within its head
+  const sum = [];
+  for (let k = 0; k < n; k++) {
+    const i = pods.of[k];
+    if (i < 0 || gone[k] || !HEAD.test(mat(k))) continue;
+    const s = sum[i] || (sum[i] = [0, 0, 0, 0]);
+    s[0] += X[k]; s[1] += Y[k]; s[2] += Z[k]; s[3]++;
+  }
+  const front = [];
+  const takenFrom = new Int32Array(n).fill(-1);
+  for (let k = 0; k < n; k++) if (pods.of[k] >= 0 && !gone[k]) front.push(k);
+  while (front.length) {
+    const k = front.pop();
+    const i = pods.of[k], s = sum[i];
+    if (!s) continue;
+    for (const [a, b, c] of N26) {
+      const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+      if (j === undefined || !isStrand(j) || !SHELL.test(mat(j))) continue;
+      if (Math.hypot(X[j] - s[0] / s[3], Y[j] - s[1] / s[3], Z[j] - s[2] / s[3]) > POD_HEAD_R) continue;
+      takenFrom[j] = strandOf[j];
+      strandOf[j] = -1; pods.of[j] = i; lab[j] = 200; podBits++;
+      front.push(j);
+    }
+  }
+  // (where a strand runs on past a pod through the glass of its head, the glass it can't do without stays the strand's,
+  // or the strand beyond it would be cut off)
+  for (let pass = 0; pass < 12; pass++) {
+    const comp = new Int32Array(n).fill(-1), size = [], strandOfComp = [];
+    for (let k0 = 0; k0 < n; k0++) {
+      if (!isStrand(k0) || comp[k0] >= 0) continue;
+      const id = size.length, ks = [k0];
+      comp[k0] = id;
+      for (let q = 0; q < ks.length; q++) {
+        const k = ks[q];
+        for (const [a, b, c] of N26) {
+          const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+          if (j === undefined || comp[j] >= 0 || !isStrand(j) || strandOf[j] !== strandOf[k0]) continue;
+          comp[j] = id;
+          ks.push(j);
+        }
+      }
+      size.push(ks.length); strandOfComp.push(strandOf[k0]);
+    }
+    const biggest = new Map();
+    size.forEach((sz, id) => {
+      const s = strandOfComp[id];
+      if (!biggest.has(s) || size[biggest.get(s)] < sz) biggest.set(s, id);
+    });
+    const back = [];
+    for (let k = 0; k < n; k++) {
+      if (comp[k] < 0 || biggest.get(strandOf[k]) === comp[k]) continue;
+      for (const [a, b, c] of N26) {
+        const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+        if (j !== undefined && takenFrom[j] === strandOf[k] && pods.of[j] >= 0) back.push(j);
+      }
+    }
+    for (const j of back) {
+      if (pods.of[j] < 0) continue;
+      strandOf[j] = takenFrom[j]; pods.of[j] = -1; lab[j] = 100; podBits--;
+    }
+    if (!back.length) break;
+  }
+
+  // arm skin: copper and lime touching the arm, then anything of a strand lying between two bits of one arm
+  const DIRS = [];
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) {
+    if (a > 0 || (a === 0 && b > 0) || (a === 0 && b === 0 && c >= 0)) DIRS.push([a, b, c]);
+  }
+  const armAlong = (k, d, sign) => {
+    for (let s = 1; s <= 3; s++) {
+      const j = find(X[k] + d[0] * s * sign, Y[k] + d[1] * s * sign, Z[k] + d[2] * s * sign);
+      if (j === undefined) return -1;
+      if (isArm(j)) return lab[j];
+      if (!isStrand(j)) return -1;
+    }
+    return -1;
+  };
+  for (let pass = 0; pass < 8; pass++) {
+    const set = [];
+    for (let k = 0; k < n; k++) {
+      if (!isStrand(k)) continue;
+      let arm = -1;
+      if (ARM_SKIN.test(mat(k))) {
+        for (const [a, b, c] of N26) {
+          const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+          if (j !== undefined && isArm(j)) { arm = lab[j]; break; }
+        }
+      }
+      for (const d of DIRS) {
+        if (arm >= 0) break;
+        const up = armAlong(k, d, 1);
+        if (up >= 0 && armAlong(k, d, -1) === up) arm = up;
+      }
+      if (arm >= 0) set.push([k, arm]);
+    }
+    for (const [k, a] of set) { strandOf[k] = -1; lab[k] = a; armBits++; }
+    if (!set.length) break;
+  }
+  // what's left of a strand that lies along an arm nearly all its length (a loop's middle the rule above missed) is
+  // the arm's too
+  const along = new Map();
+  for (let k = 0; k < n; k++) {
+    if (!isStrand(k)) continue;
+    const s = along.get(strandOf[k]) || { all: 0, by: new Map() };
+    s.all++;
+    for (const [a, b, c] of N26) {
+      const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+      if (j !== undefined && isArm(j)) { s.by.set(lab[j], (s.by.get(lab[j]) || 0) + 1); break; }
+    }
+    along.set(strandOf[k], s);
+  }
+  // (and a "strand" that is hardly any bone or calcite, touching an arm, is the arm's own end: its copper, loop and
+  // lights going on down to the ground)
+  const pale = new Map();
+  for (let k = 0; k < n; k++) {
+    if (isStrand(k) && /^(bone_block|calcite)$/.test(mat(k))) pale.set(strandOf[k], (pale.get(strandOf[k]) || 0) + 1);
+  }
+  for (const [s, o] of along) {
+    const best = [...o.by].sort((p, q) => q[1] - p[1])[0];
+    if (!best || (best[1] < 0.6 * o.all && (pale.get(s) || 0) > o.all / 3)) continue;
+    for (let k = 0; k < n; k++) if (strandOf[k] === s && !gone[k]) { strandOf[k] = -1; lab[k] = best[0]; armBits++; }
+  }
+  return { podBits, armBits };
 }
 
 function spotDef(C, bone, name) {
