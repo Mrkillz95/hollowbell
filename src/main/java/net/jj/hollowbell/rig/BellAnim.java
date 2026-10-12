@@ -1,6 +1,5 @@
 package net.jj.hollowbell.rig;
 
-import net.jj.hollowbell.solid.Solid;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -422,20 +421,7 @@ public final class BellAnim {
             if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
         }
         if (st.carryStrand < 0) { carryChain = -1; carryP0 = null; }
-        // his arms, strands and pods kept from passing through each other (see BellApart)
-        if (!first && APART) {
-            long t0 = Solid.clock();
-            if (apart == null) apart = new BellApart(rig);
-            apart.apply(st, st.chain, prev, held, mBody);
-            apartNanos += Solid.clock() - t0;
-        }
     }
-
-    /** what keeping his parts apart has cost in all, both sides (see Solid.clock) */
-    public static long apartNanos;
-    /** off only for the lab's before-and-after count (-Dhollowbell.noApart=true) and the cost test */
-    public static boolean APART = !Boolean.getBoolean("hollowbell.noApart");
-    private BellApart apart;
 
     // ------------------------------------------------------------------ carrying somebody up onto his crown
 

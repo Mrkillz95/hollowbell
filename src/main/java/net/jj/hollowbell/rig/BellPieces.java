@@ -11,9 +11,7 @@ import org.joml.Quaternionf;
  * {@link BellRig#frame}): the bend is spread over the slices, so it reads as one smooth curve with no gaps, and the
  * root comes smoothly out of what it hangs from.
  *
- * The blocks are the same as the bone's (see {@link BellModel}); the slices only say which of them go together. Which
- * slice each block is in, and how many slices a piece has (more for a wide one, whose far side opens up most in a
- * bend), come with the model from tools/convert.js, which also keeps the faces between two slices.
+ * The blocks are the same as the bone's (see {@link BellModel}); the slices only say which of them go together.
  */
 public final class BellPieces {
     private static BellPieces instance;
@@ -22,6 +20,10 @@ public final class BellPieces {
         if (instance == null) instance = new BellPieces(BellRig.get(), BellModel.get());
         return instance;
     }
+
+    /** slices per piece of an arm and of a strand */
+    public static final int ARM_SLICES = Integer.getInteger("hollowbell.armSlices", 8);
+    public static final int STRAND_SLICES = Integer.getInteger("hollowbell.strandSlices", 3);
 
     public final int count;
     /** per slice: its bone, its chain (-1 none), and how far along its piece its middle is (0 top joint, 1 bottom) */
@@ -43,7 +45,7 @@ public final class BellPieces {
         int total = 0;
         for (int b = 0; b < nb; b++) {
             first[b] = total;
-            num[b] = rig.chainOf[b] < 0 ? 1 : Math.max(1, model.slices[b]);
+            num[b] = rig.chainOf[b] < 0 ? 1 : rig.kind[b] == BellRig.Kind.ARM ? ARM_SLICES : STRAND_SLICES;
             total += num[b];
         }
         count = total;
@@ -63,7 +65,15 @@ public final class BellPieces {
             int n = model.count(b);
             int[] of = new int[n];
             if (P > 1) {
-                for (int v = 0; v < n; v++) of[v] = first[b] + Math.min(P - 1, model.slice[b][v] & 0xff);
+                BellRig.Chain ch = rig.chains[rig.chainOf[b]];
+                int i = rig.seg[b];
+                float ax = ch.joints[i].x, ay = ch.joints[i].y, az = ch.joints[i].z;
+                float dx = ch.joints[i + 1].x - ax, dy = ch.joints[i + 1].y - ay, dz = ch.joints[i + 1].z - az;
+                float l2 = Math.max(1e-4f, dx * dx + dy * dy + dz * dz);
+                for (int v = 0; v < n; v++) {
+                    float t = ((model.x[b][v] + 0.5f - ax) * dx + (model.y[b][v] + 0.5f - ay) * dy + (model.z[b][v] + 0.5f - az) * dz) / l2;
+                    of[v] = first[b] + Math.max(0, Math.min(P - 1, (int) Math.floor(t * P)));
+                }
             } else java.util.Arrays.fill(of, first[b]);
             sliceOf[b] = of;
             if (P > 1) {
