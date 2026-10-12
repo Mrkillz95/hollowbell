@@ -3,7 +3,7 @@
   "id": "jj_giants",
   "version": "${version}",
   "name": "JJ's Giants",
-  "description": "The Giants Guide: one book about all of JJ's giants that are installed. Where their ground is, what each move does, what they drop, and the commands.",
+  "description": "The Giants Guide: one book about all the giants that are installed. Where their ground is, what each move does, what they drop, and the commands.",
   "authors": [
     "JJ"
   ],
