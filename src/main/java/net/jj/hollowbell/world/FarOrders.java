@@ -188,8 +188,12 @@ public final class FarOrders {
 
     // ------------------------------------------------------------------ fetching one from land nobody has loaded
 
-    private record Fetch(UUID id, String dim, double x, double z, Vec3 to, @Nullable UUID follow, long until, float cost, boolean kill) {
-        Fetch(UUID id, String dim, double x, double z, Vec3 to, @Nullable UUID follow, long until, float cost) { this(id, dim, x, z, to, follow, until, cost, false); }
+    /** kill: fetched to be killed; remove: fetched to be taken out of the world for good */
+    private record Fetch(UUID id, String dim, double x, double z, Vec3 to, @Nullable UUID follow, long until, float cost,
+                         boolean kill, boolean remove) {
+        Fetch(UUID id, String dim, double x, double z, Vec3 to, @Nullable UUID follow, long until, float cost) {
+            this(id, dim, x, z, to, follow, until, cost, false, false);
+        }
     }
     private static final List<Fetch> fetches = new ArrayList<>();
 
@@ -221,6 +225,13 @@ public final class FarOrders {
             }
             if (f.kill() && l.getEntity(f.id()) instanceof HollowbellEntity h && !h.isRemoved()) {
                 kill(l, h);
+                a.unpark(f.id());
+                it.remove();
+                continue;
+            }
+            if (f.remove() && l.getEntity(f.id()) instanceof HollowbellEntity h && !h.isRemoved()) {
+                h.discard();
+                WorldOne.get(server).removed(server.overworld(), f.id());
                 a.unpark(f.id());
                 it.remove();
                 continue;
@@ -267,6 +278,7 @@ public final class FarOrders {
             t.putDouble("ToX", f.to().x); t.putDouble("ToY", f.to().y); t.putDouble("ToZ", f.to().z);
             if (f.follow() != null) t.putUUID("Follow", f.follow());
             t.putLong("Until", f.until()); t.putFloat("Cost", f.cost()); t.putBoolean("Kill", f.kill());
+            if (f.remove()) t.putBoolean("Remove", true);
             out.add(t);
         }
         return out;
@@ -278,7 +290,7 @@ public final class FarOrders {
             net.minecraft.nbt.CompoundTag t = l.getCompound(i);
             fetches.add(new Fetch(t.getUUID("Id"), t.getString("Dim"), t.getDouble("X"), t.getDouble("Z"),
                     new Vec3(t.getDouble("ToX"), t.getDouble("ToY"), t.getDouble("ToZ")), t.hasUUID("Follow") ? t.getUUID("Follow") : null,
-                    t.getLong("Until"), t.getFloat("Cost"), t.getBoolean("Kill")));
+                    t.getLong("Until"), t.getFloat("Cost"), t.getBoolean("Kill"), t.getBoolean("Remove")));
         }
     }
 
@@ -312,7 +324,29 @@ public final class FarOrders {
             for (var e : new ArrayList<>(a.parked().entrySet())) {
                 var p = e.getValue();
                 if (!p.dim().equals(dim) || l.getEntity(e.getKey()) != null) continue;
-                fetches.add(new Fetch(e.getKey(), dim, p.x(), p.z(), Vec3.ZERO, null, l.getGameTime() + 20 * 20, 0f, true));
+                fetches.add(new Fetch(e.getKey(), dim, p.x(), p.z(), Vec3.ZERO, null, l.getGameTime() + 20 * 20, 0f, true, false));
+                ChunkPos cp = new ChunkPos(Mth.floor(p.x()) >> 4, Mth.floor(p.z()) >> 4);
+                l.getChunkSource().addRegionTicket(FETCH, cp, 2, cp);
+                n++;
+            }
+        }
+        a.setDirty();
+        return n;
+    }
+
+    /**
+     * /hollowbell remove and /giants remove: every one left in land nobody has loaded is fetched and taken out when
+     * his chunk brings him in (forgetting him would only hide him until somebody went there). Returns how many.
+     */
+    public static int removeLying(MinecraftServer server) {
+        int n = 0;
+        Away a = Away.get(server);
+        for (ServerLevel l : server.getAllLevels()) {
+            String dim = l.dimension().location().toString();
+            for (var e : new ArrayList<>(a.parked().entrySet())) {
+                var p = e.getValue();
+                if (!p.dim().equals(dim) || l.getEntity(e.getKey()) != null) continue;
+                fetches.add(new Fetch(e.getKey(), dim, p.x(), p.z(), Vec3.ZERO, null, l.getGameTime() + 20 * 20, 0f, false, true));
                 ChunkPos cp = new ChunkPos(Mth.floor(p.x()) >> 4, Mth.floor(p.z()) >> 4);
                 l.getChunkSource().addRegionTicket(FETCH, cp, 2, cp);
                 n++;

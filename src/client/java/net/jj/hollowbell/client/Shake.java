@@ -41,11 +41,12 @@ public final class Shake {
         float a = Mth.lerp(partial, last, amount);
         if (a <= 0.002f) return null;
         Minecraft mc = Minecraft.getInstance();
-        float t = (mc.level == null ? 0 : mc.level.getGameTime()) + partial;
+        // (kept small: the game's sine table stops turning once its angle passes about 200000)
+        double t = (mc.level == null ? 0L : mc.level.getGameTime() % 24000L) + partial;
         // two speeds mixed so it reads as ground shaking, not a rattle
-        float x = (Mth.sin(t * 2.7f) * 0.6f + Mth.sin(t * 7.3f) * 0.4f) * a * 0.30f;
-        float y = (Mth.sin(t * 3.9f + 1.3f) * 0.6f + Mth.sin(t * 9.1f) * 0.4f) * a * 0.24f;
-        float z = Mth.sin(t * 5.1f + 2.2f) * a * 0.12f;
+        float x = (float) (Math.sin(t * 2.7) * 0.6 + Math.sin(t * 7.3) * 0.4) * a * 0.30f;
+        float y = (float) (Math.sin(t * 3.9 + 1.3) * 0.6 + Math.sin(t * 9.1) * 0.4) * a * 0.24f;
+        float z = (float) Math.sin(t * 5.1 + 2.2) * a * 0.12f;
         return new float[]{x, y, z};
     }
 }

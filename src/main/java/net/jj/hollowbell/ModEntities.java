@@ -15,7 +15,7 @@ public final class ModEntities {
             EntityType.Builder.of(HollowbellEntity::new, MobCategory.MONSTER).sized(8f, 8f).fireImmune()
                     .clientTrackingRange(32).updateInterval(1));
     public static final EntityType<Seat> SEAT = register("seat",
-            EntityType.Builder.<Seat>of(Seat::new, MobCategory.MISC).sized(0.5f, 0.5f).fireImmune().noSave().noSummon()
+            EntityType.Builder.<Seat>of(Seat::new, MobCategory.MISC).sized(0.5f, 0.5f).fireImmune().noSummon()
                     .clientTrackingRange(24).updateInterval(1));
     public static final EntityType<Shot> SHOT = register("shot",
             EntityType.Builder.<Shot>of(Shot::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(12).updateInterval(1));

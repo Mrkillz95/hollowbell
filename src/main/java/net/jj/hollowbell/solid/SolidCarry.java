@@ -2,6 +2,7 @@ package net.jj.hollowbell.solid;
 
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -47,6 +48,8 @@ public final class SolidCarry {
                 if (d.lengthSqr() < 64) {
                     Vec3 to = new Vec3(p.getX() + d.x, p.getY() + d.y, p.getZ() + d.z);
                     if (air == 0) to = Solid.carriedTo(b, to);
+                    // where his part goes down under the ground, you stay on top of it
+                    if (to.y < p.getY() && sinksIntoGround(p, to)) to = new Vec3(to.x, p.getY(), to.z);
                     p.setPos(to.x, to.y, to.z);
                 }
                 turned = Mth.wrapDegrees(Solid.yawOf(c.toWorld[frame]) - yaw);
@@ -68,6 +71,13 @@ public final class SolidCarry {
         if (found == b && a.frame() == oldFrame && oldRest != null) restPrev = oldRest;
         on = found; frame = a.frame(); rest = a.rest(); was = p.position(); yaw = Solid.yawOf(c.toWorld[frame]); air = nowAir;
         return turned;
+    }
+
+    /** moving to `to` would take it down into blocks it isn't in now */
+    private static boolean sinksIntoGround(Entity p, Vec3 to) {
+        AABB now = p.getBoundingBox().deflate(0.01);
+        AABB then = now.move(to.x - p.getX(), to.y - p.getY(), to.z - p.getZ());
+        return p.level().noCollision(p, now) && !p.level().noCollision(p, then);
     }
 
     public boolean riding() { return on != null; }

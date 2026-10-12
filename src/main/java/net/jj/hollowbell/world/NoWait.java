@@ -1,6 +1,7 @@
 package net.jj.hollowbell.world;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -72,6 +73,38 @@ public final class NoWait {
     public static int heightOrGuess(ServerLevel l, Heightmap.Types t, int x, int z) {
         int y = height(l, t, x, z);
         return y != NOT_YET ? y : guessGround(l, x, z);
+    }
+
+    /**
+     * Where something stands at x z: the top of the land, or under a roof (the nether) the first floor with two free
+     * blocks over it, looked for down from a little over nearY (the top of the land there is the roof). NOT_YET if
+     * the chunk isn't loaded.
+     */
+    public static int standY(Level l, int x, int z, int nearY) {
+        LevelChunk c = chunk(l, x, z);
+        if (c == null) return NOT_YET;
+        int top = c.getHeight(Heightmap.Types.MOTION_BLOCKING, x & 15, z & 15) + 1;
+        if (!l.dimensionType().hasCeiling()) return top;
+        int from = Math.min(nearY + 16, ceiling(l) - 3);
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int y = from; y > l.getMinBuildHeight(); y--) {
+            if (!c.getBlockState(m.set(x, y - 1, z)).isFaceSturdy(l, m, Direction.UP)) continue;
+            if (!c.getBlockState(m.set(x, y, z)).getCollisionShape(l, m).isEmpty() || !c.getFluidState(m).isEmpty()) continue;
+            if (c.getBlockState(m.set(x, y + 1, z)).getCollisionShape(l, m).isEmpty()) return y;
+        }
+        return top;
+    }
+
+    /** standY, or where the ground is likely to be when the land isn't there yet (under a roof: nearY itself) */
+    public static int standOrGuess(ServerLevel l, int x, int z, int nearY) {
+        int y = standY(l, x, z, nearY);
+        if (y != NOT_YET) return y;
+        return l.dimensionType().hasCeiling() ? nearY : guessGround(l, x, z);
+    }
+
+    /** the highest a thing can go: the roof in the nether, else the top of the world */
+    public static int ceiling(Level l) {
+        return l.dimensionType().hasCeiling() ? l.getMinBuildHeight() + l.dimensionType().logicalHeight() : l.getMaxBuildHeight();
     }
 
     /** ask for the land round this block to be made ready (radius in chunks), without waiting for it */

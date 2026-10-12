@@ -5,11 +5,17 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -60,7 +66,21 @@ public class Seat extends Entity {
         if (getPassengers().isEmpty()) { if (++empty > 10) discard(); } else empty = 0;
         Entity o = level().getEntity(ownerId());
         boolean gone = !(o instanceof HollowbellEntity h) || h.isRemoved() || !h.usesSeat(this);
-        if (gone) { if (++ownerless > 2) { ejectPassengers(); discard(); } } else ownerless = 0;
+        if (gone) { if (++ownerless > 2) letGo(); } else ownerless = 0;
+    }
+
+    /** whoever is on it is set free, and floats down from up there */
+    private void letGo() {
+        for (Entity e : getPassengers()) {
+            e.fallDistance = 0;
+            if (e instanceof LivingEntity le) {
+                double over = e.getY() - level().getHeight(Heightmap.Types.MOTION_BLOCKING, e.getBlockX(), e.getBlockZ());
+                int ticks = Mth.clamp((int) Math.ceil(over / 0.45) + 60, 100, 2400);
+                le.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, ticks, 0, false, false));
+            }
+        }
+        ejectPassengers();
+        discard();
     }
 
     @Override
@@ -71,11 +91,19 @@ public class Seat extends Entity {
 
     @Override protected Vec3 getPassengerAttachmentPoint(Entity e, EntityDimensions d, float f) { return Vec3.ZERO; }
     /** let go of, whatever holds it stays where it is (it isn't lifted onto the top of the seat first) */
-    @Override public Vec3 getDismountLocationForPassenger(net.minecraft.world.entity.LivingEntity p) { return p.position(); }
+    @Override public Vec3 getDismountLocationForPassenger(LivingEntity p) { return p.position(); }
     @Override public boolean isPickable() { return false; }
     @Override public boolean isPushable() { return false; }
     @Override public boolean hurt(DamageSource src, float amount) { return false; }
-    @Override public boolean shouldBeSaved() { return false; }
+    /**
+     * Only with a creature on it: a passenger is only saved with what it rides, so it would be lost with the chunk.
+     * Loaded back, the seat has no owner and lets it go.
+     */
+    @Override
+    public boolean shouldBeSaved() {
+        for (Entity e : getPassengers()) if (!(e instanceof Player)) return super.shouldBeSaved();
+        return false;
+    }
     @Override protected boolean canAddPassenger(Entity e) { return getPassengers().isEmpty(); }
     @Override protected void readAdditionalSaveData(CompoundTag tag) {}
     @Override protected void addAdditionalSaveData(CompoundTag tag) {}

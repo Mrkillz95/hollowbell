@@ -186,7 +186,7 @@ He's made from your build block for block. Every block wears its real texture, a
   - when you fall fast you drift down slowly instead, like he lets things down, and take no fall damage (a mace smash from high up is soft too).
   Other magic still hurts, like a potion of harming.
   Each piece says so in gold. The armor has new pictures too: pale green-white glass with copper seams, bone ribs down the chest, and a warm rivet here and there. It's see-through when you wear it, like his dome.
-- **His crown holds him off.** Set his crown down, stand within 16 blocks of it and do `/hollowbell ward on`. For 20 minutes he won't come within 700 blocks of it, won't go after anything inside that circle, and the book can't send him in there. If he's inside when it wakes, he leaves. Then the crown needs 20 minutes to gather itself again. Take the crown up and it stops. `/hollowbell ward blocks 0` turns it off.
+- **His crown holds him off.** Set his crown down and right-click it (or stand within 16 blocks of it and do `/hollowbell ward on`). For 20 minutes he won't come within 700 blocks of it, won't go after anything inside that circle, and the book can't send him in there. If he's inside when it wakes, he leaves. Then the crown needs 20 minutes to gather itself again. Take the crown up and it stops. `/hollowbell ward blocks 0` turns it off.
 - **Keep him to one place.** `/hollowbell area <x> <z> <radius>` keeps the nearest one inside that circle. `/hollowbell area off` lets him go. In the book, on the "him" page, type how far (empty means 200) and press **Keep to here**, and he stays that close to where you're standing. **Let him roam** frees him. While he's kept, everywhere he drifts, is sent or wanders to is pulled inside, and if he's outside he drifts back in. If someone he's after is far outside, he lets them go. Riding him still takes him anywhere. It's saved on him, so it lasts, and it holds while he's out of the world too.
 - **`/giants`** changes things for all of JJ's bosses at once (Pitchgut, Furrowmaw, Cerberus, the Hollowbell and the Lantern Willow, whichever you have). See the commands below.
 - Fixed: "the oldest goes" at the limit was really a random one after a save, and a Hollowbell just loading back in with its chunk could push another one out. Now only a newly made one counts, and age is saved.
@@ -342,7 +342,7 @@ When he drifts near another of JJ's giants (160 blocks at full size), he fights 
 
 ## His moves
 
-There are three kinds. **Light** moves are quick and he uses them a lot. **Medium** moves have a short warning and hit hard: most normal mobs die from one. **Heavy** moves are rare and huge: they hit tens of blocks round him at full size, kill everything normal in the way and badly hurt a player in netherite. Before a heavy move you hear a loud warning sound, a red message comes up and his glow flares, so you have 1.5 to 4.5 seconds to get away. After one he's worn out for 5 seconds: slow, drooping and not attacking.
+There are three kinds. **Light** moves are quick and he uses them a lot. **Medium** moves have a short warning and hit hard: most normal mobs die from one. **Heavy** moves are rare and huge: they hit tens of blocks round him at full size, kill everything normal in the way and badly hurt a player in netherite. Before a heavy move you hear a loud warning sound, a red message comes up and his glow flares, so you have 1.5 to 5.5 seconds to get away. After one he's worn out for 5 seconds: slow, drooping and not attacking.
 
 Bigger ones hit harder and wider, smaller ones less.
 
@@ -350,7 +350,7 @@ Bigger ones hit harder and wider, smaller ones less.
 
 | Move | What it does |
 |---|---|
-| Grab and lift | A strand wraps round you and slowly pulls you up into the dome. Hit that strand four times and it lets go. |
+| Grab and lift | A strand wraps round you and slowly pulls you up into the dome. Hit that strand a few times (four at most) and it lets go. |
 | Harvest | He does it to anything: cows, villagers, even trees get pulled up and into the dome, where you can see them through the glass. Creatures die in there. |
 | Sting volley | The strand ends nearest you flick three rounds of stingers at you. Poison and slowness. |
 | Strand lash | One strand winds back and whips sideways through everything on that side of him. |
@@ -363,7 +363,7 @@ Bigger ones hit harder and wider, smaller ones less.
 | Curtain | The strands close in round you like a cage and pull tight. |
 | Sweep | All his strands swing across the ground in a wide arc. |
 | Arm slam | One of his eight arms lifts up and slaps down on the ground. Everything under the arm gets hit. |
-| Arm wrap | An arm curls round you and squeezes. Hit that arm four times and it lets go. |
+| Arm wrap | An arm curls round you and squeezes. Hit that arm a few times (four at most) and it lets go. |
 | Pulse wave | A hard pulse sends out a shock wave: knockback and nausea, and it knocks flyers out of the air. |
 | Shed | Eggs drop off his strands and hatch into **Bellings**, small jellies that drift after you and sting. |
 | Spore cloud | The eggs in his strands burst into clouds of poison that drift after you. |
@@ -376,8 +376,8 @@ Bigger ones hit harder and wider, smaller ones less.
 |---|---|
 | Drop | The bell lifts and glows, then the whole of him slams down on the ground. He stays down for a while, then rises back up slowly. |
 | Whirlpool | He spins, and his strands drag everything in a wide ring in under him, then crush it. |
-| Sky dive | He climbs about 70 blocks, turns over and dives bell first. The shock wave reaches about 100 blocks out. |
-| Deep toll | Three tolls, louder each time, then a massive shock ring. It throws everything far and breaks glass and leaves. |
+| Sky dive | He climbs about 100 blocks, turns over and dives bell first. The shock wave reaches about 100 blocks out. |
+| Deep toll | Three tolls, louder each time, then a massive shock ring. It throws everything far, and with griefing on it breaks glass and leaves. |
 | Arm storm | All eight arms go up, then crash down one after another all round him. |
 | Stinger storm | Every strand flicks stingers up, and they rain down over a wide area. |
 | Sun lances | A beam of burning light comes out of each glowing spot and sweeps over the ground. One hunts you. |
@@ -413,14 +413,14 @@ A very small Hollowbell has no room inside: he squeezes you and drops you instea
 | Stinger | A whip-like sword, a bit stronger than netherite. What it hits is poisoned and slowed. Hold right-click and let go to throw it like a harpoon: small things are pulled to you, walls and big things pull you to them. |
 | Bell Glass | Craft it into bell glass armor (like diamond, with more toughness). The full set keeps poison and dizziness off, slows a fast fall, rings when you're hurt low, and has its Armour power (R): the Bell toll on the ground, a glide in the air. |
 | Hollowbell Pods | For the book, and a pod in a glass bottle makes a poison potion. |
-| Hollowbell Crown | A glowing trophy block to set down. Wake it with `/hollowbell ward on` and it holds him off. |
+| Hollowbell Crown | A glowing trophy block to set down. Right-click it to wake it and it holds him off. |
 | Oxidized copper, bone blocks, verdant froglight | From his body. |
 
 All of it goes into his Loot Cache on a pedestal where he fell. Its beam shows from up to 1024 blocks away, and goes out once you've emptied it.
 
 ### His crown
 
-Set his crown down, stand within 16 blocks of it and do `/hollowbell ward on`. For 20 minutes he won't come within 700 blocks of it, won't go after anything inside that circle, and the book can't send him in there (a trip stops at the edge). Then the crown sits dark for 20 minutes. Take the crown up and it stops. `/hollowbell ward blocks 0` turns it off.
+Set his crown down and right-click it (or stand within 16 blocks of it and do `/hollowbell ward on`). For 20 minutes he won't come within 700 blocks of it, won't go after anything inside that circle, and the book can't send him in there (a trip stops at the edge). Then the crown sits dark for 20 minutes. Take the crown up and it stops. `/hollowbell ward blocks 0` turns it off.
 
 ### Advancements
 
