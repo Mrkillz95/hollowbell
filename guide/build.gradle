@@ -11,15 +11,35 @@ repositories {
 }
 loom {
     splitEnvironmentSourceSets()
+}
+// The game tests and the autotest live in their own source sets, so they never go in the jar.
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+    dev {
+        compileClasspath += sourceSets.client.compileClasspath + sourceSets.main.output + sourceSets.client.output
+        runtimeClasspath += sourceSets.client.runtimeClasspath + sourceSets.main.output + sourceSets.client.output
+    }
+}
+loom {
     mods {
         "jj_giants" {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }
+        "jj_giants-gametest" {
+            sourceSet sourceSets.gametest
+        }
+        "jj_giants-dev" {
+            sourceSet sourceSets.dev
+        }
     }
     runs {
         gametest {
             server()
+            source sourceSets.gametest
             name "Game Test"
             vmArg "-Dfabric-api.gametest"
             vmArg "-Xmx3G"
@@ -28,6 +48,7 @@ loom {
         }
         autotest {
             client()
+            source sourceSets.dev
             name "Auto Test"
             vmArg "-Djj_giants.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "tools/autotest.txt")
             vmArg "-Xmx4G"
@@ -45,7 +66,7 @@ dependencies {
     // tools/giant_mods.py without their own game tests), for the tests and pictures that need them.
     if (project.hasProperty('giants')) fileTree(dir: 'run-mods', include: '*.jar').each { modLocalRuntime files(it) }
 }
-processResources {
+tasks.matching { it.name in ['processResources', 'processGametestResources', 'processDevResources'] }.configureEach {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": project.version }
 }

@@ -76,7 +76,6 @@ public class HollowbellClient implements ClientModInitializer {
             @Override public ResourceLocation getFabricId() { return ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "model_reload"); }
             @Override public void onResourceManagerReload(ResourceManager rm) { BellMeshes.INSTANCE.invalidate(); }
         });
-        net.jj.hollowbell.client.dev.AutoTest.init();
         // /hollowbell detail [on|off]: the server passes it on, and the setting is kept on this computer only.
         // (It used to be a command of the client's own, but then the client took every /hollowbell command for its
         // own and never sent the rest to the server.)

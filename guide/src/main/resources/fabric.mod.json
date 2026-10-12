@@ -15,9 +15,6 @@
     ],
     "client": [
       "net.jj.giants.client.GuideClient"
-    ],
-    "fabric-gametest": [
-      "net.jj.giants.test.GuideGameTests"
     ]
   },
   "depends": {

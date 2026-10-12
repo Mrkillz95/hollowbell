@@ -12,15 +12,35 @@ repositories {
 def autotestScript = gradle.startParameter.projectProperties.script ?: "tools/autotest.txt"
 loom {
     splitEnvironmentSourceSets()
+}
+// The game tests and labs (gametest) and the autotest (dev) live in their own source sets, so they never go in the jar.
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+    dev {
+        compileClasspath += sourceSets.client.compileClasspath + sourceSets.main.output + sourceSets.client.output
+        runtimeClasspath += sourceSets.client.runtimeClasspath + sourceSets.main.output + sourceSets.client.output
+    }
+}
+loom {
     mods {
         "hollowbell" {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }
+        "hollowbell-gametest" {
+            sourceSet sourceSets.gametest
+        }
+        "hollowbell-dev" {
+            sourceSet sourceSets.dev
+        }
     }
     runs {
         gametest {
             server()
+            source sourceSets.gametest
             name "Game Test"
             vmArg "-Dfabric-api.gametest"
             vmArg "-Dhollowbell.debug=true"
@@ -30,6 +50,7 @@ loom {
         }
         autotest {
             client()
+            source sourceSets.dev
             name "Auto Test"
             vmArg "-Dhollowbell.autotest=${project.projectDir}/${autotestScript}"
             vmArg "-Xmx6G"
@@ -44,7 +65,7 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
-processResources {
+tasks.matching { it.name in ['processResources', 'processGametestResources', 'processDevResources'] }.configureEach {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": project.version }
 }
@@ -61,11 +82,10 @@ afterEvaluate {
 }
 
 // Draws the Bell Hollows without the game, from the real plan, into pictures/ground/ (map, den, samples).
-// Development only, never in the jar: ./gradlew groundLab   (or -Plab="map" / "den" / "sample")
-jar { exclude 'net/jj/hollowbell/lab/**' }
+// ./gradlew groundLab   (or -Plab="map" / "den" / "sample")
 tasks.register('groundLab', JavaExec) {
-    dependsOn 'classes'
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'gametestClasses'
+    classpath = sourceSets.gametest.runtimeClasspath
     mainClass = 'net.jj.hollowbell.lab.GroundLab'
     workingDir = projectDir
     args = (project.findProperty('lab') ?: 'all').toString().split(' ').toList()
@@ -73,10 +93,10 @@ tasks.register('groundLab', JavaExec) {
 }
 
 // Pose lab: runs his animation offline in every pose and move and measures blocks cut off or coming apart
-// (build/poselab). Development only, never in the jar: ./gradlew poseLab -Plab="idle arm_slam" -Pshots=1
+// (build/poselab). ./gradlew poseLab -Plab="idle arm_slam" -Pshots=1
 tasks.register('poseLab', JavaExec) {
-    dependsOn 'classes'
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'gametestClasses'
+    classpath = sourceSets.gametest.runtimeClasspath
     mainClass = 'net.jj.hollowbell.lab.PoseLab'
     workingDir = projectDir
     args = (project.findProperty('lab') ?: 'all').toString().split(' ').toList()
@@ -85,10 +105,10 @@ tasks.register('poseLab', JavaExec) {
     if (project.hasProperty('out')) systemProperty 'lab.out', project.property('out')
 }
 // Solid lab: his solid shape (what's filled in, the dome still hollow) and how much his parts pass into each other in
-// every move (build/solidlab). Development only: ./gradlew solidLab -Plab="solid overlap" -Pshots=1
+// every move (build/solidlab). ./gradlew solidLab -Plab="solid overlap" -Pshots=1
 tasks.register('solidLab', JavaExec) {
-    dependsOn 'classes'
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'gametestClasses'
+    classpath = sourceSets.gametest.runtimeClasspath
     mainClass = 'net.jj.hollowbell.lab.SolidLab'
     workingDir = projectDir
     args = (project.findProperty('lab') ?: 'solid overlap').toString().split(' ').toList()
@@ -97,6 +117,6 @@ tasks.register('solidLab', JavaExec) {
     if (project.hasProperty('out')) systemProperty 'lab.out', project.property('out')
 }
 tasks.register('poseLabClasspath') {
-    dependsOn 'classes'
-    doLast { new File(buildDir, 'poselab-cp.txt').text = sourceSets.main.runtimeClasspath.asPath }
+    dependsOn 'gametestClasses'
+    doLast { new File(buildDir, 'poselab-cp.txt').text = sourceSets.gametest.runtimeClasspath.asPath }
 }

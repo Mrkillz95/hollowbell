@@ -1,5 +1,6 @@
 package net.jj.hollowbell.client.dev;
 
+import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.client.render.BellMeshes;
@@ -34,13 +35,14 @@ import java.util.List;
  * Lines: world flat|normal, gui on|off, render N, cmd ..., wait N, waitmodel, shot name,
  * view mx my mz tx ty tz (camera in his own model space), book, page N, quit.
  */
-public final class AutoTest {
+public final class AutoTest implements ClientModInitializer {
     private static List<String> script;
     private static int line, wait, joined, atWaited;
     private static boolean asked;
     private static String follow;
 
-    public static void init() {
+    @Override
+    public void onInitializeClient() {
         String f = System.getProperty("hollowbell.autotest");
         if (f != null && System.getenv("HB_SCRIPT") != null && !System.getenv("HB_SCRIPT").isEmpty()) f = System.getenv("HB_SCRIPT");
         if (f == null) return;
