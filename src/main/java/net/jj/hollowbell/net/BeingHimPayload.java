@@ -11,7 +11,14 @@ public record BeingHimPayload(int bellId, boolean on) implements CustomPacketPay
     public static final CustomPacketPayload.Type<BeingHimPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "being_him"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BeingHimPayload> CODEC = StreamCodec.of(
-            (buf, p) -> { buf.writeVarInt(p.bellId()); buf.writeBoolean(p.on()); },
+            (buf, p) -> {
+                buf.writeVarInt(p.bellId());
+                buf.writeBoolean(p.on());
+            },
             buf -> new BeingHimPayload(buf.readVarInt(), buf.readBoolean()));
-    @Override public CustomPacketPayload.Type<BeingHimPayload> type() { return TYPE; }
+
+    @Override
+    public CustomPacketPayload.Type<BeingHimPayload> type() {
+        return TYPE;
+    }
 }

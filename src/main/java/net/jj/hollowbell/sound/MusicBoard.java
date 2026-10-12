@@ -1,6 +1,8 @@
 package net.jj.hollowbell.sound;
 
 import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Only one giant's fight theme plays at a time, across all the giants. They share a board in the
@@ -17,16 +19,23 @@ public final class MusicBoard {
 
     @SuppressWarnings("unchecked")
     public static Map<String, double[]> musicBoard() {
-        java.util.Properties p = System.getProperties();
+        Properties p = System.getProperties();
         Object o = p.get(KEY);
-        if (!(o instanceof java.util.Map)) { p.putIfAbsent(KEY, new java.util.concurrent.ConcurrentHashMap<String, double[]>()); o = p.get(KEY); }
-        return (java.util.Map<String, double[]>) o;
+        if (!(o instanceof Map)) {
+            p.putIfAbsent(KEY, new ConcurrentHashMap<String, double[]>());
+            o = p.get(KEY);
+        }
+        return (Map<String, double[]>) o;
     }
 
     /** this mod wants its theme: it is this far (squared) from the nearest boss fighting */
-    public static void want(String mod, double distSq) { musicBoard().put(mod, new double[]{distSq, System.currentTimeMillis()}); }
+    public static void want(String mod, double distSq) {
+        musicBoard().put(mod, new double[] {distSq, System.currentTimeMillis()});
+    }
 
-    public static void drop(String mod) { musicBoard().remove(mod); }
+    public static void drop(String mod) {
+        musicBoard().remove(mod);
+    }
 
     /** does this mod's theme win the board right now */
     public static boolean plays(Map<String, double[]> board, String mod, long now) {

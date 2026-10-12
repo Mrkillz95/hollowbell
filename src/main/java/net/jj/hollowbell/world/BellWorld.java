@@ -1,5 +1,14 @@
 package net.jj.hollowbell.world;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -11,16 +20,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.saveddata.SavedData;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * What the world remembers for him: everybody's own safe list (the players and the kinds of creature each player
@@ -34,17 +33,22 @@ public final class BellWorld extends SavedData {
     /** the ones on the lists that are single creatures, not players (a pet, a named mob, your horse) */
     private final Set<UUID> mobs = new HashSet<>();
 
-    private static final SavedData.Factory<BellWorld> FACTORY = new SavedData.Factory<>(BellWorld::new, BellWorld::load, null);
+    private static final SavedData.Factory<BellWorld> FACTORY =
+            new SavedData.Factory<>(BellWorld::new, BellWorld::load, null);
 
     public static BellWorld get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(FACTORY, "hollowbell");
     }
 
-    public boolean onList(UUID owner, UUID who) { Set<UUID> s = friends.get(owner); return s != null && s.contains(who); }
+    public boolean onList(UUID owner, UUID who) {
+        Set<UUID> s = friends.get(owner);
+        return s != null && s.contains(who);
+    }
 
     public boolean kindOnList(UUID owner, EntityType<?> type) {
         Set<String> s = kinds.get(owner);
-        return s != null && s.contains(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString());
+        return s != null
+                && s.contains(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString());
     }
 
     public boolean toggleFriend(UUID owner, UUID who) {
@@ -55,9 +59,15 @@ public final class BellWorld extends SavedData {
         return on;
     }
 
-    public void addFriend(UUID owner, UUID who) { friends.computeIfAbsent(owner, k -> new HashSet<>()).add(who); setDirty(); }
+    public void addFriend(UUID owner, UUID who) {
+        friends.computeIfAbsent(owner, k -> new HashSet<>()).add(who);
+        setDirty();
+    }
 
-    public void dropFriend(UUID owner, UUID who) { Set<UUID> s = friends.get(owner); if (s != null && s.remove(who)) setDirty(); }
+    public void dropFriend(UUID owner, UUID who) {
+        Set<UUID> s = friends.get(owner);
+        if (s != null && s.remove(who)) setDirty();
+    }
 
     public boolean toggleKind(UUID owner, EntityType<?> type) {
         Set<String> s = kinds.computeIfAbsent(owner, k -> new HashSet<>());
@@ -68,7 +78,10 @@ public final class BellWorld extends SavedData {
         return on;
     }
 
-    public void dropKind(UUID owner, String id) { Set<String> s = kinds.get(owner); if (s != null && s.remove(id)) setDirty(); }
+    public void dropKind(UUID owner, String id) {
+        Set<String> s = kinds.get(owner);
+        if (s != null && s.remove(id)) setDirty();
+    }
 
     public List<UUID> listOf(UUID owner) {
         Set<UUID> s = friends.get(owner);
@@ -84,13 +97,30 @@ public final class BellWorld extends SavedData {
         return out;
     }
 
-    public String nameOf(UUID who) { return names.getOrDefault(who, who.toString().substring(0, 8)); }
-    public void rememberName(UUID who, String name) { if (!name.equals(names.get(who))) { names.put(who, name); setDirty(); } }
-    public void rememberMob(UUID who, String name) { rememberName(who, name); if (mobs.add(who)) setDirty(); }
-    public boolean isMob(UUID who) { return mobs.contains(who); }
+    public String nameOf(UUID who) {
+        return names.getOrDefault(who, who.toString().substring(0, 8));
+    }
+
+    public void rememberName(UUID who, String name) {
+        if (!name.equals(names.get(who))) {
+            names.put(who, name);
+            setDirty();
+        }
+    }
+
+    public void rememberMob(UUID who, String name) {
+        rememberName(who, name);
+        if (mobs.add(who)) setDirty();
+    }
+
+    public boolean isMob(UUID who) {
+        return mobs.contains(who);
+    }
 
     /** "Cows", "Wolves", "Sheep": the name of a kind for "All ..." on the list */
-    public static String kindsName(String id) { return plural(kindName(id)); }
+    public static String kindsName(String id) {
+        return plural(kindName(id));
+    }
 
     public static String plural(String n) {
         String l = n.toLowerCase(Locale.ROOT);
@@ -98,7 +128,8 @@ public final class BellWorld extends SavedData {
         if (l.endsWith("wolf")) return n.substring(0, n.length() - 1) + "ves";
         if (l.endsWith("man") && !l.endsWith("human")) return n.substring(0, n.length() - 2) + "en";
         if (l.endsWith("s") || l.endsWith("x") || l.endsWith("ch") || l.endsWith("sh")) return n + "es";
-        if (l.endsWith("y") && l.length() > 1 && "aeiou".indexOf(l.charAt(l.length() - 2)) < 0) return n.substring(0, n.length() - 1) + "ies";
+        if (l.endsWith("y") && l.length() > 1 && "aeiou".indexOf(l.charAt(l.length() - 2)) < 0)
+            return n.substring(0, n.length() - 1) + "ies";
         return n + "s";
     }
 
@@ -106,7 +137,10 @@ public final class BellWorld extends SavedData {
     public static String kindName(String id) {
         ResourceLocation rl = ResourceLocation.tryParse(id);
         if (rl == null) return id;
-        return BuiltInRegistries.ENTITY_TYPE.getOptional(rl).map(t -> t.getDescription().getString()).orElse(id);
+        return BuiltInRegistries.ENTITY_TYPE
+                .getOptional(rl)
+                .map(t -> t.getDescription().getString())
+                .orElse(id);
     }
 
     private static BellWorld load(CompoundTag tag, HolderLookup.Provider p) {

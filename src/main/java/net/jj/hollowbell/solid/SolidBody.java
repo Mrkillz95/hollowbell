@@ -45,20 +45,28 @@ public interface SolidBody {
     float solidScale();
 
     /** what never bumps into him: his own seats, shots, hooks, whoever rides at his helm... */
-    default boolean solidIgnores(Entity e) { return false; }
+    default boolean solidIgnores(Entity e) {
+        return false;
+    }
 
     /**
      * The bone that carries whoever stands on this one: itself, or (for a part that rolls or swells under you, like an
      * eye) a steadier one it hangs from. It must be solid too.
      */
-    default int solidCarryBone(int bone) { return bone; }
+    default int solidCarryBone(int bone) {
+        return bone;
+    }
 
     /**
      * Whether this one, moving, bumps into other bodies (a robot walking into the Swarmforge does; a giant walking into
      * another giant doesn't).
      */
-    default boolean solidBumpsBodies() { return false; }
+    default boolean solidBumpsBodies() {
+        return false;
+    }
 
     /** a bump this high over your feet (world blocks) you walk up onto without jumping */
-    default double solidStep() { return 1.3; }
+    default double solidStep() {
+        return 1.3;
+    }
 }

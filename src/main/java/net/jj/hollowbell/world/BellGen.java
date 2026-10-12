@@ -1,6 +1,13 @@
 package net.jj.hollowbell.world;
 
 import com.google.common.collect.ImmutableSet;
+import com.mojang.serialization.Codec;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -8,6 +15,7 @@ import net.minecraft.core.QuartPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.placement.OrePlacements;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
@@ -17,19 +25,21 @@ import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.RandomSupport;
+import net.minecraft.world.level.levelgen.WorldgenRandom;
+import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 import net.minecraft.world.level.levelgen.placement.BiomeFilter;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.placement.PlacementContext;
 import net.minecraft.world.level.levelgen.placement.PlacementFilter;
 import net.minecraft.world.level.levelgen.placement.PlacementModifier;
 import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 /**
  * The Bell Hollows are made by the world itself, as its land is made. The claim (where, how big, the seed) is
@@ -41,12 +51,20 @@ public final class BellGen {
     private BellGen() {}
 
     /** the other giants' ground: a column one of them already took stays theirs */
-    private static final Set<String> GIANTS = Set.of("mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge");
+    private static final Set<String> GIANTS = Set.of(
+            "mountain_breathes",
+            "furrowmaw",
+            "fire_ice_cerberus",
+            "hollowbell",
+            "lanternwillow",
+            "wreckback",
+            "swarmforge");
 
     /** everything a generator thread may know. Never changed once made; a new claim makes a new one. */
     public static final class Snap {
         /** the overworld's own biome source and generator: compared by identity (the nether uses the same kinds) */
         public final Object source, generator;
+
         public final Holder<Biome> biome;
         final ChunkGenerator gen;
         final RandomState randomState;
@@ -62,14 +80,39 @@ public final class BellGen {
         public final int minX, maxX, minZ, maxZ;
         /** his ground's outline; only its pure outline functions are used from here, so it is shared */
         public final @Nullable BellPlan outline;
+
         private volatile Set<Holder<Biome>> unionOf, union;
 
-        Snap(Object source, ChunkGenerator gen, RandomState rs, LevelHeightAccessor heights, int sea, Holder<Biome> biome,
-             List<PlacedFeature> ores, boolean claimed, long seed, int cx, int cz, int radius) {
-            this.source = source; this.generator = gen; this.gen = gen; this.randomState = rs; this.heights = heights;
-            this.sea = sea; this.biome = biome; this.ores = ores;
-            this.claimed = claimed; this.seed = seed; this.cx = cx; this.cz = cz; this.radius = radius;
-            this.minX = cx - radius - 2; this.maxX = cx + radius + 2; this.minZ = cz - radius - 2; this.maxZ = cz + radius + 2;
+        Snap(
+                Object source,
+                ChunkGenerator gen,
+                RandomState rs,
+                LevelHeightAccessor heights,
+                int sea,
+                Holder<Biome> biome,
+                List<PlacedFeature> ores,
+                boolean claimed,
+                long seed,
+                int cx,
+                int cz,
+                int radius) {
+            this.source = source;
+            this.generator = gen;
+            this.gen = gen;
+            this.randomState = rs;
+            this.heights = heights;
+            this.sea = sea;
+            this.biome = biome;
+            this.ores = ores;
+            this.claimed = claimed;
+            this.seed = seed;
+            this.cx = cx;
+            this.cz = cz;
+            this.radius = radius;
+            this.minX = cx - radius - 2;
+            this.maxX = cx + radius + 2;
+            this.minZ = cz - radius - 2;
+            this.maxZ = cz + radius + 2;
             this.outline = claimed ? newPlan() : null;
         }
 
@@ -82,20 +125,37 @@ public final class BellGen {
             ChunkGenerator g = gen;
             RandomState rs = randomState;
             LevelHeightAccessor hs = heights;
-            return new BellPlan(seed, cx, cz, radius, sea, hs.getMinBuildHeight(), hs.getMaxBuildHeight(),
+            return new BellPlan(
+                    seed,
+                    cx,
+                    cz,
+                    radius,
+                    sea,
+                    hs.getMinBuildHeight(),
+                    hs.getMaxBuildHeight(),
                     (x, z) -> g.getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, hs, rs) - 1);
         }
 
-        public boolean inBox(int x, int z) { return x >= minX && x <= maxX && z >= minZ && z <= maxZ; }
+        public boolean inBox(int x, int z) {
+            return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
+        }
 
         /** could any of this chunk, or of the chunks next to it, be his? */
         public boolean touchesNear(ChunkPos p) {
-            return claimed && p.getMaxBlockX() + 16 >= minX && p.getMinBlockX() - 16 <= maxX && p.getMaxBlockZ() + 16 >= minZ && p.getMinBlockZ() - 16 <= maxZ;
+            return claimed
+                    && p.getMaxBlockX() + 16 >= minX
+                    && p.getMinBlockX() - 16 <= maxX
+                    && p.getMaxBlockZ() + 16 >= minZ
+                    && p.getMinBlockZ() - 16 <= maxZ;
         }
 
         /** could any of this chunk be his? */
         public boolean touches(ChunkPos p) {
-            return claimed && p.getMaxBlockX() >= minX && p.getMinBlockX() <= maxX && p.getMaxBlockZ() >= minZ && p.getMinBlockZ() <= maxZ;
+            return claimed
+                    && p.getMaxBlockX() >= minX
+                    && p.getMinBlockX() <= maxX
+                    && p.getMaxBlockZ() >= minZ
+                    && p.getMinBlockZ() <= maxZ;
         }
 
         /** the possible biomes of the overworld and his, so /locate biome knows his is there to be found */
@@ -113,7 +173,7 @@ public final class BellGen {
     /** the one snapshot the generator threads read; replaced whole, never changed */
     public static volatile @Nullable Snap SNAP;
 
-    // ------------------------------------------------------------------ made on the server thread
+    // made on the server thread
 
     /**
      * The overworld has been made (before any of its chunks): what the generator threads will need is taken now,
@@ -141,8 +201,19 @@ public final class BellGen {
             ores.add(new PlacedFeature(pf.feature(), List.copyOf(mods)));
         }
         LevelHeightAccessor heights = LevelHeightAccessor.create(over.getMinBuildHeight(), over.getHeight());
-        SNAP = new Snap(src.getGenerator().getBiomeSource(), src.getGenerator(), src.randomState(), heights, over.getSeaLevel(),
-                biome, List.copyOf(ores), false, 0, 0, 0, 0);
+        SNAP = new Snap(
+                src.getGenerator().getBiomeSource(),
+                src.getGenerator(),
+                src.randomState(),
+                heights,
+                over.getSeaLevel(),
+                biome,
+                List.copyOf(ores),
+                false,
+                0,
+                0,
+                0,
+                0);
     }
 
     /** the claim changed (made, moved, let go): a new snapshot for the generator threads */
@@ -153,7 +224,9 @@ public final class BellGen {
     }
 
     /** the server stopped: nothing is kept for the next world */
-    public static void forget() { SNAP = null; }
+    public static void forget() {
+        SNAP = null;
+    }
 
     /** is this spot inside his ground's outline (the finder asks)? */
     public static boolean inGround(int x, int z) {
@@ -161,7 +234,7 @@ public final class BellGen {
         return s != null && s.claimed && s.inBox(x, z) && s.outline.dn(x, z) < 1;
     }
 
-    // ------------------------------------------------------------------ the biome hook (generator threads)
+    // the biome hook (generator threads)
 
     /** a few thousand answers per thread, so the hundreds of calls for one column cost one outline check */
     private static final class Memo {
@@ -169,6 +242,7 @@ public final class BellGen {
         final byte[] vals = new byte[2048];
         Snap owner;
     }
+
     private static final ThreadLocal<Memo> MEMO = ThreadLocal.withInitial(Memo::new);
 
     /** the overworld's biome source was asked for a biome: his ground's columns (from y 0 up) are the Bell Hollows */
@@ -188,7 +262,10 @@ public final class BellGen {
         if (!s.inBox(bx, bz)) return false;
         if (otherGiant(in)) return false;
         Memo m = MEMO.get();
-        if (m.owner != s) { java.util.Arrays.fill(m.vals, (byte) 0); m.owner = s; }
+        if (m.owner != s) {
+            Arrays.fill(m.vals, (byte) 0);
+            m.owner = s;
+        }
         long key = ((long) qx << 32) ^ (qz & 0xffffffffL);
         int slot = (int) ((key * 0x9E3779B97F4A7C15L) >>> 53);
         if (m.vals[slot] != 0 && m.keys[slot] == key) return m.vals[slot] == 2;
@@ -210,14 +287,15 @@ public final class BellGen {
         return s.union(in);
     }
 
-    // ------------------------------------------------------------------ the decoration hook (generator threads)
+    // the decoration hook (generator threads)
 
     /**
      * A chunk of the overworld has had its vanilla decoration: if it is his, his land is made in it now. Then the
      * chunks round it that are his and made already are tidied: this chunk's decoration may have put a tree or
      * leaves on them (a chunk's trees reach into the chunks next to it).
      */
-    public static void decorated(Object generator, WorldGenLevel level, ChunkAccess chunk, StructureManager structures) {
+    public static void decorated(
+            Object generator, WorldGenLevel level, ChunkAccess chunk, StructureManager structures) {
         Snap s = SNAP;
         if (s == null || !s.claimed || generator != s.generator || !s.touchesNear(chunk.getPos())) return;
         try {
@@ -229,28 +307,31 @@ public final class BellGen {
         }
     }
 
-    // ------------------------------------------------------------------ the "made" mark on a chunk
+    // the "made" mark on a chunk
 
     /** set on a chunk once his ground has been made in it (kept with the chunk when it is saved) */
-    public static final net.fabricmc.fabric.api.attachment.v1.AttachmentType<Boolean> MADE =
-            net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry.createPersistent(
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "ground_made"), com.mojang.serialization.Codec.BOOL);
+    public static final AttachmentType<Boolean> MADE = AttachmentRegistry.createPersistent(
+            ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "ground_made"), Codec.BOOL);
 
     /** loads this class at start, so the mark is known before any chunk is read */
     public static void init() {}
 
-    public static void markMade(ChunkAccess chunk) { chunk.setAttached(MADE, Boolean.TRUE); }
+    public static void markMade(ChunkAccess chunk) {
+        chunk.setAttached(MADE, Boolean.TRUE);
+    }
 
-    public static boolean made(ChunkAccess chunk) { return Boolean.TRUE.equals(chunk.getAttached(MADE)); }
+    public static boolean made(ChunkAccess chunk) {
+        return Boolean.TRUE.equals(chunk.getAttached(MADE));
+    }
 
-    // ------------------------------------------------------------------ no surface structures in his ground
+    // no surface structures in his ground
 
     /**
      * Would a structure with this box sit in his ground? Only one reaching up to the surface counts (deep ones like
      * mineshafts, strongholds and ancient cities stay); its whole footprint is looked at every 8 blocks and at its
      * corners, against the same outline the land itself is made by. Such a structure is never made at all.
      */
-    public static boolean refuses(Snap s, net.minecraft.world.level.levelgen.structure.BoundingBox b) {
+    public static boolean refuses(Snap s, BoundingBox b) {
         if (s == null || !s.claimed || s.outline == null) return false;
         if (b.maxY() < s.sea - 16) return false;
         if (b.maxX() < s.minX || b.minX() > s.maxX || b.maxZ() < s.minZ || b.minZ() > s.maxZ) return false;
@@ -265,11 +346,12 @@ public final class BellGen {
     }
 
     /** the structure hook: is this new structure start refused (for the overworld's own generator only)? */
-    public static boolean refuses(Object generator, net.minecraft.world.level.levelgen.structure.StructureStart start) {
+    public static boolean refuses(Object generator, StructureStart start) {
         Snap s = SNAP;
         if (s == null || !s.claimed || generator != s.generator || !start.isValid()) return false;
         boolean no = refuses(s, start.getBoundingBox());
-        if (no && DEBUG) HollowbellMod.LOG.info("No {} in the Bell Hollows at {}", start.getStructure(), start.getBoundingBox());
+        if (no && DEBUG)
+            HollowbellMod.LOG.info("No {} in the Bell Hollows at {}", start.getStructure(), start.getBoundingBox());
         return no;
     }
 
@@ -277,16 +359,38 @@ public final class BellGen {
 
     /** the standard overworld ores and stone blobs; the biome swap took them, so he puts them back himself */
     @SuppressWarnings("unchecked")
-    private static final ResourceKey<PlacedFeature>[] ORES = new ResourceKey[]{
-            OrePlacements.ORE_DIRT, OrePlacements.ORE_GRAVEL, OrePlacements.ORE_GRANITE_UPPER, OrePlacements.ORE_GRANITE_LOWER,
-            OrePlacements.ORE_DIORITE_UPPER, OrePlacements.ORE_DIORITE_LOWER, OrePlacements.ORE_ANDESITE_UPPER,
-            OrePlacements.ORE_ANDESITE_LOWER, OrePlacements.ORE_TUFF,
-            OrePlacements.ORE_COAL_UPPER, OrePlacements.ORE_COAL_LOWER, OrePlacements.ORE_IRON_UPPER, OrePlacements.ORE_IRON_MIDDLE,
-            OrePlacements.ORE_IRON_SMALL, OrePlacements.ORE_GOLD, OrePlacements.ORE_GOLD_LOWER, OrePlacements.ORE_REDSTONE,
-            OrePlacements.ORE_REDSTONE_LOWER, OrePlacements.ORE_DIAMOND, OrePlacements.ORE_DIAMOND_MEDIUM, OrePlacements.ORE_DIAMOND_LARGE,
-            OrePlacements.ORE_DIAMOND_BURIED, OrePlacements.ORE_LAPIS, OrePlacements.ORE_LAPIS_BURIED, OrePlacements.ORE_COPPER};
+    private static final ResourceKey<PlacedFeature>[] ORES = new ResourceKey[] {
+        OrePlacements.ORE_DIRT,
+        OrePlacements.ORE_GRAVEL,
+        OrePlacements.ORE_GRANITE_UPPER,
+        OrePlacements.ORE_GRANITE_LOWER,
+        OrePlacements.ORE_DIORITE_UPPER,
+        OrePlacements.ORE_DIORITE_LOWER,
+        OrePlacements.ORE_ANDESITE_UPPER,
+        OrePlacements.ORE_ANDESITE_LOWER,
+        OrePlacements.ORE_TUFF,
+        OrePlacements.ORE_COAL_UPPER,
+        OrePlacements.ORE_COAL_LOWER,
+        OrePlacements.ORE_IRON_UPPER,
+        OrePlacements.ORE_IRON_MIDDLE,
+        OrePlacements.ORE_IRON_SMALL,
+        OrePlacements.ORE_GOLD,
+        OrePlacements.ORE_GOLD_LOWER,
+        OrePlacements.ORE_REDSTONE,
+        OrePlacements.ORE_REDSTONE_LOWER,
+        OrePlacements.ORE_DIAMOND,
+        OrePlacements.ORE_DIAMOND_MEDIUM,
+        OrePlacements.ORE_DIAMOND_LARGE,
+        OrePlacements.ORE_DIAMOND_BURIED,
+        OrePlacements.ORE_LAPIS,
+        OrePlacements.ORE_LAPIS_BURIED,
+        OrePlacements.ORE_COPPER
+    };
 
-    public static int oreCount() { Snap s = SNAP; return s == null ? 0 : s.ores.size(); }
+    public static int oreCount() {
+        Snap s = SNAP;
+        return s == null ? 0 : s.ores.size();
+    }
 
     /**
      * The ores for one chunk: the vanilla placements, seeded from the world seed and the chunk (never the level's
@@ -294,11 +398,10 @@ public final class BellGen {
      */
     static void ores(WorldGenLevel level, ChunkAccess chunk, Snap s) {
         ChunkPos cp = chunk.getPos();
-        var r = new net.minecraft.world.level.levelgen.WorldgenRandom(new net.minecraft.world.level.levelgen.XoroshiroRandomSource(
-                net.minecraft.world.level.levelgen.RandomSupport.generateUniqueSeed()));
+        var r = new WorldgenRandom(new XoroshiroRandomSource(RandomSupport.generateUniqueSeed()));
         long deco = r.setDecorationSeed(level.getSeed(), cp.getMinBlockX(), cp.getMinBlockZ());
         BlockPos origin = new BlockPos(cp.getMinBlockX(), level.getMinBuildHeight(), cp.getMinBlockZ());
-        int step = net.minecraft.world.level.levelgen.GenerationStep.Decoration.UNDERGROUND_ORES.ordinal();
+        int step = GenerationStep.Decoration.UNDERGROUND_ORES.ordinal();
         for (int k = 0; k < s.ores.size(); k++) {
             r.setFeatureSeed(deco, 7000 + k, step);
             s.ores.get(k).place(level, s.gen, r, origin);
@@ -308,10 +411,22 @@ public final class BellGen {
     /** the vanilla biome check, asked the other way: only where this spot's biome is the Bell Hollows */
     static final class OursFilter extends PlacementFilter {
         private final ResourceKey<Biome> key;
-        OursFilter(ResourceKey<Biome> key) { this.key = key; }
-        @Override protected boolean shouldPlace(PlacementContext ctx, RandomSource r, BlockPos p) {
-            return ctx.getLevel().getNoiseBiome(QuartPos.fromBlock(p.getX()), QuartPos.fromBlock(p.getY()), QuartPos.fromBlock(p.getZ())).is(key);
+
+        OursFilter(ResourceKey<Biome> key) {
+            this.key = key;
         }
-        @Override public PlacementModifierType<?> type() { return PlacementModifierType.BIOME_FILTER; }
+
+        @Override
+        protected boolean shouldPlace(PlacementContext ctx, RandomSource r, BlockPos p) {
+            return ctx.getLevel()
+                    .getNoiseBiome(
+                            QuartPos.fromBlock(p.getX()), QuartPos.fromBlock(p.getY()), QuartPos.fromBlock(p.getZ()))
+                    .is(key);
+        }
+
+        @Override
+        public PlacementModifierType<?> type() {
+            return PlacementModifierType.BIOME_FILTER;
+        }
     }
 }

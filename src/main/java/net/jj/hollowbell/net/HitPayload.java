@@ -15,7 +15,14 @@ public record HitPayload(int bellId, int bone) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<HitPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "hit"));
     public static final StreamCodec<RegistryFriendlyByteBuf, HitPayload> CODEC = StreamCodec.of(
-            (buf, p) -> { buf.writeVarInt(p.bellId()); buf.writeVarInt(p.bone()); },
+            (buf, p) -> {
+                buf.writeVarInt(p.bellId());
+                buf.writeVarInt(p.bone());
+            },
             buf -> new HitPayload(buf.readVarInt(), buf.readVarInt()));
-    @Override public CustomPacketPayload.Type<HitPayload> type() { return TYPE; }
+
+    @Override
+    public CustomPacketPayload.Type<HitPayload> type() {
+        return TYPE;
+    }
 }

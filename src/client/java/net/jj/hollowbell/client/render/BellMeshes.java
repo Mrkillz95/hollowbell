@@ -10,6 +10,9 @@ import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
@@ -26,12 +29,10 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Hollowbell baked into GPU meshes, one set per bone, from the game's own block models, so every block looks just
@@ -45,7 +46,9 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class BellMeshes {
     public static final BellMeshes INSTANCE = new BellMeshes();
-    private static final Direction[] DIRS = {Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
+    private static final Direction[] DIRS = {
+        Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
+    };
     private static final int[][] OFF = {{0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}};
     public static final int FULL = 0, FAR = 1, TINY = 2;
     private static final int[] LUMP = {1, 2, 8};
@@ -58,19 +61,28 @@ public final class BellMeshes {
         final int quads;
         /** where the camera was (in the bone's rest space) when it was last sorted */
         final Vector3f sortedFor = new Vector3f(Float.NaN, 0, 0);
-        @Nullable CompletableFuture<SortJob> sorting;
-        Mesh(VertexBuffer vb, @Nullable MeshData.SortState sort, int quads) { this.vb = vb; this.sort = sort; this.quads = quads; }
+
+        @Nullable
+        CompletableFuture<SortJob> sorting;
+
+        Mesh(VertexBuffer vb, @Nullable MeshData.SortState sort, int quads) {
+            this.vb = vb;
+            this.sort = sort;
+            this.quads = quads;
+        }
     }
 
     record SortJob(ByteBufferBuilder mem, ByteBufferBuilder.Result result) {}
 
     /** [lod][kind][bone], except the full version: [FULL][kind][slice] (see {@link BellPieces}) */
     private Mesh[][][] meshes;
+
     private CompletableFuture<Built> building;
     private boolean ready;
     public long quadCount, farQuadCount;
 
     private record Part(MeshData data, @Nullable MeshData.SortState sort, int quads) {}
+
     private record Built(Part[][][] parts, ByteBufferBuilder[] memory) {}
 
     private BellMeshes() {}
@@ -83,33 +95,46 @@ public final class BellMeshes {
         }
         if (!building.isDone()) return false;
         Built b;
-        try { b = building.join(); }
-        catch (Exception e) { HollowbellMod.LOG.error("Hollowbell mesh build failed", e); building = null; return false; }
+        try {
+            b = building.join();
+        } catch (Exception e) {
+            HollowbellMod.LOG.error("Hollowbell mesh build failed", e);
+            building = null;
+            return false;
+        }
         meshes = new Mesh[3][4][];
         for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) meshes[l][k] = new Mesh[b.parts[l][k].length];
         int nb = b.parts[1][0].length;
         long q = 0, fq = 0;
-        for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) for (int i = 0; i < b.parts[l][k].length; i++) {
-            Part p = b.parts[l][k][i];
-            if (p == null) continue;
-            VertexBuffer vb = new VertexBuffer(VertexBuffer.Usage.STATIC);
-            vb.bind();
-            vb.upload(p.data);
-            meshes[l][k][i] = new Mesh(vb, p.sort, p.quads);
-            if (l == FULL) q += p.quads; else if (l == FAR) fq += p.quads;
-        }
+        for (int l = 0; l < 3; l++)
+            for (int k = 0; k < 4; k++)
+                for (int i = 0; i < b.parts[l][k].length; i++) {
+                    Part p = b.parts[l][k][i];
+                    if (p == null) continue;
+                    VertexBuffer vb = new VertexBuffer(VertexBuffer.Usage.STATIC);
+                    vb.bind();
+                    vb.upload(p.data);
+                    meshes[l][k][i] = new Mesh(vb, p.sort, p.quads);
+                    if (l == FULL) q += p.quads;
+                    else if (l == FAR) fq += p.quads;
+                }
         VertexBuffer.unbind();
         for (ByteBufferBuilder m : b.memory) if (m != null) m.close();
-        quadCount = q; farQuadCount = fq;
+        quadCount = q;
+        farQuadCount = fq;
         ready = true;
         HollowbellMod.LOG.info("Hollowbell on the GPU: {} faces in {} bones ({} faces far away)", q, nb, fq);
         return true;
     }
 
-    public boolean isReady() { return ready; }
+    public boolean isReady() {
+        return ready;
+    }
 
     /** a mesh: for FULL, of one slice (see {@link BellPieces}); for FAR and TINY, of one bone */
-    public @Nullable Mesh mesh(int lod, int kind, int unit) { return meshes == null ? null : meshes[lod][kind][unit]; }
+    public @Nullable Mesh mesh(int lod, int kind, int unit) {
+        return meshes == null ? null : meshes[lod][kind][unit];
+    }
 
     /**
      * Re-sorts a see-through mesh for the camera at camRest (the bone's rest space), off the render thread,
@@ -120,7 +145,12 @@ public final class BellMeshes {
         if (m.sorting != null) {
             if (!m.sorting.isDone()) return;
             SortJob j;
-            try { j = m.sorting.join(); } catch (Exception e) { m.sorting = null; return; }
+            try {
+                j = m.sorting.join();
+            } catch (Exception e) {
+                m.sorting = null;
+                return;
+            }
             m.sorting = null;
             if (j != null) {
                 m.vb.bind();
@@ -134,14 +164,16 @@ public final class BellMeshes {
         Vector3f at = new Vector3f(camRest);
         MeshData.SortState st = m.sort;
         int bytes = m.quads * 6 * 4 + 256;
-        m.sorting = CompletableFuture.supplyAsync(() -> {
-            ByteBufferBuilder mem = new ByteBufferBuilder(bytes);
-            ByteBufferBuilder.Result r = st.buildSortedIndexBuffer(mem, VertexSorting.byDistance(at));
-            return new SortJob(mem, r);
-        }, Util.backgroundExecutor());
+        m.sorting = CompletableFuture.supplyAsync(
+                () -> {
+                    ByteBufferBuilder mem = new ByteBufferBuilder(bytes);
+                    ByteBufferBuilder.Result r = st.buildSortedIndexBuffer(mem, VertexSorting.byDistance(at));
+                    return new SortJob(mem, r);
+                },
+                Util.backgroundExecutor());
     }
 
-    // ------------------------------------------------------------------ building
+    // building
 
     private Built build() {
         long t0 = System.currentTimeMillis();
@@ -155,16 +187,22 @@ public final class BellMeshes {
         int[] kindOf = new int[np];
         for (int i = 0; i < np; i++) {
             BlockState st;
-            try { st = BlockStateParser.parseForBlock(lookup, model.palette[i], false).blockState(); }
-            catch (Exception e) { throw new IllegalStateException("Hollowbell: unknown block " + model.palette[i], e); }
+            try {
+                st = BlockStateParser.parseForBlock(lookup, model.palette[i], false)
+                        .blockState();
+            } catch (Exception e) {
+                throw new IllegalStateException("Hollowbell: unknown block " + model.palette[i], e);
+            }
             states[i] = st;
             models[i] = mc.getBlockRenderer().getBlockModel(st);
-            kindOf[i] = st.getLightEmission() > 0 ? GLOW : ItemBlockRenderTypes.getChunkRenderType(st) == RenderType.translucent() ? CLEAR : SOLID;
+            kindOf[i] = st.getLightEmission() > 0
+                    ? GLOW
+                    : ItemBlockRenderTypes.getChunkRenderType(st) == RenderType.translucent() ? CLEAR : SOLID;
         }
         // the red loops: lime glass on his arms turns to red glass below half health
         int limeIdx = -1;
         for (int i = 0; i < np; i++) if (model.palette[i].equals("minecraft:lime_stained_glass")) limeIdx = i;
-        BlockState red = net.minecraft.world.level.block.Blocks.RED_STAINED_GLASS.defaultBlockState();
+        BlockState red = Blocks.RED_STAINED_GLASS.defaultBlockState();
         BakedModel redModel = mc.getBlockRenderer().getBlockModel(red);
 
         int nb = model.boneCount();
@@ -172,7 +210,7 @@ public final class BellMeshes {
         // up close each arm and strand is drawn in slices that bend smoothly; further off, a piece at a time
         Part[][][] parts = new Part[3][4][];
         for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) parts[l][k] = new Part[l == FULL ? pieces.count : nb];
-        java.util.List<ByteBufferBuilder> mem = new java.util.ArrayList<>();
+        List<ByteBufferBuilder> mem = new ArrayList<>();
         RandomSource rnd = RandomSource.create(42);
         PoseStack ps = new PoseStack();
         PoseStack.Pose pose = ps.last();
@@ -192,32 +230,62 @@ public final class BellMeshes {
                     int m = 0;
                     for (int i = 0; i < n; i++) if (of[i] == unit) m++;
                     if (m == 0) continue;
-                    vx = new int[m]; vy = new int[m]; vz = new int[m]; vp = new int[m]; vf = new int[m]; va = new int[m];
+                    vx = new int[m];
+                    vy = new int[m];
+                    vz = new int[m];
+                    vp = new int[m];
+                    vf = new int[m];
+                    va = new int[m];
                     for (int i = 0, j = 0; i < n; i++) {
                         if (of[i] != unit) continue;
-                        vx[j] = model.x[b][i]; vy[j] = model.y[b][i]; vz[j] = model.z[b][i]; vp[j] = model.pal[b][i];
-                        vf[j] = model.faces[b][i] & 0x3f; va[j] = model.alpha[b] == null ? 255 : model.alpha[b][i] & 0xff;
+                        vx[j] = model.x[b][i];
+                        vy[j] = model.y[b][i];
+                        vz[j] = model.z[b][i];
+                        vp[j] = model.pal[b][i];
+                        vf[j] = model.faces[b][i] & 0x3f;
+                        va[j] = model.alpha[b] == null ? 255 : model.alpha[b][i] & 0xff;
                         j++;
                     }
                 } else {
-                    Long2IntOpenHashMap pal = new Long2IntOpenHashMap(n / 4 + 8), best = new Long2IntOpenHashMap(n / 4 + 8);
+                    Long2IntOpenHashMap pal = new Long2IntOpenHashMap(n / 4 + 8),
+                            best = new Long2IntOpenHashMap(n / 4 + 8);
                     Long2IntOpenHashMap alp = new Long2IntOpenHashMap(n / 4 + 8);
                     for (int i = 0; i < n; i++) {
-                        long key = BellModel.key(Math.floorDiv(model.x[b][i], L), Math.floorDiv(model.y[b][i], L), Math.floorDiv(model.z[b][i], L));
+                        long key = BellModel.key(
+                                Math.floorDiv(model.x[b][i], L),
+                                Math.floorDiv(model.y[b][i], L),
+                                Math.floorDiv(model.z[b][i], L));
                         int score = Integer.bitCount(model.faces[b][i] & 0x3f) + 1;
-                        if (score > best.get(key)) { best.put(key, score); pal.put(key, model.pal[b][i]); }
+                        if (score > best.get(key)) {
+                            best.put(key, score);
+                            pal.put(key, model.pal[b][i]);
+                        }
                         int a = model.alpha[b] == null ? 255 : model.alpha[b][i] & 0xff;
                         alp.put(key, Math.max(alp.get(key), a));
                     }
                     long[] keys = pal.keySet().toLongArray();
                     int m = keys.length;
-                    vx = new int[m]; vy = new int[m]; vz = new int[m]; vp = new int[m]; vf = new int[m]; va = new int[m];
+                    vx = new int[m];
+                    vy = new int[m];
+                    vz = new int[m];
+                    vp = new int[m];
+                    vf = new int[m];
+                    va = new int[m];
                     for (int i = 0; i < m; i++) {
                         long k = keys[i];
-                        int cx = (int) ((k >>> 26) & 0x1fff) - 4096, cy = (int) ((k >>> 13) & 0x1fff) - 4096, cz = (int) (k & 0x1fff) - 4096;
+                        int cx = (int) ((k >>> 26) & 0x1fff) - 4096,
+                                cy = (int) ((k >>> 13) & 0x1fff) - 4096,
+                                cz = (int) (k & 0x1fff) - 4096;
                         int f = 0;
-                        for (int d = 0; d < 6; d++) if (!pal.containsKey(BellModel.key(cx + OFF[d][0], cy + OFF[d][1], cz + OFF[d][2]))) f |= 1 << d;
-                        vx[i] = cx; vy[i] = cy; vz[i] = cz; vp[i] = pal.get(k); vf[i] = f; va[i] = alp.get(k);
+                        for (int d = 0; d < 6; d++)
+                            if (!pal.containsKey(BellModel.key(cx + OFF[d][0], cy + OFF[d][1], cz + OFF[d][2])))
+                                f |= 1 << d;
+                        vx[i] = cx;
+                        vy[i] = cy;
+                        vz[i] = cz;
+                        vp[i] = pal.get(k);
+                        vf[i] = f;
+                        va[i] = alp.get(k);
                     }
                 }
                 boolean armBone = rig.kind[b] == BellRig.Kind.ARM;
@@ -232,7 +300,8 @@ public final class BellMeshes {
                     if (count[k] == 0) continue;
                     ByteBufferBuilder memK = new ByteBufferBuilder(Math.max(256, count[k] * 4 * 36 + 1024));
                     mem.add(memK);
-                    BufferBuilder out = new BufferBuilder(memK, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);
+                    BufferBuilder out =
+                            new BufferBuilder(memK, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);
                     int quads = 0;
                     for (int i = 0; i < vx.length; i++) {
                         int kk = va[i] < 255 ? CLEAR : kindOf[vp[i]];
@@ -240,7 +309,10 @@ public final class BellMeshes {
                         int p = vp[i];
                         BlockState st = states[p];
                         BakedModel bm = models[p];
-                        if (k == CLEAR_RED && p == limeIdx) { st = red; bm = redModel; }
+                        if (k == CLEAR_RED && p == limeIdx) {
+                            st = red;
+                            bm = redModel;
+                        }
                         pose.pose().identity().translate(vx[i] * L, vy[i] * L, vz[i] * L);
                         if (L != 1) pose.pose().scale(L);
                         float a = va[i] / 255f;
@@ -248,7 +320,10 @@ public final class BellMeshes {
                         for (int d = 0; d < 6; d++) {
                             if ((vf[i] & (1 << d)) == 0) continue;
                             List<BakedQuad> qs = bm.getQuads(st, DIRS[d], rnd);
-                            for (BakedQuad q : qs) { out.putBulkData(pose, q, 1f, 1f, 1f, a, light, OverlayTexture.NO_OVERLAY); quads++; }
+                            for (BakedQuad q : qs) {
+                                out.putBulkData(pose, q, 1f, 1f, 1f, a, light, OverlayTexture.NO_OVERLAY);
+                                quads++;
+                            }
                         }
                     }
                     MeshData md = out.build();
@@ -271,8 +346,11 @@ public final class BellMeshes {
     /** textures changed (resource pack switch): throw the meshes away, they rebuild on the next frame */
     public void invalidate() {
         RenderSystem.recordRenderCall(() -> {
-            if (meshes != null) for (Mesh[][] a : meshes) for (Mesh[] b : a) for (Mesh m : b) if (m != null) m.vb.close();
-            meshes = null; ready = false; building = null;
+            if (meshes != null)
+                for (Mesh[][] a : meshes) for (Mesh[] b : a) for (Mesh m : b) if (m != null) m.vb.close();
+            meshes = null;
+            ready = false;
+            building = null;
         });
     }
 }

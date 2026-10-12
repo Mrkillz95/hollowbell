@@ -1,5 +1,12 @@
 package net.jj.hollowbell.solid;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -7,13 +14,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
-
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Giant against giant: two giants never pass through each other. Each giant shows the others its rough body, its
@@ -37,7 +37,7 @@ public final class GiantHull {
     public static final int STRIDE = 6;
     public static final double BODY = 0, LIMB = 1;
 
-    // ------------------------------------------------------------------ one's own, from a solid shape
+    // one's own, from a solid shape
 
     /** rest balls (x y z r, model blocks) for each frame, worked out once per shape and choice of frames */
     private static final Map<SolidShape, float[][]> BALLS = new ConcurrentHashMap<>();
@@ -49,17 +49,27 @@ public final class GiantHull {
     public static float[][] balls(SolidShape sh, boolean[] use) {
         return BALLS.computeIfAbsent(sh, s -> {
             float lo = Float.MAX_VALUE, hi = -Float.MAX_VALUE;
-            for (int f = 0; f < s.frames(); f++) if (use[f]) for (int a = 0; a < 3; a++) { lo = Math.min(lo, s.bounds[f][a]); hi = Math.max(hi, s.bounds[f][a + 3]); }
+            for (int f = 0; f < s.frames(); f++)
+                if (use[f])
+                    for (int a = 0; a < 3; a++) {
+                        lo = Math.min(lo, s.bounds[f][a]);
+                        hi = Math.max(hi, s.bounds[f][a + 3]);
+                    }
             int c = Math.max(3, (int) Math.ceil((hi - lo) / 22f));
             float[][] out = new float[s.frames()][];
             for (int f = 0; f < s.frames(); f++) {
                 if (!use[f]) continue;
                 final int C = c;
-                it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<float[]> cubes = new it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<>();
+                Long2ObjectOpenHashMap<float[]> cubes = new Long2ObjectOpenHashMap<>();
                 s.cells(f, (x, y, z) -> {
-                    long k = (((long) Math.floorDiv(x, C) + 0x10000) << 40) | (((long) Math.floorDiv(y, C) + 0x10000) << 20) | ((long) Math.floorDiv(z, C) + 0x10000);
+                    long k = (((long) Math.floorDiv(x, C) + 0x10000) << 40)
+                            | (((long) Math.floorDiv(y, C) + 0x10000) << 20)
+                            | ((long) Math.floorDiv(z, C) + 0x10000);
                     float[] a = cubes.computeIfAbsent(k, q -> new float[4]);
-                    a[0] += x + 0.5f; a[1] += y + 0.5f; a[2] += z + 0.5f; a[3]++;
+                    a[0] += x + 0.5f;
+                    a[1] += y + 0.5f;
+                    a[2] += z + 0.5f;
+                    a[3]++;
                 });
                 List<float[]> keep = new ArrayList<>();
                 int least = Math.max(2, (int) (C * C * C * 0.12f));
@@ -68,7 +78,7 @@ public final class GiantHull {
                     float n = a[3];
                     // (a ball over the cube's filled share of it, reaching its neighbours' across the corners)
                     float r = Math.min(C * 0.87f, 0.72f * C * (float) Math.cbrt(n / (C * C * C)) + 0.3f);
-                    keep.add(new float[]{a[0] / n, a[1] / n, a[2] / n, r});
+                    keep.add(new float[] {a[0] / n, a[1] / n, a[2] / n, r});
                 }
                 float[] flat = new float[keep.size() * 4];
                 for (int i = 0; i < keep.size(); i++) System.arraycopy(keep.get(i), 0, flat, i * 4, 4);
@@ -93,25 +103,35 @@ public final class GiantHull {
             for (int i = 0; i < bl.length; i += 4) {
                 c.toWorld[f].transformPosition(bl[i], bl[i + 1], bl[i + 2], v);
                 double r = bl[i + 3] * s;
-                out[k] = v.x + c.ox; out[k + 1] = v.z + c.oz; out[k + 2] = r;
-                out[k + 3] = v.y + c.oy - r; out[k + 4] = v.y + c.oy + r; out[k + 5] = kind[f];
+                out[k] = v.x + c.ox;
+                out[k + 1] = v.z + c.oz;
+                out[k + 2] = r;
+                out[k + 3] = v.y + c.oy - r;
+                out[k + 4] = v.y + c.oy + r;
+                out[k + 5] = kind[f];
                 k += STRIDE;
             }
         }
         return out;
     }
 
-    // ------------------------------------------------------------------ another's
+    // another's
 
     private static final Map<Class<?>, Optional<Method>> HULL = new ConcurrentHashMap<>();
 
     /** does this giant show its hull (and so move itself out of others, the same as this one does) */
-    public static boolean shows(Entity giant) { return method(giant).isPresent(); }
+    public static boolean shows(Entity giant) {
+        return method(giant).isPresent();
+    }
 
     private static Optional<Method> method(Entity e) {
         return HULL.computeIfAbsent(e.getClass(), cl -> {
-            try { Method m = cl.getMethod("jjHull"); return m.getReturnType() == double[].class ? Optional.of(m) : Optional.empty(); }
-            catch (Exception x) { return Optional.empty(); }
+            try {
+                Method m = cl.getMethod("jjHull");
+                return m.getReturnType() == double[].class ? Optional.of(m) : Optional.empty();
+            } catch (Exception x) {
+                return Optional.empty();
+            }
         });
     }
 
@@ -125,12 +145,17 @@ public final class GiantHull {
             try {
                 Object o = m.get().invoke(giant);
                 if (o instanceof double[] d && d.length % STRIDE == 0) return d;
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
         }
         List<AABB> boxes = new ArrayList<>();
         boxes.add(giant.getBoundingBox());
         AABB look = giant.getBoundingBox().inflate(Math.max(48, giant.getBbWidth() * 4));
-        for (Entity p : giant.level().getEntities(giant, look, x -> !(x instanceof LivingEntity) && x.getTags().contains(partTag))) {
+        for (Entity p : giant.level()
+                .getEntities(
+                        giant,
+                        look,
+                        x -> !(x instanceof LivingEntity) && x.getTags().contains(partTag))) {
             if (ownerOf(p) == giant) boxes.add(p.getBoundingBox());
         }
         return fromBoxes(boxes);
@@ -140,9 +165,17 @@ public final class GiantHull {
 
     private static @Nullable Object ownerOf(Entity e) {
         var m = OWNER.computeIfAbsent(e.getClass(), c -> {
-            try { return Optional.of(c.getMethod("owner")); } catch (Exception x) { return Optional.empty(); }
+            try {
+                return Optional.of(c.getMethod("owner"));
+            } catch (Exception x) {
+                return Optional.empty();
+            }
         });
-        try { return m.isPresent() ? m.get().invoke(e) : null; } catch (Exception x) { return null; }
+        try {
+            return m.isPresent() ? m.get().invoke(e) : null;
+        } catch (Exception x) {
+            return null;
+        }
     }
 
     /** boxes as columns: each box cut along its longer side into squares, a column round each */
@@ -155,9 +188,10 @@ public final class GiantHull {
             boolean alongX = w >= d;
             for (int i = 0; i < n; i++) {
                 double t = (i + 0.5) / n;
-                double x = alongX ? b.minX + w * t : (b.minX + b.maxX) / 2, z = alongX ? (b.minZ + b.maxZ) / 2 : b.minZ + d * t;
+                double x = alongX ? b.minX + w * t : (b.minX + b.maxX) / 2,
+                        z = alongX ? (b.minZ + b.maxZ) / 2 : b.minZ + d * t;
                 double r = 0.5 * Math.hypot(alongX ? w / n : w, alongX ? d : d / n);
-                cols.add(new double[]{x, z, r, b.minY, b.maxY, BODY});
+                cols.add(new double[] {x, z, r, b.minY, b.maxY, BODY});
             }
         }
         double[] out = new double[cols.size() * STRIDE];
@@ -165,7 +199,7 @@ public final class GiantHull {
         return out;
     }
 
-    // ------------------------------------------------------------------ between two
+    // between two
 
     /** how much a hull weighs (its columns' volume, near enough) */
     public static double mass(double[] h) {
@@ -176,18 +210,30 @@ public final class GiantHull {
 
     /** the box round a hull */
     public static AABB box(double[] h) {
-        double x0 = Double.MAX_VALUE, y0 = Double.MAX_VALUE, z0 = Double.MAX_VALUE, x1 = -Double.MAX_VALUE, y1 = -Double.MAX_VALUE, z1 = -Double.MAX_VALUE;
+        double x0 = Double.MAX_VALUE,
+                y0 = Double.MAX_VALUE,
+                z0 = Double.MAX_VALUE,
+                x1 = -Double.MAX_VALUE,
+                y1 = -Double.MAX_VALUE,
+                z1 = -Double.MAX_VALUE;
         for (int i = 0; i < h.length; i += STRIDE) {
-            x0 = Math.min(x0, h[i] - h[i + 2]); x1 = Math.max(x1, h[i] + h[i + 2]);
-            z0 = Math.min(z0, h[i + 1] - h[i + 2]); z1 = Math.max(z1, h[i + 1] + h[i + 2]);
-            y0 = Math.min(y0, h[i + 3]); y1 = Math.max(y1, h[i + 4]);
+            x0 = Math.min(x0, h[i] - h[i + 2]);
+            x1 = Math.max(x1, h[i] + h[i + 2]);
+            z0 = Math.min(z0, h[i + 1] - h[i + 2]);
+            z1 = Math.max(z1, h[i + 1] + h[i + 2]);
+            y0 = Math.min(y0, h[i + 3]);
+            y1 = Math.max(y1, h[i + 4]);
         }
         return h.length == 0 ? new AABB(0, 0, 0, 0, 0, 0) : new AABB(x0, y0, z0, x1, y1, z1);
     }
 
     private static boolean near(double[] h, int i, AABB b, double pad) {
-        return h[i] + h[i + 2] + pad > b.minX && h[i] - h[i + 2] - pad < b.maxX && h[i + 1] + h[i + 2] + pad > b.minZ && h[i + 1] - h[i + 2] - pad < b.maxZ
-                && h[i + 4] > b.minY && h[i + 3] < b.maxY;
+        return h[i] + h[i + 2] + pad > b.minX
+                && h[i] - h[i + 2] - pad < b.maxX
+                && h[i + 1] + h[i + 2] + pad > b.minZ
+                && h[i + 1] - h[i + 2] - pad < b.maxZ
+                && h[i + 4] > b.minY
+                && h[i + 3] < b.maxY;
     }
 
     /**
@@ -212,25 +258,36 @@ public final class GiantHull {
                 if (d < 1e-4) {
                     // (right on top of each other: out the way from its middle to ours)
                     Vec3 ca = ba.getCenter(), cb = bb.getCenter();
-                    dx = ca.x - cb.x; dz = ca.z - cb.z; d = Math.max(1e-4, Math.hypot(dx, dz));
-                    if (d < 1e-3) { dx = 1; dz = 0; d = 1; }
+                    dx = ca.x - cb.x;
+                    dz = ca.z - cb.z;
+                    d = Math.max(1e-4, Math.hypot(dx, dz));
+                    if (d < 1e-3) {
+                        dx = 1;
+                        dz = 0;
+                        d = 1;
+                    }
                 }
-                best[0] = dx / d; best[1] = dz / d; best[2] = depth;
+                best[0] = dx / d;
+                best[1] = dz / d;
+                best[2] = depth;
             }
         }
         return best;
     }
 
     /** the deepest any of a's body goes into b (limb on limb not counted): 0 when they don't overlap */
-    public static double overlap(double[] a, double[] b) { return pushOut(a, b)[2]; }
+    public static double overlap(double[] a, double[] b) {
+        return pushOut(a, b)[2];
+    }
 
     /** the least gap across between a's and b's columns at the same height (below 0: they overlap) */
     public static double gap(double[] a, double[] b) {
         double g = Double.MAX_VALUE;
-        for (int i = 0; i < a.length; i += STRIDE) for (int j = 0; j < b.length; j += STRIDE) {
-            if (a[i + 4] <= b[j + 3] || b[j + 4] <= a[i + 3]) continue;
-            g = Math.min(g, Math.hypot(a[i] - b[j], a[i + 1] - b[j + 1]) - a[i + 2] - b[j + 2]);
-        }
+        for (int i = 0; i < a.length; i += STRIDE)
+            for (int j = 0; j < b.length; j += STRIDE) {
+                if (a[i + 4] <= b[j + 3] || b[j + 4] <= a[i + 3]) continue;
+                g = Math.min(g, Math.hypot(a[i] - b[j], a[i + 1] - b[j + 1]) - a[i + 2] - b[j + 2]);
+            }
         return g;
     }
 
@@ -254,7 +311,9 @@ public final class GiantHull {
     /** is this spot inside the hull */
     public static boolean contains(double[] h, double x, double y, double z) {
         for (int i = 0; i < h.length; i += STRIDE)
-            if (y >= h[i + 3] && y <= h[i + 4] && (x - h[i]) * (x - h[i]) + (z - h[i + 1]) * (z - h[i + 1]) < h[i + 2] * h[i + 2]) return true;
+            if (y >= h[i + 3]
+                    && y <= h[i + 4]
+                    && (x - h[i]) * (x - h[i]) + (z - h[i + 1]) * (z - h[i + 1]) < h[i + 2] * h[i + 2]) return true;
         return false;
     }
 }

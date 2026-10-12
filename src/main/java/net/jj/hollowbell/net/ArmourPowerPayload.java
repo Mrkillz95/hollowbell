@@ -10,6 +10,11 @@ import net.minecraft.resources.ResourceLocation;
 public record ArmourPowerPayload() implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<ArmourPowerPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "armour_power"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, ArmourPowerPayload> CODEC = StreamCodec.unit(new ArmourPowerPayload());
-    @Override public CustomPacketPayload.Type<ArmourPowerPayload> type() { return TYPE; }
+    public static final StreamCodec<RegistryFriendlyByteBuf, ArmourPowerPayload> CODEC =
+            StreamCodec.unit(new ArmourPowerPayload());
+
+    @Override
+    public CustomPacketPayload.Type<ArmourPowerPayload> type() {
+        return TYPE;
+    }
 }

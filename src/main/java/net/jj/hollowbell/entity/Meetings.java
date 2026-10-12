@@ -1,5 +1,10 @@
 package net.jj.hollowbell.entity;
 
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import net.jj.hollowbell.HollowbellConfig;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
@@ -12,26 +17,34 @@ import org.jetbrains.annotations.Nullable;
 public final class Meetings {
     private Meetings() {}
 
-    public enum Way { FIGHT, AVOID, NONE }
+    public enum Way {
+        FIGHT,
+        AVOID,
+        NONE
+    }
 
     /** a giant that has backed down carries this for two minutes: nobody fights it, and it fights no giant */
     public static final String YIELD = "jj_giant_yield";
     /** every giant's main body and part carries jj_giant_kind:<its mod id> */
     public static final String KIND = "jj_giant_kind:";
+
     public static final String ME = "hollowbell";
 
     /** the seven, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback, Swarmforge */
-    static final String[] KINDS = {"mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge"};
+    static final String[] KINDS = {
+        "mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge"
+    };
     /** f fight, a avoid (the same table in every giant mod) */
     private static final String[] TABLE = {
-            // P    F    C    H    W    WB
-            "-ffaaff",   // Pitchgut
-            "f-fafff",   // Furrowmaw
-            "ff-ffff",   // Cerberus
-            "aaf-aaa",   // Hollowbell
-            "affa-af",   // Willow
-            "fffaa-a",   // Wreckback
-            "fffafa-"};  // Swarmforge
+        // P    F    C    H    W    WB
+        "-ffaaff", // Pitchgut
+        "f-fafff", // Furrowmaw
+        "ff-ffff", // Cerberus
+        "aaf-aaa", // Hollowbell
+        "affa-af", // Willow
+        "fffaa-a", // Wreckback
+        "fffafa-"
+    }; // Swarmforge
 
     private static int index(@Nullable String kind) {
         if (kind == null) return -1;
@@ -40,19 +53,28 @@ public final class Meetings {
     }
 
     /**
-     * Who says "X and Y are fighting!": the one that starts the fight, once. A board shared by all the giant mods in the
-     * same server (kept in the JVM's system properties, so no mod needs the others) stops the second one saying it
+     * Who says "X and Y are fighting!": the one that starts the fight, once. A board shared by all the giant mods in
+     * the same server (kept in the JVM's system properties, so no mod needs the others) stops the second one saying it
      * again within 6000 ticks. True for the first claim on a pair.
      */
     @SuppressWarnings("unchecked")
-    public static boolean claimMeetingLine(java.util.UUID a, java.util.UUID b, long gameTime) {
-        java.util.Properties p = System.getProperties();
+    public static boolean claimMeetingLine(UUID a, UUID b, long gameTime) {
+        Properties p = System.getProperties();
         Object o = p.get("jj.giants.meetings");
-        if (!(o instanceof java.util.Map)) { p.putIfAbsent("jj.giants.meetings", new java.util.concurrent.ConcurrentHashMap<String, Long>()); o = p.get("jj.giants.meetings"); }
-        java.util.Map<String, Long> m = (java.util.Map<String, Long>) o;
+        if (!(o instanceof Map)) {
+            p.putIfAbsent("jj.giants.meetings", new ConcurrentHashMap<String, Long>());
+            o = p.get("jj.giants.meetings");
+        }
+        Map<String, Long> m = (Map<String, Long>) o;
         String key = a.compareTo(b) < 0 ? a + "|" + b : b + "|" + a;
         boolean[] won = {false};
-        m.compute(key, (k, v) -> { if (v == null || Math.abs(gameTime - v) > 6000L) { won[0] = true; return gameTime; } return v; });
+        m.compute(key, (k, v) -> {
+            if (v == null || Math.abs(gameTime - v) > 6000L) {
+                won[0] = true;
+                return gameTime;
+            }
+            return v;
+        });
         return won[0];
     }
 
@@ -97,6 +119,6 @@ public final class Meetings {
 
     /** how far off he notices another giant: 160 blocks at full size by default, kept between 48 and 320 */
     public static double range(float size) {
-        return Math.max(48, Math.min(320, net.jj.hollowbell.HollowbellConfig.V.meetRange * size));
+        return Math.max(48, Math.min(320, HollowbellConfig.V.meetRange * size));
     }
 }

@@ -18,10 +18,20 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(ChunkGenerator.class)
 public abstract class StructureStartMixin {
-    @WrapOperation(method = "tryGenerateStructure", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/level/StructureManager;setStartForStructure(Lnet/minecraft/core/SectionPos;Lnet/minecraft/world/level/levelgen/structure/Structure;Lnet/minecraft/world/level/levelgen/structure/StructureStart;Lnet/minecraft/world/level/chunk/StructureAccess;)V"))
-    private void hollowbell$noneInHisGround(StructureManager manager, SectionPos pos, Structure structure, StructureStart start,
-                                            StructureAccess access, Operation<Void> original) {
+    @WrapOperation(
+            method = "tryGenerateStructure",
+            at =
+                    @At(
+                            value = "INVOKE",
+                            target =
+                                    "Lnet/minecraft/world/level/StructureManager;setStartForStructure(Lnet/minecraft/core/SectionPos;Lnet/minecraft/world/level/levelgen/structure/Structure;Lnet/minecraft/world/level/levelgen/structure/StructureStart;Lnet/minecraft/world/level/chunk/StructureAccess;)V"))
+    private void hollowbell$noneInHisGround(
+            StructureManager manager,
+            SectionPos pos,
+            Structure structure,
+            StructureStart start,
+            StructureAccess access,
+            Operation<Void> original) {
         if (BellGen.refuses(this, start)) return;
         original.call(manager, pos, structure, start, access);
     }

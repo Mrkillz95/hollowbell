@@ -1,5 +1,7 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.*;
+
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -15,8 +17,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-
-import static net.jj.hollowbell.test.HollowbellGameTests.*;
 
 /** "Go after what I look at": the look finds the right one, and he really goes after it (or says why not). */
 public class LookOrderTests implements FabricGameTest {
@@ -78,7 +78,9 @@ public class LookOrderTests implements FabricGameTest {
             Pig pig = floatingPig(h, c.add(-45, 0, 10));
             ServerPlayer p = looker(h, c.add(0, 0, 3), pig);
             String said = CodexOrders.attackLooked(p, new CodexPayload(CodexPayload.ATTACK_THAT, 0), false);
-            h.assertTrue(said.startsWith("look_going") && e.getTarget() == pig, "the server's own look missed: " + said + " " + e.getTarget());
+            h.assertTrue(
+                    said.startsWith("look_going") && e.getTarget() == pig,
+                    "the server's own look missed: " + said + " " + e.getTarget());
             e.orderTo(c, null);
             h.assertTrue(e.huntedByOrder() == null, "a new order didn't end it");
             pig.discard();
@@ -122,7 +124,8 @@ public class LookOrderTests implements FabricGameTest {
             ServerPlayer p = looker(h, c.add(0, 0, 0.5), friend);
             BellWorld.get(h.getLevel().getServer()).addFriend(p.getUUID(), friend.getUUID());
             h.assertTrue(look(p) == friend, "the look missed the friend: " + look(p));
-            String said = CodexOrders.attackLooked(p, new CodexPayload(CodexPayload.ATTACK_THAT, friend.getId()), false);
+            String said =
+                    CodexOrders.attackLooked(p, new CodexPayload(CodexPayload.ATTACK_THAT, friend.getId()), false);
             h.assertTrue("look_safe".equals(said), "a friend on the safe list wasn't refused: " + said);
             h.assertTrue(e.getTarget() != friend && e.huntedByOrder() == null, "he went after the friend anyway");
             BellWorld.get(h.getLevel().getServer()).dropFriend(p.getUUID(), friend.getUUID());

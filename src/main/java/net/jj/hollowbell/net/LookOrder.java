@@ -1,5 +1,6 @@
 package net.jj.hollowbell.net;
 
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.world.BellWorld;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -19,7 +20,8 @@ public final class LookOrder {
     private LookOrder() {}
 
     /** what the order found: the creature (a giant's part already turned into its giant), or why there is none */
-    public record Found(@Nullable LivingEntity target, @Nullable String why) {}
+    public record Found(
+            @Nullable LivingEntity target, @Nullable String why) {}
 
     /**
      * The creature this player means. id is what their screen found (an entity id), or 0 or less for none, when the
@@ -65,16 +67,28 @@ public final class LookOrder {
     public static void refuse(ServerPlayer p, String why, @Nullable LivingEntity t) {
         String name = t == null ? "" : t.getDisplayName().getString();
         int c = why.indexOf(':');
-        Component msg = c > 0 ? Component.translatable("message.hollowbell." + why.substring(0, c), name, why.substring(c + 1))
+        Component msg = c > 0
+                ? Component.translatable("message.hollowbell." + why.substring(0, c), name, why.substring(c + 1))
                 : Component.translatable("message.hollowbell." + why, name);
-        p.displayClientMessage(msg, false);              // (in the chat, so the reason stays readable)
+        p.displayClientMessage(msg, false); // (in the chat, so the reason stays readable)
     }
 
     /** the glow on it, for this player only, and a little sparkle over it */
     public static void mark(ServerPlayer p, LivingEntity t) {
-        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new LookMarkPayload(t.getId()));
+        ServerPlayNetworking.send(p, new LookMarkPayload(t.getId()));
         double h = Math.min(t.getBbHeight(), 12);
-        p.serverLevel().sendParticles(p, ParticleTypes.END_ROD, true, t.getX(), t.getY() + h + 0.5, t.getZ(), 12,
-                Math.min(t.getBbWidth(), 6) * 0.4, 0.3, Math.min(t.getBbWidth(), 6) * 0.4, 0.02);
+        p.serverLevel()
+                .sendParticles(
+                        p,
+                        ParticleTypes.END_ROD,
+                        true,
+                        t.getX(),
+                        t.getY() + h + 0.5,
+                        t.getZ(),
+                        12,
+                        Math.min(t.getBbWidth(), 6) * 0.4,
+                        0.3,
+                        Math.min(t.getBbWidth(), 6) * 0.4,
+                        0.02);
     }
 }

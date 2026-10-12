@@ -1,12 +1,11 @@
 package net.jj.hollowbell.command;
 
-import net.jj.hollowbell.HollowbellConfig;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import net.jj.hollowbell.HollowbellConfig;
 
 /**
  * Every setting in config/hollowbell.json, by its name, for /hollowbell config and /giants config: read one, or set
@@ -19,7 +18,9 @@ public final class Settings {
     public static List<String> keys() {
         List<String> out = new ArrayList<>();
         for (Field f : HollowbellConfig.Values.class.getFields()) {
-            if (Modifier.isStatic(f.getModifiers()) || f.getName().equals("configVersion") || f.getName().equals("maxHollowbells")) continue;
+            if (Modifier.isStatic(f.getModifiers())
+                    || f.getName().equals("configVersion")
+                    || f.getName().equals("maxHollowbells")) continue;
             out.add(f.getName());
         }
         return out;
@@ -31,13 +32,19 @@ public final class Settings {
         return null;
     }
 
-    public static boolean has(String key) { return field(key) != null; }
+    public static boolean has(String key) {
+        return field(key) != null;
+    }
 
     /** what it's set to now, or null when there's no such setting */
     public static String get(String key) {
         Field f = field(key);
         if (f == null) return null;
-        try { return String.valueOf(f.get(HollowbellConfig.V)); } catch (IllegalAccessException e) { return null; }
+        try {
+            return String.valueOf(f.get(HollowbellConfig.V));
+        } catch (IllegalAccessException e) {
+            return null;
+        }
     }
 
     /** a number, never NaN or infinity */

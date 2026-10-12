@@ -22,7 +22,8 @@ import org.slf4j.LoggerFactory;
 public class GiantsGuideMod implements ModInitializer {
     public static final String ID = "jj_giants";
     public static final Logger LOG = LoggerFactory.getLogger("Giants Guide");
-    public static final Item GUIDE = new GuideItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON));
+    public static final Item GUIDE =
+            new GuideItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON));
 
     @Override
     public void onInitialize() {
@@ -30,14 +31,18 @@ public class GiantsGuideMod implements ModInitializer {
         Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(ID, "giants_guide"), GUIDE);
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(e -> e.accept(GUIDE));
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> FirstJoin.onJoin(handler.getPlayer()));
-        CommandRegistrationCallback.EVENT.register((d, reg, env) -> d.register(Commands.literal("giantsguide").executes(c -> {
-            ServerPlayer p = c.getSource().getPlayerOrException();
-            give(p);
-            c.getSource().sendSuccess(() -> Component.translatable("message.jj_giants.given"), false);
-            return 1;
-        })));
+        CommandRegistrationCallback.EVENT.register((d, reg, env) ->
+                d.register(Commands.literal("giantsguide").executes(c -> {
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    give(p);
+                    c.getSource().sendSuccess(() -> Component.translatable("message.jj_giants.given"), false);
+                    return 1;
+                })));
         LiveNews.register();
-        LOG.info("Giants Guide ready: {} of {} giants installed", Giants.installed().size(), Giants.ALL.size());
+        LOG.info(
+                "Giants Guide ready: {} of {} giants installed",
+                Giants.installed().size(),
+                Giants.ALL.size());
     }
 
     /** one Giants Guide into their pack (or at their feet if it's full) */

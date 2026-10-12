@@ -1,11 +1,17 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.release;
+import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
+
+import java.util.Map;
+import java.util.TreeMap;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.Giants;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
+import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.solid.GiantHull;
 import net.jj.hollowbell.solid.Solid;
 import net.minecraft.gametest.framework.GameTest;
@@ -16,9 +22,6 @@ import net.minecraft.world.entity.monster.Giant;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import static net.jj.hollowbell.test.HollowbellGameTests.release;
-import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
-
 /**
  * Giant against giant: two giants never pass through each other. Two of him drifted into each other for a
  * minute, and him going for a giant from "another mod" (a stand-in that shows no hull: its box is its body): bodies
@@ -27,9 +30,11 @@ import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
  */
 public class GiantHullTests implements FabricGameTest {
     static final float SZ = 0.12f;
-    static final java.util.Map<String, Integer> HIT = new java.util.TreeMap<>();
+    static final Map<String, Integer> HIT = new TreeMap<>();
 
-    static void after(GameTestHelper h, int t, Runnable r) { h.runAfterDelay(t, r); }
+    static void after(GameTestHelper h, int t, Runnable r) {
+        h.runAfterDelay(t, r);
+    }
 
     /** how many of a's body balls (the middles of its well-filled bits) are inside b's real solid body */
     static int bodyIn(HollowbellEntity a, HollowbellEntity b) {
@@ -40,7 +45,14 @@ public class GiantHullTests implements FabricGameTest {
             if (hh[i + 5] != GiantHull.BODY) continue;
             double y = (hh[i + 3] + hh[i + 4]) / 2;
             Solid.column(b, hh[i], hh[i + 1], y - 0.05, y + 0.05, false, r);
-            if (r.n > 0) { n++; HIT.merge(b.rig.boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[b.solidShape().bone[r.frame[0]]]].replaceAll("_[0-9]+$", ""), 1, Integer::sum); }
+            if (r.n > 0) {
+                n++;
+                HIT.merge(
+                        b.rig.boneNames[BellPieces.get().bone[b.solidShape().bone[r.frame[0]]]].replaceAll(
+                                "_[0-9]+$", ""),
+                        1,
+                        Integer::sum);
+            }
         }
         return n;
     }
@@ -77,10 +89,24 @@ public class GiantHullTests implements FabricGameTest {
             worst[1] = Math.max(worst[1], GiantHull.overlap(ha, hb));
             least[0] = Math.min(least[0], GiantHull.gap(hb, ha));
         });
-        for (int k = 1; k <= 30; k++) after(h, 60 + k * 40, () -> { in[0] += bodyIn(b, a); in[1] += bodyIn(a, b); });
+        for (int k = 1; k <= 30; k++)
+            after(h, 60 + k * 40, () -> {
+                in[0] += bodyIn(b, a);
+                in[1] += bodyIn(a, b);
+            });
         after(h, 60 + 1220, () -> {
-            String what = String.format("deepest overlap %.2f / %.2f blocks, body bits inside the other %d / %d, nearest gap %.2f, pushed %.1f / %.1f; %d / %d columns",
-                    worst[0], worst[1], in[0], in[1], least[0], a.giantPushed, b.giantPushed, a.jjHull().length / 6, b.jjHull().length / 6);
+            String what = String.format(
+                    "deepest overlap %.2f / %.2f blocks, body bits inside the other %d / %d, nearest gap %.2f, pushed"
+                            + " %.1f / %.1f; %d / %d columns",
+                    worst[0],
+                    worst[1],
+                    in[0],
+                    in[1],
+                    least[0],
+                    a.giantPushed,
+                    b.giantPushed,
+                    a.jjHull().length / 6,
+                    b.jjHull().length / 6);
             HollowbellMod.LOG.info("Giant against giant (two of him): {}; inside what: {}", what, HIT);
             HollowbellConfig.V.meetings = meet;
             h.assertTrue(worst[0] < 1.0 && worst[1] < 1.0, "they went into each other: " + what);
@@ -126,8 +152,10 @@ public class GiantHullTests implements FabricGameTest {
         });
         after(h, 40 + 1000, () -> {
             Giant gg = g[0];
-            String what = String.format("deepest into it %.2f, nearest across %.2f (his bell %.2f wide), pushed %.1f, him %.1f over its top", worst[0], nearest[0], e.bellRadius() * 2,
-                    e.giantPushed, e.getY() - gg.getBoundingBox().maxY);
+            String what = String.format(
+                    "deepest into it %.2f, nearest across %.2f (his bell %.2f wide), pushed %.1f, him %.1f over its"
+                            + " top",
+                    worst[0], nearest[0], e.bellRadius() * 2, e.giantPushed, e.getY() - gg.getBoundingBox().maxY);
             h.assertTrue(nearest[0] < e.bellRadius() + gg.getBbWidth(), "he never came up to it: " + what);
             h.assertTrue(worst[0] < 1.0, "he went into it: " + what);
             // a blow: aimed at its body, not at its feet
@@ -135,11 +163,22 @@ public class GiantHullTests implements FabricGameTest {
             h.assertTrue(e.forceMove(Moves.SLAM, gg), "he wouldn't slam at it");
             Vec3 aim = e.aimWorld();
             AABB box = gg.getBoundingBox();
-            double cx = Math.max(box.minX - aim.x, Math.max(0, aim.x - box.maxX)), cy = Math.max(box.minY - aim.y, Math.max(0, aim.y - box.maxY)), cz = Math.max(box.minZ - aim.z, Math.max(0, aim.z - box.maxZ));
-            double off = Math.sqrt(Math.max(0, cx) * Math.max(0, cx) + Math.max(0, cy) * Math.max(0, cy) + Math.max(0, cz) * Math.max(0, cz));
+            double cx = Math.max(box.minX - aim.x, Math.max(0, aim.x - box.maxX)),
+                    cy = Math.max(box.minY - aim.y, Math.max(0, aim.y - box.maxY)),
+                    cz = Math.max(box.minZ - aim.z, Math.max(0, aim.z - box.maxZ));
+            double off = Math.sqrt(Math.max(0, cx) * Math.max(0, cx)
+                    + Math.max(0, cy) * Math.max(0, cy)
+                    + Math.max(0, cz) * Math.max(0, cz));
             double fromFeet = aim.distanceTo(gg.position());
-            HollowbellMod.LOG.info("Giant against giant (stand-in): {}; aim {} blocks off its body, {} from its feet", what, off, fromFeet);
-            h.assertTrue(off < 1.0 && fromFeet > 2.0, String.format("his blow aims %.2f off its body and %.2f from its feet: not at its body", off, fromFeet));
+            HollowbellMod.LOG.info(
+                    "Giant against giant (stand-in): {}; aim {} blocks off its body, {} from its feet",
+                    what,
+                    off,
+                    fromFeet);
+            h.assertTrue(
+                    off < 1.0 && fromFeet > 2.0,
+                    String.format(
+                            "his blow aims %.2f off its body and %.2f from its feet: not at its body", off, fromFeet));
             HollowbellConfig.V.fightGiants = fight;
             gg.discard();
             release(h, e);

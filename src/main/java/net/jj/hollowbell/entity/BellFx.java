@@ -5,7 +5,9 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
-/** Little things the client adds round him: glow drifting off the spots and the crown at night, drips off the strands. */
+/**
+ * Little things the client adds round him: glow drifting off the spots and the crown at night, drips off the strands.
+ */
 public final class BellFx {
     private BellFx() {}
 
@@ -18,7 +20,8 @@ public final class BellFx {
         int n = night ? 3 : 1;
         for (int i = 0; i < n; i++) {
             var S = rig.spots[r.nextInt(rig.spots.length)];
-            Vec3 c = h.toWorld(new Vector3f(S.centre()).add((r.nextFloat() - 0.5f) * 30f, (r.nextFloat() - 0.2f) * 20f, (r.nextFloat() - 0.5f) * 30f));
+            Vec3 c = h.toWorld(new Vector3f(S.centre())
+                    .add((r.nextFloat() - 0.5f) * 30f, (r.nextFloat() - 0.2f) * 20f, (r.nextFloat() - 0.5f) * 30f));
             h.level().addParticle(night ? ParticleTypes.GLOW : ParticleTypes.END_ROD, c.x, c.y, c.z, 0, 0.01 * s, 0);
         }
         if (r.nextInt(3) == 0) {

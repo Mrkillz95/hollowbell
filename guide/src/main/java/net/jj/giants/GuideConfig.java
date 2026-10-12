@@ -2,10 +2,9 @@ package net.jj.giants;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.fabricmc.loader.api.FabricLoader;
 
 /** config/jj_giants.json: the guide's own settings. */
 public final class GuideConfig {
@@ -19,7 +18,9 @@ public final class GuideConfig {
 
     private GuideConfig() {}
 
-    private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("jj_giants.json"); }
+    private static Path file() {
+        return FabricLoader.getInstance().getConfigDir().resolve("jj_giants.json");
+    }
 
     public static void load() {
         Path f = file();

@@ -25,12 +25,19 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(ChunkMap.class)
 public abstract class UnloadSpinMixin {
-    @Shadow @Final private Long2ObjectLinkedOpenHashMap<ChunkHolder> pendingUnloads;
+    @Shadow
+    @Final
+    private Long2ObjectLinkedOpenHashMap<ChunkHolder> pendingUnloads;
 
-    @WrapOperation(method = "method_60440", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ChunkMap;scheduleUnload(JLnet/minecraft/server/level/ChunkHolder;)V"))
+    @WrapOperation(
+            method = "method_60440",
+            at =
+                    @At(
+                            value = "INVOKE",
+                            target =
+                                    "Lnet/minecraft/server/level/ChunkMap;scheduleUnload(JLnet/minecraft/server/level/ChunkHolder;)V"))
     private void hollowbell$dropStaleUnload(ChunkMap self, long pos, ChunkHolder holder, Operation<Void> original) {
-        if (pendingUnloads.get(pos) != holder) return;       // taken back since: this job is over
+        if (pendingUnloads.get(pos) != holder) return; // taken back since: this job is over
         original.call(self, pos, holder);
     }
 }

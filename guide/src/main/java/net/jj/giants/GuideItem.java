@@ -1,5 +1,6 @@
 package net.jj.giants;
 
+import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -10,14 +11,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
-import java.util.List;
-
 /** The Giants Guide: right-click and the guide opens (on your own screen; the server does nothing). */
 public class GuideItem extends Item {
     /** set by the client side: opens the guide's screen */
     public static Runnable opener = () -> {};
 
-    public GuideItem(Properties p) { super(p); }
+    public GuideItem(Properties p) {
+        super(p);
+    }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {

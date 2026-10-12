@@ -1,25 +1,32 @@
 package net.jj.hollowbell.world;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import net.jj.hollowbell.HollowbellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * There is one of him in the world, always. A brand-new world quietly picks a spot far away — open, flattish
@@ -36,35 +43,57 @@ public class WorldOne extends SavedData {
 
     /** where he is, or where the next one will come down */
     private int x, z;
-    private boolean placed;          // a spot has been chosen at all
-    private boolean alive;           // one of them is out there now
-    private long dueAt = -1;         // game time the next one comes down, while none is alive
-    /** which one of him is the world's own (null until one is known) */
-    private @Nullable java.util.UUID oneId;
 
-    // ------------------------------------------------------------------ his ground (the Bell Hollows)
+    private boolean placed; // a spot has been chosen at all
+    private boolean alive; // one of them is out there now
+    private long dueAt = -1; // game time the next one comes down, while none is alive
+    /** which one of him is the world's own (null until one is known) */
+    private @Nullable UUID oneId;
+
+    // his ground (the Bell Hollows)
     /** where his ground lies, how far it reaches, and the seed that shapes it */
     private int homeX, homeZ, homeRadius;
+
     private long homeSeed;
     private boolean homeClaimed;
     /** 1: the first, smaller Hollows; 2: painted over loaded land; 3: made by the world's generation */
     private int groundVersion = GROUND_VERSION;
+
     public static final int GROUND_VERSION = 3;
 
-    public boolean homeClaimed() { return homeClaimed; }
-    public int homeX() { return homeX; }
-    public int homeZ() { return homeZ; }
-    public int homeRadius() { return homeRadius; }
-    public long homeSeed() { return homeSeed; }
-    public int groundVersion() { return groundVersion; }
+    public boolean homeClaimed() {
+        return homeClaimed;
+    }
+
+    public int homeX() {
+        return homeX;
+    }
+
+    public int homeZ() {
+        return homeZ;
+    }
+
+    public int homeRadius() {
+        return homeRadius;
+    }
+
+    public long homeSeed() {
+        return homeSeed;
+    }
+
+    public int groundVersion() {
+        return groundVersion;
+    }
 
     /** how far a new ground reaches, from the settings */
-    public static int configRadius() { return Mth.clamp(HollowbellConfig.V.homeRadius, 200, 2000); }
+    public static int configRadius() {
+        return Mth.clamp(HollowbellConfig.V.homeRadius, 200, 2000);
+    }
 
     /**
-     * A ground of an older groundVersion keeps its centre and seed and grows to the new size if it was smaller. The land the
-     * world had already made stays exactly as it is (painted bits and all); only land not made yet comes out as his
-     * ground from now on. /hollowbell ground new claims a whole fresh one. Returns whether anything changed.
+     * A ground of an older groundVersion keeps its centre and seed and grows to the new size if it was smaller. The
+     * land the world had already made stays exactly as it is (painted bits and all); only land not made yet comes out
+     * as his ground from now on. /hollowbell ground new claims a whole fresh one. Returns whether anything changed.
      */
     public boolean upgradeGround() {
         if (!homeClaimed) return false;
@@ -72,10 +101,19 @@ public class WorldOne extends SavedData {
         if (groundVersion < GROUND_VERSION) {
             groundVersion = GROUND_VERSION;
             changed = true;
-            HollowbellMod.LOG.info("The Bell Hollows at {}, {} are from an older version: the land already made stays as it is", homeX, homeZ);
+            HollowbellMod.LOG.info(
+                    "The Bell Hollows at {}, {} are from an older version: the land already made stays as it is",
+                    homeX,
+                    homeZ);
         }
-        if (homeRadius < configRadius()) { homeRadius = configRadius(); changed = true; }
-        if (changed) { setDirty(); BellGen.publish(this); }
+        if (homeRadius < configRadius()) {
+            homeRadius = configRadius();
+            changed = true;
+        }
+        if (changed) {
+            setDirty();
+            BellGen.publish(this);
+        }
         return changed;
     }
 
@@ -89,7 +127,11 @@ public class WorldOne extends SavedData {
 
     /** a ground as an older version left it */
     public void claimOldHome(int atX, int atZ, long seed, int version) {
-        homeX = atX; homeZ = atZ; homeRadius = 320; homeSeed = seed; homeClaimed = true;
+        homeX = atX;
+        homeZ = atZ;
+        homeRadius = 320;
+        homeSeed = seed;
+        homeClaimed = true;
         groundVersion = version;
         setDirty();
         BellGen.publish(this);
@@ -97,7 +139,8 @@ public class WorldOne extends SavedData {
 
     /** the ground round this spot becomes his: from now on the world makes the land there as his */
     public void claimHome(ServerLevel level, int atX, int atZ) {
-        homeX = atX; homeZ = atZ;
+        homeX = atX;
+        homeZ = atZ;
         homeRadius = configRadius();
         homeSeed = level.random.nextLong();
         homeClaimed = true;
@@ -117,21 +160,26 @@ public class WorldOne extends SavedData {
 
     /** a world that has picked nothing yet, no ground, no ward */
     public void clearForTests() {
-        placed = false; alive = false; dueAt = -1; x = 0; z = 0; oneId = null;
+        placed = false;
+        alive = false;
+        dueAt = -1;
+        x = 0;
+        z = 0;
+        oneId = null;
         cooldown = 0;
         forgetWard();
         dropHome();
     }
 
-    // ------------------------------------------------------------------ claiming ground the world hasn't made yet
+    // claiming ground the world hasn't made yet
 
     /** how many of the region files a circle round this spot would lie in exist already (0: none of it is made) */
     public static int madeRegions(ServerLevel level, int cx, int cz, int r) {
-        java.nio.file.Path dir = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("region");
+        Path dir = level.getServer().getWorldPath(LevelResource.ROOT).resolve("region");
         int n = 0;
         for (int rx = Math.floorDiv(cx - r, 512); rx <= Math.floorDiv(cx + r, 512); rx++)
             for (int rz = Math.floorDiv(cz - r, 512); rz <= Math.floorDiv(cz + r, 512); rz++)
-                if (java.nio.file.Files.exists(dir.resolve("r." + rx + "." + rz + ".mca"))) n++;
+                if (Files.exists(dir.resolve("r." + rx + "." + rz + ".mca"))) n++;
         return n;
     }
 
@@ -154,7 +202,11 @@ public class WorldOne extends SavedData {
         for (int tries = 0; tries < 20; tries++) {
             int made = madeRegions(level, x, z, r) + (playersNear(level, x, z, r) ? 100 : 0);
             if (made == 0) return;
-            if (made < best) { best = made; bestX = x; bestZ = z; }
+            if (made < best) {
+                best = made;
+                bestX = x;
+                bestZ = z;
+            }
             double dx = x - spawn.getX(), dz = z - spawn.getZ(), len = Math.max(1, Math.hypot(dx, dz));
             double a = Math.atan2(dz, dx) + (level.random.nextDouble() - 0.5) * 0.8;
             double step = r * 1.5 + 256;
@@ -162,7 +214,8 @@ public class WorldOne extends SavedData {
             z = Mth.floor(spawn.getZ() + Math.sin(a) * (len + step));
             findSpot(level);
         }
-        x = bestX; z = bestZ;
+        x = bestX;
+        z = bestZ;
         HollowbellMod.LOG.info("No wholly unmade land found for the Bell Hollows; taking {}, {}", x, z);
     }
 
@@ -190,8 +243,13 @@ public class WorldOne extends SavedData {
         keepOffOldGround();
         claimFresh(level);
         BlockPos at = new BlockPos(homeX, 0, homeZ);
-        if (alive) { x = keepX; z = keepZ; }
-        else { placed = true; if (dueAt < 0) dueAt = level.getGameTime(); }
+        if (alive) {
+            x = keepX;
+            z = keepZ;
+        } else {
+            placed = true;
+            if (dueAt < 0) dueAt = level.getGameTime();
+        }
         setDirty();
         return at;
     }
@@ -204,11 +262,13 @@ public class WorldOne extends SavedData {
         BellGen.capture(over);
         WorldOne w = get(over.getServer());
         w.upgradeGround();
-        // for checking his ground on a real world: -Dhollowbell.groundAt=x,z puts it there, laid out from the world seed
+        // for checking his ground on a real world: -Dhollowbell.groundAt=x,z puts it there, laid out from the world
+        // seed
         String at = System.getProperty("hollowbell.groundAt");
         if (!IN_TESTS && at != null && !w.homeClaimed) {
             String[] xz = at.split(",");
-            w.x = Integer.parseInt(xz[0].trim()); w.z = Integer.parseInt(xz[1].trim());
+            w.x = Integer.parseInt(xz[0].trim());
+            w.z = Integer.parseInt(xz[1].trim());
             w.claimHome(over, w.x, w.z);
             w.homeSeed = BellPlan.mix(over.getSeed(), 0x6B2E11L);
             w.placed = true;
@@ -235,25 +295,42 @@ public class WorldOne extends SavedData {
         findSpot(level);
     }
 
-    // ------------------------------------------------------------------ the crown holding him off
+    // the crown holding him off
     /**
      * His own crown, set down and woken, is the one thing he will not drift towards. While it is going he keeps
      * right out of a circle round it, his moves find nothing in there, and the book cannot send him in. It costs
      * the crown a long rest afterwards.
      */
     private int wardX, wardY = Integer.MIN_VALUE, wardZ;
+
     private String wardDim = "minecraft:overworld";
     private long wardUntil = -1, wardRestUntil = -1;
 
-    public boolean warding(ServerLevel l) { return wardUntil > 0 && l.getGameTime() < wardUntil; }
-    public long wardLeft(ServerLevel l) { return Math.max(0, wardUntil - l.getGameTime()); }
-    public long wardRestLeft(ServerLevel l) { return Math.max(0, wardRestUntil - l.getGameTime()); }
-    public @Nullable BlockPos wardSpot() { return wardUntil > 0 ? new BlockPos(wardX, 0, wardZ) : null; }
-    public static double wardRange() { return Math.max(48, HollowbellConfig.V.wardBlocks); }
+    public boolean warding(ServerLevel l) {
+        return wardUntil > 0 && l.getGameTime() < wardUntil;
+    }
+
+    public long wardLeft(ServerLevel l) {
+        return Math.max(0, wardUntil - l.getGameTime());
+    }
+
+    public long wardRestLeft(ServerLevel l) {
+        return Math.max(0, wardRestUntil - l.getGameTime());
+    }
+
+    public @Nullable BlockPos wardSpot() {
+        return wardUntil > 0 ? new BlockPos(wardX, 0, wardZ) : null;
+    }
+
+    public static double wardRange() {
+        return Math.max(48, HollowbellConfig.V.wardBlocks);
+    }
 
     /** the crown is woken: he will not come near this place until it is spent */
     public void startWard(ServerLevel l, BlockPos at, int ticks, int restTicks) {
-        wardX = at.getX(); wardY = at.getY(); wardZ = at.getZ();
+        wardX = at.getX();
+        wardY = at.getY();
+        wardZ = at.getZ();
         wardDim = l.dimension().location().toString();
         wardUntil = l.getGameTime() + ticks;
         wardRestUntil = wardUntil + restTicks;
@@ -262,23 +339,31 @@ public class WorldOne extends SavedData {
 
     /** the crown the ward stands on was broken or picked up: the ward stops, and its rest starts now */
     public void crownTaken(ServerLevel l, BlockPos at) {
-        if (!warding(l) || at.getX() != wardX || at.getZ() != wardZ || (wardY != Integer.MIN_VALUE && at.getY() != wardY)) return;
+        if (!warding(l)
+                || at.getX() != wardX
+                || at.getZ() != wardZ
+                || (wardY != Integer.MIN_VALUE && at.getY() != wardY)) return;
         if (!l.dimension().location().toString().equals(wardDim)) return;
         long now = l.getGameTime();
         wardRestUntil -= wardUntil - now;
         wardUntil = now;
         setDirty();
-        for (net.minecraft.server.level.ServerPlayer p : l.players())
+        for (ServerPlayer p : l.players())
             if (p.distanceToSqr(at.getX(), at.getY(), at.getZ()) < 64 * 64)
-                p.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.hollowbell.ward_broken"), true);
+                p.displayClientMessage(Component.translatable("message.hollowbell.ward_broken"), true);
     }
 
     /** /hollowbell ward off, and a clean slate between tests: the rest is let off as well */
-    public void forgetWard() { wardUntil = -1; wardRestUntil = -1; setDirty(); }
+    public void forgetWard() {
+        wardUntil = -1;
+        wardRestUntil = -1;
+        setDirty();
+    }
 
     /** is this spot inside the circle he will not enter? */
-    public boolean warded(net.minecraft.world.level.Level l, double x, double z) {
-        if (wardUntil <= 0 || HollowbellConfig.V.wardBlocks <= 0 || !(l instanceof ServerLevel sl) || !warding(sl)) return false;
+    public boolean warded(Level l, double x, double z) {
+        if (wardUntil <= 0 || HollowbellConfig.V.wardBlocks <= 0 || !(l instanceof ServerLevel sl) || !warding(sl))
+            return false;
         if (!sl.dimension().location().toString().equals(wardDim)) return false;
         double dx = x - (wardX + 0.5), dz = z - (wardZ + 0.5);
         double r = wardRange();
@@ -289,8 +374,9 @@ public class WorldOne extends SavedData {
      * A trip out of the world from one spot to another: if it would cross a woken crown's circle, it stops at the
      * edge where it would go in (a spot already inside is left for the ward's own push to deal with).
      */
-    public Vec3 wardStop(net.minecraft.world.level.Level l, Vec3 from, Vec3 to) {
-        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl) || HollowbellConfig.V.wardBlocks <= 0) return to;
+    public Vec3 wardStop(Level l, Vec3 from, Vec3 to) {
+        if (wardUntil <= 0 || !(l instanceof ServerLevel sl) || !warding(sl) || HollowbellConfig.V.wardBlocks <= 0)
+            return to;
         if (!sl.dimension().location().toString().equals(wardDim)) return to;
         double cx = wardX + 0.5, cz = wardZ + 0.5, r = wardRange() + 16;
         double fx = from.x - cx, fz = from.z - cz;
@@ -306,69 +392,95 @@ public class WorldOne extends SavedData {
         return new Vec3(from.x + dx * t, to.y, from.z + dz * t);
     }
 
-    // ------------------------------------------------------------------ getting at it
+    // getting at it
 
     public static WorldOne get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(WorldOne::new, WorldOne::load, null), NAME);
+        return server.overworld()
+                .getDataStorage()
+                .computeIfAbsent(new SavedData.Factory<>(WorldOne::new, WorldOne::load, null), NAME);
     }
 
     private WorldOne() {}
 
-    private static WorldOne load(CompoundTag tag, net.minecraft.core.HolderLookup.Provider p) {
+    private static WorldOne load(CompoundTag tag, HolderLookup.Provider p) {
         WorldOne w = new WorldOne();
-        w.x = tag.getInt("X"); w.z = tag.getInt("Z");
+        w.x = tag.getInt("X");
+        w.z = tag.getInt("Z");
         w.placed = tag.getBoolean("Placed");
         w.alive = tag.getBoolean("Alive");
         w.dueAt = tag.contains("DueAt") ? tag.getLong("DueAt") : -1;
         w.oneId = tag.hasUUID("OneId") ? tag.getUUID("OneId") : null;
         w.homeClaimed = tag.getBoolean("HomeClaimed");
-        w.homeX = tag.getInt("HomeX"); w.homeZ = tag.getInt("HomeZ");
+        w.homeX = tag.getInt("HomeX");
+        w.homeZ = tag.getInt("HomeZ");
         w.homeRadius = tag.contains("HomeRadius") ? tag.getInt("HomeRadius") : 320;
         w.homeSeed = tag.getLong("HomeSeed");
         w.groundVersion = tag.contains("GroundVersion") ? tag.getInt("GroundVersion") : 1;
         w.upgradeGround();
         if (tag.contains("WardUntil")) {
-            w.wardX = tag.getInt("WardX"); w.wardZ = tag.getInt("WardZ");
+            w.wardX = tag.getInt("WardX");
+            w.wardZ = tag.getInt("WardZ");
             w.wardY = tag.contains("WardY") ? tag.getInt("WardY") : Integer.MIN_VALUE;
             w.wardDim = tag.getString("WardDim");
-            w.wardUntil = tag.getLong("WardUntil"); w.wardRestUntil = tag.getLong("WardRest");
+            w.wardUntil = tag.getLong("WardUntil");
+            w.wardRestUntil = tag.getLong("WardRest");
             if (w.wardDim == null || w.wardDim.isEmpty()) w.wardDim = "minecraft:overworld";
         }
         return w;
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider p) {
-        tag.putInt("X", x); tag.putInt("Z", z);
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider p) {
+        tag.putInt("X", x);
+        tag.putInt("Z", z);
         tag.putBoolean("Placed", placed);
         tag.putBoolean("Alive", alive);
         tag.putLong("DueAt", dueAt);
         if (oneId != null) tag.putUUID("OneId", oneId);
         tag.putBoolean("HomeClaimed", homeClaimed);
-        tag.putInt("HomeX", homeX); tag.putInt("HomeZ", homeZ);
+        tag.putInt("HomeX", homeX);
+        tag.putInt("HomeZ", homeZ);
         tag.putInt("HomeRadius", homeRadius);
         tag.putLong("HomeSeed", homeSeed);
         tag.putInt("GroundVersion", groundVersion);
         if (wardUntil > 0 || wardRestUntil > 0) {
-            tag.putInt("WardX", wardX); tag.putInt("WardY", wardY); tag.putInt("WardZ", wardZ); tag.putString("WardDim", wardDim);
-            tag.putLong("WardUntil", wardUntil); tag.putLong("WardRest", wardRestUntil);
+            tag.putInt("WardX", wardX);
+            tag.putInt("WardY", wardY);
+            tag.putInt("WardZ", wardZ);
+            tag.putString("WardDim", wardDim);
+            tag.putLong("WardUntil", wardUntil);
+            tag.putLong("WardRest", wardRestUntil);
         }
         return tag;
     }
 
-    // ------------------------------------------------------------------ what the finder and the command read
+    // what the finder and the command read
 
     /** where he is or where the next one comes down, or null while no spot is known */
-    public @Nullable BlockPos where() { return placed ? new BlockPos(x, 0, z) : null; }
-    public boolean aliveNow() { return alive; }
-    /** ticks until the next one comes down, or -1 */
-    public long dueIn(ServerLevel l) { return alive || dueAt < 0 ? -1 : Math.max(0, dueAt - l.getGameTime()); }
-    /** whole days until the next one comes down */
-    public int daysLeft(ServerLevel l) { long t = dueIn(l); return t < 0 ? -1 : (int) Math.ceil(t / 24000.0); }
+    public @Nullable BlockPos where() {
+        return placed ? new BlockPos(x, 0, z) : null;
+    }
 
-    public @Nullable java.util.UUID oneId() { return oneId; }
+    public boolean aliveNow() {
+        return alive;
+    }
+    /** ticks until the next one comes down, or -1 */
+    public long dueIn(ServerLevel l) {
+        return alive || dueAt < 0 ? -1 : Math.max(0, dueAt - l.getGameTime());
+    }
+    /** whole days until the next one comes down */
+    public int daysLeft(ServerLevel l) {
+        long t = dueIn(l);
+        return t < 0 ? -1 : (int) Math.ceil(t / 24000.0);
+    }
+
+    public @Nullable UUID oneId() {
+        return oneId;
+    }
     /** is this the world's own one? */
-    public boolean isTheOne(java.util.UUID id) { return oneId != null && oneId.equals(id); }
+    public boolean isTheOne(UUID id) {
+        return oneId != null && oneId.equals(id);
+    }
 
     /**
      * The world's own one reports in: the finder points right at him. Only the overworld is written down (the
@@ -379,11 +491,14 @@ public class WorldOne extends SavedData {
         if (oneId != null && !oneId.equals(h.getUUID())) return;
         boolean changed = oneId == null || !alive || !placed || dueAt >= 0;
         oneId = h.getUUID();
-        placed = true; alive = true; dueAt = -1;
-        if (h.level().dimension() == net.minecraft.world.level.Level.OVERWORLD) {
+        placed = true;
+        alive = true;
+        dueAt = -1;
+        if (h.level().dimension() == Level.OVERWORLD) {
             int nx = Mth.floor(h.getX()), nz = Mth.floor(h.getZ());
             changed |= nx != x || nz != z;
-            x = nx; z = nz;
+            x = nx;
+            z = nz;
         }
         if (changed) setDirty();
     }
@@ -401,22 +516,32 @@ public class WorldOne extends SavedData {
         r.body.putBoolean("WorldOne", true);
         away.setDirty();
         oneId = r.id;
-        placed = true; alive = true; dueAt = -1;
+        placed = true;
+        alive = true;
+        dueAt = -1;
         if ("minecraft:overworld".equals(r.dim)) {
             var at = r.spot(now);
-            x = Mth.floor(at.x); z = Mth.floor(at.z);
+            x = Mth.floor(at.x);
+            z = Mth.floor(at.z);
         }
         setDirty();
     }
 
     /** a sum came back under a new name (its old one was taken): the world keeps track */
-    public void renamed(java.util.UUID was, java.util.UUID now) {
-        if (isTheOne(was)) { oneId = now; setDirty(); }
+    public void renamed(UUID was, UUID now) {
+        if (isTheOne(was)) {
+            oneId = now;
+            setDirty();
+        }
     }
 
     /** the world told outright where things stand */
     public void noteSpot(int atX, int atZ, boolean isAlive, long due) {
-        x = atX; z = atZ; placed = true; alive = isAlive; dueAt = due;
+        x = atX;
+        z = atZ;
+        placed = true;
+        alive = isAlive;
+        dueAt = due;
         setDirty();
     }
 
@@ -428,7 +553,7 @@ public class WorldOne extends SavedData {
         double a = level.random.nextDouble() * Math.PI * 2;
         double d = Math.max(clearOfGround(), far * 0.25 + level.random.nextDouble() * far * 0.75);
         // measured from where he fell if that was the overworld, otherwise from where he was last seen in it
-        boolean over = h.level().dimension() == net.minecraft.world.level.Level.OVERWORLD;
+        boolean over = h.level().dimension() == Level.OVERWORLD;
         double fx = over ? h.getX() : x, fz = over ? h.getZ() : z;
         x = Mth.floor(fx + Math.cos(a) * d);
         z = Mth.floor(fz + Math.sin(a) * d);
@@ -447,7 +572,7 @@ public class WorldOne extends SavedData {
      * own does the count to the next one start; a remove that couldn't reach him (asleep in a far chunk) changes
      * nothing.
      */
-    public void removed(ServerLevel level, java.util.UUID id) {
+    public void removed(ServerLevel level, UUID id) {
         if (isTheOne(id)) gone(level);
     }
 
@@ -459,16 +584,18 @@ public class WorldOne extends SavedData {
         setDirty();
     }
 
-    // ------------------------------------------------------------------ keeping one out there, and only one
+    // keeping one out there, and only one
 
     /** any Hollowbell in any level besides this one, still standing */
-    public static @Nullable HollowbellEntity anyOther(@Nullable MinecraftServer server, @Nullable HollowbellEntity except) {
+    public static @Nullable HollowbellEntity anyOther(
+            @Nullable MinecraftServer server, @Nullable HollowbellEntity except) {
         if (server == null) return null;
         HollowbellEntity found = null;
         for (ServerLevel l : server.getAllLevels()) {
-            for (HollowbellEntity o : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying())) {
+            for (HollowbellEntity o :
+                    l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying())) {
                 if (o == except) continue;
-                if (found == null || o.isWorldOne()) found = o;   // the world's own one always wins
+                if (found == null || o.isWorldOne()) found = o; // the world's own one always wins
             }
         }
         return found;
@@ -478,15 +605,23 @@ public class WorldOne extends SavedData {
     private static @Nullable Away.Rec newestAway(MinecraftServer server) {
         Away.Rec best = null;
         for (Away.Rec r : Away.get(server).all()) {
-            if (best == null) { best = r; continue; }
+            if (best == null) {
+                best = r;
+                continue;
+            }
             boolean bw = best.body.getBoolean("WorldOne"), rw = r.body.getBoolean("WorldOne");
-            if (rw != bw) { if (rw) best = r; continue; }
+            if (rw != bw) {
+                if (rw) best = r;
+                continue;
+            }
             if (born(r) > born(best)) best = r;
         }
         return best;
     }
 
-    private static long born(Away.Rec r) { return r.body.contains("BornAt") ? r.body.getLong("BornAt") : Long.MIN_VALUE / 4; }
+    private static long born(Away.Rec r) {
+        return r.body.contains("BornAt") ? r.body.getLong("BornAt") : Long.MIN_VALUE / 4;
+    }
 
     /**
      * One of him has come into the world (ENTITY_LOAD). Freshly made ones meet the cap. A saved body still marked
@@ -501,19 +636,24 @@ public class WorldOne extends SavedData {
     /** as joined(), for putting several of him down on purpose */
     public static void joinedNow(HollowbellEntity h, ServerLevel world) {
         MinecraftServer server = world.getServer();
-        if (server == null || h.isRemoved() || h.isDeadOrDying()) return;   // one saved mid-death is already counted as dead
+        if (server == null || h.isRemoved() || h.isDeadOrDying())
+            return; // one saved mid-death is already counted as dead
         WorldOne w = get(server);
-        if (w.isTheOne(h.getUUID())) return;                     // the world's own, or the spawner putting him down
+        if (w.isTheOne(h.getUUID())) return; // the world's own, or the spawner putting him down
         if (h.isWorldOne()) {
-            if (w.oneId == null) { w.adopt(h); return; }         // a world from before names were kept
-            h.clearWorldOne();                                  // an old copy: he's just one of them now
-            return;                                             // (loading from a save never pushes anybody out)
+            if (w.oneId == null) {
+                w.adopt(h);
+                return;
+            } // a world from before names were kept
+            h.clearWorldOne(); // an old copy: he's just one of them now
+            return; // (loading from a save never pushes anybody out)
         }
         if (h.freshSpawn()) limitNow(h, world);
     }
 
     /** one standing thing at the cap: a loaded one, or one written down as a sum */
-    private record Standing(@Nullable HollowbellEntity e, @Nullable Away.Rec r, long born, boolean worldOne) {}
+    private record Standing(
+            @Nullable HollowbellEntity e, @Nullable Away.Rec r, long born, boolean worldOne) {}
 
     /**
      * How many of him the world will hold. The newest wins: summoning one is somebody deciding they want him
@@ -524,22 +664,27 @@ public class WorldOne extends SavedData {
     public static boolean limitNow(@Nullable HollowbellEntity joining, ServerLevel world) {
         if (joining != null && joining.isRemoved()) return false;
         int max = Math.max(0, HollowbellConfig.V.maxInWorld);
-        if (max <= 0) return false;                              // as many as you like
+        if (max <= 0) return false; // as many as you like
         MinecraftServer server = world.getServer();
         if (server == null) return false;
 
         List<HollowbellEntity> all = new ArrayList<>();
         for (ServerLevel l : server.getAllLevels())
-            for (HollowbellEntity o : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying())) all.add(o);
+            for (HollowbellEntity o : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()))
+                all.add(o);
         if (joining != null && !all.contains(joining)) all.add(joining);
         Away away = Away.get(server);
         List<Away.Rec> out = away.all();
-        if (all.size() + out.size() <= max) return false;        // at the cap is fine; only past it someone goes
+        if (all.size() + out.size() <= max) return false; // at the cap is fine; only past it someone goes
 
         List<Standing> list = new ArrayList<>();
         for (HollowbellEntity e : all) list.add(new Standing(e, null, e.bornAtOr(world), e.isWorldOne()));
         for (Away.Rec r : out)
-            list.add(new Standing(null, r, r.body.contains("BornAt") ? r.body.getLong("BornAt") : Long.MIN_VALUE / 4, r.body.getBoolean("WorldOne")));
+            list.add(new Standing(
+                    null,
+                    r,
+                    r.body.contains("BornAt") ? r.body.getLong("BornAt") : Long.MIN_VALUE / 4,
+                    r.body.getBoolean("WorldOne")));
         // newest first; on a tie the one just joining wins (somebody wanted him here, now)
         list.sort((p, q) -> {
             int c = Long.compare(q.born, p.born);
@@ -568,22 +713,24 @@ public class WorldOne extends SavedData {
         return joiningGoes;
     }
 
-    // ------------------------------------------------------------------ the spawner
+    // the spawner
 
     private int cooldown;
 
     public void tick(ServerLevel level) {
         if (!HollowbellConfig.V.oneInTheWorld) return;
-        if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) return;
+        if (level.dimension() != Level.OVERWORLD) return;
         if (--cooldown > 0) return;
         cooldown = 100;
         if (level.players().isEmpty()) return;
         MinecraftServer server = level.getServer();
 
-        if (!placed) {                                    // natural spawning just turned on: he is somewhere out there already
+        if (!placed) { // natural spawning just turned on: he is somewhere out there already
             pickFirstSpot(level);
             if (!homeClaimed) claimFresh(level);
-            placed = true; alive = false; dueAt = level.getGameTime();
+            placed = true;
+            alive = false;
+            dueAt = level.getGameTime();
             setDirty();
             HollowbellMod.LOG.info("A Hollowbell drifts near {}, {}", x, z);
         }
@@ -592,10 +739,16 @@ public class WorldOne extends SavedData {
         if (alive) return;
         // somebody already has one out, in the world or out of it: that is the one, and nothing new comes down
         HollowbellEntity already = anyOther(server, null);
-        if (already != null) { adopt(already); return; }
+        if (already != null) {
+            adopt(already);
+            return;
+        }
         Away away = Away.get(server);
         Away.Rec rec = newestAway(server);
-        if (rec != null) { adoptAway(rec, away, level.getGameTime()); return; }
+        if (rec != null) {
+            adoptAway(rec, away, level.getGameTime());
+            return;
+        }
         if (dueAt < 0 || level.getGameTime() < dueAt) return;
         // and the spawner never pushes anybody out to make room
         int max = HollowbellConfig.V.maxInWorld;
@@ -617,8 +770,12 @@ public class WorldOne extends SavedData {
         int gy = groundGuess(level, gx, gz);
         if (gy <= level.getSeaLevel() + 1) return false;
         var b = level.getUncachedNoiseBiome(gx >> 2, gy >> 2, gz >> 2);
-        return !b.is(BiomeTags.IS_OCEAN) && !b.is(BiomeTags.IS_DEEP_OCEAN) && !b.is(BiomeTags.IS_RIVER)
-                && !b.is(BiomeTags.IS_JUNGLE) && !b.is(BiomeTags.IS_TAIGA) && !b.is(Biomes.DARK_FOREST);
+        return !b.is(BiomeTags.IS_OCEAN)
+                && !b.is(BiomeTags.IS_DEEP_OCEAN)
+                && !b.is(BiomeTags.IS_RIVER)
+                && !b.is(BiomeTags.IS_JUNGLE)
+                && !b.is(BiomeTags.IS_TAIGA)
+                && !b.is(Biomes.DARK_FOREST);
     }
 
     /** flattish: five height guesses 40 blocks apart differ by less than 14 */
@@ -627,7 +784,8 @@ public class WorldOne extends SavedData {
         int[][] at = {{0, 0}, {40, 0}, {-40, 0}, {0, 40}, {0, -40}};
         for (int[] o : at) {
             int hgt = groundGuess(level, gx + o[0], gz + o[1]);
-            lo = Math.min(lo, hgt); hi = Math.max(hi, hgt);
+            lo = Math.min(lo, hgt);
+            hi = Math.max(hi, hgt);
         }
         return hi - lo < 14;
     }
@@ -660,21 +818,29 @@ public class WorldOne extends SavedData {
             int cx = ox, cz = oz;
             if (tries > 0) {
                 double a = level.random.nextDouble() * Math.PI * 2, d = 300 + tries * 120 * level.random.nextDouble();
-                cx = ox + (int) (Math.cos(a) * d); cz = oz + (int) (Math.sin(a) * d);
+                cx = ox + (int) (Math.cos(a) * d);
+                cz = oz + (int) (Math.sin(a) * d);
             }
             double land = landShare(level, cx, cz);
             if (land < best - 0.2) continue;
             boolean open = openGround(level, cx, cz);
             double score = land + (open ? 0.25 : 0) + (open && flatEnough(level, cx, cz) ? 0.1 : 0);
-            if (score > best) { best = score; bx = cx; bz = cz; }
+            if (score > best) {
+                best = score;
+                bx = cx;
+                bz = cz;
+            }
             if (land >= 0.94 && open) break;
         }
-        x = bx; z = bz;
+        x = bx;
+        z = bz;
         avoidWard();
     }
 
     /** how far a new ground's centre must be from the old one so the two never overlap */
-    private double clearOfGround() { return (homeClaimed ? homeRadius : 0) + configRadius() + 64; }
+    private double clearOfGround() {
+        return (homeClaimed ? homeRadius : 0) + configRadius() + 64;
+    }
 
     /** the next one comes down far enough off that his new ground never lies over the old one */
     private void keepOffOldGround() {
@@ -682,7 +848,11 @@ public class WorldOne extends SavedData {
         double dx = x - (homeX + 0.5), dz = z - (homeZ + 0.5);
         double len = Math.sqrt(dx * dx + dz * dz), keep = clearOfGround();
         if (len >= keep) return;
-        if (len < 1.0E-4) { dx = 1; dz = 0; len = 1; }
+        if (len < 1.0E-4) {
+            dx = 1;
+            dz = 0;
+            len = 1;
+        }
         x = Mth.floor(homeX + 0.5 + dx / len * keep);
         z = Mth.floor(homeZ + 0.5 + dz / len * keep);
     }
@@ -694,7 +864,11 @@ public class WorldOne extends SavedData {
         double len = Math.sqrt(dx * dx + dz * dz);
         double keep = wardRange() + 300;
         if (len >= keep) return;
-        if (len < 1.0E-4) { dx = 1; dz = 0; len = 1; }
+        if (len < 1.0E-4) {
+            dx = 1;
+            dz = 0;
+            len = 1;
+        }
         x = Mth.floor(wardX + 0.5 + dx / len * keep);
         z = Mth.floor(wardZ + 0.5 + dz / len * keep);
     }
@@ -715,10 +889,11 @@ public class WorldOne extends SavedData {
         }
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
         if (e == null) return;
-        e.setBellScale(Mth.clamp(HollowbellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+        e.setBellScale(
+                Mth.clamp(HollowbellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
         e.setVariant(HollowbellEntity.CALM);
         e.markWorldOne();
-        oneId = e.getUUID();                              // named first, so his arrival never meets the cap
+        oneId = e.getUUID(); // named first, so his arrival never meets the cap
         // his ground was claimed long before, so the land here is made as his as this chunk is made
         if (!homeClaimed) claimFresh(level);
         level.getChunkSource().addRegionTicket(TICKET, new ChunkPos(new BlockPos(x, 64, z)), 3, e.getId());
@@ -726,7 +901,8 @@ public class WorldOne extends SavedData {
         e.moveTo(x + 0.5, Math.max(y, level.getMinBuildHeight() + 1), z + 0.5, level.random.nextFloat() * 360f, 0f);
         e.setHome(e.position());
         level.addFreshEntityWithPassengers(e);
-        alive = true; dueAt = -1;
+        alive = true;
+        dueAt = -1;
         setDirty();
         HollowbellMod.LOG.info("The Hollowbell has come down at {}, {}, {}", x, y, z);
     }

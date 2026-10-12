@@ -11,5 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public class PickMixin {
     @Inject(method = "pick(F)V", at = @At("TAIL"))
-    private void hollowbell$pickHim(float partial, CallbackInfo ci) { BellPick.afterPick(partial); }
+    private void hollowbell$pickHim(float partial, CallbackInfo ci) {
+        BellPick.afterPick(partial);
+    }
 }

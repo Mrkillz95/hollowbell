@@ -1,5 +1,10 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.drop;
+import static net.jj.hollowbell.test.HollowbellGameTests.player;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.command.GiantsCommand;
@@ -17,9 +22,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-import static net.jj.hollowbell.test.HollowbellGameTests.drop;
-import static net.jj.hollowbell.test.HollowbellGameTests.player;
-
 /**
  * /giants paint [depth]: a painted column is his ground's own layers from its new top down to the depth asked
  * (5 unless told), and the block under that is left as it was. The test world is flat and only three blocks deep,
@@ -36,7 +38,13 @@ public class PaintDepthTests implements FabricGameTest {
     }
 
     private static CommandSourceStack op(GameTestHelper h, Vec3 at) {
-        return h.getLevel().getServer().createCommandSourceStack().withPosition(at).withLevel(h.getLevel()).withPermission(4).withSuppressedOutput();
+        return h.getLevel()
+                .getServer()
+                .createCommandSourceStack()
+                .withPosition(at)
+                .withLevel(h.getLevel())
+                .withPermission(4)
+                .withSuppressedOutput();
     }
 
     /**
@@ -48,17 +56,27 @@ public class PaintDepthTests implements FabricGameTest {
         ServerLevel lv = h.getLevel();
         BlockPos at = farSpot(h, slot);
         int cx = at.getX(), cz = at.getZ(), R = 14;
-        for (int x = (cx - R - 32) >> 4; x <= (cx + R + 32) >> 4; x++) for (int z = (cz - R - 32) >> 4; z <= (cz + R + 32) >> 4; z++) lv.getChunk(x, z);
+        for (int x = (cx - R - 32) >> 4; x <= (cx + R + 32) >> 4; x++)
+            for (int z = (cz - R - 32) >> 4; z <= (cz + R + 32) >> 4; z++) lv.getChunk(x, z);
         BlockState stone = Blocks.STONE.defaultBlockState();
-        for (int x = cx - R - 2; x <= cx + R + 2; x++) for (int z = cz - R - 2; z <= cz + R + 2; z++)
-            for (int y = lv.getMinBuildHeight() + 1; y <= LAND; y++) lv.setBlock(new BlockPos(x, y, z), stone, 2);
+        for (int x = cx - R - 2; x <= cx + R + 2; x++)
+            for (int z = cz - R - 2; z <= cz + R + 2; z++)
+                for (int y = lv.getMinBuildHeight() + 1; y <= LAND; y++) lv.setBlock(new BlockPos(x, y, z), stone, 2);
         int d = depth == null ? Painter.DEPTH : depth;
-        BellPlan plan = new BellPlan(BellPlan.mix(lv.getSeed(), slot), cx, cz, (int) Math.ceil(R * 3.2), lv.getSeaLevel(),
-                lv.getMinBuildHeight(), lv.getMaxBuildHeight(), (x, z) -> LAND);
+        BellPlan plan = new BellPlan(
+                BellPlan.mix(lv.getSeed(), slot),
+                cx,
+                cz,
+                (int) Math.ceil(R * 3.2),
+                lv.getSeaLevel(),
+                lv.getMinBuildHeight(),
+                lv.getMaxBuildHeight(),
+                (x, z) -> LAND);
         plan.withDen = false;
         plan.paintDepth = d;
-        java.util.Set<ChunkPos> chunks = new java.util.LinkedHashSet<>();
-        for (int x = cx - R; x <= cx + R; x++) for (int z = cz - R; z <= cz + R; z++) chunks.add(new ChunkPos(x >> 4, z >> 4));
+        Set<ChunkPos> chunks = new LinkedHashSet<>();
+        for (int x = cx - R; x <= cx + R; x++)
+            for (int z = cz - R; z <= cz + R; z++) chunks.add(new ChunkPos(x >> 4, z >> 4));
         int checked = 0, bad = 0, badBelow = 0, deepOnes = 0;
         StringBuilder first = new StringBuilder();
         for (ChunkPos cp : chunks) {
@@ -80,12 +98,26 @@ public class PaintDepthTests implements FabricGameTest {
                 for (int k = 0; top - k >= bottom; k++) {
                     int y = top - k;
                     BellPlan.Mat m = k == 0 ? o.layer[i][0] : plan.layer(x, y, z, k, o.topMat(i), y0[i]);
-                    BlockState want = m == BellPlan.Mat.KEEP ? (y > y0[i] ? HomeGround.state(BellPlan.Mat.CALCITE) : stone) : HomeGround.state(m);
+                    BlockState want = m == BellPlan.Mat.KEEP
+                            ? (y > y0[i] ? HomeGround.state(BellPlan.Mat.CALCITE) : stone)
+                            : HomeGround.state(m);
                     BlockState got = lv.getBlockState(new BlockPos(x, y, z));
                     if (!got.equals(want)) {
                         ok = false;
-                        if (first.length() < 400) first.append(" (").append(x).append(",").append(y).append(",").append(z).append(" k").append(k)
-                                .append(": ").append(got.getBlock().getName().getString()).append(" not ").append(want.getBlock().getName().getString()).append(")");
+                        if (first.length() < 400)
+                            first.append(" (")
+                                    .append(x)
+                                    .append(",")
+                                    .append(y)
+                                    .append(",")
+                                    .append(z)
+                                    .append(" k")
+                                    .append(k)
+                                    .append(": ")
+                                    .append(got.getBlock().getName().getString())
+                                    .append(" not ")
+                                    .append(want.getBlock().getName().getString())
+                                    .append(")");
                     }
                     if (k >= BellPlan.MADE_DEPTH && y <= y0[i] && m == plan.strata(x, y, z)) deepOnes++;
                 }
@@ -93,16 +125,38 @@ public class PaintDepthTests implements FabricGameTest {
                 BlockState below = lv.getBlockState(new BlockPos(x, bottom - 1, z));
                 if (!below.is(Blocks.STONE)) {
                     badBelow++;
-                    if (first.length() < 400) first.append(" [under ").append(x).append(",").append(bottom - 1).append(",").append(z).append(": ")
-                            .append(below.getBlock().getName().getString()).append("]");
+                    if (first.length() < 400)
+                        first.append(" [under ")
+                                .append(x)
+                                .append(",")
+                                .append(bottom - 1)
+                                .append(",")
+                                .append(z)
+                                .append(": ")
+                                .append(below.getBlock().getName().getString())
+                                .append("]");
                 }
             }
         }
-        HollowbellMod.LOG.info("paint depth {}: {} columns checked, {} not his layers, {} with the block under touched, {} deep blocks{}", d, checked, bad, badBelow, deepOnes, first);
+        HollowbellMod.LOG.info(
+                "paint depth {}: {} columns checked, {} not his layers, {} with the block under touched, {} deep"
+                        + " blocks{}",
+                d,
+                checked,
+                bad,
+                badBelow,
+                deepOnes,
+                first);
         h.assertTrue(checked >= 150, "too few columns to check: " + checked);
-        h.assertTrue(bad <= checked * 0.03, bad + " of " + checked + " columns aren't his layers " + d + " deep:" + first);
-        h.assertTrue(badBelow <= checked * 0.01, badBelow + " of " + checked + " columns had the block under the depth changed:" + first);
-        if (d > BellPlan.MADE_DEPTH) h.assertTrue(deepOnes >= checked * (d - BellPlan.MADE_DEPTH) * 0.9, "the layers under the first four aren't his own rock: " + deepOnes);
+        h.assertTrue(
+                bad <= checked * 0.03, bad + " of " + checked + " columns aren't his layers " + d + " deep:" + first);
+        h.assertTrue(
+                badBelow <= checked * 0.01,
+                badBelow + " of " + checked + " columns had the block under the depth changed:" + first);
+        if (d > BellPlan.MADE_DEPTH)
+            h.assertTrue(
+                    deepOnes >= checked * (d - BellPlan.MADE_DEPTH) * 0.9,
+                    "the layers under the first four aren't his own rock: " + deepOnes);
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "paint_depth_default")
@@ -124,21 +178,32 @@ public class PaintDepthTests implements FabricGameTest {
         var server = lv.getServer();
         var d = server.getCommands().getDispatcher();
         Vec3 here = Vec3.atCenterOf(h.absolutePos(new BlockPos(1, 2, 1)));
-        for (String ok : new String[]{"giants paint hollowbell", "giants paint hollowbell 40", "giants paint hollowbell 40 full", "giants paint hollowbell 40 full 10",
-                "giants paint hollowbell 40 full 1", "giants paint hollowbell 40 full 64", "giants paint hollowbell 40 biome"}) {
+        for (String ok : new String[] {
+            "giants paint hollowbell",
+            "giants paint hollowbell 40",
+            "giants paint hollowbell 40 full",
+            "giants paint hollowbell 40 full 10",
+            "giants paint hollowbell 40 full 1",
+            "giants paint hollowbell 40 full 64",
+            "giants paint hollowbell 40 biome"
+        }) {
             var pr = d.parse(ok, op(h, here));
             h.assertTrue(!pr.getReader().canRead() && pr.getExceptions().isEmpty(), "/" + ok + " doesn't parse");
         }
-        for (String no : new String[]{"giants paint hollowbell 40 full 0", "giants paint hollowbell 40 full 65"}) {
+        for (String no : new String[] {"giants paint hollowbell 40 full 0", "giants paint hollowbell 40 full 65"}) {
             var pr = d.parse(no, op(h, here));
             h.assertTrue(pr.getReader().canRead() || !pr.getExceptions().isEmpty(), "/" + no + " shouldn't be taken");
         }
-        var tips = d.getCompletionSuggestions(d.parse("giants paint hollowbell 40 full ", op(h, here))).get();
-        h.assertTrue(tips.getList().stream().anyMatch(s -> s.getText().equals("10")), "no depths are offered after full: " + tips.getList());
+        var tips = d.getCompletionSuggestions(d.parse("giants paint hollowbell 40 full ", op(h, here)))
+                .get();
+        h.assertTrue(
+                tips.getList().stream().anyMatch(s -> s.getText().equals("10")),
+                "no depths are offered after full: " + tips.getList());
 
         BlockPos at = farSpot(h, 610);
         int cx = at.getX(), cz = at.getZ();
-        for (int x = (cx - 48) >> 4; x <= (cx + 48) >> 4; x++) for (int z = (cz - 48) >> 4; z <= (cz + 48) >> 4; z++) lv.getChunk(x, z);
+        for (int x = (cx - 48) >> 4; x <= (cx + 48) >> 4; x++)
+            for (int z = (cz - 48) >> 4; z <= (cz + 48) >> 4; z++) lv.getChunk(x, z);
         ServerPlayer p = player(h, new Vec3(cx + 0.5, -40, cz + 0.5));
         String b = "net.jj.hollowbell.GiantsBridge";
         // the depth goes last; an older /giants sends none (5 then); a bare number after the player is taken too
@@ -146,13 +211,15 @@ public class PaintDepthTests implements FabricGameTest {
         h.assertTrue(said.size() == 1 && said.get(0).contains("10 blocks deep"), "depth=10 wasn't heard: " + said);
         Painter.forget();
         said = GiantsCommand.ask(server, "paint", "16 full " + p.getUUID(), b);
-        h.assertTrue(said.size() == 1 && said.get(0).contains("5 blocks deep"), "with no depth it should be 5: " + said);
+        h.assertTrue(
+                said.size() == 1 && said.get(0).contains("5 blocks deep"), "with no depth it should be 5: " + said);
         Painter.forget();
         said = GiantsCommand.ask(server, "paint", "16 full " + p.getUUID() + " 7", b);
         h.assertTrue(said.size() == 1 && said.get(0).contains("7 blocks deep"), "a bare depth wasn't heard: " + said);
         Painter.forget();
         said = GiantsCommand.ask(server, "paint", "16 full " + p.getUUID() + " depth=500", b);
-        h.assertTrue(said.size() == 1 && said.get(0).contains("64 blocks deep"), "a depth over 64 should be 64: " + said);
+        h.assertTrue(
+                said.size() == 1 && said.get(0).contains("64 blocks deep"), "a depth over 64 should be 64: " + said);
         Painter.forget();
         said = GiantsCommand.ask(server, "paint", "16 biome " + p.getUUID() + " depth=10", b);
         h.assertTrue(said.size() == 1 && !said.get(0).contains("deep"), "biome only takes no depth: " + said);
@@ -163,16 +230,24 @@ public class PaintDepthTests implements FabricGameTest {
         for (int k = 0; k < 400 && Painter.busy(); k++) Painter.tick(server);
         h.assertTrue(!Painter.busy(), "the painting never finished");
         int floor = lv.getMinBuildHeight(), cols = 0, his = 0;
-        for (int x = cx - 14; x <= cx + 14; x++) for (int z = cz - 14; z <= cz + 14; z++) {
-            if ((x - cx) * (x - cx) + (z - cz) * (z - cz) > 14 * 14) continue;
-            h.assertTrue(lv.getBlockState(new BlockPos(x, floor, z)).is(Blocks.BEDROCK), "the bedrock at " + x + ", " + z + " was painted over");
-            cols++;
-            BlockState over = lv.getBlockState(new BlockPos(x, floor + 1, z));
-            // the flat world's dirt right on the bedrock is his ground now
-            if (!over.is(Blocks.DIRT) && !over.is(Blocks.GRASS_BLOCK) && !over.isAir() && over.getFluidState().isEmpty()) his++;
-        }
-        HollowbellMod.LOG.info("paint depth 64 on the flat world: {} of {} columns are his right down to the bedrock", his, cols);
-        h.assertTrue(his >= cols * 0.9, "only " + his + " of " + cols + " columns are his ground right down to the bedrock");
+        for (int x = cx - 14; x <= cx + 14; x++)
+            for (int z = cz - 14; z <= cz + 14; z++) {
+                if ((x - cx) * (x - cx) + (z - cz) * (z - cz) > 14 * 14) continue;
+                h.assertTrue(
+                        lv.getBlockState(new BlockPos(x, floor, z)).is(Blocks.BEDROCK),
+                        "the bedrock at " + x + ", " + z + " was painted over");
+                cols++;
+                BlockState over = lv.getBlockState(new BlockPos(x, floor + 1, z));
+                // the flat world's dirt right on the bedrock is his ground now
+                if (!over.is(Blocks.DIRT)
+                        && !over.is(Blocks.GRASS_BLOCK)
+                        && !over.isAir()
+                        && over.getFluidState().isEmpty()) his++;
+            }
+        HollowbellMod.LOG.info(
+                "paint depth 64 on the flat world: {} of {} columns are his right down to the bedrock", his, cols);
+        h.assertTrue(
+                his >= cols * 0.9, "only " + his + " of " + cols + " columns are his ground right down to the bedrock");
         drop(p);
         h.succeed();
     }

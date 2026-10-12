@@ -47,6 +47,6 @@ public final class Shake {
         float x = (float) (Math.sin(t * 2.7) * 0.6 + Math.sin(t * 7.3) * 0.4) * a * 0.30f;
         float y = (float) (Math.sin(t * 3.9 + 1.3) * 0.6 + Math.sin(t * 9.1) * 0.4) * a * 0.24f;
         float z = (float) Math.sin(t * 5.1 + 2.2) * a * 0.12f;
-        return new float[]{x, y, z};
+        return new float[] {x, y, z};
     }
 }

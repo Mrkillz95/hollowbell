@@ -12,8 +12,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public abstract class SolidFrameMixin {
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void hollowbell$solidFrame(DeltaTracker dt, CallbackInfo ci) { SolidClient.beforeFrame(dt.getGameTimeDeltaPartialTick(true)); }
+    private void hollowbell$solidFrame(DeltaTracker dt, CallbackInfo ci) {
+        SolidClient.beforeFrame(dt.getGameTimeDeltaPartialTick(true));
+    }
 
     @Inject(method = "renderLevel", at = @At("RETURN"))
-    private void hollowbell$solidFrameEnd(DeltaTracker dt, CallbackInfo ci) { SolidClient.afterFrame(); }
+    private void hollowbell$solidFrameEnd(DeltaTracker dt, CallbackInfo ci) {
+        SolidClient.afterFrame();
+    }
 }

@@ -1,14 +1,13 @@
 package net.jj.hollowbell.net;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Every two seconds (and at once when one goes on or off): the loot caches with their beam on within 1024 blocks of
@@ -26,9 +25,15 @@ public record LootBeamsPayload(List<BlockPos> all) implements CustomPacketPayloa
             buf -> {
                 int n = buf.readVarInt();
                 List<BlockPos> all = new ArrayList<>(Math.min(n, 256));
-                for (int i = 0; i < n; i++) { BlockPos b = buf.readBlockPos(); if (i < 256) all.add(b); }
+                for (int i = 0; i < n; i++) {
+                    BlockPos b = buf.readBlockPos();
+                    if (i < 256) all.add(b);
+                }
                 return new LootBeamsPayload(all);
             });
 
-    @Override public CustomPacketPayload.Type<LootBeamsPayload> type() { return TYPE; }
+    @Override
+    public CustomPacketPayload.Type<LootBeamsPayload> type() {
+        return TYPE;
+    }
 }

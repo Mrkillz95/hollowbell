@@ -14,7 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ChunkGenerator.class)
 public abstract class DecorationMixin {
     @Inject(method = "applyBiomeDecoration", at = @At("TAIL"))
-    private void hollowbell$bellHollows(WorldGenLevel level, ChunkAccess chunk, StructureManager structures, CallbackInfo ci) {
+    private void hollowbell$bellHollows(
+            WorldGenLevel level, ChunkAccess chunk, StructureManager structures, CallbackInfo ci) {
         BellGen.decorated(this, level, chunk, structures);
     }
 }

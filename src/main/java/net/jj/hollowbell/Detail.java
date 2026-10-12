@@ -11,7 +11,9 @@ public final class Detail {
 
     public static final int FULL = 0, FAR = 1, TINY = 2;
 
-    public static boolean on() { return HollowbellConfig.V.simpleFarAway; }
+    public static boolean on() {
+        return HollowbellConfig.V.simpleFarAway;
+    }
 
     public static void set(boolean on) {
         HollowbellConfig.V.simpleFarAway = on;
