@@ -186,6 +186,7 @@ public final class AutoTest {
             }
             // ridelog: is the player being carried on him, how far a frame set them from where the tick had them, how
             // often they were moved out of him
+            if (s.startsWith("ridetrace ")) { SolidClient.traceTicks = Integer.parseInt(s.substring(10).trim()); continue; }
             if (s.equals("ridelog")) {
                 SolidCarry c = SolidClient.CARRY;
                 String on = c.on == null ? "-"
