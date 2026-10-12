@@ -645,6 +645,7 @@ const SHELL = new RegExp('^(white_stained_glass|glass|light_gray_stained_glass|t
   + 'yellow_stained_glass|lime_stained_glass|ochre_froglight|shroomlight|sea_lantern)$');
 const HEAD = /^(white_stained_glass|glass|tinted_glass|black_concrete)$/;
 const ARM_SKIN = /^(weathered_copper|oxidized_copper|lime_stained_glass)$/;
+const LIGHT = /^(verdant_froglight|ochre_froglight|pearlescent_froglight|sea_lantern|shroomlight|glowstone)$/;
 const POD_HEAD_R = 9;
 
 function takeBack(C, strandOf, pods, gone) {
@@ -741,6 +742,14 @@ function takeBack(C, strandOf, pods, gone) {
           const j = find(X[k] + a, Y[k] + b, Z[k] + c);
           if (j !== undefined && isArm(j)) { arm = lab[j]; break; }
         }
+      } else if (LIGHT.test(mat(k))) {
+        // a light set into an arm's skin (three or more arm blocks round it) lights the arm, not the strand by it
+        const by = new Map();
+        for (const [a, b, c] of N26) {
+          const j = find(X[k] + a, Y[k] + b, Z[k] + c);
+          if (j !== undefined && isArm(j)) by.set(lab[j], (by.get(lab[j]) || 0) + 1);
+        }
+        for (const [a, m] of by) if (m >= 3) arm = a;
       }
       for (const d of DIRS) {
         if (arm >= 0) break;
