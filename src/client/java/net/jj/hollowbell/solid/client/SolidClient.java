@@ -23,8 +23,8 @@ public final class SolidClient {
     private SolidClient() {}
 
     public static final SolidCarry CARRY = new SolidCarry();
-    /** how many times you were moved out of him (for the autotest) */
-    public static int unstuck;
+    /** how many times you were moved out of him, and nudged by his soft parts (for the autotest) */
+    public static int unstuck, softPushed;
     /** the most the frame put you off from where the tick had you (for the autotest), blocks */
     public static double frameFix;
 
@@ -53,7 +53,7 @@ public final class SolidClient {
                 break;
             }
         }
-        for (SolidBody b : Solid.bodies(true)) if (b.solidSelf().level() == p.level() && b.solidReady() && !b.solidIgnores(p)) Solid.softPush(b, p);
+        for (SolidBody b : Solid.bodies(true)) if (b.solidSelf().level() == p.level() && b.solidReady() && !b.solidIgnores(p) && Solid.softPush(b, p)) softPushed++;
         Solid.nanosClient += System.nanoTime() - t0;
     }
 
