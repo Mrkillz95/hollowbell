@@ -69,8 +69,12 @@ public final class BellRig {
     public final int bellBone;
 
     public record ArmDef(int k, int[] bones, Vector3f[] joints, Vector3f tip, Vector3f centre, float angle) {}
-    /** follow: per piece, the bone that carries it (an arm, a strand hung before it or a pod; -1: it hangs), or null */
-    public record StrandDef(int k, int[] bones, Vector3f[] joints, Vector3f bottom, float top, float low, int @Nullable [] follow) {}
+    /**
+     * follow: per piece, the bone that carries it (an arm, a strand hung before it or a pod; -1: it hangs), or null;
+     * carryAt: per carried piece, the middle of where it touches that (or null)
+     */
+    public record StrandDef(int k, int[] bones, Vector3f[] joints, Vector3f bottom, float top, float low, int @Nullable [] follow,
+                            Vector3f @Nullable [] carryAt) {}
     public record BlobDef(int k, int bone, Vector3f centre, float radius) {}
     public record BandDef(int bone, float top, float bottom) { public float mid() { return (top + bottom) * 0.5f; } }
     public record SectorDef(int bone, float angle) {}
@@ -92,8 +96,9 @@ public final class BellRig {
         /** per joint, the bone that carries it and how far along that bone it lies (with follow) */
         public int @Nullable [] followAt;
         public float @Nullable [] followU;
-        /** per carried piece, the spot along what carries it that it goes with */
+        /** per carried piece, the spot along what carries it that it goes with, and the middle of where it touches it */
         public float @Nullable [] pieceU;
+        public Vector3f @Nullable [] carryAt;
         public float parentFrac;
         Chain(int id, boolean arm, int index, int[] bones, Vector3f[] joints, int parentBone) {
             this.id = id; this.arm = arm; this.index = index; this.bones = bones; this.joints = joints; this.parentBone = parentBone;
@@ -154,7 +159,8 @@ public final class BellRig {
         for (int i = 0; i < strands.length; i++) {
             JsonObject o = a.get(i).getAsJsonObject();
             strands[i] = new StrandDef(i, ints(o.getAsJsonArray("bones")), vecs(o.getAsJsonArray("joints")), vec(o.getAsJsonArray("bottom")),
-                    o.get("top").getAsFloat(), o.get("low").getAsFloat(), o.has("follow") ? ints(o.getAsJsonArray("follow")) : null);
+                    o.get("top").getAsFloat(), o.get("low").getAsFloat(), o.has("follow") ? ints(o.getAsJsonArray("follow")) : null,
+                    o.has("carryAt") ? spots(o.getAsJsonArray("carryAt")) : null);
         }
         pods = blobs(j.getAsJsonArray("pods"));
         eggs = blobs(j.getAsJsonArray("eggs"));
@@ -201,7 +207,7 @@ public final class BellRig {
         for (int i = 0; i < chains.length; i++) {
             Chain o = cs.get(i);
             chains[i] = new Chain(i, o.arm, o.index, o.bones, o.joints, o.parentBone);
-            if (!o.arm) chains[i].follow = strands[o.index].follow();
+            if (!o.arm) { chains[i].follow = strands[o.index].follow(); chains[i].carryAt = strands[o.index].carryAt(); }
             for (int b : o.bones) chainOf[b] = i;
         }
         for (Chain ch : chains) {
@@ -225,12 +231,15 @@ public final class BellRig {
             int m = ch.bones.length;
             ch.followAt = new int[m + 1];
             ch.followU = new float[m + 1];
-            // each carried piece goes with one spot of what carries it, all of it alike: the spot level with its
-            // middle (carried along the arm's bend instead, a wide piece was sheared apart)
+            // each carried piece goes with one spot of what carries it, all of it alike: where it touches it (carried
+            // along the arm's bend instead, a wide piece was sheared apart)
             float[] pieceU = new float[m];
+            Vector3f[] at = ch.carryAt;
             for (int i = 0; i < m; i++) {
                 int ab = f[i];
-                if (ab >= 0 && chainOf[ab] >= 0) pieceU[i] = along(ab, new Vector3f(ch.joints[i]).add(ch.joints[i + 1]).mul(0.5f));
+                if (ab < 0 || chainOf[ab] < 0) continue;
+                Vector3f p = at != null && at[i] != null ? at[i] : new Vector3f(ch.joints[i]).add(ch.joints[i + 1]).mul(0.5f);
+                pieceU[i] = along(ab, p);
             }
             ch.pieceU = pieceU;
             for (int t = 0; t <= m; t++) {
@@ -391,6 +400,12 @@ public final class BellRig {
 
     private static Vector3f vec(JsonArray a) { return new Vector3f(a.get(0).getAsFloat(), a.get(1).getAsFloat(), a.get(2).getAsFloat()); }
     private static Vector3f[] vecs(JsonArray a) { Vector3f[] v = new Vector3f[a.size()]; for (int i = 0; i < v.length; i++) v[i] = vec(a.get(i).getAsJsonArray()); return v; }
+    /** points, some of them missing (null) */
+    private static Vector3f[] spots(JsonArray a) {
+        Vector3f[] v = new Vector3f[a.size()];
+        for (int i = 0; i < v.length; i++) v[i] = a.get(i).isJsonNull() ? null : vec(a.get(i).getAsJsonArray());
+        return v;
+    }
     private static int[] ints(JsonArray a) { int[] v = new int[a.size()]; for (int i = 0; i < v.length; i++) v[i] = a.get(i).getAsInt(); return v; }
 
     private static BellRig load() {
