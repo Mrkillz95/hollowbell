@@ -18,7 +18,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Hollowbell | 1.12.1 |
 | Lantern Willow | 1.10.0 |
 | Wreckback | 1.1.1 |
-| The Swarmforge | 1.4.1 |
+| The Swarmforge | 1.4.2 |
 
 ## Install
 
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.18.jar` in. Keep Fabric API in there.
+`giants-all-1.4.19.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -58,6 +58,14 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.19
+
+- Swarmforge: getting out of his cab puts you on the ground beside him with no fall, remove and kill also reach the
+  one waiting in his Scrapyard, his crane slam no longer shoots up like a pole, and his replies match the others.
+
+Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
+Swarmforge 1.4.2.
 
 ## New in 1.4.18
 
