@@ -12,7 +12,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giant | Version |
 |---|---|
 | Giants Guide | 1.4.8 |
-| Pitchgut | 1.34.2 |
+| Pitchgut | 1.35.0 |
 | Furrowmaw | 1.15.0 |
 | Fire & Ice Cerberus | 2.17.0 |
 | Hollowbell | 1.12.1 |
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.19.jar` in. Keep Fabric API in there.
+`giants-all-1.4.20.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -58,6 +58,15 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.20
+
+- Pitchgut: getting down, his hand lowers you, lets go and lifts away, and you land on clear ground beside him.
+  "Follow me" is in his book, `kill` reaches every world, his replies match the other giants, and `/giants list`
+  shows where he really is.
+
+Inside: Pitchgut 1.35.0, Furrowmaw 1.15.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
+Swarmforge 1.4.2.
 
 ## New in 1.4.19
 
