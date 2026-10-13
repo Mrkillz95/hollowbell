@@ -44,8 +44,9 @@ import org.joml.Vector3f;
  * Each bone has up to three meshes: solid blocks, glowing blocks (drawn at full light), and see-through ones
  * (stained and tinted glass). The see-through ones keep what they need to be
  * re-sorted back to front as you move around, so the dome looks right from any side.
- * There is also a far-away version with every 2x2x2 lump of blocks merged into one, and a tiny one (8x8x8) for the
- * Bellings and for him when he is very small or very far.
+ * There is also a far-away version with every 2x2x2 lump of blocks merged into one box, cut in the same slices as the
+ * full one, and a tiny one (8x8x8 lumps, a bone at a time) for the Bellings and for him when he is very small or very
+ * far. Each lump's box only spans the blocks it has, so a strand one block thick stays one block thick.
  */
 public final class BellMeshes {
     public static final BellMeshes INSTANCE = new BellMeshes();
@@ -77,7 +78,7 @@ public final class BellMeshes {
 
     record SortJob(ByteBufferBuilder mem, ByteBufferBuilder.Result result) {}
 
-    /** [lod][kind][bone], except the full version: [FULL][kind][slice] (see {@link BellPieces}) */
+    /** [lod][kind][slice] (see {@link BellPieces}), except the tiny version: [TINY][kind][bone] */
     private Mesh[][][] meshes;
 
     private CompletableFuture<Built> building;
@@ -107,7 +108,7 @@ public final class BellMeshes {
         }
         meshes = new Mesh[3][4][];
         for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) meshes[l][k] = new Mesh[b.parts[l][k].length];
-        int nb = b.parts[1][0].length;
+        int nb = b.parts[TINY][0].length;
         long q = 0, fq = 0;
         for (int l = 0; l < 3; l++)
             for (int k = 0; k < 4; k++)
@@ -134,7 +135,7 @@ public final class BellMeshes {
         return ready;
     }
 
-    /** a mesh: for FULL, of one slice (see {@link BellPieces}); for FAR and TINY, of one bone */
+    /** a mesh: for FULL and FAR, of one slice (see {@link BellPieces}); for TINY, of one bone */
     public @Nullable Mesh mesh(int lod, int kind, int unit) {
         return meshes == null ? null : meshes[lod][kind][unit];
     }
@@ -211,9 +212,9 @@ public final class BellMeshes {
 
         int nb = model.boneCount();
         BellPieces pieces = BellPieces.get();
-        // up close each arm and strand is drawn in slices that bend smoothly; further off, a piece at a time
+        // each arm and strand is drawn in slices that bend smoothly; very far off, a piece at a time
         Part[][][] parts = new Part[3][4][];
-        for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) parts[l][k] = new Part[l == FULL ? pieces.count : nb];
+        for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) parts[l][k] = new Part[l != TINY ? pieces.count : nb];
         List<ByteBufferBuilder> mem = new ArrayList<>();
         RandomSource rnd = RandomSource.create(42);
         PoseStack ps = new PoseStack();
@@ -222,15 +223,17 @@ public final class BellMeshes {
 
         for (int lod = 0; lod < 3; lod++) {
             int L = LUMP[lod];
-            int units = lod == FULL ? pieces.count : nb;
+            boolean sliced = lod != TINY;
+            int units = sliced ? pieces.count : nb;
             for (int unit = 0; unit < units; unit++) {
-                int b = lod == FULL ? pieces.bone[unit] : unit;
+                int b = sliced ? pieces.bone[unit] : unit;
                 int n = model.count(b);
                 if (n == 0) continue;
-                // voxels (or merged lumps) of this bone (or of this slice of it): x y z palette faces alpha
-                int[] vx, vy, vz, vp, vf, va;
+                int[] of = pieces.sliceOf[b];
+                // voxels (or merged lumps) of this slice of a bone (or of the whole bone): x y z palette faces alpha,
+                // and for a lump the box it fills inside its cube (see grow())
+                int[] vx, vy, vz, vp, vf, va, vb = null;
                 if (L == 1) {
-                    int[] of = pieces.sliceOf[b];
                     int m = 0;
                     for (int i = 0; i < n; i++) if (of[i] == unit) m++;
                     if (m == 0) continue;
@@ -254,11 +257,13 @@ public final class BellMeshes {
                     Long2IntOpenHashMap pal = new Long2IntOpenHashMap(n / 4 + 8),
                             best = new Long2IntOpenHashMap(n / 4 + 8);
                     Long2IntOpenHashMap alp = new Long2IntOpenHashMap(n / 4 + 8);
+                    Long2IntOpenHashMap box = new Long2IntOpenHashMap(n / 4 + 8);
+                    box.defaultReturnValue(EMPTY_BOX);
                     for (int i = 0; i < n; i++) {
-                        long key = BellModel.key(
-                                Math.floorDiv(model.x[b][i], L),
-                                Math.floorDiv(model.y[b][i], L),
-                                Math.floorDiv(model.z[b][i], L));
+                        if (sliced && of[i] != unit) continue;
+                        int x = model.x[b][i], y = model.y[b][i], z = model.z[b][i];
+                        long key = BellModel.key(Math.floorDiv(x, L), Math.floorDiv(y, L), Math.floorDiv(z, L));
+                        box.put(key, grow(box.get(key), Math.floorMod(x, L), Math.floorMod(y, L), Math.floorMod(z, L)));
                         int score = Integer.bitCount(model.faces[b][i] & 0x3f) + 1;
                         if (score > best.get(key)) {
                             best.put(key, score);
@@ -269,6 +274,8 @@ public final class BellMeshes {
                     }
                     long[] keys = pal.keySet().toLongArray();
                     int m = keys.length;
+                    if (m == 0) continue;
+                    vb = new int[m];
                     vx = new int[m];
                     vy = new int[m];
                     vz = new int[m];
@@ -280,10 +287,13 @@ public final class BellMeshes {
                         int cx = (int) ((k >>> 26) & 0x1fff) - 4096,
                                 cy = (int) ((k >>> 13) & 0x1fff) - 4096,
                                 cz = (int) (k & 0x1fff) - 4096;
+                        int bx = box.get(k);
                         int f = 0;
-                        for (int d = 0; d < 6; d++)
-                            if (!pal.containsKey(BellModel.key(cx + OFF[d][0], cy + OFF[d][1], cz + OFF[d][2])))
-                                f |= 1 << d;
+                        for (int d = 0; d < 6; d++) {
+                            long nk = BellModel.key(cx + OFF[d][0], cy + OFF[d][1], cz + OFF[d][2]);
+                            if (!pal.containsKey(nk) || !covered(bx, box.get(nk), d, L)) f |= 1 << d;
+                        }
+                        vb[i] = bx;
                         vx[i] = cx;
                         vy[i] = cy;
                         vz[i] = cz;
@@ -298,7 +308,7 @@ public final class BellMeshes {
                     int k = va[i] < 255 ? CLEAR : kindOf[vp[i]];
                     int f = Integer.bitCount(vf[i]);
                     count[k] += f;
-                    if (armBone && k == CLEAR && L == 1) count[CLEAR_RED] += f;
+                    if (armBone && k == CLEAR && sliced) count[CLEAR_RED] += f;
                 }
                 for (int k = 0; k < 4; k++) {
                     if (count[k] == 0) continue;
@@ -318,7 +328,12 @@ public final class BellMeshes {
                             bm = redModel;
                         }
                         pose.pose().identity().translate(vx[i] * L, vy[i] * L, vz[i] * L);
-                        if (L != 1) pose.pose().scale(L);
+                        if (vb != null) {
+                            int bx = vb[i];
+                            pose.pose()
+                                    .translate(lo(bx, 0), lo(bx, 1), lo(bx, 2))
+                                    .scale(size(bx, 0), size(bx, 1), size(bx, 2));
+                        }
                         float a = va[i] / 255f;
                         int light = k == GLOW ? lightGlow : lightSolid;
                         for (int d = 0; d < 6; d++) {
@@ -345,6 +360,49 @@ public final class BellMeshes {
         }
         HollowbellMod.LOG.info("Hollowbell meshes built in {} ms", System.currentTimeMillis() - t0);
         return new Built(parts, mem.toArray(new ByteBufferBuilder[0]));
+    }
+
+    /**
+     * A lump's box inside its cube: the lowest and highest block it has on each axis, 3 bits each (x y z lows, then
+     * x y z highs).
+     */
+    private static final int EMPTY_BOX = 7 | 7 << 3 | 7 << 6;
+
+    private static int grow(int box, int x, int y, int z) {
+        int[] at = {x, y, z};
+        for (int a = 0; a < 3; a++) {
+            int lo = Math.min(lo(box, a), at[a]), hi = Math.max(hi(box, a), at[a]);
+            box = box & ~(7 << 3 * a) & ~(7 << 9 + 3 * a) | lo << 3 * a | hi << 9 + 3 * a;
+        }
+        return box;
+    }
+
+    private static int lo(int box, int axis) {
+        return box >> 3 * axis & 7;
+    }
+
+    private static int hi(int box, int axis) {
+        return box >> 9 + 3 * axis & 7;
+    }
+
+    private static int size(int box, int axis) {
+        return hi(box, axis) - lo(box, axis) + 1;
+    }
+
+    /**
+     * Is face d of a lump's box hidden by the next lump that way: both reach the face between them, and the next one's
+     * box covers all of this face (anything less would leave a see-through gap).
+     */
+    private static boolean covered(int box, int next, int d, int lump) {
+        int axis = d < 2 ? 1 : d < 4 ? 2 : 0;
+        boolean up = (d & 1) == 1;
+        boolean touch = up
+                ? hi(box, axis) == lump - 1 && lo(next, axis) == 0
+                : lo(box, axis) == 0 && hi(next, axis) == lump - 1;
+        if (!touch) return false;
+        for (int a = 0; a < 3; a++)
+            if (a != axis && (lo(next, a) > lo(box, a) || hi(next, a) < hi(box, a))) return false;
+        return true;
     }
 
     /** textures changed (resource pack switch): throw the meshes away, they rebuild on the next frame */
