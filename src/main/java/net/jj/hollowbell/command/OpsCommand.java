@@ -7,9 +7,16 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.HollowbellEntity;
-import net.jj.hollowbell.item.BellPower;
+import net.jj.hollowbell.item.Powers;
 import net.jj.hollowbell.net.CodexOrders;
 import net.jj.hollowbell.net.CodexPayload;
 import net.jj.hollowbell.net.LookTrace;
@@ -22,13 +29,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
-
 /**
- * The nearest one's state: who he goes for, his wind, grudges, home, cooldowns, freezing him, his speed, whether he
- * can be hurt, a glow, a name, forgiving, waking, and the players' own powers. The "/hollowbell set ..." forms work too.
+ * The nearest one's state: who he goes for, his wind, grudges, home, cooldowns, freezing him, his speed, whether he can
+ * be hurt, a glow, a name, forgiving, waking, and the players' own powers. The "/hollowbell set ..." forms work too.
  */
 public final class OpsCommand {
     private OpsCommand() {}
@@ -37,12 +40,17 @@ public final class OpsCommand {
         return Component.translatable("command.hollowbell." + key, args);
     }
 
-    private interface Act { int run(CommandContext<CommandSourceStack> c, HollowbellEntity h) throws CommandSyntaxException; }
+    private interface Act {
+        int run(CommandContext<CommandSourceStack> c, HollowbellEntity h) throws CommandSyntaxException;
+    }
 
     private static Command<CommandSourceStack> on(Act a) {
         return c -> {
-            HollowbellEntity h = HollowbellCommand.nearest(c.getSource());
-            if (h == null) { c.getSource().sendFailure(t("none")); return 0; }
+            HollowbellEntity h = BellCommand.nearest(c.getSource());
+            if (h == null) {
+                c.getSource().sendFailure(t("none"));
+                return 0;
+            }
             return a.run(c, h);
         };
     }
@@ -57,8 +65,12 @@ public final class OpsCommand {
         // (bare, or "help": the main commands, so nobody is left with "Unknown or incomplete command")
         root.executes(OpsCommand::help);
         root.then(Commands.literal("help").executes(OpsCommand::help));
-        root.then(Commands.literal("target").requires(s -> s.hasPermission(2))
-                .then(Commands.literal("none").executes(on((c, h) -> { h.clearHitList(); return say(c, t("target_none")); })))
+        root.then(Commands.literal("target")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.literal("none").executes(on((c, h) -> {
+                    h.clearHitList();
+                    return say(c, t("target_none"));
+                })))
                 // what the player giving it is looking at, by the book's rules
                 .then(Commands.literal("look").executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
@@ -75,17 +87,25 @@ public final class OpsCommand {
                     h.sendAfter(le);
                     return say(c, t("target", e.getName()));
                 }))));
-        root.then(Commands.literal("windnow").requires(s -> s.hasPermission(2))
+        root.then(Commands.literal("windnow")
+                .requires(s -> s.hasPermission(2))
                 .executes(on((c, h) -> {
-                    c.getSource().sendSuccess(() -> t("windnow_is", Math.round(h.mood().wind() * 100)), false);
+                    c.getSource()
+                            .sendSuccess(
+                                    () -> t("windnow_is", Math.round(h.mood().wind() * 100)), false);
                     return 1;
                 }))
-                .then(Commands.argument("share", FloatArgumentType.floatArg(0, 1)).executes(on((c, h) -> {
-                    h.mood().setWind(FloatArgumentType.getFloat(c, "share"));
-                    return say(c, t("windnow_is", Math.round(h.mood().wind() * 100)));
-                }))));
-        root.then(Commands.literal("grudge").requires(s -> s.hasPermission(2))
-                .then(Commands.literal("clear").executes(on((c, h) -> { h.mood().settle(null); return say(c, t("grudge_clear")); })))
+                .then(Commands.argument("share", FloatArgumentType.floatArg(0, 1))
+                        .executes(on((c, h) -> {
+                            h.mood().setWind(FloatArgumentType.getFloat(c, "share"));
+                            return say(c, t("windnow_is", Math.round(h.mood().wind() * 100)));
+                        }))));
+        root.then(Commands.literal("grudge")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.literal("clear").executes(on((c, h) -> {
+                    h.mood().settle(null);
+                    return say(c, t("grudge_clear"));
+                })))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(on((c, h) -> {
                             ServerPlayer p = EntityArgument.getPlayer(c, "player");
@@ -93,17 +113,31 @@ public final class OpsCommand {
                             c.getSource().sendSuccess(() -> t("grudge_is", p.getName(), now), false);
                             return 1;
                         }))
-                        .then(Commands.argument("share", FloatArgumentType.floatArg(0, 1)).executes(on((c, h) -> {
-                            ServerPlayer p = EntityArgument.getPlayer(c, "player");
-                            h.mood().setSour(p.getUUID(), FloatArgumentType.getFloat(c, "share"));
-                            return say(c, t("grudge_is", p.getName(), Math.round(h.mood().sourOf(p.getUUID()) * 100)));
-                        })))));
-        root.then(Commands.literal("forgive").requires(s -> s.hasPermission(2))
-                .executes(on((c, h) -> { h.forgiveAll(); return say(c, t("forgiven")); })));
-        root.then(Commands.literal("home").requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("share", FloatArgumentType.floatArg(0, 1))
+                                .executes(on((c, h) -> {
+                                    ServerPlayer p = EntityArgument.getPlayer(c, "player");
+                                    h.mood().setSour(p.getUUID(), FloatArgumentType.getFloat(c, "share"));
+                                    return say(
+                                            c,
+                                            t(
+                                                    "grudge_is",
+                                                    p.getName(),
+                                                    Math.round(h.mood().sourOf(p.getUUID()) * 100)));
+                                })))));
+        root.then(Commands.literal("forgive").requires(s -> s.hasPermission(2)).executes(on((c, h) -> {
+            h.forgiveAll();
+            return say(c, t("forgiven"));
+        })));
+        root.then(Commands.literal("home")
+                .requires(s -> s.hasPermission(2))
                 .executes(on((c, h) -> {
                     Vec3 at = h.home();
-                    c.getSource().sendSuccess(() -> at == null ? t("home_none") : t("home_is", (int) at.x, (int) at.y, (int) at.z), false);
+                    c.getSource()
+                            .sendSuccess(
+                                    () -> at == null
+                                            ? t("home_none")
+                                            : t("home_is", (int) at.x, (int) at.y, (int) at.z),
+                                    false);
                     return 1;
                 }))
                 .then(Commands.literal("here").executes(on((c, h) -> {
@@ -111,10 +145,15 @@ public final class OpsCommand {
                     h.setHome(at);
                     return say(c, t("home_is", (int) at.x, (int) at.y, (int) at.z));
                 }))));
-        root.then(Commands.literal("cooldowns").requires(s -> s.hasPermission(2))
-                .then(Commands.literal("reset").executes(on((c, h) -> { h.moves().clearCooldowns(); return say(c, t("cooldowns_reset")); }))));
+        root.then(Commands.literal("cooldowns")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.literal("reset").executes(on((c, h) -> {
+                    h.moves().clearCooldowns();
+                    return say(c, t("cooldowns_reset"));
+                }))));
         // the glass set's and the Stinger's waits, for players (not him)
-        root.then(Commands.literal("powers").requires(s -> s.hasPermission(2))
+        root.then(Commands.literal("powers")
+                .requires(s -> s.hasPermission(2))
                 .then(Commands.literal("reset")
                         .executes(c -> powersReset(c, List.of(c.getSource().getPlayerOrException())))
                         .then(Commands.argument("players", EntityArgument.players())
@@ -122,24 +161,34 @@ public final class OpsCommand {
         root.then(onOff("freeze", HollowbellEntity::frozen, HollowbellEntity::setFrozen));
         root.then(onOff("invulnerable", Entity::isInvulnerable, Entity::setInvulnerable));
         root.then(onOff("glow", Entity::hasGlowingTag, Entity::setGlowingTag));
-        root.then(Commands.literal("speed").requires(s -> s.hasPermission(2))
+        root.then(Commands.literal("speed")
+                .requires(s -> s.hasPermission(2))
                 .executes(on((c, h) -> {
-                    c.getSource().sendSuccess(() -> t("speed_is", String.format(Locale.ROOT, "%.2f", h.speedMul())), false);
+                    c.getSource()
+                            .sendSuccess(() -> t("speed_is", String.format(Locale.ROOT, "%.2f", h.speedMul())), false);
                     return 1;
                 }))
-                .then(Commands.argument("times", FloatArgumentType.floatArg(0.1f, 5f)).executes(on((c, h) -> {
-                    h.setSpeedMul(FloatArgumentType.getFloat(c, "times"));
-                    return say(c, t("speed_is", String.format(Locale.ROOT, "%.2f", h.speedMul())));
-                }))));
-        root.then(Commands.literal("name").requires(s -> s.hasPermission(2))
-                .then(Commands.literal("clear").executes(on((c, h) -> { h.setCustomName(null); return say(c, t("name_clear")); })))
-                .then(Commands.argument("name", StringArgumentType.greedyString()).executes(on((c, h) -> {
-                    String n = StringArgumentType.getString(c, "name");
-                    h.setCustomName(Component.literal(n));
-                    return say(c, t("name_set", n));
-                }))));
-        root.then(Commands.literal("wake").requires(s -> s.hasPermission(2))
-                .executes(on((c, h) -> { h.wakeUp(); return say(c, t("awake")); })));
+                .then(Commands.argument("times", FloatArgumentType.floatArg(0.1f, 5f))
+                        .executes(on((c, h) -> {
+                            h.setSpeedMul(FloatArgumentType.getFloat(c, "times"));
+                            return say(c, t("speed_is", String.format(Locale.ROOT, "%.2f", h.speedMul())));
+                        }))));
+        root.then(Commands.literal("name")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.literal("clear").executes(on((c, h) -> {
+                    h.setCustomName(null);
+                    return say(c, t("name_clear"));
+                })))
+                .then(Commands.argument("name", StringArgumentType.greedyString())
+                        .executes(on((c, h) -> {
+                            String n = StringArgumentType.getString(c, "name");
+                            h.setCustomName(Component.literal(n));
+                            return say(c, t("name_set", n));
+                        }))));
+        root.then(Commands.literal("wake").requires(s -> s.hasPermission(2)).executes(on((c, h) -> {
+            h.wakeUp();
+            return say(c, t("awake"));
+        })));
         return root;
     }
 
@@ -152,19 +201,109 @@ public final class OpsCommand {
         for (ServerPlayer p : who) {
             p.getCooldowns().removeCooldown(ModItems.BELL_CHESTPLATE);
             p.getCooldowns().removeCooldown(ModItems.STINGER);
-            BellPower.stop(p);
+            Powers.stop(p);
         }
-        Component name = who.size() == 1 ? who.iterator().next().getName() : Component.literal(String.valueOf(who.size()));
+        Component name =
+                who.size() == 1 ? who.iterator().next().getName() : Component.literal(String.valueOf(who.size()));
         return say(c, t("powers_reset", name));
     }
 
-    private interface Get { boolean get(HollowbellEntity h); }
-    private interface Set { void set(HollowbellEntity h, boolean v); }
+    private interface Get {
+        boolean get(HollowbellEntity h);
+    }
+
+    private interface Set {
+        void set(HollowbellEntity h, boolean v);
+    }
 
     private static LiteralArgumentBuilder<CommandSourceStack> onOff(String name, Get get, Set set) {
-        return Commands.literal(name).requires(s -> s.hasPermission(2))
-                .executes(on((c, h) -> { c.getSource().sendSuccess(() -> t(name + (get.get(h) ? "_is_on" : "_is_off")), false); return 1; }))
-                .then(Commands.literal("on").executes(on((c, h) -> { set.set(h, true); return say(c, t(name + "_is_on")); })))
-                .then(Commands.literal("off").executes(on((c, h) -> { set.set(h, false); return say(c, t(name + "_is_off")); })));
+        return Commands.literal(name)
+                .requires(s -> s.hasPermission(2))
+                .executes(on((c, h) -> {
+                    c.getSource().sendSuccess(() -> t(name + (get.get(h) ? "_is_on" : "_is_off")), false);
+                    return 1;
+                }))
+                .then(Commands.literal("on").executes(on((c, h) -> {
+                    set.set(h, true);
+                    return say(c, t(name + "_is_on"));
+                })))
+                .then(Commands.literal("off").executes(on((c, h) -> {
+                    set.set(h, false);
+                    return say(c, t(name + "_is_off"));
+                })));
+    }
+
+    // config/hollowbell.json by name, for /hollowbell config and /giants config: read one, or set it (checked and
+    // saved); numbers keep to the same limits the file does when it's read
+
+    /** every setting's name, in the file's order (the old renamed ones left out) */
+    public static List<String> keys() {
+        List<String> out = new ArrayList<>();
+        for (Field f : BellConfig.Values.class.getFields()) {
+            if (Modifier.isStatic(f.getModifiers())
+                    || f.getName().equals("configVersion")
+                    || f.getName().equals("maxHollowbells")) continue;
+            out.add(f.getName());
+        }
+        return out;
+    }
+
+    private static Field field(String key) {
+        for (Field f : BellConfig.Values.class.getFields())
+            if (f.getName().equalsIgnoreCase(key) && keys().contains(f.getName())) return f;
+        return null;
+    }
+
+    public static boolean has(String key) {
+        return field(key) != null;
+    }
+
+    /** what it's set to now, or null when there's no such setting */
+    public static String get(String key) {
+        Field f = field(key);
+        if (f == null) return null;
+        try {
+            return String.valueOf(f.get(BellConfig.V));
+        } catch (IllegalAccessException e) {
+            return null;
+        }
+    }
+
+    /** a number, never NaN or infinity */
+    private static double finite(String v) {
+        double d = Double.parseDouble(v);
+        if (!Double.isFinite(d)) throw new NumberFormatException(v);
+        return d;
+    }
+
+    /** sets it; returns null when it worked, or what was wrong */
+    public static String set(String key, String value) {
+        Field f = field(key);
+        if (f == null) return "there's no setting called " + key;
+        String v = value.trim().toLowerCase(Locale.ROOT);
+        try {
+            Class<?> t = f.getType();
+            if (t == boolean.class) {
+                boolean b = switch (v) {
+                    case "on", "true", "yes" -> true;
+                    case "off", "false", "no" -> false;
+                    default -> throw new IllegalArgumentException("on or off");
+                };
+                f.setBoolean(BellConfig.V, b);
+            } else if (t == int.class) f.setInt(BellConfig.V, Integer.parseInt(v));
+            else if (t == float.class) f.setFloat(BellConfig.V, (float) finite(v));
+            else if (t == double.class) f.setDouble(BellConfig.V, finite(v));
+            else return "that one can't be set from a command";
+        } catch (NumberFormatException e) {
+            return key + " needs a number";
+        } catch (IllegalArgumentException e) {
+            return key + " needs " + e.getMessage();
+        } catch (IllegalAccessException e) {
+            return "that one can't be set from a command";
+        }
+        // the same limits as reading the file
+        BellConfig.migrate(BellConfig.V);
+        BellConfig.save();
+        return null;
     }
 }

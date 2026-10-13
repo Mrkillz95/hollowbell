@@ -1,8 +1,14 @@
 package net.jj.hollowbell.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.client.render.BellRenderer;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -12,13 +18,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Your side of far sight: the server says once a second where every Hollowbell on your horizon is, and each one
@@ -34,12 +33,16 @@ public final class FarSightClient {
         float yaw;
         boolean listed = true;
         float fade;
-        Ghost(HollowbellEntity e) { this.e = e; }
+
+        Ghost(HollowbellEntity e) {
+            this.e = e;
+        }
     }
 
     private static final Map<UUID, Ghost> ghosts = new HashMap<>();
     /** real ones this game has, and when each was last seen (so one leaving view is taken over without a gap) */
     private static final Set<UUID> real = new HashSet<>();
+
     private static final Map<UUID, Long> realSeen = new HashMap<>();
 
     public static void receive(FarSightPayload p) {
@@ -62,36 +65,56 @@ public final class FarSightClient {
                 if (seen != null && mc.level.getGameTime() - seen < 60) g.fade = 1f;
                 ghosts.put(f.id(), g);
             }
-            g.tx = f.x(); g.ty = f.y(); g.tz = f.z(); g.yaw = f.yaw();
+            g.tx = f.x();
+            g.ty = f.y();
+            g.tz = f.z();
+            g.yaw = f.yaw();
             g.listed = true;
             if (Math.abs(g.e.bellScale() - f.scale()) > 1e-3f) g.e.setBellScale(f.scale());
             if (g.e.variant() != f.variant()) g.e.setVariant(f.variant());
             g.e.setSleepiness(f.asleep() ? 1f : 0f);
         }
-        for (Map.Entry<UUID, Ghost> en : ghosts.entrySet()) if (!now.contains(en.getKey())) en.getValue().listed = false;
+        for (Map.Entry<UUID, Ghost> en : ghosts.entrySet())
+            if (!now.contains(en.getKey())) en.getValue().listed = false;
     }
 
     public static void tick(Minecraft mc) {
-        if (mc.level == null) { clear(); return; }
+        if (mc.level == null) {
+            clear();
+            return;
+        }
         real.clear();
         long t = mc.level.getGameTime();
         for (Entity e : mc.level.entitiesForRendering())
-            if (e instanceof HollowbellEntity h && !h.isGhost()) { real.add(h.getUUID()); realSeen.put(h.getUUID(), t); }
+            if (e instanceof HollowbellEntity h && !h.isGhost()) {
+                real.add(h.getUUID());
+                realSeen.put(h.getUUID(), t);
+            }
         realSeen.values().removeIf(v -> t - v > 200 || t < v);
         for (Iterator<Map.Entry<UUID, Ghost>> it = ghosts.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, Ghost> en = it.next();
             Ghost g = en.getValue();
-            if (g.e.level() != mc.level) { it.remove(); continue; }
+            if (g.e.level() != mc.level) {
+                it.remove();
+                continue;
+            }
             boolean handedOver = real.contains(en.getKey());
-            boolean show = g.listed && !handedOver && HollowbellConfig.V.farSightBlocks > 0;
+            boolean show = g.listed && !handedOver && BellConfig.V.farSightBlocks > 0;
             g.fade = handedOver ? 0f : Mth.clamp(g.fade + (show ? 0.05f : -0.05f), 0f, 1f);
-            if (!g.listed && g.fade <= 0f) { it.remove(); continue; }
+            if (!g.listed && g.fade <= 0f) {
+                it.remove();
+                continue;
+            }
             // glide toward where the server last said he was
             HollowbellEntity e = g.e;
             e.setOldPosAndRot();
             double far = Math.hypot(g.tx - e.getX(), g.tz - e.getZ());
             if (far > 200) e.setPos(g.tx, g.ty, g.tz);
-            else e.setPos(e.getX() + (g.tx - e.getX()) * 0.12, e.getY() + (g.ty - e.getY()) * 0.12, e.getZ() + (g.tz - e.getZ()) * 0.12);
+            else
+                e.setPos(
+                        e.getX() + (g.tx - e.getX()) * 0.12,
+                        e.getY() + (g.ty - e.getY()) * 0.12,
+                        e.getZ() + (g.tz - e.getZ()) * 0.12);
             e.setYRot(e.getYRot() + Mth.wrapDegrees(g.yaw - e.getYRot()) * 0.12f);
             e.ghostTick();
         }
@@ -103,27 +126,37 @@ public final class FarSightClient {
         if (mc.level == null) return;
         Vec3 cam = ctx.camera().getPosition();
         float partial = ctx.tickCounter().getGameTimeDeltaPartialTick(false);
-        int limit = Math.min(4096, HollowbellConfig.V.farSightBlocks);
+        int limit = Math.min(4096, BellConfig.V.farSightBlocks);
         for (Map.Entry<UUID, Ghost> en : ghosts.entrySet()) {
             Ghost g = en.getValue();
             if (g.fade <= 0f || real.contains(en.getKey())) continue;
             HollowbellEntity e = g.e;
             if (!(mc.getEntityRenderDispatcher().getRenderer(e) instanceof BellRenderer r)) continue;
-            double x = Mth.lerp(partial, e.xo, e.getX()), y = Mth.lerp(partial, e.yo, e.getY()), z = Mth.lerp(partial, e.zo, e.getZ());
+            double x = Mth.lerp(partial, e.xo, e.getX()),
+                    y = Mth.lerp(partial, e.yo, e.getY()),
+                    z = Mth.lerp(partial, e.zo, e.getZ());
             double dx = x - cam.x, dy = y - cam.y, dz = z - cam.z;
             double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (Math.hypot(dx, dz) > limit * 1.05 + 64) continue;
             double k = BellRenderer.shrink(dist);
             AABB box = e.bodyBox();
-            if (ctx.frustum() != null && !ctx.frustum().isVisible(k < 1 ? BellRenderer.shrunk(box, cam.x, cam.y, cam.z, k) : box)) continue;
+            if (ctx.frustum() != null
+                    && !ctx.frustum().isVisible(k < 1 ? BellRenderer.shrunk(box, cam.x, cam.y, cam.z, k) : box))
+                continue;
             PoseStack ps = new PoseStack();
             ps.translate(dx, dy, dz);
             r.renderGhost(e, ps, partial, g.fade, ctx.consumers());
         }
     }
 
-    /** how many are being drawn far off right now (for the tests and the curious) */
-    public static int count() { return ghosts.size(); }
+    /** how many are being drawn far off right now */
+    public static int count() {
+        return ghosts.size();
+    }
 
-    public static void clear() { ghosts.clear(); real.clear(); realSeen.clear(); }
+    public static void clear() {
+        ghosts.clear();
+        real.clear();
+        realSeen.clear();
+    }
 }

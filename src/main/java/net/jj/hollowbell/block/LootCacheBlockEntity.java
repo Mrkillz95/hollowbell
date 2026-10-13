@@ -1,16 +1,19 @@
 package net.jj.hollowbell.block;
 
 import net.jj.hollowbell.ModBlocks;
+import net.jj.hollowbell.world.LootBeams;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -18,22 +21,46 @@ import net.minecraft.world.level.block.state.BlockState;
 public class LootCacheBlockEntity extends RandomizableContainerBlockEntity {
     private NonNullList<ItemStack> items = NonNullList.withSize(27, ItemStack.EMPTY);
 
-    public LootCacheBlockEntity(BlockPos pos, BlockState st) { super(ModBlocks.LOOT_CACHE_ENTITY, pos, st); }
+    public LootCacheBlockEntity(BlockPos pos, BlockState st) {
+        super(ModBlocks.LOOT_CACHE_ENTITY, pos, st);
+    }
 
-    @Override protected NonNullList<ItemStack> getItems() { return items; }
-    @Override protected void setItems(NonNullList<ItemStack> list) { items = list; }
-    @Override protected Component getDefaultName() { return Component.translatable("block.hollowbell.loot_cache"); }
-    @Override public int getContainerSize() { return 27; }
-    @Override protected AbstractContainerMenu createMenu(int id, Inventory inv) { return ChestMenu.threeRows(id, inv, this); }
+    @Override
+    protected NonNullList<ItemStack> getItems() {
+        return items;
+    }
+
+    @Override
+    protected void setItems(NonNullList<ItemStack> list) {
+        items = list;
+    }
+
+    @Override
+    protected Component getDefaultName() {
+        return Component.translatable("block.hollowbell.loot_cache");
+    }
+
+    @Override
+    public int getContainerSize() {
+        return 27;
+    }
+
+    @Override
+    protected AbstractContainerMenu createMenu(int id, Inventory inv) {
+        return ChestMenu.threeRows(id, inv, this);
+    }
 
     /** put in what fits; returns what didn't */
     public ItemStack add(ItemStack st) {
         for (int i = 0; i < items.size() && !st.isEmpty(); i++) {
             ItemStack in = items.get(i);
-            if (in.isEmpty()) { items.set(i, st.copy()); st = ItemStack.EMPTY; }
-            else if (ItemStack.isSameItemSameComponents(in, st) && in.getCount() < in.getMaxStackSize()) {
+            if (in.isEmpty()) {
+                items.set(i, st.copy());
+                st = ItemStack.EMPTY;
+            } else if (ItemStack.isSameItemSameComponents(in, st) && in.getCount() < in.getMaxStackSize()) {
                 int n = Math.min(st.getCount(), in.getMaxStackSize() - in.getCount());
-                in.grow(n); st.shrink(n);
+                in.grow(n);
+                st.shrink(n);
             }
         }
         setChanged();
@@ -50,16 +77,16 @@ public class LootCacheBlockEntity extends RandomizableContainerBlockEntity {
         if (st.hasProperty(LootCacheBlock.LIT) && st.getValue(LootCacheBlock.LIT) != full)
             level.setBlock(worldPosition, st.setValue(LootCacheBlock.LIT, full), 3);
         // the far-off beam goes with it, for everyone
-        if (level instanceof net.minecraft.server.level.ServerLevel sl && st.is(net.jj.hollowbell.ModBlocks.LOOT_CACHE))
-            net.jj.hollowbell.world.LootBeams.mark(sl, worldPosition, full);
+        if (level instanceof ServerLevel sl && st.is(ModBlocks.LOOT_CACHE)) LootBeams.mark(sl, worldPosition, full);
     }
 
     /** its ground loaded: a cache from before the list of beams existed goes on it */
     @Override
-    public void setLevel(net.minecraft.world.level.Level l) {
+    public void setLevel(Level l) {
         super.setLevel(l);
         BlockState st = getBlockState();
-        if (!l.isClientSide && st.hasProperty(LootCacheBlock.LIT)) net.jj.hollowbell.world.LootBeams.noteLoaded(l, worldPosition, st.getValue(LootCacheBlock.LIT));
+        if (!l.isClientSide && st.hasProperty(LootCacheBlock.LIT))
+            LootBeams.noteLoaded(l, worldPosition, st.getValue(LootCacheBlock.LIT));
     }
 
     @Override

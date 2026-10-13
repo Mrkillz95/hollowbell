@@ -1,6 +1,6 @@
 package net.jj.hollowbell.client;
 
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 
@@ -13,7 +13,7 @@ public final class Shake {
 
     /** a foot has come down: how hard you feel it falls off with distance */
     public static void thump(double dist, float scale) {
-        if (!HollowbellConfig.V.screenShake) return;
+        if (!BellConfig.V.screenShake) return;
         double reach = 60 + 340 * scale;
         if (dist > reach) return;
         float near = (float) (1.0 - dist / reach);
@@ -22,7 +22,7 @@ public final class Shake {
 
     /** he has come down: one long shove instead of a footfall */
     public static void crash(double dist, float scale) {
-        if (!HollowbellConfig.V.screenShake) return;
+        if (!BellConfig.V.screenShake) return;
         double reach = 140 + 600 * scale;
         if (dist > reach) return;
         float near = (float) (1.0 - dist / reach);
@@ -37,7 +37,7 @@ public final class Shake {
 
     /** sideways, up-down and forward-back wobble for the camera this frame */
     public static float[] offset(float partial) {
-        if (amount <= 0f || !HollowbellConfig.V.screenShake) return null;
+        if (amount <= 0f || !BellConfig.V.screenShake) return null;
         float a = Mth.lerp(partial, last, amount);
         if (a <= 0.002f) return null;
         Minecraft mc = Minecraft.getInstance();
@@ -47,6 +47,6 @@ public final class Shake {
         float x = (float) (Math.sin(t * 2.7) * 0.6 + Math.sin(t * 7.3) * 0.4) * a * 0.30f;
         float y = (float) (Math.sin(t * 3.9 + 1.3) * 0.6 + Math.sin(t * 9.1) * 0.4) * a * 0.24f;
         float z = (float) Math.sin(t * 5.1 + 2.2) * a * 0.12f;
-        return new float[]{x, y, z};
+        return new float[] {x, y, z};
     }
 }

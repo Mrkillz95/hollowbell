@@ -1,4 +1,4 @@
-// Draws voxels to PNG from a few directions, with simple depth shading (like reference/render.js).
+// Draws voxels to PNG from a few directions, with simple depth shading.
 const { writePng } = require('./png');
 
 const COL = {

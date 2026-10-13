@@ -14,9 +14,11 @@ public record SafeDropPayload(String id) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<SafeDropPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "safe_drop"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, SafeDropPayload> CODEC = StreamCodec.of(
-            (buf, p) -> buf.writeUtf(p.id(), 200),
-            buf -> new SafeDropPayload(buf.readUtf(200)));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SafeDropPayload> CODEC =
+            StreamCodec.of((buf, p) -> buf.writeUtf(p.id(), 200), buf -> new SafeDropPayload(buf.readUtf(200)));
 
-    @Override public CustomPacketPayload.Type<SafeDropPayload> type() { return TYPE; }
+    @Override
+    public CustomPacketPayload.Type<SafeDropPayload> type() {
+        return TYPE;
+    }
 }

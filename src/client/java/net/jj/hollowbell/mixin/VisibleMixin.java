@@ -21,18 +21,32 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(LevelRenderer.class)
 public abstract class VisibleMixin {
-    @Shadow private ClientLevel level;
-    @Shadow public abstract boolean isSectionCompiled(BlockPos pos);
-    @Unique private final LongOpenHashSet hollowbell$spots = new LongOpenHashSet();
+    @Shadow
+    private ClientLevel level;
+
+    @Shadow
+    public abstract boolean isSectionCompiled(BlockPos pos);
+
+    @Unique
+    private final LongOpenHashSet hollowbell$spots = new LongOpenHashSet();
 
     @Inject(method = "renderLevel", at = @At("HEAD"), require = 0)
     private void hollowbell$find(CallbackInfo ci) {
         hollowbell$spots.clear();
         if (level == null) return;
-        for (Entity e : level.entitiesForRendering()) if (e instanceof HollowbellEntity) hollowbell$spots.add(e.blockPosition().asLong());
+        for (Entity e : level.entitiesForRendering())
+            if (e instanceof HollowbellEntity)
+                hollowbell$spots.add(e.blockPosition().asLong());
     }
 
-    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;isSectionCompiled(Lnet/minecraft/core/BlockPos;)Z"), require = 0)
+    @WrapOperation(
+            method = "renderLevel",
+            at =
+                    @At(
+                            value = "INVOKE",
+                            target =
+                                    "Lnet/minecraft/client/renderer/LevelRenderer;isSectionCompiled(Lnet/minecraft/core/BlockPos;)Z"),
+            require = 0)
     private boolean hollowbell$drawAnyway(LevelRenderer self, BlockPos pos, Operation<Boolean> original) {
         if (hollowbell$spots.contains(pos.asLong())) return true;
         return original.call(self, pos);

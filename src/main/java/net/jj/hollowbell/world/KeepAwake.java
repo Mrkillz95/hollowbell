@@ -1,13 +1,12 @@
 package net.jj.hollowbell.world;
 
-import net.jj.hollowbell.HollowbellConfig;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-
 
 /**
  * He's far bigger than the game expects anything to be. It only moves a creature while the chunk at its very
@@ -21,12 +20,17 @@ public final class KeepAwake {
     private static final TicketType<Integer> HOLLOWBELL = TicketType.create("hollowbell", Integer::compare, 100);
 
     public static void tick(ServerLevel level) {
-        if (!HollowbellConfig.V.chunkLoading || level.getGameTime() % 20 != 0) return;
+        if (!BellConfig.V.chunkLoading || level.getGameTime() % 20 != 0) return;
         for (HollowbellEntity h : level.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved())) {
             // out to where he'd step out of the world, so he's never left frozen short of it
-            double r = Math.max(300 * Math.max(0.15f, h.bellScale()) + 140, Away.awayRange(level.getServer(), h.bellScale()) + 32);
+            double r = Math.max(
+                    300 * Math.max(0.15f, h.bellScale()) + 140, Away.awayRange(level.getServer(), h.bellScale()) + 32);
             boolean seen = false;
-            for (ServerPlayer p : level.players()) if (!p.isSpectator() && p.distanceToSqr(h.getX(), p.getY(), h.getZ()) < r * r) { seen = true; break; }
+            for (ServerPlayer p : level.players())
+                if (!p.isSpectator() && p.distanceToSqr(h.getX(), p.getY(), h.getZ()) < r * r) {
+                    seen = true;
+                    break;
+                }
             if (!seen) continue;
             // 2 chunks out from his middle keeps the middle moving; more keeps the ground under all of him there
             int radius = Math.min(9, (int) Math.ceil(90 * h.bellScale() / 16.0) + 2);

@@ -1,87 +1,141 @@
 package net.jj.hollowbell;
 
+import java.util.List;
+import java.util.Map;
 import net.jj.hollowbell.item.BellArmorItem;
 import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.item.FinderItem;
 import net.jj.hollowbell.item.StingerItem;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tiers;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.crafting.Ingredient;
-
-import java.util.List;
-import java.util.Map;
 
 public final class ModItems {
     public static final Item CALM_EGG = egg("calm_hollowbell_spawn_egg", 0, 0x52A284, 0xE5E1CF);
     public static final Item HUNTING_EGG = egg("hunting_hollowbell_spawn_egg", 1, 0x52A284, 0xE0662A);
     public static final Item GUARDIAN_EGG = egg("guardian_hollowbell_spawn_egg", 2, 0x52A284, 0x2E8B3A);
     public static final Item SMALL_EGG = egg("small_hollowbell_spawn_egg", 3, 0x8CC7AE, 0xE5E1CF);
-    public static final Item BELLING_EGG = reg("belling_spawn_egg", new SpawnEggItem(ModEntities.BELLING, 0x3E4447, 0xE5941D, new Item.Properties()));
+    public static final Item BELLING_EGG =
+            reg("belling_spawn_egg", new SpawnEggItem(ModEntities.BELLING, 0x3E4447, 0xE5941D, new Item.Properties()));
 
     public static final Item POD = reg("hollowbell_pod", new Item(new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final Item BELL_GLASS = reg("bell_glass", new Item(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final Item STINGER = reg("stinger", new StingerItem(Tiers.NETHERITE,
-            new Item.Properties().rarity(Rarity.EPIC).fireResistant().attributes(SwordItem.createAttributes(Tiers.NETHERITE, 4, -2.2f))));
-    public static final Item CODEX = reg("hollowbell_codex", new CodexItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
-    public static final Item CROWN = reg("hollowbell_crown", new BlockItem(ModBlocks.CROWN, new Item.Properties().rarity(Rarity.EPIC)) {
-        @Override
-        public void appendHoverText(net.minecraft.world.item.ItemStack stack, TooltipContext ctx, List<net.minecraft.network.chat.Component> tip, net.minecraft.world.item.TooltipFlag flag) {
-            tip.add(net.minecraft.network.chat.Component.translatable("item.hollowbell.hollowbell_crown.tip1").withStyle(net.minecraft.ChatFormatting.GRAY));
-            tip.add(net.minecraft.network.chat.Component.translatable("item.hollowbell.hollowbell_crown.tip2", HollowbellConfig.V.wardBlocks,
-                    Math.max(1, HollowbellConfig.V.wardSeconds / 60)).withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
-            tip.add(net.minecraft.network.chat.Component.translatable("item.hollowbell.hollowbell_crown.tip3",
-                    Math.max(0, HollowbellConfig.V.wardRestSeconds / 60)).withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
-        }
-    });
+    public static final Item STINGER = reg(
+            "stinger",
+            new StingerItem(
+                    Tiers.NETHERITE,
+                    new Item.Properties()
+                            .rarity(Rarity.EPIC)
+                            .fireResistant()
+                            .attributes(SwordItem.createAttributes(Tiers.NETHERITE, 4, -2.2f))));
+    public static final Item CODEX = reg(
+            "hollowbell_codex",
+            new CodexItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
+    public static final Item CROWN =
+            reg("hollowbell_crown", new BlockItem(ModBlocks.CROWN, new Item.Properties().rarity(Rarity.EPIC)) {
+                @Override
+                public void appendHoverText(
+                        ItemStack stack, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
+                    tip.add(Component.translatable("item.hollowbell.hollowbell_crown.tip1")
+                            .withStyle(ChatFormatting.GRAY));
+                    tip.add(Component.translatable(
+                                    "item.hollowbell.hollowbell_crown.tip2",
+                                    BellConfig.V.wardBlocks,
+                                    Math.max(1, BellConfig.V.wardSeconds / 60))
+                            .withStyle(ChatFormatting.DARK_AQUA));
+                    tip.add(Component.translatable(
+                                    "item.hollowbell.hollowbell_crown.tip3",
+                                    Math.max(0, BellConfig.V.wardRestSeconds / 60))
+                            .withStyle(ChatFormatting.DARK_GRAY));
+                }
+            });
     /** the blocks of his ground */
-    public static final Item BELL_CALCITE = reg("bell_calcite", new BlockItem(ModBlocks.BELL_CALCITE, new Item.Properties()));
-    public static final Item TENDRIL_GLASS = reg("tendril_glass", new BlockItem(ModBlocks.TENDRIL_GLASS, new Item.Properties()));
+    public static final Item BELL_CALCITE =
+            reg("bell_calcite", new BlockItem(ModBlocks.BELL_CALCITE, new Item.Properties()));
+
+    public static final Item TENDRIL_GLASS =
+            reg("tendril_glass", new BlockItem(ModBlocks.TENDRIL_GLASS, new Item.Properties()));
     public static final Item BELL_SHARD = reg("bell_shard", new BlockItem(ModBlocks.BELL_SHARD, new Item.Properties()));
-    public static final Item LOOT_CACHE = reg("loot_cache", new BlockItem(ModBlocks.LOOT_CACHE, new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final Item LOOT_CACHE =
+            reg("loot_cache", new BlockItem(ModBlocks.LOOT_CACHE, new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final Item SPORE_MOSS = reg("spore_moss", new BlockItem(ModBlocks.SPORE_MOSS, new Item.Properties()));
     /** "Finder of the Hollowbell": says how far he is and which way, or when the next one comes down */
-    public static final Item FINDER = reg("hollowbell_finder", new FinderItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    public static final Item FINDER = reg(
+            "hollowbell_finder",
+            new FinderItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
-    /** bell glass armor: as tough as diamond and light; the full set keeps poison off and slows a fast fall (see BellArmorItem) */
-    public static final Holder<ArmorMaterial> BELL_GLASS_ARMOR = Registry.registerForHolder(BuiltInRegistries.ARMOR_MATERIAL,
+    /**
+     * bell glass armor: as tough as diamond and light; the full set keeps poison off and slows a fast fall (see
+     * BellArmorItem)
+     */
+    public static final Holder<ArmorMaterial> BELL_GLASS_ARMOR = Registry.registerForHolder(
+            BuiltInRegistries.ARMOR_MATERIAL,
             ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "bell_glass"),
-            new ArmorMaterial(Map.of(ArmorItem.Type.BOOTS, 3, ArmorItem.Type.LEGGINGS, 6, ArmorItem.Type.CHESTPLATE, 8,
-                    ArmorItem.Type.HELMET, 3, ArmorItem.Type.BODY, 11),
-                    18, SoundEvents.ARMOR_EQUIP_DIAMOND, () -> Ingredient.of(BELL_GLASS),
-                    List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "bell_glass"))),
-                    2.0f, 0.05f));
+            new ArmorMaterial(
+                    Map.of(
+                            ArmorItem.Type.BOOTS,
+                            3,
+                            ArmorItem.Type.LEGGINGS,
+                            6,
+                            ArmorItem.Type.CHESTPLATE,
+                            8,
+                            ArmorItem.Type.HELMET,
+                            3,
+                            ArmorItem.Type.BODY,
+                            11),
+                    18,
+                    SoundEvents.ARMOR_EQUIP_DIAMOND,
+                    () -> Ingredient.of(BELL_GLASS),
+                    List.of(new ArmorMaterial.Layer(
+                            ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "bell_glass"))),
+                    2.0f,
+                    0.05f));
+
     public static final Item BELL_HELMET = armour("bell_glass_helmet", ArmorItem.Type.HELMET);
     public static final Item BELL_CHESTPLATE = armour("bell_glass_chestplate", ArmorItem.Type.CHESTPLATE);
     public static final Item BELL_LEGGINGS = armour("bell_glass_leggings", ArmorItem.Type.LEGGINGS);
     public static final Item BELL_BOOTS = armour("bell_glass_boots", ArmorItem.Type.BOOTS);
 
     private static Item armour(String name, ArmorItem.Type type) {
-        return reg(name, new BellArmorItem(BELL_GLASS_ARMOR, type, new Item.Properties().durability(type.getDurability(35))));
+        return reg(
+                name,
+                new BellArmorItem(BELL_GLASS_ARMOR, type, new Item.Properties().durability(type.getDurability(35))));
     }
 
     private static Item reg(String name, Item item) {
-        return Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, name), item);
+        return Registry.register(
+                BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, name), item);
     }
 
     private static Item egg(String name, int variant, int c1, int c2) {
         CompoundTag t = new CompoundTag();
         t.putString("id", HollowbellMod.MOD_ID + ":hollowbell");
         t.putInt("HollowbellEgg", variant);
-        return reg(name, new SpawnEggItem(ModEntities.HOLLOWBELL, c1, c2, new Item.Properties().component(DataComponents.ENTITY_DATA, CustomData.of(t))));
+        return reg(
+                name,
+                new SpawnEggItem(
+                        ModEntities.HOLLOWBELL,
+                        c1,
+                        c2,
+                        new Item.Properties().component(DataComponents.ENTITY_DATA, CustomData.of(t))));
     }
 
     public static void init() {}

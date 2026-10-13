@@ -1,5 +1,12 @@
 package net.jj.hollowbell.world;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.block.LootCacheBlock;
 import net.jj.hollowbell.net.LootBeamsPayload;
@@ -14,13 +21,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.SavedData;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 /**
  * The loot caches with their beam on, per dimension, kept with the world. A beam is drawn by the cache itself only
  * while its ground is loaded for you, so the server tells every player about the ones within 1024 blocks and
@@ -34,9 +34,12 @@ public final class LootBeams extends SavedData {
 
     private final Set<Long> on = new LinkedHashSet<>();
 
-    private static final SavedData.Factory<LootBeams> FACTORY = new SavedData.Factory<>(LootBeams::new, LootBeams::load, null);
+    private static final SavedData.Factory<LootBeams> FACTORY =
+            new SavedData.Factory<>(LootBeams::new, LootBeams::load, null);
 
-    public static LootBeams get(ServerLevel l) { return l.getDataStorage().computeIfAbsent(FACTORY, NAME); }
+    public static LootBeams get(ServerLevel l) {
+        return l.getDataStorage().computeIfAbsent(FACTORY, NAME);
+    }
 
     private static LootBeams load(CompoundTag tag, HolderLookup.Provider p) {
         LootBeams b = new LootBeams();
@@ -52,6 +55,7 @@ public final class LootBeams extends SavedData {
 
     /** caches found while their ground loads (maybe off the main thread): put on the list at the next tick */
     private record Seen(Level level, BlockPos pos, boolean lit) {}
+
     private static final Queue<Seen> seen = new ConcurrentLinkedQueue<>();
     private static volatile boolean changed;
     private static int clock;
@@ -60,7 +64,10 @@ public final class LootBeams extends SavedData {
     public static void mark(ServerLevel l, BlockPos pos, boolean lit) {
         LootBeams b = get(l);
         boolean did = lit ? b.on.add(pos.asLong()) : b.on.remove(pos.asLong());
-        if (did) { b.setDirty(); changed = true; }
+        if (did) {
+            b.setDirty();
+            changed = true;
+        }
     }
 
     /** a cache's ground just loaded */
@@ -68,7 +75,9 @@ public final class LootBeams extends SavedData {
         if (l instanceof ServerLevel) seen.add(new Seen(l, pos.immutable(), lit));
     }
 
-    public static boolean isOn(ServerLevel l, BlockPos pos) { return get(l).on.contains(pos.asLong()); }
+    public static boolean isOn(ServerLevel l, BlockPos pos) {
+        return get(l).on.contains(pos.asLong());
+    }
 
     private static boolean litCache(BlockState st) {
         return st.is(ModBlocks.LOOT_CACHE) && st.hasProperty(LootCacheBlock.LIT) && st.getValue(LootCacheBlock.LIT);
@@ -99,13 +108,16 @@ public final class LootBeams extends SavedData {
             // anything that isn't a lit cache any more (loaded ground only; the rest is checked when it loads)
             for (ServerLevel l : server.getAllLevels()) {
                 LootBeams b = get(l);
-                if (b.on.removeIf(x -> { BlockPos p = BlockPos.of(x); return l.isLoaded(p) && !litCache(l.getBlockState(p)); })) b.setDirty();
+                if (b.on.removeIf(x -> {
+                    BlockPos p = BlockPos.of(x);
+                    return l.isLoaded(p) && !litCache(l.getBlockState(p));
+                })) b.setDirty();
             }
         }
         changed = false;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, LootBeamsPayload.TYPE)) continue;
-            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new LootBeamsPayload(listFor(p)));
+            if (!ServerPlayNetworking.canSend(p, LootBeamsPayload.TYPE)) continue;
+            ServerPlayNetworking.send(p, new LootBeamsPayload(listFor(p)));
         }
     }
 }

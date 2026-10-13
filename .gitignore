@@ -5,6 +5,12 @@ out/
 .idea/
 *.iml
 .vscode/
-reference/*_vox.bin
-reference/*_names.json
 logs/
+CLAUDE.md
+pictures/
+art/
+autotest/
+autotest*.txt
+watch-release.sh
+watch-all.sh
+run-mods/

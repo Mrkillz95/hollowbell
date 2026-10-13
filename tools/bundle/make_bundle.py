@@ -28,7 +28,7 @@ with zipfile.ZipFile(guide) as gz:
     fmj = json.loads(gz.read('fabric.mod.json'))
     if fmj.get('id') != 'jj_giants': raise SystemExit(f'{guide} is not the Giants Guide')
     fmj['version'] = bver
-    fmj['name'] = "JJ's Giants (all seven)"
+    fmj['name'] = "Giants Guide (all seven)"
     fmj['description'] = ('All seven giants in one jar, and the Giants Guide: ' + ', '.join(f'{n} {v}' for _, v, n in ids) + '.')
     fmj.get('entrypoints', {}).pop('fabric-gametest', None)  # the guide's own tests stay out of the jar people play with
     fmj['jars'] = [{'file': 'META-INF/jars/' + os.path.basename(p)} for p in jars]

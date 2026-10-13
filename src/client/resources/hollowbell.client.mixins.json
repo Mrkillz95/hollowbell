@@ -10,7 +10,7 @@
     "FrozenBodyMixin",
     "PickMixin",
     "VisibleMixin",
-    "QuietMusicMixin",
+    "MusicMixin",
     "LookGlowMixin",
     "SolidFrameMixin"
   ],

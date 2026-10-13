@@ -7,21 +7,36 @@ base { archivesName = project.archives_base_name }
 repositories {
     maven { name = 'CentralMirror'; url = 'https://maven-central.storage-download.googleapis.com/maven2/' }
 }
-// the autotest script: -Pscript=tools/<script>.txt (read straight from the command line: findProperty("script")
-// always came out empty, so the default script ran whatever was asked)
-def autotestScript = gradle.startParameter.projectProperties.script ?: "tools/autotest.txt"
 loom {
     splitEnvironmentSourceSets()
+}
+// the game tests, the labs and the autotest live in their own source sets, so they never go in the jar
+sourceSets {
+    gametest {
+        compileClasspath += main.compileClasspath + main.output
+        runtimeClasspath += main.runtimeClasspath + main.output
+    }
+    gametestClient {
+        compileClasspath += client.compileClasspath + client.output + main.output + gametest.output
+        runtimeClasspath += client.runtimeClasspath + client.output + main.output + gametest.output
+    }
+}
+loom {
     mods {
         "hollowbell" {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
+        }
+        "hollowbell-gametest" {
+            sourceSet sourceSets.gametest
+            sourceSet sourceSets.gametestClient
         }
     }
     runs {
         gametest {
             server()
             name "Game Test"
+            source sourceSets.gametest
             vmArg "-Dfabric-api.gametest"
             vmArg "-Dhollowbell.debug=true"
             vmArg "-Xmx3G"
@@ -31,7 +46,9 @@ loom {
         autotest {
             client()
             name "Auto Test"
-            vmArg "-Dhollowbell.autotest=${project.projectDir}/${autotestScript}"
+            source sourceSets.gametestClient
+            def script = project.findProperty("script") ?: "tools/autotest.txt"
+            vmArg "-Dhollowbell.autotest=${project.projectDir}/" + script
             vmArg "-Xmx6G"
             programArgs "--width", "1280", "--height", "720"
             runDir "build/autotest"
@@ -43,10 +60,57 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    // -Pgiants: the other giants loaded too (copies of their released jars in run-mods/, never committed), to try
+    // /giants and the meetings with all of them in the dev game
+    if (project.hasProperty('giants')) fileTree(dir: 'run-mods', include: '*.jar').each { modLocalRuntime files(it) }
 }
+// the game test classes; ./gradlew runGametest -Ponly=SolidTests,HeightTests runs just those
+def allTests = [
+    'net.jj.hollowbell.test.HollowbellGameTests',
+    'net.jj.hollowbell.test.MoveTests',
+    'net.jj.hollowbell.test.KillTests',
+    'net.jj.hollowbell.test.GrabTests',
+    'net.jj.hollowbell.test.PodTests',
+    'net.jj.hollowbell.test.FlightTests',
+    'net.jj.hollowbell.test.AwayTests',
+    'net.jj.hollowbell.test.GiantsTests',
+    'net.jj.hollowbell.test.CarryTests',
+    'net.jj.hollowbell.test.WorldOneTests',
+    'net.jj.hollowbell.test.GearTests',
+    'net.jj.hollowbell.test.GroundTests',
+    'net.jj.hollowbell.test.FarSightTests',
+    'net.jj.hollowbell.test.OrdersTests',
+    'net.jj.hollowbell.test.OpsTests',
+    'net.jj.hollowbell.test.RestartTests',
+    'net.jj.hollowbell.test.LootTests',
+    'net.jj.hollowbell.test.SoundTests',
+    'net.jj.hollowbell.test.PaintDepthTests',
+    'net.jj.hollowbell.test.LookOrderTests',
+    'net.jj.hollowbell.test.HealTests',
+    'net.jj.hollowbell.test.FreezeTests',
+    'net.jj.hollowbell.test.FarFindTests',
+    'net.jj.hollowbell.test.SolidTests',
+    'net.jj.hollowbell.test.GiantHullTests',
+    'net.jj.hollowbell.test.SpawnEggTests',
+    'net.jj.hollowbell.test.ThrownTests',
+    'net.jj.hollowbell.test.DeathTests',
+    'net.jj.hollowbell.test.HeavyDelayTests',
+    'net.jj.hollowbell.test.HeldTests',
+    'net.jj.hollowbell.test.HeightTests'
+]
+def onlyTests = project.findProperty('only')
+def tests = !onlyTests ? allTests :
+        allTests.findAll { t -> onlyTests.toString().split(',').any { t.endsWith('.' + it) } }
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": project.version }
+}
+processGametestResources {
+    inputs.property "version", project.version
+    inputs.property "gametests", tests.join(',')
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version, "gametests": groovy.json.JsonOutput.toJson(tests)
+    }
 }
 tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
 java {
@@ -55,17 +119,18 @@ java {
 }
 jar { from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } } }
 
-// Maven Central rate-limits the cloud machine, so use Google's mirror of it instead.
+// Google's mirror of Maven Central, in place of the main one
 afterEvaluate {
-    repositories.removeIf { it instanceof MavenArtifactRepository && it.url.toString().contains("repo.maven.apache.org") }
+    repositories.removeIf {
+        it instanceof MavenArtifactRepository && it.url.toString().contains("repo.maven.apache.org")
+    }
 }
 
 // Draws the Bell Hollows without the game, from the real plan, into pictures/ground/ (map, den, samples).
-// Development only, never in the jar: ./gradlew groundLab   (or -Plab="map" / "den" / "sample")
-jar { exclude 'net/jj/hollowbell/lab/**' }
+// ./gradlew groundLab   (or -Plab="map" / "den" / "sample")
 tasks.register('groundLab', JavaExec) {
-    dependsOn 'classes'
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'gametestClasses'
+    classpath = sourceSets.gametest.runtimeClasspath
     mainClass = 'net.jj.hollowbell.lab.GroundLab'
     workingDir = projectDir
     args = (project.findProperty('lab') ?: 'all').toString().split(' ').toList()
@@ -73,10 +138,10 @@ tasks.register('groundLab', JavaExec) {
 }
 
 // Pose lab: runs his animation offline in every pose and move and measures blocks cut off or coming apart
-// (build/poselab). Development only, never in the jar: ./gradlew poseLab -Plab="idle arm_slam" -Pshots=1
+// (build/poselab). ./gradlew poseLab -Plab="idle arm_slam" -Pshots=1
 tasks.register('poseLab', JavaExec) {
-    dependsOn 'classes'
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'gametestClasses'
+    classpath = sourceSets.gametest.runtimeClasspath
     mainClass = 'net.jj.hollowbell.lab.PoseLab'
     workingDir = projectDir
     args = (project.findProperty('lab') ?: 'all').toString().split(' ').toList()
@@ -85,10 +150,10 @@ tasks.register('poseLab', JavaExec) {
     if (project.hasProperty('out')) systemProperty 'lab.out', project.property('out')
 }
 // Solid lab: his solid shape (what's filled in, the dome still hollow) and how much his parts pass into each other in
-// every move (build/solidlab). Development only: ./gradlew solidLab -Plab="solid overlap" -Pshots=1
+// every move (build/solidlab). ./gradlew solidLab -Plab="solid overlap" -Pshots=1
 tasks.register('solidLab', JavaExec) {
-    dependsOn 'classes'
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'gametestClasses'
+    classpath = sourceSets.gametest.runtimeClasspath
     mainClass = 'net.jj.hollowbell.lab.SolidLab'
     workingDir = projectDir
     args = (project.findProperty('lab') ?: 'solid overlap').toString().split(' ').toList()
@@ -97,6 +162,6 @@ tasks.register('solidLab', JavaExec) {
     if (project.hasProperty('out')) systemProperty 'lab.out', project.property('out')
 }
 tasks.register('poseLabClasspath') {
-    dependsOn 'classes'
-    doLast { new File(buildDir, 'poselab-cp.txt').text = sourceSets.main.runtimeClasspath.asPath }
+    dependsOn 'gametestClasses'
+    doLast { new File(buildDir, 'poselab-cp.txt').text = sourceSets.gametest.runtimeClasspath.asPath }
 }

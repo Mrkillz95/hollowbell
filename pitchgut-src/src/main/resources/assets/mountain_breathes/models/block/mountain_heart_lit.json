@@ -1,4 +1,0 @@
-{
-  "parent": "mountain_breathes:block/heart_shape",
-  "textures": { "all": "mountain_breathes:block/mountain_heart_lit" }
-}

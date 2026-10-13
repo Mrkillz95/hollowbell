@@ -39,7 +39,10 @@ public final class LookAim {
 
     public static boolean glows(Entity e) {
         if (markId < 0 || e.getId() != markId) return false;
-        if (e.level().getGameTime() > markUntil) { markId = -1; return false; }
+        if (e.level().getGameTime() > markUntil) {
+            markId = -1;
+            return false;
+        }
         return true;
     }
 }

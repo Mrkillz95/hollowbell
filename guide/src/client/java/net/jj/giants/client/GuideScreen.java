@@ -1,5 +1,7 @@
 package net.jj.giants.client;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.jj.giants.Giant;
 import net.jj.giants.Giants;
 import net.jj.giants.GiantsGuideMod;
@@ -23,9 +25,6 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * The Giants Guide, open. Drawn like the giants' own books: a title, a close button and tabs along the top. On the
  * left, every giant that is installed, with a picture; on the right, the picked giant's pages. The last entry on the
@@ -37,12 +36,19 @@ import java.util.List;
  * "@live" (what the server says right now), "@meettable" (who fights whom). The moves page is made from his moves.
  */
 public class GuideScreen extends Screen {
-    private static final int GOLD = 0xFFE0B050, TITLE = 0xFFE9C9BC, TEXT = 0xFFD8D8D8, KEY = 0xFFFFE080, GREY = 0xFF9A9A9A,
-            PANEL = 0xE8141210, EDGE = 0xFF6B5A44, LINE = 0x30FFFFFF;
+    private static final int GOLD = 0xFFE0B050,
+            TITLE = 0xFFE9C9BC,
+            TEXT = 0xFFD8D8D8,
+            KEY = 0xFFFFE080,
+            GREY = 0xFF9A9A9A,
+            PANEL = 0xE8141210,
+            EDGE = 0xFF6B5A44,
+            LINE = 0x30FFFFFF;
     private static final String[] TOGETHER_PAGES = {"meetings", "giants"};
 
     /** what was open last time (kept while the game runs) */
     private static String pickKey = "";
+
     private static int tab;
     private static double keptScroll;
 
@@ -58,15 +64,32 @@ public class GuideScreen extends Screen {
     // where things go (set in init)
     private int px0, py0, pw, ph, lw, rowH, rx, rw, cy, ch, cw;
 
-    public GuideScreen() { super(Component.translatable("guide.jj_giants.title")); }
+    public GuideScreen() {
+        super(Component.translatable("guide.jj_giants.title"));
+    }
 
     /** open on a giant ("together" for the last entry) and a tab, scrolled to the top (the picture-taking uses this) */
-    public static void showPage(String key, int t, double sc) { pickKey = key; tab = t; keptScroll = sc; }
+    public static void showPage(String key, int t, double sc) {
+        pickKey = key;
+        tab = t;
+        keptScroll = sc;
+    }
 
-    private boolean together() { return pick >= giants.size(); }
-    private @Nullable Giant giant() { return together() ? null : giants.get(pick); }
-    private String[] pages() { return together() ? TOGETHER_PAGES : Giants.pages(giant()); }
-    private int entries() { return giants.isEmpty() ? 0 : giants.size() + 1; }
+    private boolean together() {
+        return pick >= giants.size();
+    }
+
+    private @Nullable Giant giant() {
+        return together() ? null : giants.get(pick);
+    }
+
+    private String[] pages() {
+        return together() ? TOGETHER_PAGES : Giants.pages(giant());
+    }
+
+    private int entries() {
+        return giants.isEmpty() ? 0 : giants.size() + 1;
+    }
 
     @Override
     protected void init() {
@@ -94,18 +117,28 @@ public class GuideScreen extends Screen {
             String[] pg = pages();
             Component[] names = new Component[pg.length];
             int need = 0;
-            for (int i = 0; i < pg.length; i++) { names[i] = Component.translatable("guide.jj_giants.tab." + pg[i]); need += font.width(names[i]) + 8; }
+            for (int i = 0; i < pg.length; i++) {
+                names[i] = Component.translatable("guide.jj_giants.tab." + pg[i]);
+                need += font.width(names[i]) + 8;
+            }
             int gap = 2, spare = Math.max(0, rw - need - gap * (pg.length - 1)), x = rx;
             for (int i = 0; i < pg.length; i++) {
                 final int which = i;
                 int w = font.width(names[i]) + 8 + spare / pg.length + (i < spare % pg.length ? 1 : 0);
                 Component label = i == tab ? names[i].copy().withStyle(ChatFormatting.YELLOW) : names[i];
-                addRenderableWidget(Button.builder(label, b -> { tab = which; keptScroll = 0; rebuild(); })
-                        .bounds(x, py0 + 18, w, 18).build());
+                addRenderableWidget(Button.builder(label, b -> {
+                            tab = which;
+                            keptScroll = 0;
+                            rebuild();
+                        })
+                        .bounds(x, py0 + 18, w, 18)
+                        .build());
                 x += w + gap;
             }
         }
-        Button close = Button.builder(Component.literal("✕"), b -> onClose()).bounds(px0 + pw - 19, py0 + 2, 16, 14).build();
+        Button close = Button.builder(Component.literal("✕"), b -> onClose())
+                .bounds(px0 + pw - 19, py0 + 2, 16, 14)
+                .build();
         close.setTooltip(Tooltip.create(Component.translatable("guide.jj_giants.close")));
         addRenderableWidget(close);
 
@@ -119,10 +152,11 @@ public class GuideScreen extends Screen {
         init();
     }
 
-    // ------------------------------------------------------------------ the page's blocks
+    // the page's blocks
 
     private interface Block {
         int height();
+
         void draw(GuiGraphics g, int x, int y, int mx, int my);
     }
 
@@ -137,15 +171,23 @@ public class GuideScreen extends Screen {
             String page = Giants.pages(g)[tab];
             if (page.equals("moves")) movesPage(g);
             else lines("guide.jj_giants." + g.key() + "." + page + ".");
-            if (page.equals("where")) { Live.ask(g.key()); shownNews = Live.news(g.key()); }
+            if (page.equals("where")) {
+                Live.ask(g.key());
+                shownNews = Live.news(g.key());
+            }
         }
         contentH = 0;
         for (Block b : blocks) contentH += b.height();
         contentH += 4;
     }
 
-    private static boolean has(String key) { return Language.getInstance().has(key); }
-    private static String raw(String key) { return Language.getInstance().getOrDefault(key); }
+    private static boolean has(String key) {
+        return Language.getInstance().has(key);
+    }
+
+    private static String raw(String key) {
+        return Language.getInstance().getOrDefault(key);
+    }
 
     /** the numbered lines prefix+1, prefix+2, ... until one is missing */
     private void lines(String prefix) {
@@ -165,14 +207,20 @@ public class GuideScreen extends Screen {
     private static String[] cells(String s) {
         String body = s.substring(2);
         int bar = body.indexOf(" | ");
-        return bar < 0 ? new String[]{body.trim(), ""} : new String[]{body.substring(0, bar).trim(), body.substring(bar + 3).trim()};
+        return bar < 0
+                ? new String[] {body.trim(), ""}
+                : new String[] {
+                    body.substring(0, bar).trim(), body.substring(bar + 3).trim()
+                };
     }
 
     private void line(String s, int leftW) {
         if (s.startsWith("# ")) heading(Component.literal(s.substring(2)), GOLD);
         else if (s.startsWith("- ")) bullet(Component.literal(s.substring(2)));
-        else if (s.startsWith("| ")) { String[] c = cells(s); row(Component.literal(c[0]), Component.literal(c[1]), leftW, KEY); }
-        else if (s.startsWith("@item ")) items(s.substring(6));
+        else if (s.startsWith("| ")) {
+            String[] c = cells(s);
+            row(Component.literal(c[0]), Component.literal(c[1]), leftW, KEY);
+        } else if (s.startsWith("@item ")) items(s.substring(6));
         else if (s.startsWith("@recipe ")) recipe(s.substring(8).trim());
         else if (s.equals("@picture")) picture(giant());
         else if (s.equals("@live")) live(giant());
@@ -182,7 +230,10 @@ public class GuideScreen extends Screen {
 
     private void gap(int h) {
         blocks.add(new Block() {
-            public int height() { return h; }
+            public int height() {
+                return h;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {}
         });
     }
@@ -190,9 +241,13 @@ public class GuideScreen extends Screen {
     private void para(Component c, int colour, int indent) {
         List<FormattedCharSequence> ls = font.split(c, cw - indent);
         blocks.add(new Block() {
-            public int height() { return ls.size() * 10 + 3; }
+            public int height() {
+                return ls.size() * 10 + 3;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
-                for (int i = 0; i < ls.size(); i++) g.drawString(font, ls.get(i), x + indent, y + i * 10, colour, false);
+                for (int i = 0; i < ls.size(); i++)
+                    g.drawString(font, ls.get(i), x + indent, y + i * 10, colour, false);
             }
         });
     }
@@ -201,7 +256,10 @@ public class GuideScreen extends Screen {
         boolean first = blocks.isEmpty();
         List<FormattedCharSequence> ls = font.split(c, cw);
         blocks.add(new Block() {
-            public int height() { return (first ? 0 : 5) + ls.size() * 10 + 4; }
+            public int height() {
+                return (first ? 0 : 5) + ls.size() * 10 + 4;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 int y0 = y + (first ? 0 : 5);
                 for (int i = 0; i < ls.size(); i++) g.drawString(font, ls.get(i), x, y0 + i * 10, colour, false);
@@ -213,7 +271,10 @@ public class GuideScreen extends Screen {
     private void bullet(Component c) {
         List<FormattedCharSequence> ls = font.split(c, cw - 9);
         blocks.add(new Block() {
-            public int height() { return ls.size() * 10 + 2; }
+            public int height() {
+                return ls.size() * 10 + 2;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 g.drawString(font, "•", x + 1, y, GREY, false);
                 for (int i = 0; i < ls.size(); i++) g.drawString(font, ls.get(i), x + 9, y + i * 10, TEXT, false);
@@ -225,7 +286,10 @@ public class GuideScreen extends Screen {
         List<FormattedCharSequence> a = font.split(left, leftW - 4), b = font.split(right, cw - leftW - 2);
         int n = Math.max(1, Math.max(a.size(), b.size()));
         blocks.add(new Block() {
-            public int height() { return n * 10 + 4; }
+            public int height() {
+                return n * 10 + 4;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 for (int i = 0; i < a.size(); i++) g.drawString(font, a.get(i), x, y + 1 + i * 10, leftColour, false);
                 for (int i = 0; i < b.size(); i++) g.drawString(font, b.get(i), x + leftW, y + 1 + i * 10, TEXT, false);
@@ -249,12 +313,17 @@ public class GuideScreen extends Screen {
         String[] p = spec.split(" \\| ", 3);
         List<ItemStack> st = stacks(p[0]);
         String t = p.length > 1 ? p[1].trim() : "";
-        Component title = !t.isEmpty() ? Component.literal(t) : !st.isEmpty() ? st.get(0).getHoverName() : Component.empty();
-        List<FormattedCharSequence> text = p.length > 2 && !p[2].isBlank() ? font.split(Component.literal(p[2].trim()), cw - 4) : List.of();
+        Component title =
+                !t.isEmpty() ? Component.literal(t) : !st.isEmpty() ? st.get(0).getHoverName() : Component.empty();
+        List<FormattedCharSequence> text =
+                p.length > 2 && !p[2].isBlank() ? font.split(Component.literal(p[2].trim()), cw - 4) : List.of();
         int iconsW = st.size() * 18;
         List<FormattedCharSequence> head = font.split(title, Math.max(40, cw - iconsW - 4));
         blocks.add(new Block() {
-            public int height() { return Math.max(st.isEmpty() ? 10 : 18, head.size() * 10) + text.size() * 10 + 6; }
+            public int height() {
+                return Math.max(st.isEmpty() ? 10 : 18, head.size() * 10) + text.size() * 10 + 6;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 for (int i = 0; i < st.size(); i++) {
                     int ix = x + i * 18, iy = y + 1;
@@ -263,7 +332,8 @@ public class GuideScreen extends Screen {
                     if (mx >= ix && mx < ix + 17 && my >= iy && my < iy + 17 && inContent(mx, my)) hovered = st.get(i);
                 }
                 int hy = y + (st.isEmpty() ? 0 : Math.max(0, (18 - head.size() * 10) / 2 + 1));
-                for (int i = 0; i < head.size(); i++) g.drawString(font, head.get(i), x + iconsW + (st.isEmpty() ? 0 : 4), hy + i * 10, KEY, false);
+                for (int i = 0; i < head.size(); i++)
+                    g.drawString(font, head.get(i), x + iconsW + (st.isEmpty() ? 0 : 4), hy + i * 10, KEY, false);
                 int ty = y + Math.max(st.isEmpty() ? 10 : 18, head.size() * 10) + 2;
                 for (int i = 0; i < text.size(); i++) g.drawString(font, text.get(i), x + 4, ty + i * 10, TEXT, false);
             }
@@ -282,11 +352,13 @@ public class GuideScreen extends Screen {
         int w = r instanceof ShapedRecipe s ? s.getWidth() : 3;
         ItemStack result = r.getResultItem(mc.level.registryAccess());
         blocks.add(new Block() {
-            public int height() { return 3 * 18 + 6; }
+            public int height() {
+                return 3 * 18 + 6;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 int x0 = x + 4;
-                for (int sy = 0; sy < 3; sy++)
-                    for (int sx = 0; sx < 3; sx++) slot(g, x0 + sx * 18, y + sy * 18);
+                for (int sy = 0; sy < 3; sy++) for (int sx = 0; sx < 3; sx++) slot(g, x0 + sx * 18, y + sy * 18);
                 for (int i = 0; i < ing.size() && i < 9; i++) {
                     ItemStack[] opts = ing.get(i).getItems();
                     if (opts.length == 0) continue;
@@ -302,7 +374,8 @@ public class GuideScreen extends Screen {
                 g.renderItem(result, rxx + 1, y + 19);
                 if (mx >= rxx && mx < rxx + 18 && my >= y + 18 && my < y + 36 && inContent(mx, my)) hovered = result;
                 List<FormattedCharSequence> nm = font.split(result.getHoverName(), Math.max(30, cw - (rxx + 24 - x)));
-                for (int i = 0; i < nm.size() && i < 3; i++) g.drawString(font, nm.get(i), rxx + 24, y + 23 - (nm.size() - 1) * 5 + i * 10, KEY, false);
+                for (int i = 0; i < nm.size() && i < 3; i++)
+                    g.drawString(font, nm.get(i), rxx + 24, y + 23 - (nm.size() - 1) * 5 + i * 10, KEY, false);
             }
         });
     }
@@ -316,16 +389,21 @@ public class GuideScreen extends Screen {
     /** "@picture": his picture, name, role and size */
     private void picture(@Nullable Giant gi) {
         if (gi == null) return;
-        ResourceLocation tex = ResourceLocation.fromNamespaceAndPath(GiantsGuideMod.ID, "textures/gui/giant/" + gi.key() + ".png");
+        ResourceLocation tex =
+                ResourceLocation.fromNamespaceAndPath(GiantsGuideMod.ID, "textures/gui/giant/" + gi.key() + ".png");
         List<FormattedCharSequence> size = font.split(Component.translatable(gi.sizeKey()), cw - 60);
         blocks.add(new Block() {
-            public int height() { return Math.max(54, 26 + size.size() * 10) + 4; }
+            public int height() {
+                return Math.max(54, 26 + size.size() * 10) + 4;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 g.fill(x, y, x + 52, y + 52, EDGE);
                 g.blit(tex, x + 2, y + 2, 48, 48, 0, 0, 64, 64, 64, 64);
                 g.drawString(font, Component.translatable(gi.nameKey()), x + 58, y + 2, TITLE, false);
                 g.drawString(font, Component.translatable(gi.roleKey()), x + 58, y + 13, GOLD, false);
-                for (int i = 0; i < size.size(); i++) g.drawString(font, size.get(i), x + 58, y + 26 + i * 10, GREY, false);
+                for (int i = 0; i < size.size(); i++)
+                    g.drawString(font, size.get(i), x + 58, y + 26 + i * 10, GREY, false);
             }
         });
     }
@@ -335,8 +413,10 @@ public class GuideScreen extends Screen {
         if (gi == null) return;
         heading(Component.translatable("guide.jj_giants.live.title"), GOLD);
         Live.News n = Live.news(gi.key());
-        if (n == null || n.state() == Live.State.ASKING && n.lines().isEmpty()) para(Component.translatable("guide.jj_giants.live.asking"), GREY, 0);
-        else if (n.state() == Live.State.NO_SERVER) para(Component.translatable("guide.jj_giants.live.no_server"), GREY, 0);
+        if (n == null || n.state() == Live.State.ASKING && n.lines().isEmpty())
+            para(Component.translatable("guide.jj_giants.live.asking"), GREY, 0);
+        else if (n.state() == Live.State.NO_SERVER)
+            para(Component.translatable("guide.jj_giants.live.no_server"), GREY, 0);
         else if (n.lines().isEmpty()) para(Component.translatable("guide.jj_giants.live.nothing"), GREY, 0);
         else for (String s : n.lines()) bullet(Component.literal(s));
     }
@@ -344,21 +424,30 @@ public class GuideScreen extends Screen {
     /** "@meettable": who fights whom when they meet, for the giants installed */
     private void meetTable() {
         int n = giants.size();
-        if (n < 2) { para(Component.translatable("guide.jj_giants.together.one"), GREY, 0); return; }
+        if (n < 2) {
+            para(Component.translatable("guide.jj_giants.together.one"), GREY, 0);
+            return;
+        }
         int labelW = 0;
-        for (Giant g : giants) labelW = Math.max(labelW, font.width(Component.translatable("guide.jj_giants." + g.key() + ".short")) + 6);
+        for (Giant g : giants)
+            labelW = Math.max(labelW, font.width(Component.translatable("guide.jj_giants." + g.key() + ".short")) + 6);
         int colW = Math.max(24, (cw - labelW) / n);
-        Component fight = Component.translatable("guide.jj_giants.together.fight"), away = Component.translatable("guide.jj_giants.together.away");
+        Component fight = Component.translatable("guide.jj_giants.together.fight"),
+                away = Component.translatable("guide.jj_giants.together.away");
         if (font.width(away) > colW - 2) away = Component.translatable("guide.jj_giants.together.away_short");
         final Component fightC = fight, awayC = away;
         final int lab = labelW;
         // the column heads are the names when they fit, or else the giants' pictures
         boolean names = true;
-        for (Giant g : giants) names &= font.width(Component.translatable("guide.jj_giants." + g.key() + ".short")) <= colW - 4;
+        for (Giant g : giants)
+            names &= font.width(Component.translatable("guide.jj_giants." + g.key() + ".short")) <= colW - 4;
         final boolean byName = names;
         final int headH = byName ? 13 : 18;
         blocks.add(new Block() {
-            public int height() { return headH + n * 13 + 4; }
+            public int height() {
+                return headH + n * 13 + 4;
+            }
+
             public void draw(GuiGraphics g, int x, int y, int mx, int my) {
                 for (int c = 0; c < n; c++) {
                     Giant gc = giants.get(c);
@@ -366,20 +455,43 @@ public class GuideScreen extends Screen {
                     if (byName) {
                         Component h = Component.translatable("guide.jj_giants." + gc.key() + ".short");
                         g.drawString(font, h, hx - font.width(h) / 2, y + 2, KEY, false);
-                    } else g.blit(ResourceLocation.fromNamespaceAndPath(GiantsGuideMod.ID, "textures/gui/giant/" + gc.key() + ".png"),
-                            hx - 8, y, 16, 16, 0, 0, 64, 64, 64, 64);
+                    } else
+                        g.blit(
+                                ResourceLocation.fromNamespaceAndPath(
+                                        GiantsGuideMod.ID, "textures/gui/giant/" + gc.key() + ".png"),
+                                hx - 8,
+                                y,
+                                16,
+                                16,
+                                0,
+                                0,
+                                64,
+                                64,
+                                64,
+                                64);
                 }
                 for (int r = 0; r < n; r++) {
                     int ry = y + headH + r * 13;
                     g.fill(x, ry - 1, x + lab + n * colW, ry, LINE);
-                    g.drawString(font, Component.translatable("guide.jj_giants." + giants.get(r).key() + ".short"), x, ry + 2, KEY, false);
+                    g.drawString(
+                            font,
+                            Component.translatable(
+                                    "guide.jj_giants." + giants.get(r).key() + ".short"),
+                            x,
+                            ry + 2,
+                            KEY,
+                            false);
                     for (int c = 0; c < n; c++) {
                         int cx = x + lab + c * colW;
-                        if (r == c) { g.drawString(font, "–", cx + colW / 2 - 2, ry + 2, GREY, false); continue; }
+                        if (r == c) {
+                            g.drawString(font, "–", cx + colW / 2 - 2, ry + 2, GREY, false);
+                            continue;
+                        }
                         boolean f = Giants.fight(giants.get(r), giants.get(c));
                         g.fill(cx + 1, ry, cx + colW - 1, ry + 12, f ? 0x60A02020 : 0x602060A0);
                         Component t = f ? fightC : awayC;
-                        g.drawString(font, t, cx + colW / 2 - font.width(t) / 2, ry + 2, f ? 0xFFFF8080 : 0xFF80C0FF, false);
+                        g.drawString(
+                                font, t, cx + colW / 2 - font.width(t) / 2, ry + 2, f ? 0xFFFF8080 : 0xFF80C0FF, false);
                     }
                 }
             }
@@ -413,9 +525,11 @@ public class GuideScreen extends Screen {
         return Component.translatable(has(m.whatKey()) ? m.whatKey() : g.moveWhatCopy(m));
     }
 
-    // ------------------------------------------------------------------ drawing
+    // drawing
 
-    private boolean inContent(int mx, int my) { return mx >= rx && mx < rx + rw && my >= cy && my < cy + ch; }
+    private boolean inContent(int mx, int my) {
+        return mx >= rx && mx < rx + rw && my >= cy && my < cy + ch;
+    }
 
     @Override
     public void renderBackground(GuiGraphics g, int mx, int my, float partial) {
@@ -432,13 +546,27 @@ public class GuideScreen extends Screen {
         for (int i = 0; i < entries(); i++) {
             int y = y0 + i * rowH;
             boolean sel = i == pick, over = mx >= x && mx < x + lw && my >= y && my < y + rowH - 2;
-            if (sel) { g.fill(x, y, x + lw, y + rowH - 2, 0xFF3A3020); g.renderOutline(x, y, lw, rowH - 2, TITLE); }
-            else if (over) g.fill(x, y, x + lw, y + rowH - 2, 0x30FFFFFF);
+            if (sel) {
+                g.fill(x, y, x + lw, y + rowH - 2, 0xFF3A3020);
+                g.renderOutline(x, y, lw, rowH - 2, TITLE);
+            } else if (over) g.fill(x, y, x + lw, y + rowH - 2, 0x30FFFFFF);
             int pic = rowH - 6;
             Component name;
             if (i < giants.size()) {
                 Giant gi = giants.get(i);
-                g.blit(ResourceLocation.fromNamespaceAndPath(GiantsGuideMod.ID, "textures/gui/giant/" + gi.key() + ".png"), x + 2, y + 2, pic, pic, 0, 0, 64, 64, 64, 64);
+                g.blit(
+                        ResourceLocation.fromNamespaceAndPath(
+                                GiantsGuideMod.ID, "textures/gui/giant/" + gi.key() + ".png"),
+                        x + 2,
+                        y + 2,
+                        pic,
+                        pic,
+                        0,
+                        0,
+                        64,
+                        64,
+                        64,
+                        64);
                 name = Component.translatable(gi.nameKey());
             } else {
                 g.renderItem(new ItemStack(GiantsGuideMod.GUIDE), x + 2 + (pic - 16) / 2, y + 2 + (pic - 16) / 2);
@@ -446,7 +574,8 @@ public class GuideScreen extends Screen {
             }
             List<FormattedCharSequence> ls = font.split(name, lw - pic - 8);
             int ty = y + (rowH - 2 - Math.min(2, ls.size()) * 9) / 2;
-            for (int k = 0; k < ls.size() && k < 2; k++) g.drawString(font, ls.get(k), x + pic + 6, ty + k * 9, sel ? KEY : TEXT, false);
+            for (int k = 0; k < ls.size() && k < 2; k++)
+                g.drawString(font, ls.get(k), x + pic + 6, ty + k * 9, sel ? KEY : TEXT, false);
         }
     }
 
@@ -482,7 +611,7 @@ public class GuideScreen extends Screen {
         if (hovered != null && !hovered.isEmpty()) g.renderTooltip(font, hovered, mx, my);
     }
 
-    // ------------------------------------------------------------------ mouse
+    // mouse
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
@@ -510,7 +639,10 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        if (dragging) { dragTo(my); return true; }
+        if (dragging) {
+            dragTo(my);
+            return true;
+        }
         return super.mouseDragged(mx, my, button, dx, dy);
     }
 
@@ -544,5 +676,8 @@ public class GuideScreen extends Screen {
         return super.keyPressed(key, scan, mods);
     }
 
-    @Override public boolean isPauseScreen() { return false; }
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
 }

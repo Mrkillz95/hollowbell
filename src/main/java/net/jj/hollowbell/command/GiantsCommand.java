@@ -3,24 +3,33 @@ package net.jj.hollowbell.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import net.jj.hollowbell.GiantsBridge;
 import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 /**
- * /giants: one command for all of JJ's bosses at once. Every one of the seven mods carries this class, but only
+ * /giants: one command for all the bosses at once. Every one of the seven mods carries this class, but only
  * one registers it: the first of the seven bridges (in this fixed order) that is actually loaded. This
  * mod's bridge sorts first, so with the Cerberus installed it is this class that answers.
  *
@@ -29,8 +38,7 @@ import net.minecraft.server.MinecraftServer;
  * still answer.
  */
 public final class GiantsCommand {
-    private GiantsCommand() {
-    }
+    private GiantsCommand() {}
 
     /** the seven bridges, in the order every copy elects them; the same list in every mod. (The Swarmforge came
      *  seventh, so he goes on the end, not in his sorted place: the election doesn't change.) */
@@ -41,9 +49,10 @@ public final class GiantsCommand {
         "net.jj.lanternwillow.GiantsBridge",
         "net.jj.mountain.GiantsBridge",
         "net.jj.wreckback.GiantsBridge",
-        "net.jj.swarmforge.GiantsBridge"};
+        "net.jj.swarmforge.GiantsBridge"
+    };
 
-    private static final String MINE = net.jj.hollowbell.GiantsBridge.class.getName();
+    private static final String MINE = GiantsBridge.class.getName();
 
     /** most lines one bridge may add, so a broken one can't flood the chat */
     private static final int MOST_LINES = 40;
@@ -63,6 +72,7 @@ public final class GiantsCommand {
         try {
             return Class.forName(name, false, GiantsCommand.class.getClassLoader());
         } catch (Throwable t) {
+            // that giant's mod isn't installed
             return null;
         }
     }
@@ -92,7 +102,9 @@ public final class GiantsCommand {
     }
 
     /** the name /giants tp takes for each bridge, in the same order as BRIDGES */
-    public static final String[] TP_NAMES = {"cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback", "swarmforge"};
+    public static final String[] TP_NAMES = {
+        "cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback", "swarmforge"
+    };
 
     /** every loaded bridge's answer, in order */
     public static List<String> ask(MinecraftServer server, String action, String arg) {
@@ -130,7 +142,8 @@ public final class GiantsCommand {
                     }
                 }
             } catch (Throwable t) {
-                Throwable why = t instanceof InvocationTargetException ite && ite.getCause() != null ? ite.getCause() : t;
+                Throwable why =
+                        t instanceof InvocationTargetException ite && ite.getCause() != null ? ite.getCause() : t;
                 HollowbellMod.LOG.warn("/giants: {} failed on {}", b, action, why);
                 out.add(nameOf(b) + ": didn't answer (" + why.getClass().getSimpleName() + ").");
             }
@@ -154,7 +167,7 @@ public final class GiantsCommand {
     }
 
     /** /giants tp <name>: takes you to that one giant, asking only its own mod */
-    private static int tp(CommandContext<CommandSourceStack> c) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int tp(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         return one(c, "tp", c.getSource().getPlayerOrException().getUUID().toString());
     }
 
@@ -167,8 +180,12 @@ public final class GiantsCommand {
      * giant's older mod (which reads only the first three words, or takes any bare number for the radius) still
      * paints, at its own old depth.
      */
-    private static int paint(CommandContext<CommandSourceStack> c, int radius, String mode, int depth) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        return one(c, "paint", radius + " " + mode + " " + c.getSource().getPlayerOrException().getUUID() + " depth=" + depth);
+    private static int paint(CommandContext<CommandSourceStack> c, int radius, String mode, int depth)
+            throws CommandSyntaxException {
+        return one(
+                c,
+                "paint",
+                radius + " " + mode + " " + c.getSource().getPlayerOrException().getUUID() + " depth=" + depth);
     }
 
     /** the depth a paint command was given */
@@ -181,7 +198,7 @@ public final class GiantsCommand {
 
     /** one action, asked of just the named giant's mod */
     private static int one(CommandContext<CommandSourceStack> c, String action, String arg) {
-        String which = StringArgumentType.getString(c, "which").toLowerCase(java.util.Locale.ROOT);
+        String which = StringArgumentType.getString(c, "which").toLowerCase(Locale.ROOT);
         // (the names of the mods' own commands, and their old ones, work too)
         which = switch (which) {
             case "lanternwillow" -> "willow";
@@ -189,9 +206,11 @@ public final class GiantsCommand {
             case "fire_ice_cerberus" -> "cerberus";
             default -> which;
         };
-        int i = java.util.Arrays.asList(TP_NAMES).indexOf(which);
+        int i = Arrays.asList(TP_NAMES).indexOf(which);
         if (i < 0) {
-            c.getSource().sendFailure(Component.literal("No giant called " + which + ". Try one of: " + String.join(", ", TP_NAMES) + "."));
+            c.getSource()
+                    .sendFailure(Component.literal(
+                            "No giant called " + which + ". Try one of: " + String.join(", ", TP_NAMES) + "."));
             return 0;
         }
         if (find(BRIDGES[i]) == null) {
@@ -213,12 +232,13 @@ public final class GiantsCommand {
         "lanternwillow:lanternwillow",
         "mountain_breathes:mountain",
         "wreckback:wreckback",
-        "swarmforge:swarmforge"};
+        "swarmforge:swarmforge"
+    };
 
     /** which bridge (index into BRIDGES) owns this entity as a giant's main body, or -1 */
-    public static int bridgeOf(net.minecraft.world.entity.Entity e) {
-        String id = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
-        return java.util.Arrays.asList(MAIN_TYPES).indexOf(id);
+    public static int bridgeOf(Entity e) {
+        String id = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
+        return Arrays.asList(MAIN_TYPES).indexOf(id);
     }
 
     /**
@@ -228,10 +248,10 @@ public final class GiantsCommand {
      */
     private static int meet(CommandContext<CommandSourceStack> c) {
         CommandSourceStack src = c.getSource();
-        net.minecraft.server.level.ServerLevel level = src.getLevel();
-        net.minecraft.world.phys.Vec3 at = src.getPosition();
-        List<net.minecraft.world.entity.Entity> found = new ArrayList<>();
-        for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
+        ServerLevel level = src.getLevel();
+        Vec3 at = src.getPosition();
+        List<Entity> found = new ArrayList<>();
+        for (Entity e : level.getAllEntities()) {
             if (e != null && e.isAlive() && !e.isRemoved() && bridgeOf(e) >= 0 && find(BRIDGES[bridgeOf(e)]) != null) {
                 found.add(e);
             }
@@ -240,8 +260,8 @@ public final class GiantsCommand {
             src.sendFailure(Component.literal("There need to be two giants in this world for that."));
             return 0;
         }
-        found.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(at)));
-        net.minecraft.world.entity.Entity a = found.get(0), b = found.get(1);
+        found.sort(Comparator.comparingDouble(e -> e.distanceToSqr(at)));
+        Entity a = found.get(0), b = found.get(1);
         List<String> lines = new ArrayList<>();
         lines.addAll(ask(src.getServer(), "meet", b.getUUID() + " " + a.getUUID(), BRIDGES[bridgeOf(a)]));
         lines.addAll(ask(src.getServer(), "meet", a.getUUID() + " " + b.getUUID(), BRIDGES[bridgeOf(b)]));
@@ -267,68 +287,117 @@ public final class GiantsCommand {
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> toggle(String name) {
-        return Commands.literal(name).requires(s -> s.hasPermission(2)).executes(c -> run(c, name, ""))
-            .then(Commands.literal("on").executes(c -> run(c, name, "on")))
-            .then(Commands.literal("off").executes(c -> run(c, name, "off")));
+        return Commands.literal(name)
+                .requires(s -> s.hasPermission(2))
+                .executes(c -> run(c, name, ""))
+                .then(Commands.literal("on").executes(c -> run(c, name, "on")))
+                .then(Commands.literal("off").executes(c -> run(c, name, "off")));
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("giants")
-            .executes(c -> {
-                if (!c.getSource().hasPermission(2)) {
-                    c.getSource().sendFailure(Component.literal("You need cheats on for that. /giants where works without."));
-                    return 0;
-                }
+                .executes(c -> {
+                    if (!c.getSource().hasPermission(2)) {
+                        c.getSource()
+                                .sendFailure(
+                                        Component.literal("You need cheats on for that. /giants where works without."));
+                        return 0;
+                    }
 
-                return run(c, "status", "");
-            })
-            .then(toggle("natural"))
-            .then(Commands.literal("limit").requires(s -> s.hasPermission(2)).executes(c -> run(c, "limit", ""))
-                .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20))
-                    .executes(c -> run(c, "limit", String.valueOf(IntegerArgumentType.getInteger(c, "how many"))))))
-            .then(toggle("fight"))
-            .then(toggle("away"))
-            .then(Commands.literal("volume").requires(s -> s.hasPermission(2)).executes(c -> run(c, "volume", ""))
-                .then(Commands.argument("x", FloatArgumentType.floatArg(0.0F, 2.0F))
-                    .executes(c -> run(c, "volume", String.valueOf(FloatArgumentType.getFloat(c, "x"))))))
-            .then(toggle("shake"))
-            .then(Commands.literal("bossbar").requires(s -> s.hasPermission(2)).executes(c -> run(c, "bossbar", ""))
-                .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
-                    .executes(c -> run(c, "bossbar", String.valueOf(IntegerArgumentType.getInteger(c, "blocks"))))))
-            .then(toggle("griefing"))
-            .then(Commands.literal("heavydelay").requires(s -> s.hasPermission(2))
-                .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
-                    .executes(c -> run(c, "heavydelay", String.valueOf(IntegerArgumentType.getInteger(c, "seconds"))))))
-            .then(toggle("meetings"))
-            .then(Commands.literal("meet").requires(s -> s.hasPermission(2)).executes(GiantsCommand::meet))
-            .then(Commands.literal("where").executes(c -> run(c, "where", "")))
-            .then(Commands.literal("goto").requires(s -> s.hasPermission(2))
-                .then(Commands.argument("x", DoubleArgumentType.doubleArg())
-                    .then(Commands.argument("z", DoubleArgumentType.doubleArg())
-                        .executes(c -> run(c, "goto", DoubleArgumentType.getDouble(c, "x") + " " + DoubleArgumentType.getDouble(c, "z"))))))
-            .then(Commands.literal("config").requires(s -> s.hasPermission(2))
-                .executes(c -> run(c, "config", ""))
-                .then(Commands.argument("key", StringArgumentType.word())
-                    .executes(c -> runKeep(c, "config", StringArgumentType.getString(c, "key")))
-                    .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(c -> run(c, "config", StringArgumentType.getString(c, "key") + " " + StringArgumentType.getString(c, "value"))))))
-            .then(Commands.literal("paint").requires(s -> s.hasPermission(2))
-                .then(Commands.argument("which", StringArgumentType.word())
-                    .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
-                    .executes(c -> paint(c, 64, "full", PAINT_DEPTH))
-                    .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512))
-                        .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full", PAINT_DEPTH))
-                        .then(Commands.literal("full").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full", PAINT_DEPTH))
-                            .then(Commands.argument("depth", IntegerArgumentType.integer(PAINT_DEPTH_MIN, PAINT_DEPTH_MAX))
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(PAINT_DEPTHS, b))
-                                .executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "full", depth(c)))))
-                        .then(Commands.literal("biome").executes(c -> paint(c, IntegerArgumentType.getInteger(c, "radius"), "biome", PAINT_DEPTH))))))
-            .then(Commands.literal("tp").requires(s -> s.hasPermission(2))
-                .then(Commands.argument("which", StringArgumentType.word())
-                    .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
-                    .executes(GiantsCommand::tp)))
-            .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(c -> run(c, "list", "")))
-            .then(Commands.literal("kill").requires(s -> s.hasPermission(2)).executes(c -> run(c, "kill", "")))
-            .then(Commands.literal("remove").requires(s -> s.hasPermission(2)).executes(c -> run(c, "remove", ""))));
+                    return run(c, "status", "");
+                })
+                .then(toggle("natural"))
+                .then(Commands.literal("limit")
+                        .requires(s -> s.hasPermission(2))
+                        .executes(c -> run(c, "limit", ""))
+                        .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20))
+                                .executes(c -> run(
+                                        c, "limit", String.valueOf(IntegerArgumentType.getInteger(c, "how many"))))))
+                .then(toggle("fight"))
+                .then(toggle("away"))
+                .then(Commands.literal("volume")
+                        .requires(s -> s.hasPermission(2))
+                        .executes(c -> run(c, "volume", ""))
+                        .then(Commands.argument("x", FloatArgumentType.floatArg(0.0F, 2.0F))
+                                .executes(c -> run(c, "volume", String.valueOf(FloatArgumentType.getFloat(c, "x"))))))
+                .then(toggle("shake"))
+                .then(Commands.literal("bossbar")
+                        .requires(s -> s.hasPermission(2))
+                        .executes(c -> run(c, "bossbar", ""))
+                        .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
+                                .executes(c -> run(
+                                        c, "bossbar", String.valueOf(IntegerArgumentType.getInteger(c, "blocks"))))))
+                .then(toggle("griefing"))
+                .then(Commands.literal("heavydelay")
+                        .requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
+                                .executes(c -> run(
+                                        c,
+                                        "heavydelay",
+                                        String.valueOf(IntegerArgumentType.getInteger(c, "seconds"))))))
+                .then(toggle("meetings"))
+                .then(Commands.literal("meet").requires(s -> s.hasPermission(2)).executes(GiantsCommand::meet))
+                .then(Commands.literal("where").executes(c -> run(c, "where", "")))
+                .then(Commands.literal("goto")
+                        .requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("x", DoubleArgumentType.doubleArg())
+                                .then(Commands.argument("z", DoubleArgumentType.doubleArg())
+                                        .executes(c -> run(
+                                                c,
+                                                "goto",
+                                                DoubleArgumentType.getDouble(c, "x") + " "
+                                                        + DoubleArgumentType.getDouble(c, "z"))))))
+                .then(Commands.literal("config")
+                        .requires(s -> s.hasPermission(2))
+                        .executes(c -> run(c, "config", ""))
+                        .then(Commands.argument("key", StringArgumentType.word())
+                                .executes(c -> runKeep(c, "config", StringArgumentType.getString(c, "key")))
+                                .then(Commands.argument("value", StringArgumentType.word())
+                                        .executes(c -> run(
+                                                c,
+                                                "config",
+                                                StringArgumentType.getString(c, "key") + " "
+                                                        + StringArgumentType.getString(c, "value"))))))
+                .then(Commands.literal("paint")
+                        .requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("which", StringArgumentType.word())
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
+                                .executes(c -> paint(c, 64, "full", PAINT_DEPTH))
+                                .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512))
+                                        .executes(c -> paint(
+                                                c, IntegerArgumentType.getInteger(c, "radius"), "full", PAINT_DEPTH))
+                                        .then(Commands.literal("full")
+                                                .executes(c -> paint(
+                                                        c,
+                                                        IntegerArgumentType.getInteger(c, "radius"),
+                                                        "full",
+                                                        PAINT_DEPTH))
+                                                .then(Commands.argument(
+                                                                "depth",
+                                                                IntegerArgumentType.integer(
+                                                                        PAINT_DEPTH_MIN, PAINT_DEPTH_MAX))
+                                                        .suggests((c, b) ->
+                                                                SharedSuggestionProvider.suggest(PAINT_DEPTHS, b))
+                                                        .executes(c -> paint(
+                                                                c,
+                                                                IntegerArgumentType.getInteger(c, "radius"),
+                                                                "full",
+                                                                depth(c)))))
+                                        .then(Commands.literal("biome")
+                                                .executes(c -> paint(
+                                                        c,
+                                                        IntegerArgumentType.getInteger(c, "radius"),
+                                                        "biome",
+                                                        PAINT_DEPTH))))))
+                .then(Commands.literal("tp")
+                        .requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("which", StringArgumentType.word())
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
+                                .executes(GiantsCommand::tp)))
+                .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(c -> run(c, "list", "")))
+                .then(Commands.literal("kill").requires(s -> s.hasPermission(2)).executes(c -> run(c, "kill", "")))
+                .then(Commands.literal("remove")
+                        .requires(s -> s.hasPermission(2))
+                        .executes(c -> run(c, "remove", ""))));
     }
 }

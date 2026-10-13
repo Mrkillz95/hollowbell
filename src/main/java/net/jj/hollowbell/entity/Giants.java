@@ -1,16 +1,21 @@
 package net.jj.hollowbell.entity;
 
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TraceableEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
-
 /**
- * The giants: JJ's seven bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback
+ * The giants: the seven bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback
  * and the Swarmforge). They all follow the same rules with each other: a blow from one giant lands on another by the
  * other's own armour against giants, and none of them ever picks another up, swallows it or drags it about. Each one
  * tags itself {@link #TAG}; the ids below catch the others even from older versions that don't.
@@ -43,7 +48,8 @@ public final class Giants {
         Entity e = src.getEntity();
         if (e == null) e = src.getDirectEntity();
         for (int i = 0; i < 3 && e != null; i++) {
-            Entity owner = e instanceof Projectile p ? p.getOwner() : e instanceof TraceableEntity t ? t.getOwner() : null;
+            Entity owner =
+                    e instanceof Projectile p ? p.getOwner() : e instanceof TraceableEntity t ? t.getOwner() : null;
             if (owner == null || owner == e) break;
             e = owner;
         }
@@ -56,26 +62,35 @@ public final class Giants {
         return e != null && e != self && (isGiant(e) || e.getTags().contains(KIN));
     }
 
-    private static final java.util.Map<Class<?>, java.util.Optional<java.lang.reflect.Method>> OWNER = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<Class<?>, Optional<Method>> OWNER = new ConcurrentHashMap<>();
 
     /**
      * The giant a part box belongs to. The other giants are mostly made of part boxes that aren't creatures themselves
      * (Pitchgut's, the Furrowmaw's rings, the Cerberus's body): each has an {@code owner()}. A creature is its own.
      */
-    public static @Nullable net.minecraft.world.entity.LivingEntity ownerOf(@Nullable Entity e) {
+    public static @Nullable LivingEntity ownerOf(@Nullable Entity e) {
         if (e == null) return null;
-        if (e instanceof net.minecraft.world.entity.LivingEntity le) return le;
+        if (e instanceof LivingEntity le) return le;
         var m = OWNER.computeIfAbsent(e.getClass(), c -> {
-            try { var mm = c.getMethod("owner"); mm.setAccessible(true); return java.util.Optional.of(mm); }
-            catch (Exception x) { return java.util.Optional.empty(); }
+            try {
+                var mm = c.getMethod("owner");
+                mm.setAccessible(true);
+                return Optional.of(mm);
+            } catch (Exception x) {
+                // meant to fail: most entities have no owner()
+                return Optional.empty();
+            }
         });
         if (m.isEmpty()) return null;
-        try { return m.get().invoke(e) instanceof net.minecraft.world.entity.LivingEntity le ? le : null; }
-        catch (Exception x) { return null; }
+        try {
+            return m.get().invoke(e) instanceof LivingEntity le ? le : null;
+        } catch (Exception x) {
+            HollowbellMod.LOG.debug("owner of {} failed", e, x);
+            return null;
+        }
     }
 
-    private static final java.util.Map<Class<?>, java.util.Optional<java.lang.reflect.Method>> RIDDEN =
-            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<Class<?>, Optional<Method>> RIDDEN = new ConcurrentHashMap<>();
 
     /**
      * A giant somebody is riding (they sit on a seat of its own, never on the giant, so its passengers don't show
@@ -85,12 +100,19 @@ public final class Giants {
         if (e == null) return false;
         var m = RIDDEN.computeIfAbsent(e.getClass(), c -> {
             // (meant to find nothing on a giant from before this was added)
-            try { return java.util.Optional.of(c.getMethod("jjRidden")); }
-            catch (NoSuchMethodException x) { return java.util.Optional.empty(); }
+            try {
+                return Optional.of(c.getMethod("jjRidden"));
+            } catch (NoSuchMethodException x) {
+                return Optional.empty();
+            }
         });
         if (m.isEmpty()) return false;
-        try { return Boolean.TRUE.equals(m.get().invoke(e)); }
-        catch (ReflectiveOperationException x) { return false; }
+        try {
+            return Boolean.TRUE.equals(m.get().invoke(e));
+        } catch (ReflectiveOperationException x) {
+            HollowbellMod.LOG.debug("jjRidden of {} failed", e, x);
+            return false;
+        }
     }
 
     /**
@@ -111,7 +133,10 @@ public final class Giants {
 
     /** a giant, or riding one, or anything that mustn't be picked up or dragged about by a giant */
     public static boolean carriesGiant(@Nullable Entity e) {
-        for (int i = 0; i < 4 && e != null; i++) { if (isGiant(e)) return true; e = e.getVehicle(); }
+        for (int i = 0; i < 4 && e != null; i++) {
+            if (isGiant(e)) return true;
+            e = e.getVehicle();
+        }
         return false;
     }
 }
