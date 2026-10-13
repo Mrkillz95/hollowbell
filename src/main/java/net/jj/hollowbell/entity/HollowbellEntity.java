@@ -873,8 +873,11 @@ public class HollowbellEntity extends Monster implements SolidBody {
         Vec3 w = toWorld(new Vector3f(mx, 0, mz));
         BlockPos p = BlockPos.containing(w.x, getY(), w.z);
         if (!NoWait.loaded(level(), p)) return Float.NaN;
-        return (float)
-                ((level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) - getY()) / bellScale());
+        // (under a roof the top of the land is the roof)
+        int y = level().dimensionType().hasCeiling()
+                ? NoWait.standY(level(), p.getX(), p.getZ(), p.getY())
+                : level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
+        return (float) ((y - getY()) / bellScale());
     }
 
     /** the joints of one of his chains (an arm or strand) as they are this tick, model space */
@@ -1247,6 +1250,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public static boolean canCarry(@Nullable Entity e) {
         // (nothing with somebody on it: a ridden horse would take its rider up with it)
         if (e == null || e.isVehicle() || Giants.carriesGiant(e)) return false;
+        if (Giants.onGiantSeat(e, HollowbellMod.MOD_ID)) return false;
         EntityType<?> t = e.getType();
         if (t.is(NOT_CARRIED) || t.is(ConventionalEntityTypeTags.BOSSES)) return false;
         String cls = e.getClass().getName();

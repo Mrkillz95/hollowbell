@@ -404,7 +404,7 @@ final class BellHolds {
             double x = h.getX() + off.x, z = h.getZ() + off.z;
             BlockPos col = BlockPos.containing(x, h.getY(), z);
             if (!NoWait.loaded(mv.level(), col)) continue;
-            double y = mv.level().getHeight(Heightmap.Types.MOTION_BLOCKING, col.getX(), col.getZ());
+            double y = NoWait.standY(mv.level(), col.getX(), col.getZ(), who.getBlockY());
             AABB box = who.getDimensions(Pose.STANDING).makeBoundingBox(x, y, z);
             if (!mv.level().noCollision(who, box)
                     || mv.level().containsAnyLiquid(box)
