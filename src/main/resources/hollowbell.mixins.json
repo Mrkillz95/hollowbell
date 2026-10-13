@@ -6,6 +6,7 @@
   "mixins": [
     "ChunkMapAccess",
     "HollowsDecorateMixin",
+    "HollowsNoiseMixin",
     "LogOffMixin",
     "HollowsBiomeMixin",
     "HollowsLocateMixin",

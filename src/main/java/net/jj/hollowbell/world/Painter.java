@@ -22,7 +22,6 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import org.jetbrains.annotations.Nullable;
@@ -95,8 +94,7 @@ public final class Painter {
                 l.getSeaLevel(),
                 l.getMinBuildHeight(),
                 l.getMaxBuildHeight(),
-                (x, z) -> src.getGenerator().getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, l, src.randomState())
-                        - 1);
+                BellGen.landTop(src.getGenerator(), l, src.randomState()));
         j.plan.withDen = false;
         j.plan.paintDepth = j.depth;
         int r = j.radius;

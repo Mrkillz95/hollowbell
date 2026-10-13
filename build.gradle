@@ -50,6 +50,8 @@ loom {
             def script = project.findProperty("script") ?: "tools/autotest.txt"
             vmArg "-Dhollowbell.autotest=${project.projectDir}/" + script
             vmArg "-Xmx6G"
+            // -PgroundAt=x,z: his ground put there in a new normal world, laid out from the world seed
+            if (project.hasProperty("groundAt")) vmArg "-Dhollowbell.groundAt=" + project.property("groundAt")
             programArgs "--width", "1280", "--height", "720"
             runDir "build/autotest"
         }

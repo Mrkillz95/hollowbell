@@ -4,7 +4,10 @@ import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
@@ -126,14 +129,7 @@ public final class BellGen {
             RandomState rs = randomState;
             LevelHeightAccessor hs = heights;
             return new BellPlan(
-                    seed,
-                    cx,
-                    cz,
-                    radius,
-                    sea,
-                    hs.getMinBuildHeight(),
-                    hs.getMaxBuildHeight(),
-                    (x, z) -> g.getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, hs, rs) - 1);
+                    seed, cx, cz, radius, sea, hs.getMinBuildHeight(), hs.getMaxBuildHeight(), landTop(g, hs, rs));
         }
 
         public boolean inBox(int x, int z) {
@@ -168,6 +164,56 @@ public final class BellGen {
             union = u;
             return u;
         }
+    }
+
+    /**
+     * Each chunk in and round his ground as the generator first made it, right after its noise: per column the top
+     * block's y. Asking the generator itself for a column works out that column's whole noise again, and his ground
+     * asks many times a chunk, which made his land very slow to load.
+     */
+    private static final Map<Long, int[]> TOPS = Collections.synchronizedMap(new LinkedHashMap<>(1024, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, int[]> e) {
+            return size() > 16384;
+        }
+    });
+
+    /** a chunk the generator has just filled with land (HollowsNoiseMixin): its tops noted, if it's in or near his */
+    public static void noised(ChunkAccess chunk, ChunkGenerator gen) {
+        Snap s = SNAP;
+        ChunkPos p = chunk.getPos();
+        if (s == null || !s.claimed || s.gen != gen) return;
+        if (p.getMaxBlockX() < s.minX - 48 || p.getMinBlockX() > s.maxX + 48) return;
+        if (p.getMaxBlockZ() < s.minZ - 48 || p.getMinBlockZ() > s.maxZ + 48) return;
+        Heightmap top = chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.WORLD_SURFACE_WG);
+        int[] v = new int[256];
+        for (int lx = 0; lx < 16; lx++)
+            for (int lz = 0; lz < 16; lz++) v[lx * 16 + lz] = top.getFirstAvailable(lx, lz) - 1;
+        TOPS.put(p.toLong(), v);
+    }
+
+    /**
+     * The top of the land at a column as the generator makes it: from the chunk's own noted tops when it has been
+     * made, else from the generator, once a column (a plan is for one thread, and so is this).
+     */
+    public static BellPlan.Ground landTop(ChunkGenerator g, LevelHeightAccessor hs, RandomState rs) {
+        Map<Long, Integer> asked = new LinkedHashMap<>(1024, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<Long, Integer> e) {
+                return size() > 65536;
+            }
+        };
+        return (x, z) -> {
+            int[] made = TOPS.get(ChunkPos.asLong(x >> 4, z >> 4));
+            if (made != null) return made[(x & 15) * 16 + (z & 15)];
+            long k = ((long) x << 32) ^ (z & 0xffffffffL);
+            Integer y = asked.get(k);
+            if (y == null) {
+                y = g.getBaseHeight(x, z, Heightmap.Types.WORLD_SURFACE_WG, hs, rs) - 1;
+                asked.put(k, y);
+            }
+            return y;
+        };
     }
 
     /** the one snapshot the generator threads read; replaced whole, never changed */
@@ -226,6 +272,7 @@ public final class BellGen {
     /** the server stopped: nothing is kept for the next world */
     public static void forget() {
         SNAP = null;
+        TOPS.clear();
     }
 
     /** is this spot inside his ground's outline (the finder asks)? */
