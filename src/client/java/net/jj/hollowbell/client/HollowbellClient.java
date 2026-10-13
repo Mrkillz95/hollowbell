@@ -93,11 +93,13 @@ public class HollowbellClient implements ClientModInitializer {
             SolidClient.clear();
         });
         ArmourPowerKey.init();
+        LookKey.init();
         ClientTickEvents.END_CLIENT_TICK.register(c -> {
             Shake.tick();
             BeingHim.tick(c);
             BellSounds.tick(c);
             ArmourPowerKey.tick(c);
+            LookKey.tick(c);
             FightMusic.tick(c);
             SolidClient.tick(c);
         });
@@ -151,6 +153,18 @@ public class HollowbellClient implements ClientModInitializer {
                         BellConfig.save();
                         return;
                     }
+                    if (p.what() == DetailPayload.AT) {
+                        BellConfig.V.simpleFarAwayAt = Math.max(20, Math.min(4000, p.arg()));
+                        BellConfig.save();
+                        if (ctx.client().player != null)
+                            ctx.client()
+                                    .player
+                                    .displayClientMessage(
+                                            Component.translatable(
+                                                    "command.hollowbell.detail_at", BellConfig.V.simpleFarAwayAt),
+                                            false);
+                        return;
+                    }
                     if (p.what() == DetailPayload.ON) Detail.set(true);
                     else if (p.what() == DetailPayload.OFF) Detail.set(false);
                     String key = p.what() == DetailPayload.ON
@@ -161,7 +175,9 @@ public class HollowbellClient implements ClientModInitializer {
                                             ? "command.hollowbell.detail_is_on"
                                             : "command.hollowbell.detail_is_off";
                     if (ctx.client().player != null)
-                        ctx.client().player.displayClientMessage(Component.translatable(key), false);
+                        ctx.client()
+                                .player
+                                .displayClientMessage(Component.translatable(key, BellConfig.V.simpleFarAwayAt), false);
                 }));
     }
 }
