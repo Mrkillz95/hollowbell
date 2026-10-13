@@ -3,6 +3,7 @@ package net.jj.hollowbell.client.render;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.rig.BellRig;
@@ -23,9 +24,15 @@ import org.joml.Vector3f;
 public class BellingRenderer extends EntityRenderer<Belling> {
     private static final float SIZE = 0.0085f;
 
-    public BellingRenderer(EntityRendererProvider.Context ctx) { super(ctx); this.shadowRadius = 0.3f; }
+    public BellingRenderer(EntityRendererProvider.Context ctx) {
+        super(ctx);
+        this.shadowRadius = 0.3f;
+    }
 
-    @Override public ResourceLocation getTextureLocation(Belling e) { return TextureAtlas.LOCATION_BLOCKS; }
+    @Override
+    public ResourceLocation getTextureLocation(Belling e) {
+        return TextureAtlas.LOCATION_BLOCKS;
+    }
 
     @Override
     public void render(Belling e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {
@@ -44,22 +51,43 @@ public class BellingRenderer extends EntityRenderer<Belling> {
         float k = 0.3f + 0.7f * Math.max(LightTexture.block(light), LightTexture.sky(light)) / 15f;
         float hurt = e.hurtTime > 0 ? 0.35f : 0f;
         for (int pass = 0; pass < 3; pass++) {
-            RenderType rt = pass == 2 ? RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS) : RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+            RenderType rt = pass == 2
+                    ? RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)
+                    : RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
             rt.setupRenderState();
             ShaderInstance shader = RenderSystem.getShader();
-            if (shader == null) { rt.clearRenderState(); continue; }
-            shader.setDefaultUniforms(VertexFormat.Mode.QUADS, view, RenderSystem.getProjectionMatrix(), Minecraft.getInstance().getWindow());
+            if (shader == null) {
+                rt.clearRenderState();
+                continue;
+            }
+            shader.setDefaultUniforms(
+                    VertexFormat.Mode.QUADS,
+                    view,
+                    RenderSystem.getProjectionMatrix(),
+                    Minecraft.getInstance().getWindow());
             shader.apply();
             int kind = pass == 0 ? BellMeshes.SOLID : pass == 1 ? BellMeshes.GLOW : BellMeshes.CLEAR;
             float kk = pass == 1 ? 1f : k;
-            if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(kk, kk * (1 - hurt), kk * (1 - hurt), 1f); shader.COLOR_MODULATOR.upload(); }
+            if (shader.COLOR_MODULATOR != null) {
+                shader.COLOR_MODULATOR.set(kk, kk * (1 - hurt), kk * (1 - hurt), 1f);
+                shader.COLOR_MODULATOR.upload();
+            }
             mv.set(view).mul(base);
-            if (shader.MODEL_VIEW_MATRIX != null) { shader.MODEL_VIEW_MATRIX.set(mv); shader.MODEL_VIEW_MATRIX.upload(); }
+            if (shader.MODEL_VIEW_MATRIX != null) {
+                shader.MODEL_VIEW_MATRIX.set(mv);
+                shader.MODEL_VIEW_MATRIX.upload();
+            }
             if (pass == 1) {
                 Vector3f l0 = new Vector3f(), l1 = new Vector3f();
                 BellRenderer.glowLight(l0, l1);
-                if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
-                if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
+                if (shader.LIGHT0_DIRECTION != null) {
+                    shader.LIGHT0_DIRECTION.set(l0);
+                    shader.LIGHT0_DIRECTION.upload();
+                }
+                if (shader.LIGHT1_DIRECTION != null) {
+                    shader.LIGHT1_DIRECTION.set(l1);
+                    shader.LIGHT1_DIRECTION.upload();
+                }
             }
             for (int b = 0; b < rig.boneCount(); b++) {
                 BellMeshes.Mesh m = meshes.mesh(BellMeshes.TINY, kind, b);
@@ -68,7 +96,7 @@ public class BellingRenderer extends EntityRenderer<Belling> {
                 m.vb.draw();
             }
             shader.clear();
-            com.mojang.blaze3d.vertex.VertexBuffer.unbind();
+            VertexBuffer.unbind();
             rt.clearRenderState();
         }
         Lighting.setupLevel();

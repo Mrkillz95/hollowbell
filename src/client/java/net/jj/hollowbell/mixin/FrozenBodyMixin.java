@@ -1,8 +1,8 @@
 package net.jj.hollowbell.mixin;
 
 import net.jj.hollowbell.client.BeingHim;
-import net.minecraft.client.player.KeyboardInput;
 import net.minecraft.client.player.Input;
+import net.minecraft.client.player.KeyboardInput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -27,9 +28,15 @@ public class StingerHookRenderer extends EntityRenderer<StingerHook> {
     private final ItemRenderer items;
     private final ItemStack look = new ItemStack(ModItems.STINGER);
 
-    public StingerHookRenderer(EntityRendererProvider.Context ctx) { super(ctx); items = ctx.getItemRenderer(); }
+    public StingerHookRenderer(EntityRendererProvider.Context ctx) {
+        super(ctx);
+        items = ctx.getItemRenderer();
+    }
 
-    @Override public ResourceLocation getTextureLocation(StingerHook e) { return net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS; }
+    @Override
+    public ResourceLocation getTextureLocation(StingerHook e) {
+        return TextureAtlas.LOCATION_BLOCKS;
+    }
 
     @Override
     public void render(StingerHook e, float yaw, float pt, PoseStack pose, MultiBufferSource buf, int light) {
@@ -49,7 +56,8 @@ public class StingerHookRenderer extends EntityRenderer<StingerHook> {
         pose.mulPose(Axis.XP.rotationDegrees(90));
         pose.mulPose(Axis.ZP.rotationDegrees(-45));
         pose.scale(1.1f, 1.1f, 1.1f);
-        items.renderStatic(look, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, pose, buf, e.level(), e.getId());
+        items.renderStatic(
+                look, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, pose, buf, e.level(), e.getId());
         pose.popPose();
         if (owner != null) strand(pose, buf, hand.subtract(me), e.state() == StingerHook.FLYING, e.tickCount + pt);
         super.render(e, yaw, pt, pose, buf, light);
@@ -70,14 +78,19 @@ public class StingerHookRenderer extends EntityRenderer<StingerHook> {
             float l = Mth.sqrt(nx * nx + ny * ny + nz * nz);
             if (l < 1e-4) l = 1;
             int g = 200 + (int) (40 * Math.sin(f * 12 + t * 0.3));
-            vc.addVertex(m, x, y, z).setColor(170, Mth.clamp(g, 0, 255), 180, 255).setNormal(pose.last(), nx / l, ny / l, nz / l);
+            vc.addVertex(m, x, y, z)
+                    .setColor(170, Mth.clamp(g, 0, 255), 180, 255)
+                    .setNormal(pose.last(), nx / l, ny / l, nz / l);
         }
     }
 
     /** about where the throwing hand is */
     private Vec3 handPos(Entity owner, float pt) {
         Minecraft mc = Minecraft.getInstance();
-        float body = Mth.lerp(pt, owner instanceof Player p ? p.yBodyRotO : owner.yRotO, owner instanceof Player p2 ? p2.yBodyRot : owner.getYRot());
+        float body = Mth.lerp(
+                pt,
+                owner instanceof Player p ? p.yBodyRotO : owner.yRotO,
+                owner instanceof Player p2 ? p2.yBodyRot : owner.getYRot());
         int side = owner instanceof Player p && p.getMainArm() == HumanoidArm.LEFT ? -1 : 1;
         Vec3 base = owner.getPosition(pt);
         if (owner == mc.getCameraEntity() && mc.options.getCameraType().isFirstPerson()) {

@@ -28,13 +28,20 @@ import net.minecraft.world.item.armortrim.ArmorTrim;
  * (BellArmorBits).
  */
 public final class BellArmorRenderer implements ArmorRenderer {
-    private static final ResourceLocation OUTER = ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "textures/models/armor/bell_glass_layer_1.png");
-    private static final ResourceLocation INNER = ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "textures/models/armor/bell_glass_layer_2.png");
+    private static final ResourceLocation OUTER =
+            ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "textures/models/armor/bell_glass_layer_1.png");
+    private static final ResourceLocation INNER =
+            ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "textures/models/armor/bell_glass_layer_2.png");
 
     private HumanoidModel<LivingEntity> outer, inner;
 
     public static void register() {
-        ArmorRenderer.register(new BellArmorRenderer(), ModItems.BELL_HELMET, ModItems.BELL_CHESTPLATE, ModItems.BELL_LEGGINGS, ModItems.BELL_BOOTS);
+        ArmorRenderer.register(
+                new BellArmorRenderer(),
+                ModItems.BELL_HELMET,
+                ModItems.BELL_CHESTPLATE,
+                ModItems.BELL_LEGGINGS,
+                ModItems.BELL_BOOTS);
     }
 
     private HumanoidModel<LivingEntity> model(boolean legs) {
@@ -47,31 +54,57 @@ public final class BellArmorRenderer implements ArmorRenderer {
     }
 
     @Override
-    public void render(PoseStack pose, MultiBufferSource buffers, ItemStack stack, LivingEntity entity, EquipmentSlot slot, int light,
-                       HumanoidModel<LivingEntity> context) {
+    public void render(
+            PoseStack pose,
+            MultiBufferSource buffers,
+            ItemStack stack,
+            LivingEntity entity,
+            EquipmentSlot slot,
+            int light,
+            HumanoidModel<LivingEntity> context) {
         if (!(stack.getItem() instanceof ArmorItem armor)) return;
         boolean legs = slot == EquipmentSlot.LEGS;
         HumanoidModel<LivingEntity> m = model(legs);
         context.copyPropertiesTo(m);
         m.setAllVisible(false);
         switch (slot) {
-            case HEAD -> { m.head.visible = true; m.hat.visible = true; }
-            case CHEST -> { m.body.visible = true; m.rightArm.visible = true; m.leftArm.visible = true; }
-            case LEGS -> { m.body.visible = true; m.rightLeg.visible = true; m.leftLeg.visible = true; }
-            case FEET -> { m.rightLeg.visible = true; m.leftLeg.visible = true; }
-            default -> { return; }
+            case HEAD -> {
+                m.head.visible = true;
+                m.hat.visible = true;
+            }
+            case CHEST -> {
+                m.body.visible = true;
+                m.rightArm.visible = true;
+                m.leftArm.visible = true;
+            }
+            case LEGS -> {
+                m.body.visible = true;
+                m.rightLeg.visible = true;
+                m.leftLeg.visible = true;
+            }
+            case FEET -> {
+                m.rightLeg.visible = true;
+                m.leftLeg.visible = true;
+            }
+            default -> {
+                return;
+            }
         }
         // the glass, see-through, with the glint over it when enchanted
-        var vc = ItemRenderer.getArmorFoilBuffer(buffers, RenderType.entityTranslucent(legs ? INNER : OUTER), stack.hasFoil());
+        var vc = ItemRenderer.getArmorFoilBuffer(
+                buffers, RenderType.entityTranslucent(legs ? INNER : OUTER), stack.hasFoil());
         m.renderToBuffer(pose, vc, light, OverlayTexture.NO_OVERLAY);
         // the parts that stand out: ribs, pods, strands, glowing spots (see BellArmorBits)
         BellArmorBits.render(pose, buffers, entity, slot, light, m);
         // a smithing trim, if it has one, the same way vanilla puts it on
         ArmorTrim trim = stack.get(DataComponents.TRIM);
         if (trim != null) {
-            TextureAtlasSprite sprite = Minecraft.getInstance().getModelManager().getAtlas(Sheets.ARMOR_TRIMS_SHEET)
+            TextureAtlasSprite sprite = Minecraft.getInstance()
+                    .getModelManager()
+                    .getAtlas(Sheets.ARMOR_TRIMS_SHEET)
                     .getSprite(legs ? trim.innerTexture(armor.getMaterial()) : trim.outerTexture(armor.getMaterial()));
-            var tvc = sprite.wrap(buffers.getBuffer(Sheets.armorTrimsSheet(trim.pattern().value().decal())));
+            var tvc = sprite.wrap(buffers.getBuffer(
+                    Sheets.armorTrimsSheet(trim.pattern().value().decal())));
             m.renderToBuffer(pose, tvc, light, OverlayTexture.NO_OVERLAY);
         }
     }

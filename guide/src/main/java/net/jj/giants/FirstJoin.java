@@ -1,5 +1,8 @@
 package net.jj.giants;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -8,10 +11,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
-
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
 
 /** Who has had their free Giants Guide in this world (saved with the world, so each player gets one once). */
 public final class FirstJoin extends SavedData {
@@ -37,7 +36,9 @@ public final class FirstJoin extends SavedData {
         return tag;
     }
 
-    public boolean had(UUID id) { return given.contains(id); }
+    public boolean had(UUID id) {
+        return given.contains(id);
+    }
 
     /** a player joined: the first time ever in this world (and with the setting on), they get one guide */
     public static boolean onJoin(ServerPlayer player) {

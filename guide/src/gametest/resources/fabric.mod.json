@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "jj_giants-gametest",
+  "version": "${version}",
+  "name": "Giants Guide Game Tests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "net.jj.giants.test.GuideGameTests"
+    ],
+    "client": [
+      "net.jj.giants.client.dev.AutoTest"
+    ]
+  },
+  "depends": {
+    "jj_giants": "*"
+  }
+}

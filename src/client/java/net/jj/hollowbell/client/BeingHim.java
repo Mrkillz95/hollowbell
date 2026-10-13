@@ -1,48 +1,80 @@
 package net.jj.hollowbell.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import java.util.Arrays;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.entity.Moves;
+import net.jj.hollowbell.net.CodexOrders;
 import net.jj.hollowbell.net.DrivePayload;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * Being him, from his crown. The view swings out behind him and the keys drive him about: W pushes him on, A/D
  * and S steer, the number keys set off his moves, and G gets you off. The list of what each key does sits down
- * the left of the screen with its own clock on each line. Copied from the Mountain's so the two work the same.
+ * the left of the screen with its own clock on each line.
  */
 public final class BeingHim {
     private BeingHim() {}
 
     /** the attacks you can set off, in the order they are listed (light, medium, heavy), and the key for each */
     private static final int[] SLOT = Moves.ORDER;
+
     private static final int[] KEY = {
-            GLFW.GLFW_KEY_1, GLFW.GLFW_KEY_2, GLFW.GLFW_KEY_3, GLFW.GLFW_KEY_4, GLFW.GLFW_KEY_5,
-            GLFW.GLFW_KEY_6, GLFW.GLFW_KEY_7, GLFW.GLFW_KEY_8, GLFW.GLFW_KEY_9, GLFW.GLFW_KEY_0,
-            GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_V, GLFW.GLFW_KEY_B, GLFW.GLFW_KEY_N, GLFW.GLFW_KEY_M,
-            GLFW.GLFW_KEY_R, GLFW.GLFW_KEY_H, GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K, GLFW.GLFW_KEY_U};
-    private static final String[] KEY_NAME = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Z", "X", "C", "V", "B", "N", "M", "R", "H", "J", "K", "U"};
+        GLFW.GLFW_KEY_1,
+        GLFW.GLFW_KEY_2,
+        GLFW.GLFW_KEY_3,
+        GLFW.GLFW_KEY_4,
+        GLFW.GLFW_KEY_5,
+        GLFW.GLFW_KEY_6,
+        GLFW.GLFW_KEY_7,
+        GLFW.GLFW_KEY_8,
+        GLFW.GLFW_KEY_9,
+        GLFW.GLFW_KEY_0,
+        GLFW.GLFW_KEY_Z,
+        GLFW.GLFW_KEY_X,
+        GLFW.GLFW_KEY_C,
+        GLFW.GLFW_KEY_V,
+        GLFW.GLFW_KEY_B,
+        GLFW.GLFW_KEY_N,
+        GLFW.GLFW_KEY_M,
+        GLFW.GLFW_KEY_R,
+        GLFW.GLFW_KEY_H,
+        GLFW.GLFW_KEY_J,
+        GLFW.GLFW_KEY_K,
+        GLFW.GLFW_KEY_U
+    };
+    private static final String[] KEY_NAME = {
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Z", "X", "C", "V", "B", "N", "M", "R", "H", "J", "K", "U"
+    };
     private static final int LEAVE_KEY = GLFW.GLFW_KEY_G;
 
     /** the same numbers the server keeps */
-    private static final int ANY_COOL = net.jj.hollowbell.net.CodexOrders.ANY_COOL;
+    private static final int ANY_COOL = CodexOrders.ANY_COOL;
+
     private static final long[] used = new long[Moves.NAMES.length];
-    static { java.util.Arrays.fill(used, Long.MIN_VALUE / 4); }
+
+    static {
+        Arrays.fill(used, Long.MIN_VALUE / 4);
+    }
 
     private static int inId = -1;
     /** held on to rather than looked up each tick */
     private static @Nullable HollowbellEntity inHim;
+
     private static int heldSlot = -1;
-    private static net.minecraft.client.CameraType wasView;
+    private static CameraType wasView;
 
     /** how far the view sits back from him, as a share of the usual: the scroll wheel and [ ] change it */
     private static final int CLOSER_KEY = GLFW.GLFW_KEY_LEFT_BRACKET, FARTHER_KEY = GLFW.GLFW_KEY_RIGHT_BRACKET;
+
     private static float zoom = 1f;
     private static long zoomShownAt = Long.MIN_VALUE / 4;
 
@@ -52,19 +84,27 @@ public final class BeingHim {
     }
 
     private static void setZoom(float z) {
-        zoom = net.minecraft.util.Mth.clamp(z, 0.15f, 6f);
+        zoom = Mth.clamp(z, 0.15f, 6f);
         zoomShownAt = now();
     }
 
     /** what the camera should multiply its usual distance by */
-    public static float zoom() { return zoom; }
+    public static float zoom() {
+        return zoom;
+    }
+
     private static final boolean[] wasDown = new boolean[KEY.length + 1];
 
-    public static boolean inside() { return inId >= 0; }
+    public static boolean inside() {
+        return inId >= 0;
+    }
 
     /** the automated test driving him instead of the keyboard */
     private static float @Nullable [] auto;
-    public static void autoDrive(float f, float s, float yaw) { auto = new float[]{f, s, yaw}; }
+
+    public static void autoDrive(float f, float s, float yaw) {
+        auto = new float[] {f, s, yaw};
+    }
 
     public static @Nullable HollowbellEntity him() {
         Minecraft mc = Minecraft.getInstance();
@@ -86,9 +126,9 @@ public final class BeingHim {
             // out of your own eyes: in close the game hides whatever the camera is sitting in, and what the
             // camera is sitting in is him
             if (wasView == null) wasView = mc.options.getCameraType();
-            mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
-            zoomShownAt = now() + 100;          // say how to move the view for the first few seconds
-            java.util.Arrays.fill(wasDown, false);
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            zoomShownAt = now() + 100; // say how to move the view for the first few seconds
+            Arrays.fill(wasDown, false);
         } else {
             inId = -1;
             inHim = null;
@@ -96,7 +136,10 @@ public final class BeingHim {
                 mc.setCameraEntity(mc.player);
                 if (heldSlot >= 0) mc.player.getInventory().selected = heldSlot;
             }
-            if (wasView != null) { mc.options.setCameraType(wasView); wasView = null; }
+            if (wasView != null) {
+                mc.options.setCameraType(wasView);
+                wasView = null;
+            }
             heldSlot = -1;
         }
     }
@@ -107,13 +150,17 @@ public final class BeingHim {
     }
 
     private static long coolLeft(int attack) {
-        return Math.max(0, Math.max(net.jj.hollowbell.net.CodexOrders.attackCool(attack) - (now() - used[attack]), ANY_COOL - (now() - used[0])));
+        return Math.max(
+                0, Math.max(CodexOrders.attackCool(attack) - (now() - used[attack]), ANY_COOL - (now() - used[0])));
     }
 
     public static void tick(Minecraft mc) {
         if (inId < 0) return;
         HollowbellEntity m = him();
-        if (m == null || m.isRemoved() || mc.player == null) { set(-1, false); return; }
+        if (m == null || m.isRemoved() || mc.player == null) {
+            set(-1, false);
+            return;
+        }
         // his own eyes: keep the view on him even if something else grabbed the camera
         if (mc.getCameraEntity() != m) mc.setCameraEntity(m);
 
@@ -136,7 +183,8 @@ public final class BeingHim {
                 int which = SLOT[i];
                 if (coolLeft(which) <= 0) {
                     ClientPlayNetworking.send(new DrivePayload(DrivePayload.ATTACK, which, 0, 0, 0));
-                    used[which] = now(); used[0] = now();
+                    used[which] = now();
+                    used[0] = now();
                 }
             }
             wasDown[i] = down;
@@ -150,13 +198,18 @@ public final class BeingHim {
         if (mc.options.keyRight.isDown()) s -= 1;
         // jump takes him up, sneak takes him down
         int up = (mc.options.keyJump.isDown() ? 1 : 0) - (mc.options.keyShift.isDown() ? 1 : 0);
-        if (auto != null) { f = auto[0]; s = auto[1]; yaw = auto[2]; up = auto.length > 3 ? (int) auto[3] : 0; }
+        if (auto != null) {
+            f = auto[0];
+            s = auto[1];
+            yaw = auto[2];
+            up = auto.length > 3 ? (int) auto[3] : 0;
+        }
         ClientPlayNetworking.send(new DrivePayload(DrivePayload.DRIVE, up, f, s, yaw));
         mc.player.setDeltaMovement(0, mc.player.getDeltaMovement().y, 0);
     }
 
     /**
-     * The riding screen, top left, the same as the other giants': his health and what he's doing, his wind and
+     * The riding screen, top left: his health and what he's doing, his wind and
      * grudge bars, then his moves in three columns (light, medium, heavy) with a clock on each, and the keys. Hidden
      * with F1; drawn under his boss bars when it would run into them, and smaller if the window is short.
      */
@@ -172,7 +225,9 @@ public final class BeingHim {
         for (int i = 0; i < KEY.length; i++) {
             int which = SLOT[i];
             long left = coolLeft(which);
-            String base = "[" + KEY_NAME[i] + "] " + Component.translatable("move.hollowbell." + Moves.NAMES[which]).getString();
+            String base = "[" + KEY_NAME[i] + "] "
+                    + Component.translatable("move.hollowbell." + Moves.NAMES[which])
+                            .getString();
             labels[i] = left > 0 ? base + "  " + (int) Math.ceil(left / 20.0) + "s" : base;
             // the width is taken with a clock on, so the columns don't shift about as the clocks come and go
             int t = Moves.tier(which);
@@ -180,8 +235,16 @@ public final class BeingHim {
             rows[t]++;
         }
         int bars = 116;
-        int width = Math.max(Math.max(bars * 2 + 8, font.width(Component.translatable("being.hollowbell.updown"))), colW[0] + colW[1] + colW[2] + 16);
-        int height = 22 + 26 + 11 + Math.max(rows[0], Math.max(rows[1], rows[2])) * 10 + 4 + 20 + (now() - zoomShownAt < 60 ? 10 : 0);
+        int width = Math.max(
+                Math.max(bars * 2 + 8, font.width(Component.translatable("being.hollowbell.updown"))),
+                colW[0] + colW[1] + colW[2] + 16);
+        int height = 22
+                + 26
+                + 11
+                + Math.max(rows[0], Math.max(rows[1], rows[2])) * 10
+                + 4
+                + 20
+                + (now() - zoomShownAt < 60 ? 10 : 0);
         float fit = Math.min(1f, Math.min((g.guiHeight() - 64f) / height, (g.guiWidth() * 0.5f) / width));
         // his boss bars run across the top middle: if this would run under them, start below them
         float top = 6f;
@@ -194,11 +257,18 @@ public final class BeingHim {
         g.pose().translate(6, top, 0);
         g.pose().scale(fit, fit, 1f);
         int x = 0, y = 0;
-        g.drawString(font, Component.translatable("being.hollowbell.title").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF, true);
+        g.drawString(
+                font,
+                Component.translatable("being.hollowbell.title").withStyle(ChatFormatting.GOLD),
+                x,
+                y,
+                0xFFFFFF,
+                true);
         if (m != null) {
             int pct = Math.round(100f * m.healthNow() / Math.max(1f, m.healthMax()));
-            Component line = Component.translatable("being.hollowbell.held", pct).append("  ")
-                    .append(Component.translatable("doing.hollowbell." + net.jj.hollowbell.net.CodexOrders.doing(m)));
+            Component line = Component.translatable("being.hollowbell.held", pct)
+                    .append("  ")
+                    .append(Component.translatable("doing.hollowbell." + CodexOrders.doing(m)));
             if (m.tired()) line = line.copy().append(Component.translatable("codex.hollowbell.worn_out"));
             g.drawString(font, line.copy().withStyle(ChatFormatting.GRAY), x, y + 10, 0xBBBBBB, true);
         }
@@ -210,7 +280,13 @@ public final class BeingHim {
         y += 16;
 
         // the moves: light (pale), medium (orange) and heavy (red), a column each
-        g.drawString(font, Component.translatable("being.hollowbell.moves").withStyle(ChatFormatting.GRAY), x, y, 0xBBBBBB, true);
+        g.drawString(
+                font,
+                Component.translatable("being.hollowbell.moves").withStyle(ChatFormatting.GRAY),
+                x,
+                y,
+                0xBBBBBB,
+                true);
         y += 11;
         int[] r = new int[3];
         int[] cx = {x, x + colW[0] + 8, x + colW[0] + colW[1] + 16};
@@ -223,11 +299,29 @@ public final class BeingHim {
             r[tier]++;
         }
         y += Math.max(r[0], Math.max(r[1], r[2])) * 10 + 4;
-        g.drawString(font, Component.translatable("being.hollowbell.updown").withStyle(ChatFormatting.GRAY), x, y, 0xBBBBBB, true);
-        g.drawString(font, Component.translatable("being.hollowbell.leave").withStyle(ChatFormatting.YELLOW), x, y + 10, 0xFFFF88, true);
+        g.drawString(
+                font,
+                Component.translatable("being.hollowbell.updown").withStyle(ChatFormatting.GRAY),
+                x,
+                y,
+                0xBBBBBB,
+                true);
+        g.drawString(
+                font,
+                Component.translatable("being.hollowbell.leave").withStyle(ChatFormatting.YELLOW),
+                x,
+                y + 10,
+                0xFFFF88,
+                true);
         if (now() - zoomShownAt < 60)
-            g.drawString(font, Component.translatable("being.hollowbell.zoom", Math.round(zoom * 100)).withStyle(ChatFormatting.GRAY),
-                    x, y + 20, 0xBBBBBB, true);
+            g.drawString(
+                    font,
+                    Component.translatable("being.hollowbell.zoom", Math.round(zoom * 100))
+                            .withStyle(ChatFormatting.GRAY),
+                    x,
+                    y + 20,
+                    0xBBBBBB,
+                    true);
         g.pose().popPose();
     }
 
@@ -238,7 +332,7 @@ public final class BeingHim {
         int lw = 44;
         int bx = x + lw, bw = Math.max(8, w - lw);
         g.fill(bx, y - 1, bx + bw, y + 9, 0xFF1A1A1A);
-        int fill = (int) ((bw - 2) * net.minecraft.util.Mth.clamp(v, 0f, 1f));
+        int fill = (int) ((bw - 2) * Mth.clamp(v, 0f, 1f));
         if (fill > 0) g.fill(bx + 1, y, bx + 1 + fill, y + 8, colour);
     }
 }

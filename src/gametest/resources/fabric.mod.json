@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "hollowbell-gametest",
+  "version": "${version}",
+  "name": "Hollowbell Game Tests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": ${gametests},
+    "client": [
+      "net.jj.hollowbell.client.dev.AutoTest"
+    ]
+  },
+  "mixins": [
+    "hollowbell-gametest.mixins.json"
+  ],
+  "depends": {
+    "hollowbell": "*"
+  }
+}

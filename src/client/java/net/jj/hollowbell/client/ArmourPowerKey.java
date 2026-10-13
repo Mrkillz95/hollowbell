@@ -6,10 +6,14 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.item.BellArmorItem;
 import net.jj.hollowbell.net.ArmourPowerPayload;
+import net.minecraft.client.AttackIndicatorStatus;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -23,7 +27,10 @@ public final class ArmourPowerKey {
     public static KeyMapping KEY;
 
     public static void init() {
-        KEY = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.hollowbell.armour_power", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R,
+        KEY = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.hollowbell.armour_power",
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_R,
                 "key.categories.hollowbell"));
     }
 
@@ -45,8 +52,12 @@ public final class ArmourPowerKey {
         }
         boolean now = mc.screen == null && mc.player != null && down(mc);
         // only when wearing this set: one set can be worn at a time, so only one mod acts on the key
-        if (now && !wasDown && mc.player != null && !mc.player.isPassenger() && !BeingHim.inside() && BellArmorItem.fullSet(mc.player))
-            ClientPlayNetworking.send(new ArmourPowerPayload());
+        if (now
+                && !wasDown
+                && mc.player != null
+                && !mc.player.isPassenger()
+                && !BeingHim.inside()
+                && BellArmorItem.fullSet(mc.player)) ClientPlayNetworking.send(new ArmourPowerPayload());
         wasDown = now;
         motes(mc);
     }
@@ -59,8 +70,14 @@ public final class ArmourPowerKey {
             if (p.isInvisible() || p.distanceToSqr(mc.player) > 48 * 48 || !BellArmorItem.fullSet(p)) continue;
             if (r.nextInt(6) != 0) continue;
             double a = r.nextDouble() * Math.PI * 2;
-            mc.level.addParticle(new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.7f, 0.95f, 0.7f), 0.6f),
-                    p.getX() + Math.cos(a) * 0.45, p.getY() + 0.3 + r.nextDouble() * 1.5, p.getZ() + Math.sin(a) * 0.45, 0, 0.02, 0);
+            mc.level.addParticle(
+                    new DustParticleOptions(new Vector3f(0.7f, 0.95f, 0.7f), 0.6f),
+                    p.getX() + Math.cos(a) * 0.45,
+                    p.getY() + 0.3 + r.nextDouble() * 1.5,
+                    p.getZ() + Math.sin(a) * 0.45,
+                    0,
+                    0.02,
+                    0);
         }
     }
 
@@ -70,9 +87,10 @@ public final class ArmourPowerKey {
         if (mc.player == null || mc.options.hideGui || BeingHim.inside() || !BellArmorItem.fullSet(mc.player)) return;
         ItemStack st = new ItemStack(ModItems.BELL_CHESTPLATE);
         int x = g.guiWidth() / 2 + 91 + 8;
-        boolean left = mc.player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT;
-        if (left && !mc.player.getOffhandItem().isEmpty()) x += 29;                   // the off-hand slot is on this side
-        if (!left && mc.options.attackIndicator().get() == net.minecraft.client.AttackIndicatorStatus.HOTBAR) x += 22;   // so is the swing meter
+        boolean left = mc.player.getMainArm() == HumanoidArm.LEFT;
+        if (left && !mc.player.getOffhandItem().isEmpty()) x += 29; // the off-hand slot is on this side
+        if (!left && mc.options.attackIndicator().get() == AttackIndicatorStatus.HOTBAR)
+            x += 22; // so is the swing meter
         int y = g.guiHeight() - 20;
         boolean ready = !mc.player.getCooldowns().isOnCooldown(ModItems.BELL_CHESTPLATE);
         g.fill(x - 2, y - 2, x + 18, y + 18, ready ? 0x6040A060 : 0x60202020);

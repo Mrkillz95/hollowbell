@@ -1,16 +1,15 @@
 package net.jj.hollowbell.entity;
 
-import net.jj.hollowbell.HollowbellConfig;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
+import net.jj.hollowbell.BellConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.Mth;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * What the book costs him.
@@ -25,7 +24,10 @@ import java.util.UUID;
  * what he likes rather than what he was told, and at the top of it he comes for the person holding the book.
  */
 public final class Mood {
-    /** he does as he is told / he takes his time / he ignores some of it / he picks his own targets / he is done with you */
+    /**
+     * he does as he is told / he takes his time / he ignores some of it / he picks his own targets / he is done with
+     * you
+     */
     public static final int FINE = 0, SLOW = 1, BALKY = 2, WILFUL = 3, TURNED = 4;
     /** where one stage gives way to the next */
     private static final float AT_SLOW = 0.30f, AT_BALKY = 0.55f, AT_WILFUL = 0.78f, AT_TURNED = 0.95f;
@@ -38,16 +40,31 @@ public final class Mood {
     /** how many times each of them has hit him while his own book was keeping him off them */
     private final Map<UUID, Integer> struck = new HashMap<>();
 
-    public Mood(HollowbellEntity m) { this.m = m; }
+    public Mood(HollowbellEntity m) {
+        this.m = m;
+    }
 
-    // ------------------------------------------------------------------ his wind
-    public float wind() { return wind; }
+    // his wind
+    public float wind() {
+        return wind;
+    }
     /** for the operator's commands: his wind set outright */
-    public void setWind(float v) { wind = Mth.clamp(v, 0f, 1f); }
+    public void setWind(float v) {
+        wind = Mth.clamp(v, 0f, 1f);
+    }
     /** for the operator's commands: what he holds against this one, set outright (0 forgets it) */
-    public void setSour(UUID who, float v) { if (v <= 0f) sour.remove(who); else sour.put(who, Mth.clamp(v, 0f, 1f)); }
-    public boolean costsAnything() { return HollowbellConfig.V.bookCosts; }
-    public boolean hasWind(float cost) { return !costsAnything() || cost <= 0f || wind >= cost; }
+    public void setSour(UUID who, float v) {
+        if (v <= 0f) sour.remove(who);
+        else sour.put(who, Mth.clamp(v, 0f, 1f));
+    }
+
+    public boolean costsAnything() {
+        return BellConfig.V.bookCosts;
+    }
+
+    public boolean hasWind(float cost) {
+        return !costsAnything() || cost <= 0f || wind >= cost;
+    }
 
     public void spendWind(float cost) {
         if (!costsAnything() || cost <= 0f) return;
@@ -61,7 +78,7 @@ public final class Mood {
 
     /** every tick: his wind coming back, and whatever he is holding against people easing off */
     public void tick() {
-        int secs = Math.max(5, HollowbellConfig.V.windSeconds);
+        int secs = Math.max(5, BellConfig.V.windSeconds);
         float back = 1f / (secs * 20f);
         boolean resting = m.resting() || m.asleep();
         if (resting) back *= 2.5f;
@@ -74,7 +91,8 @@ public final class Mood {
             for (Iterator<Map.Entry<UUID, Float>> it = sour.entrySet().iterator(); it.hasNext(); ) {
                 Map.Entry<UUID, Float> e = it.next();
                 float v = e.getValue() - off;
-                if (v <= 0f) it.remove(); else e.setValue(v);
+                if (v <= 0f) it.remove();
+                else e.setValue(v);
             }
         }
         if (!after.isEmpty()) {
@@ -83,13 +101,15 @@ public final class Mood {
         }
     }
 
-    // ------------------------------------------------------------------ what he holds against you
-    public float sourOf(UUID who) { return who == null ? 0f : sour.getOrDefault(who, 0f); }
+    // what he holds against you
+    public float sourOf(UUID who) {
+        return who == null ? 0f : sour.getOrDefault(who, 0f);
+    }
 
     /** pushing him: the number is before his temper is taken into account */
     public void sour(UUID who, float amount) {
         if (who == null || amount <= 0f || !costsAnything()) return;
-        float rate = Math.max(0f, HollowbellConfig.V.grudgeRate);
+        float rate = Math.max(0f, BellConfig.V.grudgeRate);
         if (rate <= 0f) return;
         sour.merge(who, Mth.clamp(amount * rate, 0f, 1f), (a, b) -> Math.min(1f, a + b));
     }
@@ -100,14 +120,23 @@ public final class Mood {
         for (Iterator<Map.Entry<UUID, Float>> it = sour.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, Float> e = it.next();
             float v = e.getValue() - 0.06f;
-            if (v <= 0f) it.remove(); else e.setValue(v);
+            if (v <= 0f) it.remove();
+            else e.setValue(v);
         }
     }
 
     /** takes a line off someone, for the command that puts him right */
     public void settle(UUID who) {
-        if (who == null) { sour.clear(); after.clear(); struck.clear(); wind = 1f; return; }
-        sour.remove(who); after.remove(who); struck.remove(who);
+        if (who == null) {
+            sour.clear();
+            after.clear();
+            struck.clear();
+            wind = 1f;
+            return;
+        }
+        sour.remove(who);
+        after.remove(who);
+        struck.remove(who);
     }
 
     /**
@@ -115,24 +144,26 @@ public final class Mood {
      * coming from them: returns true on the hit that finishes his patience.
      */
     public boolean struck(UUID who) {
-        int most = HollowbellConfig.V.freeHits;
+        int most = BellConfig.V.freeHits;
         if (who == null || most <= 0 || !costsAnything()) return false;
         int n = struck.merge(who, 1, Integer::sum);
         if (n < most) return false;
         struck.remove(who);
-        sour.put(who, 1f);                              // straight through to the end of his patience
+        sour.put(who, 1f); // straight through to the end of his patience
         return true;
     }
 
     /** how many he has left in him for this one before the book stops meaning anything */
     public int strikesLeft(UUID who) {
-        int most = HollowbellConfig.V.freeHits;
+        int most = BellConfig.V.freeHits;
         if (who == null || most <= 0) return Integer.MAX_VALUE;
         return Math.max(0, most - struck.getOrDefault(who, 0));
     }
 
     /** he is done listening to this one, book or no book */
-    public boolean turnedOn(UUID who) { return who != null && stage(who) == TURNED; }
+    public boolean turnedOn(UUID who) {
+        return who != null && stage(who) == TURNED;
+    }
 
     public int stage(UUID who) {
         if (!costsAnything()) return FINE;
@@ -144,7 +175,7 @@ public final class Mood {
         return FINE;
     }
 
-    // ------------------------------------------------------------------ the one he is hunting
+    // the one he is hunting
     public void hunt(UUID who, long ticks) {
         if (who == null) return;
         long until = m.level().getGameTime() + Math.max(0, ticks);
@@ -158,7 +189,9 @@ public final class Mood {
         return until != null && until > m.level().getGameTime();
     }
 
-    public boolean huntingAnyone() { return !after.isEmpty(); }
+    public boolean huntingAnyone() {
+        return !after.isEmpty();
+    }
 
     /** how much longer, in Minecraft days, rounded up */
     public int huntDaysLeft(UUID who) {
@@ -168,7 +201,7 @@ public final class Mood {
         return left <= 0 ? 0 : (int) Math.ceil(left / 24000.0);
     }
 
-    // ------------------------------------------------------------------ saved with him
+    // saved with him
     public void save(CompoundTag tag) {
         CompoundTag t = new CompoundTag();
         t.putFloat("Wind", wind);

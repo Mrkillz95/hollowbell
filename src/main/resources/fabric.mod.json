@@ -3,7 +3,7 @@
   "id": "hollowbell",
   "version": "${version}",
   "name": "Hollowbell",
-  "description": "A huge green jellyfish boss made from glass, copper and bone. It drifts over the land on its hanging strands and pulls things up into its hollow dome.",
+  "description": "A huge green jellyfish boss made from glass, copper and bone. He drifts over the land on his hanging strands and pulls things up into his hollow dome.",
   "authors": [
     "JJ"
   ],
@@ -15,24 +15,6 @@
     ],
     "client": [
       "net.jj.hollowbell.client.HollowbellClient"
-    ],
-    "fabric-gametest": [
-      "net.jj.hollowbell.test.HollowbellGameTests",
-      "net.jj.hollowbell.test.MoreGameTests",
-      "net.jj.hollowbell.test.PaintDepthTests",
-      "net.jj.hollowbell.test.LookOrderTests",
-      "net.jj.hollowbell.test.HealTests",
-      "net.jj.hollowbell.test.FreezeTests",
-      "net.jj.hollowbell.test.FarFindTests",
-      "net.jj.hollowbell.test.SolidTests",
-      "net.jj.hollowbell.test.GiantHullTests",
-      "net.jj.hollowbell.test.SpawnEggTests",
-      "net.jj.hollowbell.test.ThrownTests",
-      "net.jj.hollowbell.test.DeathTests",
-      "net.jj.hollowbell.test.HeavyDelayTests",
-      "net.jj.hollowbell.test.HeldTests",
-      "net.jj.hollowbell.test.OrderTests",
-      "net.jj.hollowbell.test.HeightTests"
     ]
   },
   "depends": {

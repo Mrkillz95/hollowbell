@@ -1,13 +1,12 @@
 package net.jj.hollowbell.solid;
 
+import java.util.List;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
-
-import java.util.List;
 
 /**
  * Carrying one entity along on a creature, the way a player's own game does it at the end of each tick: moved by as
@@ -23,6 +22,7 @@ public final class SolidCarry {
     public int frame = -1;
     /** the spot carried (its own position, in the frame as built), and where that was in the world */
     public @Nullable Vector3f rest;
+
     public @Nullable Vec3 was;
     /** the spot as of the tick before, in the same frame (null if it changed) */
     public @Nullable Vector3f restPrev;
@@ -59,17 +59,31 @@ public final class SolidCarry {
         SolidBody found = null;
         for (SolidBody x : bodies) {
             a = Solid.anchorUnder(x, p, 0.9, 1.5);
-            if (a != null) { found = x; break; }
+            if (a != null) {
+                found = x;
+                break;
+            }
         }
         int nowAir = 0;
         if (found == null && b != null && !p.onGround() && air < 100 && !(p.isInWater() && !p.onGround())) {
             a = Solid.anchorUnder(b, p, 7.0, 0.0);
-            if (a != null) { found = b; nowAir = air + 1; }
+            if (a != null) {
+                found = b;
+                nowAir = air + 1;
+            }
         }
-        if (found == null) { clear(); return turned; }
+        if (found == null) {
+            clear();
+            return turned;
+        }
         SolidCache c = Solid.frames(found);
         if (found == b && a.frame() == oldFrame && oldRest != null) restPrev = oldRest;
-        on = found; frame = a.frame(); rest = a.rest(); was = p.position(); yaw = Solid.yawOf(c.toWorld[frame]); air = nowAir;
+        on = found;
+        frame = a.frame();
+        rest = a.rest();
+        was = p.position();
+        yaw = Solid.yawOf(c.toWorld[frame]);
+        air = nowAir;
         return turned;
     }
 
@@ -80,7 +94,16 @@ public final class SolidCarry {
         return p.level().noCollision(p, now) && !p.level().noCollision(p, then);
     }
 
-    public boolean riding() { return on != null; }
+    public boolean riding() {
+        return on != null;
+    }
 
-    public void clear() { on = null; frame = -1; rest = null; was = null; restPrev = null; air = 0; }
+    public void clear() {
+        on = null;
+        frame = -1;
+        rest = null;
+        was = null;
+        restPrev = null;
+        air = 0;
+    }
 }

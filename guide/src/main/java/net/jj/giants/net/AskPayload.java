@@ -12,5 +12,8 @@ public record AskPayload(String giant) implements CustomPacketPayload {
     public static final StreamCodec<FriendlyByteBuf, AskPayload> CODEC =
             StreamCodec.composite(ByteBufCodecs.stringUtf8(64), AskPayload::giant, AskPayload::new);
 
-    @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
 }

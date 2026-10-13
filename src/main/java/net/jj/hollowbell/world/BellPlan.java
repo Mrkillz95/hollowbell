@@ -19,25 +19,58 @@ import java.util.Map;
 public final class BellPlan {
 
     /** how high the land is at a column, as the world's own generator makes it (never loads anything) */
-    public interface Ground { int height(int x, int z); }
+    public interface Ground {
+        int height(int x, int z);
+    }
 
     /** what a block of his ground is made of; the painter turns these into real blocks, the lab into colours */
     public enum Mat {
         KEEP(0, 0),
-        CALCITE(0xDDDEDA, 1), DIORITE(0xBCBCBD, 1), POLISHED_DIORITE(0xC6C7C8, 1), END_STONE(0xDBDE9E, 1),
-        BONE(0xE2DCC6, 1), SMOOTH_STONE(0xA0A0A0, 1), MOSS(0x5C7430, 1), GRASS(0x9BD4AE, 1),
-        VERDANT(0xDDF0CF, 1), PEARL(0xF3E6E8, 1), OCHRE(0xF7EDB8, 1),
-        LIME_GLASS(0x86CE2A, 2), WHITE_GLASS(0xECF2EE, 2), GRAY_GLASS(0x9DA3A0, 2), GREEN_GLASS(0x6B8A3A, 2),
-        MOSS_CARPET(0x62792F, 3), GLOW_LICHEN(0x7C9A86, 3), DRIPLEAF_LOW(0x5E8A3A, 3), DRIPLEAF_HIGH(0x74A84A, 3),
-        END_ROD(0xF6F0EA, 3), CHAIN(0x3F4550, 3), WATER(0x74CDBB, 4),
+        CALCITE(0xDDDEDA, 1),
+        DIORITE(0xBCBCBD, 1),
+        POLISHED_DIORITE(0xC6C7C8, 1),
+        END_STONE(0xDBDE9E, 1),
+        BONE(0xE2DCC6, 1),
+        SMOOTH_STONE(0xA0A0A0, 1),
+        MOSS(0x5C7430, 1),
+        GRASS(0x9BD4AE, 1),
+        VERDANT(0xDDF0CF, 1),
+        PEARL(0xF3E6E8, 1),
+        OCHRE(0xF7EDB8, 1),
+        LIME_GLASS(0x86CE2A, 2),
+        WHITE_GLASS(0xECF2EE, 2),
+        GRAY_GLASS(0x9DA3A0, 2),
+        GREEN_GLASS(0x6B8A3A, 2),
+        MOSS_CARPET(0x62792F, 3),
+        GLOW_LICHEN(0x7C9A86, 3),
+        DRIPLEAF_LOW(0x5E8A3A, 3),
+        DRIPLEAF_HIGH(0x74A84A, 3),
+        END_ROD(0xF6F0EA, 3),
+        CHAIN(0x3F4550, 3),
+        WATER(0x74CDBB, 4),
         // his own blocks (see ModBlocks): pale veined calcite, glowing tendril glass, fallen bell glass, spore moss
-        BELL_CALCITE(0xE4EBDF, 1), TENDRIL_GLASS(0x9CE0A0, 2), BELL_SHARD(0xB9DCC4, 2), SPORE_MOSS(0x7FA257, 3);
+        BELL_CALCITE(0xE4EBDF, 1),
+        TENDRIL_GLASS(0x9CE0A0, 2),
+        BELL_SHARD(0xB9DCC4, 2),
+        SPORE_MOSS(0x7FA257, 3);
 
         public final int rgb;
         /** 1 solid, 2 glass, 3 small or thin (plants, rods, chains), 4 water */
         public final int kind;
-        Mat(int rgb, int kind) { this.rgb = rgb; this.kind = kind; }
-        public boolean glows() { return this == VERDANT || this == PEARL || this == OCHRE || this == END_ROD || this == TENDRIL_GLASS || this == SPORE_MOSS; }
+
+        Mat(int rgb, int kind) {
+            this.rgb = rgb;
+            this.kind = kind;
+        }
+
+        public boolean glows() {
+            return this == VERDANT
+                    || this == PEARL
+                    || this == OCHRE
+                    || this == END_ROD
+                    || this == TENDRIL_GLASS
+                    || this == SPORE_MOSS;
+        }
     }
 
     public static final int OUT = 0, FRINGE = 1, MIDDLE = 2, CORE = 3;
@@ -62,7 +95,9 @@ public final class BellPlan {
      */
     public int paintDepth = 0;
 
-    public int depth() { return paintDepth > 0 ? paintDepth : MADE_DEPTH; }
+    public int depth() {
+        return paintDepth > 0 ? paintDepth : MADE_DEPTH;
+    }
 
     /**
      * The block k down from a column's top (k = 0 the top, at y), with topMat its top block and y0 the old ground:
@@ -88,17 +123,27 @@ public final class BellPlan {
     public boolean withDen = true;
 
     public BellPlan(long seed, int cx, int cz, int radius, int sea, int minY, int maxY, Ground ground) {
-        this.seed = seed; this.cx = cx; this.cz = cz; this.radius = radius;
-        this.sea = sea; this.minY = minY; this.maxY = maxY; this.ground = ground;
+        this.seed = seed;
+        this.cx = cx;
+        this.cz = cz;
+        this.radius = radius;
+        this.sea = sea;
+        this.minY = minY;
+        this.maxY = maxY;
+        this.ground = ground;
         this.breakAngle = h01(seed, 1, 2, 900) * Math.PI * 2 - Math.PI;
         this.ribPhase = h01(seed, 3, 4, 901) * Math.PI / 4;
     }
 
-    // ================================================================== hashing and noise (pure)
+    // hashing and noise (pure)
 
     public static long mix(long a, long b) {
         long h = a * 0x9E3779B97F4A7C15L ^ b;
-        h ^= h >>> 32; h *= 0xBF58476D1CE4E5B9L; h ^= h >>> 29; h *= 0x94D049BB133111EBL; h ^= h >>> 32;
+        h ^= h >>> 32;
+        h *= 0xBF58476D1CE4E5B9L;
+        h ^= h >>> 29;
+        h *= 0x94D049BB133111EBL;
+        h ^= h >>> 32;
         return h;
     }
 
@@ -111,9 +156,13 @@ public final class BellPlan {
         return (hash(seed, a, b, c) >>> 11) * 0x1.0p-53;
     }
 
-    private double h(int a, int b, int c) { return h01(seed, a, b, c); }
+    private double h(int a, int b, int c) {
+        return h01(seed, a, b, c);
+    }
 
-    private static double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    private static double fade(double t) {
+        return t * t * t * (t * (t * 6 - 15) + 10);
+    }
 
     /** gradient noise, about 0..1 with 0.5 the middle */
     private double perlin(int salt, double x, double z) {
@@ -136,7 +185,9 @@ public final class BellPlan {
         double sum = 0, amp = 1, tot = 0, f = 1;
         for (int o = 0; o < oct; o++) {
             sum += amp * perlin(salt + o * 131, x * f, z * f);
-            tot += amp; amp *= 0.5; f *= 2.03;
+            tot += amp;
+            amp *= 0.5;
+            f *= 2.03;
         }
         return sum / tot;
     }
@@ -151,7 +202,9 @@ public final class BellPlan {
             double v0 = h(salt + o, Math.floorMod(i0, freq), 7), v1 = h(salt + o, Math.floorMod(i0 + 1, freq), 7);
             double s = f * f * (3 - 2 * f);
             sum += amp * (v0 + (v1 - v0) * s);
-            total += amp; amp *= 0.5; freq *= 2;
+            total += amp;
+            amp *= 0.5;
+            freq *= 2;
         }
         return sum / total;
     }
@@ -167,7 +220,7 @@ public final class BellPlan {
         return a;
     }
 
-    // ================================================================== the outline and the zones
+    // the outline and the zones
 
     /**
      * How far out a column is: 0 at the centre, 1 at the edge. The edge wobbles with the angle, swells into a few
@@ -183,12 +236,18 @@ public final class BellPlan {
         return d / edge + warp;
     }
 
-    public static int zoneOf(double dn) { return dn < 0.25 ? CORE : dn < 0.8 ? MIDDLE : dn < 1 ? FRINGE : OUT; }
+    public static int zoneOf(double dn) {
+        return dn < 0.25 ? CORE : dn < 0.8 ? MIDDLE : dn < 1 ? FRINGE : OUT;
+    }
 
-    public int zone(int x, int z) { return zoneOf(dn(x, z)); }
+    public int zone(int x, int z) {
+        return zoneOf(dn(x, z));
+    }
 
     /** is this column his? All of the middle is; the fringe thins out in patches to nothing. */
-    public boolean painted(int x, int z) { return paintedAt(x, z, dn(x, z)); }
+    public boolean painted(int x, int z) {
+        return paintedAt(x, z, dn(x, z));
+    }
 
     private boolean paintedAt(int x, int z, double dn) {
         if (dn < 0.8) return true;
@@ -209,10 +268,12 @@ public final class BellPlan {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    // ================================================================== the shape of the land
+    // the shape of the land
 
     /** the height of the land at a column as the world's generator makes it, before caves and ravines cut it */
-    public int worldHeight(int x, int z) { return ground.height(x, z); }
+    public int worldHeight(int x, int z) {
+        return ground.height(x, z);
+    }
 
     /** the den sits at the height the world's generator gives its centre */
     public int denY() {
@@ -224,11 +285,16 @@ public final class BellPlan {
 
     /** one round hollow */
     private static final class Bowl {
-        int ci, cj, px, pz; double r, depth; boolean garden, pool;
+        int ci, cj, px, pz;
+        double r, depth;
+        boolean garden, pool;
     }
 
     private final Map<Long, Bowl> bowls = new LinkedHashMap<>(256, 0.75f, true) {
-        @Override protected boolean removeEldestEntry(Map.Entry<Long, Bowl> e) { return size() > 4096; }
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Bowl> e) {
+            return size() > 4096;
+        }
     };
     private static final Bowl NONE = new Bowl();
 
@@ -252,7 +318,10 @@ public final class BellPlan {
         double chance = (zone == CORE ? 0.55 : zone == MIDDLE ? 0.9 : zone == FRINGE ? 0.5 : 0) * (0.12 + 0.88 * field);
         if (h(ci, cj, 102) >= chance) return null;
         Bowl b = new Bowl();
-        b.ci = ci; b.cj = cj; b.px = px; b.pz = pz;
+        b.ci = ci;
+        b.cj = cj;
+        b.px = px;
+        b.pz = pz;
         b.r = 4 + 8 * Math.pow(h(ci, cj, 103), 1.25);
         b.depth = Math.max(2, Math.min(7, 1.2 + (b.r - 4) * 0.55 + h(ci, cj, 104) * 1.6));
         double g = h(ci, cj, 105);
@@ -262,26 +331,38 @@ public final class BellPlan {
     }
 
     /** what the hollows do to one column: how deep, which bowl it is in and how far across it (t, 0 = middle) */
-    private static final class BowlHit { double v; Bowl in; double t = 9; }
+    private static final class BowlHit {
+        double v;
+        Bowl in;
+        double t = 9;
+    }
 
     private void bowlsAt(int x, int z, BowlHit out) {
-        out.v = 0; out.in = null; out.t = 9;
+        out.v = 0;
+        out.in = null;
+        out.t = 9;
         int ci = Math.floorDiv(x, BOWL_CELL), cj = Math.floorDiv(z, BOWL_CELL);
         double deepest = 0, second = 0, lip = 0;
-        for (int i = ci - 1; i <= ci + 1; i++) for (int j = cj - 1; j <= cj + 1; j++) {
-            Bowl b = bowl(i, j);
-            if (b == null) continue;
-            double dx = x + 0.5 - (b.px + 0.5), dz = z + 0.5 - (b.pz + 0.5);
-            double t = Math.sqrt(dx * dx + dz * dz) / b.r;
-            if (t < 1) {
-                double v = -b.depth * Math.pow(1 - t * t, 0.75);
-                if (v < deepest) { second = deepest; deepest = v; }
-                else if (v < second) second = v;
-                if (t < out.t) { out.t = t; out.in = b; }
-            } else if (t < 1.4) {
-                lip = Math.max(lip, Math.min(1.4, b.depth * 0.25) * Math.sin(Math.PI * (t - 1) / 0.4));
+        for (int i = ci - 1; i <= ci + 1; i++)
+            for (int j = cj - 1; j <= cj + 1; j++) {
+                Bowl b = bowl(i, j);
+                if (b == null) continue;
+                double dx = x + 0.5 - (b.px + 0.5), dz = z + 0.5 - (b.pz + 0.5);
+                double t = Math.sqrt(dx * dx + dz * dz) / b.r;
+                if (t < 1) {
+                    double v = -b.depth * Math.pow(1 - t * t, 0.75);
+                    if (v < deepest) {
+                        second = deepest;
+                        deepest = v;
+                    } else if (v < second) second = v;
+                    if (t < out.t) {
+                        out.t = t;
+                        out.in = b;
+                    }
+                } else if (t < 1.4) {
+                    lip = Math.max(lip, Math.min(1.4, b.depth * 0.25) * Math.sin(Math.PI * (t - 1) / 0.4));
+                }
             }
-        }
         out.v = deepest < 0 ? deepest + 0.35 * second : lip;
     }
 
@@ -317,7 +398,10 @@ public final class BellPlan {
 
     /** the height a feature standing here is measured from: the land as the generator makes it, shaped */
     private final Map<Long, Integer> anchors = new LinkedHashMap<>(256, 0.75f, true) {
-        @Override protected boolean removeEldestEntry(Map.Entry<Long, Integer> e) { return size() > 4096; }
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Integer> e) {
+            return size() > 4096;
+        }
     };
 
     private int anchor(int x, int z) {
@@ -332,16 +416,21 @@ public final class BellPlan {
         return v;
     }
 
-    // ================================================================== what the ground is made of
+    // what the ground is made of
 
     /** layered rock, so a slope or a cut shows bands of calcite, diorite, end stone and bone */
     public Mat strata(int x, int y, int z) {
         int phase = (int) Math.floor(6 * perlin(56, x / 70.0, z / 70.0));
         switch (Math.floorMod(y + phase, 11)) {
-            case 2: case 3: return Mat.DIORITE;
-            case 6: return Mat.END_STONE;
-            case 9: return Mat.BONE;
-            default: return Mat.CALCITE;
+            case 2:
+            case 3:
+                return Mat.DIORITE;
+            case 6:
+                return Mat.END_STONE;
+            case 9:
+                return Mat.BONE;
+            default:
+                return Mat.CALCITE;
         }
     }
 
@@ -352,44 +441,54 @@ public final class BellPlan {
             return n < 0.47 ? Mat.KEEP : n < 0.64 ? Mat.CALCITE : n < 0.72 ? Mat.DIORITE : Mat.GRASS;
         }
         if (b.in != null && b.t < 1) {
-            if (b.t < 0.13 && !b.in.pool && !b.in.garden) return Mat.VERDANT;          // the old glow at the bottom
+            if (b.t < 0.13 && !b.in.pool && !b.in.garden) return Mat.VERDANT; // the old glow at the bottom
             if (b.in.garden && b.t < 0.8) return Mat.MOSS;
             if (b.t < 0.55) return fbm(57, x / 7.0, z / 7.0, 2) < 0.45 ? Mat.END_STONE : Mat.CALCITE;
             return strata(x, y, z);
         }
         double p1 = fbm(52, x / 40.0, z / 40.0, 3), p2 = fbm(53, x / 13.0, z / 13.0, 2);
         if (zone == CORE) {
-            if (Math.abs(fbm(55, x / 60.0, z / 60.0, 2) - 0.5) < 0.007 && fbm(58, x / 90.0, z / 90.0, 1) > 0.5) return Mat.VERDANT;
-            if (fbm(54, x / 5.0, z / 5.0, 1) > 0.78 && p1 > 0.45) return Mat.TENDRIL_GLASS;       // old glass, lit under
+            if (Math.abs(fbm(55, x / 60.0, z / 60.0, 2) - 0.5) < 0.007 && fbm(58, x / 90.0, z / 90.0, 1) > 0.5)
+                return Mat.VERDANT;
+            if (fbm(54, x / 5.0, z / 5.0, 1) > 0.78 && p1 > 0.45) return Mat.TENDRIL_GLASS; // old glass, lit under
             if (p1 > 0.64) return Mat.BONE;
             if (p1 < 0.33) return p2 > 0.55 ? Mat.GRASS : Mat.MOSS;
             return p2 > 0.62 ? Mat.END_STONE : p2 < 0.36 ? Mat.DIORITE : Mat.CALCITE;
         }
-        if (p1 < 0.46) return p2 > 0.72 ? Mat.MOSS : Mat.GRASS;                         // mint meadows
+        if (p1 < 0.46) return p2 > 0.72 ? Mat.MOSS : Mat.GRASS; // mint meadows
         if (fbm(54, x / 5.0, z / 5.0, 1) > 0.8 && p1 > 0.55) return Mat.LIME_GLASS;
         if (p1 > 0.66) return p2 > 0.5 ? Mat.SMOOTH_STONE : Mat.BONE;
         return p2 > 0.64 ? Mat.END_STONE : p2 < 0.34 ? Mat.DIORITE : Mat.CALCITE;
     }
 
-    // ================================================================== the bigger things standing on it
+    // the bigger things standing on it
 
     /** anything bigger than one column: it knows the box it can reach and answers for a column inside it */
     private abstract static class Feature {
         int minX, maxX, minZ, maxZ;
-        boolean touches(int x0, int z0) { return maxX >= x0 && minX <= x0 + 15 && maxZ >= z0 && minZ <= z0 + 15; }
+
+        boolean touches(int x0, int z0) {
+            return maxX >= x0 && minX <= x0 + 15 && maxZ >= z0 && minZ <= z0 + 15;
+        }
+
         abstract void apply(BellPlan p, Out o, int i, int x, int z);
     }
 
     /** a curved piece of an old glass bell, fallen and stuck in the ground, maybe leaning */
     private static final class Shard extends Feature {
-        double ax, az, ra, a0, half, tilt; int hmax, px, pz; boolean rim; int glassSalt;
-        @Override void apply(BellPlan p, Out o, int i, int x, int z) {
+        double ax, az, ra, a0, half, tilt;
+        int hmax, px, pz;
+        boolean rim;
+        int glassSalt;
+
+        @Override
+        void apply(BellPlan p, Out o, int i, int x, int z) {
             double qx = x + 0.5 - ax, qz = z + 0.5 - az;
             double q = Math.sqrt(qx * qx + qz * qz);
             double da = wrap(Math.atan2(qz, qx) - a0);
             if (Math.abs(da) > half) return;
             double s = da / half;
-            double prof = Math.pow(1 - s * s, 0.5) * (s > 0.35 ? 1 - (s - 0.35) * 0.55 : 1);   // one end broken lower
+            double prof = Math.pow(1 - s * s, 0.5) * (s > 0.35 ? 1 - (s - 0.35) * 0.55 : 1); // one end broken lower
             int hs = (int) Math.round(hmax * prof + (p.h(x, z, glassSalt) - 0.5) * 2.4);
             int base = p.anchor(px, pz) - 2;
             double u = da * ra;
@@ -400,7 +499,10 @@ public final class BellPlan {
                 if (k <= 2) m = Mat.CALCITE;
                 else if (rib || (rim && k == hs)) m = Mat.BELL_CALCITE;
                 else if (k == hs - 1 && p.h(x, z, glassSalt + 1) < 0.3) m = Mat.WHITE_GLASS;
-                else m = (k + glassSalt) % 7 == 0 ? Mat.GRAY_GLASS : (k + glassSalt) % 3 == 0 ? Mat.LIME_GLASS : Mat.BELL_SHARD;
+                else
+                    m = (k + glassSalt) % 7 == 0
+                            ? Mat.GRAY_GLASS
+                            : (k + glassSalt) % 3 == 0 ? Mat.LIME_GLASS : Mat.BELL_SHARD;
                 o.put(i, base + k, m);
             }
         }
@@ -408,8 +510,12 @@ public final class BellPlan {
 
     /** a thin calcite spire, banded, now and then with a glowing eye near the top */
     private static final class Spire extends Feature {
-        int px, pz, hs, phase; double rb; boolean eye;
-        @Override void apply(BellPlan p, Out o, int i, int x, int z) {
+        int px, pz, hs, phase;
+        double rb;
+        boolean eye;
+
+        @Override
+        void apply(BellPlan p, Out o, int i, int x, int z) {
             double dx = x + 0.5 - (px + 0.5), dz = z + 0.5 - (pz + 0.5);
             double d = Math.sqrt(dx * dx + dz * dz);
             if (d >= rb + 0.5) return;
@@ -430,8 +536,11 @@ public final class BellPlan {
 
     /** a fallen rib: a bone arch out of the ground, sometimes broken through */
     private static final class Arch extends Feature {
-        double px, pz, ux, uz, len, ha; int gapA = -1, gapB = -1, ax, az;
-        @Override void apply(BellPlan p, Out o, int i, int x, int z) {
+        double px, pz, ux, uz, len, ha;
+        int gapA = -1, gapB = -1, ax, az;
+
+        @Override
+        void apply(BellPlan p, Out o, int i, int x, int z) {
             double rx = x + 0.5 - px, rz = z + 0.5 - pz;
             double along = rx * ux + rz * uz + len / 2, perp = -rx * uz + rz * ux;
             if (Math.abs(perp) > 0.8 || along < 0 || along > len) return;
@@ -445,6 +554,7 @@ public final class BellPlan {
                 o.put(i, base + y, m);
             }
         }
+
         double arc(double a) {
             double t = Math.max(-1, Math.min(1, (a - len / 2) / (len / 2)));
             return ha * Math.sqrt(1 - t * t);
@@ -454,7 +564,9 @@ public final class BellPlan {
     /** a few thin calcite posts with an end rod glowing on top: drifting lights */
     private static final class Lights extends Feature {
         int[] xs, zs, hs;
-        @Override void apply(BellPlan p, Out o, int i, int x, int z) {
+
+        @Override
+        void apply(BellPlan p, Out o, int i, int x, int z) {
             for (int k = 0; k < xs.length; k++) {
                 if (xs[k] != x || zs[k] != z) continue;
                 if (o.bowlT[i] < 1.05 || o.reef[i]) return;
@@ -481,7 +593,9 @@ public final class BellPlan {
         return found;
     }
 
-    private interface CellMaker { void make(int ci, int cj); }
+    private interface CellMaker {
+        void make(int ci, int cj);
+    }
 
     private void cells(int x0, int z0, int cell, int reach, CellMaker m) {
         for (int ci = Math.floorDiv(x0 - reach, cell); ci <= Math.floorDiv(x0 + 15 + reach, cell); ci++)
@@ -497,7 +611,7 @@ public final class BellPlan {
         BowlHit b = new BowlHit();
         bowlsAt(px, pz, b);
         if (b.t < 1.1) return null;
-        return new int[]{px, pz};
+        return new int[] {px, pz};
     }
 
     private void shard(int ci, int cj) {
@@ -507,7 +621,8 @@ public final class BellPlan {
         double chance = zone == CORE ? 0.85 : zone == MIDDLE ? 0.3 : 0;
         if (h(ci, cj, 202) >= chance) return;
         Shard f = new Shard();
-        f.px = s[0]; f.pz = s[1];
+        f.px = s[0];
+        f.pz = s[1];
         f.ra = 9 + 9 * h(ci, cj, 203);
         double arcLen = 9 + 10 * h(ci, cj, 204);
         f.half = arcLen / 2 / f.ra;
@@ -519,7 +634,10 @@ public final class BellPlan {
         f.rim = h(ci, cj, 208) < 0.5;
         f.glassSalt = 300 + (int) (h(ci, cj, 209) * 50);
         int reach = (int) Math.ceil(arcLen / 2 + Math.abs(f.tilt) * f.hmax + 3);
-        f.minX = f.px - reach; f.maxX = f.px + reach; f.minZ = f.pz - reach; f.maxZ = f.pz + reach;
+        f.minX = f.px - reach;
+        f.maxX = f.px + reach;
+        f.minZ = f.pz - reach;
+        f.maxZ = f.pz + reach;
         found.add(f);
     }
 
@@ -541,7 +659,10 @@ public final class BellPlan {
             f.phase = (int) (h(ci, cj, 270 + k) * 5);
             f.eye = h(ci, cj, 280 + k) < 0.35 && f.hs > 10;
             int reach = (int) Math.ceil(f.rb) + 1;
-            f.minX = f.px - reach; f.maxX = f.px + reach; f.minZ = f.pz - reach; f.maxZ = f.pz + reach;
+            f.minX = f.px - reach;
+            f.maxX = f.px + reach;
+            f.minZ = f.pz - reach;
+            f.maxZ = f.pz + reach;
             found.add(f);
         }
     }
@@ -553,10 +674,13 @@ public final class BellPlan {
         double chance = zone == CORE ? 0.55 : zone == MIDDLE ? 0.42 : 0;
         if (h(ci, cj, 312) >= chance) return;
         Arch f = new Arch();
-        f.ax = s[0]; f.az = s[1];
-        f.px = s[0] + 0.5; f.pz = s[1] + 0.5;
+        f.ax = s[0];
+        f.az = s[1];
+        f.px = s[0] + 0.5;
+        f.pz = s[1] + 0.5;
         double a = h(ci, cj, 313) * Math.PI * 2;
-        f.ux = Math.cos(a); f.uz = Math.sin(a);
+        f.ux = Math.cos(a);
+        f.uz = Math.sin(a);
         f.len = 14 + 14 * h(ci, cj, 314);
         f.ha = f.len * (0.42 + 0.18 * h(ci, cj, 315)) + 2;
         if (h(ci, cj, 316) < 0.4) {
@@ -564,7 +688,10 @@ public final class BellPlan {
             f.gapB = f.gapA + 2 + (int) (2 * h(ci, cj, 318));
         }
         int reach = (int) Math.ceil(f.len / 2) + 2;
-        f.minX = s[0] - reach; f.maxX = s[0] + reach; f.minZ = s[1] - reach; f.maxZ = s[1] + reach;
+        f.minX = s[0] - reach;
+        f.maxX = s[0] + reach;
+        f.minZ = s[1] - reach;
+        f.maxZ = s[1] + reach;
         found.add(f);
     }
 
@@ -576,14 +703,19 @@ public final class BellPlan {
         if (h(ci, cj, 332) >= chance) return;
         int n = 1 + (int) (h(ci, cj, 333) * 2.99);
         Lights f = new Lights();
-        f.xs = new int[n]; f.zs = new int[n]; f.hs = new int[n];
+        f.xs = new int[n];
+        f.zs = new int[n];
+        f.hs = new int[n];
         for (int k = 0; k < n; k++) {
             double a = h(ci, cj, 340 + k) * Math.PI * 2, r = k == 0 ? 0 : 2 + 1.5 * h(ci, cj, 350 + k);
             f.xs[k] = s[0] + (int) Math.round(Math.cos(a) * r);
             f.zs[k] = s[1] + (int) Math.round(Math.sin(a) * r);
             f.hs[k] = 2 + (int) (h(ci, cj, 360 + k) * 3);
         }
-        f.minX = s[0] - 4; f.maxX = s[0] + 4; f.minZ = s[1] - 4; f.maxZ = s[1] + 4;
+        f.minX = s[0] - 4;
+        f.maxX = s[0] + 4;
+        f.minZ = s[1] - 4;
+        f.maxZ = s[1] + 4;
         found.add(f);
     }
 
@@ -602,12 +734,15 @@ public final class BellPlan {
             f.phase = k;
             f.eye = true;
             int reach = (int) Math.ceil(f.rb) + 1;
-            f.minX = f.px - reach; f.maxX = f.px + reach; f.minZ = f.pz - reach; f.maxZ = f.pz + reach;
+            f.minX = f.px - reach;
+            f.maxX = f.px + reach;
+            f.minZ = f.pz - reach;
+            f.maxZ = f.pz + reach;
             found.add(f);
         }
     }
 
-    // ================================================================== one chunk at a time
+    // one chunk at a time
 
     /** what goes into each of a chunk's 256 columns (index lz * 16 + lx) */
     public static final class Out {
@@ -617,13 +752,17 @@ public final class BellPlan {
         public final int[] top = new int[256];
         /** the ground's blocks from the top down: layer[i][k] is at y = top - k */
         public final Mat[][] layer = new Mat[256][LAYERS];
+
         public final int[] layers = new int[256];
         /** how many of the layers are his ground as laid (any more are a cut filled in under it) */
         public final int[] laid = new int[256];
         /** each column's top block as planned (before a raised fringe is given grass) */
-        public Mat topMat(int i) { return topMat[i]; }
+        public Mat topMat(int i) {
+            return topMat[i];
+        }
         /** blocks set above the ground, bottom to top is not promised */
         public final int[][] ay = new int[256][MAXA];
+
         public final Mat[][] am = new Mat[256][MAXA];
         public final int[] an = new int[256];
         final double[] bowlT = new double[256];
@@ -636,7 +775,9 @@ public final class BellPlan {
             if (y <= top[i]) return;
             for (int k = 0; k < an[i]; k++) if (ay[i][k] == y) return;
             if (an[i] >= MAXA) return;
-            ay[i][an[i]] = y; am[i][an[i]] = m; an[i]++;
+            ay[i][an[i]] = y;
+            am[i][an[i]] = m;
+            an[i]++;
         }
 
         public Mat above(int i, int y) {
@@ -659,15 +800,21 @@ public final class BellPlan {
         // ---- the ground's new height, column by column
         for (int i = 0; i < 256; i++) {
             int x = x0 + (i & 15), z = z0 + (i >> 4);
-            o.an[i] = 0; o.layers[i] = 0; o.reef[i] = false; o.pool[i] = false; o.topMat[i] = null;
-            o.top[i] = y0[i]; o.bowlT[i] = 9;
+            o.an[i] = 0;
+            o.layers[i] = 0;
+            o.reef[i] = false;
+            o.pool[i] = false;
+            o.topMat[i] = null;
+            o.top[i] = y0[i];
+            o.bowlT[i] = 9;
             double dn = dn(x, z);
             dns[i] = dn;
             o.zone[i] = zoneOf(dn);
             o.paint[i] = ok[i] && dn < 1 && paintedAt(x, z, dn);
             if (!o.paint[i] || wet[i]) continue;
             bowlsAt(x, z, b);
-            o.bowlT[i] = b.t; inBowl[i] = b.t < 1 ? b.in : null;
+            o.bowlT[i] = b.t;
+            inBowl[i] = b.t < 1 ? b.in : null;
             int t = (int) Math.round(target(x, z, y0[i], dn, b));
             t = Math.max(y0[i] - MAX_DOWN, Math.min(y0[i] + MAX_UP, t));
             t = Math.min(t, maxY - 40);
@@ -715,7 +862,7 @@ public final class BellPlan {
         for (int i = 0; i < 256; i++) {
             if (!o.paint[i]) continue;
             int x = x0 + (i & 15), z = z0 + (i >> 4);
-            if (wet[i]) {                        // under water: only the bed is turned, the water stays
+            if (wet[i]) { // under water: only the bed is turned, the water stays
                 o.layers[i] = 0;
                 o.laid[i] = 0;
                 continue;
@@ -727,7 +874,8 @@ public final class BellPlan {
             o.layers[i] = n;
             o.laid[i] = n;
             for (int k = 0; k < n; k++) o.layer[i][k] = layer(x, top - k, z, k, o.topMat[i], y0[i]);
-            if (o.topMat[i] == Mat.KEEP && top > y0[i]) o.layer[i][0] = Mat.GRASS;  // raised fringe: grass on top, as it was
+            if (o.topMat[i] == Mat.KEEP && top > y0[i])
+                o.layer[i][0] = Mat.GRASS; // raised fringe: grass on top, as it was
         }
     }
 
@@ -735,7 +883,8 @@ public final class BellPlan {
     private void reef(Out o, int i, int x, int z) {
         if (o.bowlT[i] < 1.0) return;
         if (perlin(35, x / 170.0, z / 170.0) < 0.56) return;
-        double wx = x + 18 * (perlin(33, x / 60.0, z / 60.0) - 0.5), wz = z + 18 * (perlin(34, x / 60.0, z / 60.0) - 0.5);
+        double wx = x + 18 * (perlin(33, x / 60.0, z / 60.0) - 0.5),
+                wz = z + 18 * (perlin(34, x / 60.0, z / 60.0) - 0.5);
         double n = fbm(31, wx / 36.0, wz / 36.0, 2);
         if (Math.abs(n - 0.5) >= 0.021) return;
         o.reef[i] = true;
@@ -755,22 +904,25 @@ public final class BellPlan {
         if (o.topMat[i] != Mat.MOSS) return;
         int y = o.top[i];
         double r = h(x, z, 41);
-        if (r < 0.07) { o.put(i, y + 1, Mat.DRIPLEAF_LOW); o.put(i, y + 2, Mat.DRIPLEAF_HIGH); }
-        else if (r < 0.13) o.put(i, y + 1, Mat.GLOW_LICHEN);
-        else if (perlin(42, x / 4.0, z / 4.0) > 0.6) o.put(i, y + 1, perlin(43, x / 9.0, z / 9.0) > 0.45 ? Mat.SPORE_MOSS : Mat.MOSS_CARPET);
+        if (r < 0.07) {
+            o.put(i, y + 1, Mat.DRIPLEAF_LOW);
+            o.put(i, y + 2, Mat.DRIPLEAF_HIGH);
+        } else if (r < 0.13) o.put(i, y + 1, Mat.GLOW_LICHEN);
+        else if (perlin(42, x / 4.0, z / 4.0) > 0.6)
+            o.put(i, y + 1, perlin(43, x / 9.0, z / 9.0) > 0.45 ? Mat.SPORE_MOSS : Mat.MOSS_CARPET);
     }
 
     /** the pools: a bowl's own, and one in the den under the bell */
     private void pools(int x0, int z0, int[] y0, boolean[] wet, int[] lowest, Bowl[] inBowl, Out o) {
-        List<int[]> spots = new ArrayList<>();     // x, z, radius*10, glow
+        List<int[]> spots = new ArrayList<>(); // x, z, radius*10, glow
         for (int i = 0; i < 256; i++) {
             Bowl bw = inBowl[i];
             if (bw == null || !bw.pool) continue;
             int x = x0 + (i & 15), z = z0 + (i >> 4);
             if (x != bw.px || z != bw.pz) continue;
-            spots.add(new int[]{x, z, (int) (Math.min(4.5, bw.r * 0.45) * 10), 1});
+            spots.add(new int[] {x, z, (int) (Math.min(4.5, bw.r * 0.45) * 10), 1});
         }
-        if (withDen && (cx >> 4) == (x0 >> 4) && (cz >> 4) == (z0 >> 4)) spots.add(new int[]{x0 + 8, z0 + 8, 45, 1});
+        if (withDen && (cx >> 4) == (x0 >> 4) && (cz >> 4) == (z0 >> 4)) spots.add(new int[] {x0 + 8, z0 + 8, 45, 1});
         for (int[] s : spots) {
             double rp = s[2] / 10.0;
             if (rp < 1.6) continue;
@@ -780,19 +932,26 @@ public final class BellPlan {
             int w = Integer.MAX_VALUE;
             boolean fine = true;
             List<Integer> in = new ArrayList<>();
-            for (int dz = -reach; dz <= reach && fine; dz++) for (int dx = -reach; dx <= reach; dx++) {
-                double d = Math.sqrt(dx * dx + dz * dz);
-                if (d >= rp + 1.5) continue;
-                int j = (lz + dz) * 16 + lx + dx;
-                if (!o.paint[j] || wet[j] || o.pool[j]) { fine = false; break; }
-                if (d < rp) in.add(j);
-                else w = Math.min(w, o.top[j]);
-            }
+            for (int dz = -reach; dz <= reach && fine; dz++)
+                for (int dx = -reach; dx <= reach; dx++) {
+                    double d = Math.sqrt(dx * dx + dz * dz);
+                    if (d >= rp + 1.5) continue;
+                    int j = (lz + dz) * 16 + lx + dx;
+                    if (!o.paint[j] || wet[j] || o.pool[j]) {
+                        fine = false;
+                        break;
+                    }
+                    if (d < rp) in.add(j);
+                    else w = Math.min(w, o.top[j]);
+                }
             if (!fine || in.isEmpty() || w == Integer.MAX_VALUE || w <= sea) continue;
             for (int j : in) {
                 double d = Math.sqrt(Math.pow((j & 15) - lx, 2) + Math.pow((j >> 4) - lz, 2));
                 int depth = d < rp * 0.55 ? 2 : 1;
-                if (Math.min(o.top[j], w - depth) < lowest[j]) { fine = false; break; }
+                if (Math.min(o.top[j], w - depth) < lowest[j]) {
+                    fine = false;
+                    break;
+                }
             }
             if (!fine) continue;
             for (int j : in) {
@@ -803,16 +962,17 @@ public final class BellPlan {
                 o.topMat[j] = d < 0.6 && s[3] == 1 ? Mat.VERDANT : Mat.CALCITE;
                 for (int y = o.top[j] + 1; y <= w; y++) o.put(j, y, Mat.WATER);
             }
-            for (int dz = -reach; dz <= reach; dz++) for (int dx = -reach; dx <= reach; dx++) {
-                double d = Math.sqrt(dx * dx + dz * dz);
-                if (d < rp || d >= rp + 1.2) continue;
-                int j = (lz + dz) * 16 + lx + dx;
-                if (o.topMat[j] != Mat.VERDANT) o.topMat[j] = Mat.CALCITE;
-            }
+            for (int dz = -reach; dz <= reach; dz++)
+                for (int dx = -reach; dx <= reach; dx++) {
+                    double d = Math.sqrt(dx * dx + dz * dz);
+                    if (d < rp || d >= rp + 1.2) continue;
+                    int j = (lz + dz) * 16 + lx + dx;
+                    if (o.topMat[j] != Mat.VERDANT) o.topMat[j] = Mat.CALCITE;
+                }
         }
     }
 
-    // ================================================================== his den: the great bell
+    // his den: the great bell
 
     /** the top of the bell's shell over a column, or MIN_VALUE outside it */
     private int shellTop(int x, int z) {
@@ -851,7 +1011,8 @@ public final class BellPlan {
             // lights hanging inside on chains
             if (d < DOME_R - 4) {
                 int ci = Math.floorDiv(x - cx, 5), cj = Math.floorDiv(z - cz, 5);
-                int hx = cx + ci * 5 + 1 + (int) (h(ci, cj, 920) * 3), hz = cz + cj * 5 + 1 + (int) (h(ci, cj, 921) * 3);
+                int hx = cx + ci * 5 + 1 + (int) (h(ci, cj, 920) * 3),
+                        hz = cz + cj * 5 + 1 + (int) (h(ci, cj, 921) * 3);
                 if (hx == x && hz == z && h(ci, cj, 922) < 0.62 && !broken(x, z, hi, th)) {
                     int len = 2 + (int) (h(ci, cj, 923) * (d < 10 ? 10 : 7));
                     int end = hi - 1 - len;
@@ -866,7 +1027,8 @@ public final class BellPlan {
         // ---- the bell's mouth, a thick rim just out of the ground
         if (d >= DOME_R - 0.6 && d < DOME_R + 1.4) {
             boolean door = Math.abs(wrap(th - breakAngle)) < 0.36;
-            if (!door) for (int y = top + 1; y <= dy + 1; y++) o.put(i, y, d < DOME_R + 0.4 ? Mat.BELL_CALCITE : Mat.BONE);
+            if (!door)
+                for (int y = top + 1; y <= dy + 1; y++) o.put(i, y, d < DOME_R + 0.4 ? Mat.BELL_CALCITE : Mat.BONE);
         }
         // ---- inside: moss and pale stone
         if (d < DOME_R - 1.5) {
@@ -883,16 +1045,17 @@ public final class BellPlan {
                 double p = perlin(962, x / 9.0, z / 9.0);
                 o.topMat[i] = p < 0.35 ? Mat.GRASS : p < 0.7 ? Mat.CALCITE : Mat.BONE;
             }
-            for (int k = 0; k < 9; k++) for (int side = -1; side <= 1; side += 2) {
-                double a = DOME_R + 5 + 7 * k;
-                if (a > DEN_AREA - 8) continue;
-                double px = cx + ux * a - uz * 3.6 * side, pz = cz + uz * a + ux * 3.6 * side;
-                if ((int) Math.floor(px) == x && (int) Math.floor(pz) == z) {
-                    int hp = 3;
-                    for (int s = 1; s <= hp; s++) o.put(i, top + s, Mat.CALCITE);
-                    o.put(i, top + hp + 1, Mat.END_ROD);
+            for (int k = 0; k < 9; k++)
+                for (int side = -1; side <= 1; side += 2) {
+                    double a = DOME_R + 5 + 7 * k;
+                    if (a > DEN_AREA - 8) continue;
+                    double px = cx + ux * a - uz * 3.6 * side, pz = cz + uz * a + ux * 3.6 * side;
+                    if ((int) Math.floor(px) == x && (int) Math.floor(pz) == z) {
+                        int hp = 3;
+                        for (int s = 1; s <= hp; s++) o.put(i, top + s, Mat.CALCITE);
+                        o.put(i, top + hp + 1, Mat.END_ROD);
+                    }
                 }
-            }
             // rubble in a fan out of the break
             double da = Math.abs(wrap(th - breakAngle));
             if (da < 0.85 && d < 54 && perp >= width + 0.5) {
@@ -904,7 +1067,14 @@ public final class BellPlan {
                     int hh = 1 + (int) (h(x, z, 934) * 2.6);
                     boolean glass = h(ci, cj, 935) < 0.62;
                     for (int s = 1; s <= hh; s++)
-                        o.put(i, top + s, glass ? (s == hh && h(x, z, 936) < 0.3 ? Mat.WHITE_GLASS : h(x, z, 937) < 0.6 ? Mat.BELL_SHARD : Mat.LIME_GLASS) : Mat.CALCITE);
+                        o.put(
+                                i,
+                                top + s,
+                                glass
+                                        ? (s == hh && h(x, z, 936) < 0.3
+                                                ? Mat.WHITE_GLASS
+                                                : h(x, z, 937) < 0.6 ? Mat.BELL_SHARD : Mat.LIME_GLASS)
+                                        : Mat.CALCITE);
                 }
             }
         }
@@ -913,7 +1083,7 @@ public final class BellPlan {
     private Mat domeMat(int x, int y, int z, double r, double th, int hi) {
         int dy = denY();
         int apex = dy + DOME_H;
-        if (r < 6.2 && y >= apex - 2) {                       // his crown on the top of the bell
+        if (r < 6.2 && y >= apex - 2) { // his crown on the top of the bell
             if (r < 2.2) return Mat.PEARL;
             if (r < 3.9) return Mat.WHITE_GLASS;
             double seg = Math.PI * 2 / 5, a = wrap(th - ribPhase);
@@ -935,10 +1105,14 @@ public final class BellPlan {
         return Mat.LIME_GLASS;
     }
 
-    // ================================================================== for the painter
+    // for the painter
 
-    /** the column that marks his den's apex, so the tests can find it */
-    public int apexY() { return denY() + DOME_H; }
+    /** the column that marks his den's apex */
+    public int apexY() {
+        return denY() + DOME_H;
+    }
 
-    public double breakAngle() { return breakAngle; }
+    public double breakAngle() {
+        return breakAngle;
+    }
 }

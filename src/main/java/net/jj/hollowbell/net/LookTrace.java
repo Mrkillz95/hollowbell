@@ -1,8 +1,15 @@
 package net.jj.hollowbell.net;
 
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.Giants;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.EnderDragonPart;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -12,11 +19,6 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.Nullable;
-
-import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * "Go after what I look at": what a look lands on. The same on both sides: the book runs it on your screen (out to
@@ -37,7 +39,8 @@ public final class LookTrace {
     public static final double NEAR_SPOT = 4.5;
 
     /** the creature (or giant's part) a look along this line lands on, or null */
-    public static @Nullable Entity trace(Level l, Vec3 from, Vec3 dir, double range, @Nullable Player who, @Nullable Entity also) {
+    public static @Nullable Entity trace(
+            Level l, Vec3 from, Vec3 dir, double range, @Nullable Player who, @Nullable Entity also) {
         dir = dir.normalize();
         Vec3 to = from.add(dir.scale(range));
         CollisionContext cc = who != null ? CollisionContext.of(who) : CollisionContext.empty();
@@ -51,18 +54,25 @@ public final class LookTrace {
         AABB around = new AABB(from, from.add(dir.scale(blockT + 2))).inflate(240);
         for (Entity e : l.getEntities((Entity) null, around, e -> candidate(e) && !skip(e, who, also))) {
             double t = hitT(e, from, dir, bestT);
-            if (t >= 0 && t < bestT) { bestT = t; best = e; }
+            if (t >= 0 && t < bestT) {
+                bestT = t;
+                best = e;
+            }
         }
         if (best != null || !block) return best;
         // the look stopped on a block: the creature nearest that spot
         Vec3 at = bh.getLocation();
         double bd = NEAR_SPOT * NEAR_SPOT;
-        for (Entity e : l.getEntities((Entity) null, new AABB(at, at).inflate(NEAR_SPOT + 2), e -> candidate(e) && !skip(e, who, also))) {
+        for (Entity e : l.getEntities(
+                (Entity) null, new AABB(at, at).inflate(NEAR_SPOT + 2), e -> candidate(e) && !skip(e, who, also))) {
             if (voxelGiant(e)) continue;
             double d = e.getBoundingBox().distanceToSqr(at);
             // (a creature is taken before a part box at the same spot)
             if (!(e instanceof LivingEntity)) d += 1;
-            if (d < bd) { bd = d; best = e; }
+            if (d < bd) {
+                bd = d;
+                best = e;
+            }
         }
         return best;
     }
@@ -70,9 +80,9 @@ public final class LookTrace {
     /** a creature, a player, or a part box of a giant; never a spectator, an item, an arrow or a boat */
     public static boolean candidate(Entity e) {
         if (!e.isAlive() || e.isSpectator() || e.isRemoved()) return false;
-        if (e instanceof LivingEntity) return !(e instanceof net.minecraft.world.entity.decoration.ArmorStand);
-        if (e instanceof net.minecraft.world.entity.boss.EnderDragonPart) return true;
-        // the part boxes of JJ's giants (and anything else with an owner() that is a creature)
+        if (e instanceof LivingEntity) return !(e instanceof ArmorStand);
+        if (e instanceof EnderDragonPart) return true;
+        // the part boxes of the giants (and anything else with an owner() that is a creature)
         return e.getClass().getName().startsWith("net.jj.") ? hasOwner(e) || Giants.isGiant(e) : hasOwner(e);
     }
 
@@ -98,62 +108,92 @@ public final class LookTrace {
             return voxelT(e, from, dir, maxT);
         }
         AABB box = e.getBoundingBox();
-        if (box.contains(from)) return -1;          // the look starts inside it (riding it, or inside it)
+        if (box.contains(from)) return -1; // the look starts inside it (riding it, or inside it)
         double far = e.position().distanceTo(from);
         // far things a bit fatter, so a mob 300 blocks off is not a single pixel to aim at
         Optional<Vec3> hit = box.inflate(0.2 + far * 0.008).clip(from, from.add(dir.scale(maxT)));
         return hit.map(h -> h.distanceTo(from)).orElse(-1.0);
     }
 
-    // ------------------------------------------------------------------ reaching the giants without knowing them
+    // reaching the giants without knowing them
 
-    private static final Map<Class<?>, Optional<Method>> OWNER = new ConcurrentHashMap<>(), SEAT = new ConcurrentHashMap<>(),
-            RAY = new ConcurrentHashMap<>(), BODY = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Optional<Method>> OWNER = new ConcurrentHashMap<>(),
+            SEAT = new ConcurrentHashMap<>(),
+            RAY = new ConcurrentHashMap<>(),
+            BODY = new ConcurrentHashMap<>();
 
-    private static Optional<Method> find(Map<Class<?>, Optional<Method>> cache, Class<?> c, String name, Class<?>... args) {
+    private static Optional<Method> find(
+            Map<Class<?>, Optional<Method>> cache, Class<?> c, String name, Class<?>... args) {
         return cache.computeIfAbsent(c, k -> {
-            try { Method m = k.getMethod(name, args); m.setAccessible(true); return Optional.of(m); }
-            catch (Exception x) { return Optional.empty(); }
+            try {
+                Method m = k.getMethod(name, args);
+                m.setAccessible(true);
+                return Optional.of(m);
+            } catch (Exception x) {
+                // meant to fail: most entities have no such method
+                return Optional.empty();
+            }
         });
     }
 
-    private static boolean hasOwner(Entity e) { return find(OWNER, e.getClass(), "owner").isPresent(); }
+    private static boolean hasOwner(Entity e) {
+        return find(OWNER, e.getClass(), "owner").isPresent();
+    }
 
     /** the giant (or creature) this is: a creature is itself, a part box is its giant's, a dragon part its dragon */
     public static @Nullable LivingEntity ownerOf(@Nullable Entity e) {
         if (e == null) return null;
         if (e instanceof LivingEntity le) return le;
-        if (e instanceof net.minecraft.world.entity.boss.EnderDragonPart dp) return dp.parentMob;
+        if (e instanceof EnderDragonPart dp) return dp.parentMob;
         Optional<Method> m = find(OWNER, e.getClass(), "owner");
         if (m.isEmpty()) return null;
-        try { return m.get().invoke(e) instanceof LivingEntity le ? le : null; } catch (Exception x) { return null; }
+        try {
+            return m.get().invoke(e) instanceof LivingEntity le ? le : null;
+        } catch (Exception x) {
+            HollowbellMod.LOG.debug("owner of {} failed", e, x);
+            return null;
+        }
     }
 
     /** the id of the giant a seat belongs to (riding one), or -1 */
     private static int seatOwner(Entity seat) {
         Optional<Method> m = find(SEAT, seat.getClass(), "ownerId");
         if (m.isEmpty()) return -1;
-        try { return m.get().invoke(seat) instanceof Integer i ? i : -1; } catch (Exception x) { return -1; }
+        try {
+            return m.get().invoke(seat) instanceof Integer i ? i : -1;
+        } catch (Exception x) {
+            HollowbellMod.LOG.debug("ownerId of {} failed", seat, x);
+            return -1;
+        }
     }
 
     /** a giant drawn from blocks, hit on the blocks it is made of (it has raycast(from, dir, max) and bodyBox()) */
     private static boolean voxelGiant(Entity e) {
-        return find(RAY, e.getClass(), "raycast", Vec3.class, Vec3.class, double.class).isPresent()
+        return find(RAY, e.getClass(), "raycast", Vec3.class, Vec3.class, double.class)
+                        .isPresent()
                 && find(BODY, e.getClass(), "bodyBox").isPresent();
     }
 
     private static @Nullable AABB body(Entity e) {
-        try { return find(BODY, e.getClass(), "bodyBox").get().invoke(e) instanceof AABB a ? a : null; } catch (Exception x) { return null; }
+        try {
+            return find(BODY, e.getClass(), "bodyBox").get().invoke(e) instanceof AABB a ? a : null;
+        } catch (Exception x) {
+            HollowbellMod.LOG.debug("bodyBox of {} failed", e, x);
+            return null;
+        }
     }
 
     private static double voxelT(Entity e, Vec3 from, Vec3 dir, double maxT) {
         try {
-            Object hit = find(RAY, e.getClass(), "raycast", Vec3.class, Vec3.class, double.class).get().invoke(e, from, dir, maxT);
+            Object hit = find(RAY, e.getClass(), "raycast", Vec3.class, Vec3.class, double.class)
+                    .get()
+                    .invoke(e, from, dir, maxT);
             if (hit == null) return -1;
             Method t = hit.getClass().getMethod("t");
             t.setAccessible(true);
             return ((Number) t.invoke(hit)).doubleValue();
-        } catch (Throwable x) {
+        } catch (Exception x) {
+            HollowbellMod.LOG.debug("raycast of {} failed", e, x);
             return -1;
         }
     }

@@ -4,8 +4,14 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.shaders.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.jj.hollowbell.HollowbellConfig;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.Detail;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
@@ -23,15 +29,12 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * Draws Hollowbell from his baked meshes. The solid and glowing blocks are drawn straight away; the glass is kept
@@ -39,34 +42,53 @@ import java.util.WeakHashMap;
  * has caught shows through the dome in its stained colours.
  */
 public class BellRenderer extends EntityRenderer<HollowbellEntity> {
-    private static final Vector3f LIGHT0 = new Vector3f(0.2f, 1.0f, -0.7f).normalize(), LIGHT1 = new Vector3f(-0.2f, 1.0f, 0.7f).normalize();
+    private static final Vector3f LIGHT0 = new Vector3f(0.2f, 1.0f, -0.7f).normalize(),
+            LIGHT1 = new Vector3f(-0.2f, 1.0f, 0.7f).normalize();
     private static final Vector3f NLIGHT1 = new Vector3f(-0.2f, -1.0f, 0.7f).normalize();
     private final BellRig rig = BellRig.get();
 
     /** the glass waiting to be drawn this frame */
     private static final List<Glass> glass = new ArrayList<>();
-    private record Glass(Matrix4f entity, Matrix4f view, Matrix4f proj, Matrix4f[] units, boolean sliced, int lod, float lit, float hurt, boolean red,
-                         float fogStart, float fogEnd, Vector3f l0, Vector3f l1, boolean[] shown) {}
+
+    private record Glass(
+            Matrix4f entity,
+            Matrix4f view,
+            Matrix4f proj,
+            Matrix4f[] units,
+            boolean sliced,
+            int lod,
+            float lit,
+            float hurt,
+            boolean red,
+            float fogStart,
+            float fogEnd,
+            Vector3f l0,
+            Vector3f l1,
+            boolean[] shown) {}
 
     public BellRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
         this.shadowRadius = 0f;
     }
 
-    @Override public ResourceLocation getTextureLocation(HollowbellEntity e) { return TextureAtlas.LOCATION_BLOCKS; }
+    @Override
+    public ResourceLocation getTextureLocation(HollowbellEntity e) {
+        return TextureAtlas.LOCATION_BLOCKS;
+    }
 
     /** the view this frame, kept from shouldRender so each part of him can be left out when it's off the screen */
-    private @org.jetbrains.annotations.Nullable Frustum frustum;
+    private @Nullable Frustum frustum;
 
     @Override
     public boolean shouldRender(HollowbellEntity e, Frustum frustum, double x, double y, double z) {
         this.frustum = frustum;
         if (!e.shouldRenderAtSqrDistance(e.distanceToSqr(x, y, z))) return false;
         double k = shrink(Math.sqrt(e.distanceToSqr(x, y, z)));
-        return frustum.isVisible(k < 1 ? shrunk(e.getBoundingBoxForCulling(), x, y, z, k) : e.getBoundingBoxForCulling());
+        return frustum.isVisible(
+                k < 1 ? shrunk(e.getBoundingBoxForCulling(), x, y, z, k) : e.getBoundingBoxForCulling());
     }
 
-    // ------------------------------------------------------------------ far off
+    // far off
 
     /**
      * The game draws nothing past a far limit (four times your render distance). Past most of that he is drawn
@@ -79,9 +101,14 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     }
 
     /** a box pulled toward the camera by k, as the shrinking draws it */
-    public static net.minecraft.world.phys.AABB shrunk(net.minecraft.world.phys.AABB b, double cx, double cy, double cz, double k) {
-        return new net.minecraft.world.phys.AABB(cx + (b.minX - cx) * k, cy + (b.minY - cy) * k, cz + (b.minZ - cz) * k,
-                cx + (b.maxX - cx) * k, cy + (b.maxY - cy) * k, cz + (b.maxZ - cz) * k);
+    public static AABB shrunk(AABB b, double cx, double cy, double cz, double k) {
+        return new AABB(
+                cx + (b.minX - cx) * k,
+                cy + (b.minY - cy) * k,
+                cz + (b.minZ - cz) * k,
+                cx + (b.maxX - cx) * k,
+                cy + (b.maxY - cy) * k,
+                cz + (b.maxZ - cz) * k);
     }
 
     /** while a stand-in is drawn: how faded in it is (1 = fully), or -1 for the real one */
@@ -90,20 +117,25 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     /** draws a far-off stand-in (see FarSightClient), faded by fog as it comes and goes */
     public void renderGhost(HollowbellEntity e, PoseStack ps, float partial, float fade, MultiBufferSource buffers) {
         ghostFade = Mth.clamp(fade, 0f, 1f);
-        try { render(e, e.getYRot(), partial, ps, buffers, LightTexture.FULL_BRIGHT); }
-        finally { ghostFade = -1; }
+        try {
+            render(e, e.getYRot(), partial, ps, buffers, LightTexture.FULL_BRIGHT);
+        } finally {
+            ghostFade = -1;
+        }
     }
 
     private final Map<HollowbellEntity, Matrix4f[][]> poses = new WeakHashMap<>();
 
     @Override
-    public void render(HollowbellEntity e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int packedLight) {
+    public void render(
+            HollowbellEntity e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int packedLight) {
         BellMeshes meshes = BellMeshes.INSTANCE;
         if (!meshes.ensureReady()) return;
         BellPieces pieces = BellPieces.get();
         // (each one's own, kept from frame to frame: every matrix is written again each time, and his glass is drawn
         // after everything else, so two of him can't share them)
-        Matrix4f[][] kept = poses.computeIfAbsent(e, x -> new Matrix4f[][]{rig.newPose(), pieces.newHang(), pieces.newPose()});
+        Matrix4f[][] kept =
+                poses.computeIfAbsent(e, x -> new Matrix4f[][] {rig.newPose(), pieces.newHang(), pieces.newPose()});
         Matrix4f[] draw = kept[0], hang = kept[1];
         e.fillState(partial);
         rig.computePose(e.state, draw, hang);
@@ -112,8 +144,13 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         var cam0 = mc0.gameRenderer.getMainCamera().getPosition();
         double dist = Math.sqrt(e.distanceToSqr(cam0.x, cam0.y, cam0.z));
         float k = (float) shrink(dist);
-        // shrunk toward the camera past the far limit; the pose stack is relative to the camera, so this is a plain scale
-        Matrix4f entity = new Matrix4f().scaling(k).mul(ps.last().pose()).rotateY(-e.getYRot() * Mth.DEG_TO_RAD).scale(s);
+        // shrunk toward the camera past the far limit; the pose stack is relative to the camera, so this is a plain
+        // scale
+        Matrix4f entity = new Matrix4f()
+                .scaling(k)
+                .mul(ps.last().pose())
+                .rotateY(-e.getYRot() * Mth.DEG_TO_RAD)
+                .scale(s);
         boolean ghost = ghostFade >= 0;
         Frustum fr = ghost || k < 1 ? null : frustum;
         Matrix4f view = new Matrix4f(RenderSystem.getModelViewMatrix());
@@ -125,12 +162,17 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         // how lit he is: brightest of a few points on him that are in loaded world, or the sky's own light
         boolean known = false;
         int bl = 0, sl = 0;
-        for (Vec3 p : new Vec3[]{e.position().add(0, 2, 0), e.position().add(0, (rig.rimY + 30) * s, 0), e.position().add(0, rig.crownY * s + 2, 0)}) {
+        for (Vec3 p : new Vec3[] {
+            e.position().add(0, 2, 0),
+            e.position().add(0, (rig.rimY + 30) * s, 0),
+            e.position().add(0, rig.crownY * s + 2, 0)
+        }) {
             BlockPos bp = BlockPos.containing(p);
             if (!e.level().hasChunkAt(bp)) continue;
             known = true;
             int l = LevelRenderer.getLightColor(e.level(), bp);
-            bl = Math.max(bl, LightTexture.block(l)); sl = Math.max(sl, LightTexture.sky(l));
+            bl = Math.max(bl, LightTexture.block(l));
+            sl = Math.max(sl, LightTexture.sky(l));
         }
         if (!known) sl = Math.max(0, 15 - e.level().getSkyDarken());
         float lit = 0.3f + 0.7f * Math.max(bl, sl) / 15f;
@@ -139,32 +181,39 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         lit *= 1f - 0.35f * dying;
 
         // far away, fewer, bigger blocks (a far-off stand-in always the simple one)
-        int far = net.jj.hollowbell.Detail.lod(dist, s);
-        if (ghost) far = Math.max(far, net.jj.hollowbell.Detail.FAR);
+        int far = Detail.lod(dist, s);
+        if (ghost) far = Math.max(far, Detail.FAR);
         int lod = switch (far) {
-            case net.jj.hollowbell.Detail.TINY -> BellMeshes.TINY;
-            case net.jj.hollowbell.Detail.FAR -> BellMeshes.FAR;
+            case Detail.TINY -> BellMeshes.TINY;
+            case Detail.FAR -> BellMeshes.FAR;
             default -> BellMeshes.FULL;
         };
         // up close his arms and strands are drawn in slices laid along a smooth curve (see BellPieces), so they bend
         // with no gaps; further off a piece at a time
         boolean sliced = lod == BellMeshes.FULL;
         Matrix4f[] units = draw;
-        if (sliced) { units = kept[2]; pieces.pose(e.state, draw, hang, units); }
+        if (sliced) {
+            units = kept[2];
+            pieces.pose(e.state, draw, hang, units);
+        }
         int unitCount = sliced ? pieces.count : rig.boneCount();
 
         RenderType rt = RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
         rt.setupRenderState();
         ShaderInstance shader = RenderSystem.getShader();
-        if (shader == null) { rt.clearRenderState(); return; }
-        float wantFog = Math.min(HollowbellConfig.V.renderDistance * 1.2f, 420f * Math.max(0.2f, s) + 220f);
+        if (shader == null) {
+            rt.clearRenderState();
+            return;
+        }
+        float wantFog = Math.min(BellConfig.V.renderDistance * 1.2f, 420f * Math.max(0.2f, s) + 220f);
         float fogStart0 = RenderSystem.getShaderFogStart(), fogEnd0 = RenderSystem.getShaderFogEnd();
         // far sight: he stays in the fog as a pale shape out to farSightBlocks and a bit past it, never gone before
-        float farSight = Math.max(0, Math.min(4096, HollowbellConfig.V.farSightBlocks));
+        float farSight = Math.max(0, Math.min(4096, BellConfig.V.farSightBlocks));
         float fe = Math.max(fogEnd0, Math.max(wantFog, farSight * 1.25f));
         float fs = Math.max(fogStart0, Math.min(wantFog * 0.85f, fe * 0.45f));
         // drawn shrunk, the fog is measured the same shrunk way; a stand-in coming or going fades into the fog
-        fs *= k; fe *= k;
+        fs *= k;
+        fe *= k;
         if (ghost) {
             float dk = (float) dist * k;
             fs = Mth.lerp(ghostFade, dk * 0.5f, fs);
@@ -187,8 +236,15 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             boneAbs.set(abs).mul(draw[b]);
             boneAbs.transformPosition(cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f));
             // (a slice of an arm or strand may lie a few blocks off its bone, where the curve takes a corner off)
-            float r = (0.5f * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0]) + (bb[4] - bb[1]) * (bb[4] - bb[1]) + (bb[5] - bb[2]) * (bb[5] - bb[2])) * 1.35f + 8f) * s + 1f;
-            if (!fr.isVisible(new net.minecraft.world.phys.AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r))) shown[b] = false;
+            float r = (0.5f
+                                            * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0])
+                                                    + (bb[4] - bb[1]) * (bb[4] - bb[1])
+                                                    + (bb[5] - bb[2]) * (bb[5] - bb[2]))
+                                            * 1.35f
+                                    + 8f)
+                            * s
+                    + 1f;
+            if (!fr.isVisible(new AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r))) shown[b] = false;
         }
         Matrix4f mv = new Matrix4f(), boneWorld = new Matrix4f();
         Matrix3f rot = new Matrix3f();
@@ -213,23 +269,47 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                         rot.transform(l0.set(l0w)).normalize();
                         rot.transform(l1.set(l1w)).normalize();
                     }
-                    if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
-                    if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
+                    if (shader.LIGHT0_DIRECTION != null) {
+                        shader.LIGHT0_DIRECTION.set(l0);
+                        shader.LIGHT0_DIRECTION.upload();
+                    }
+                    if (shader.LIGHT1_DIRECTION != null) {
+                        shader.LIGHT1_DIRECTION.set(l1);
+                        shader.LIGHT1_DIRECTION.upload();
+                    }
                     float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying);
-                    if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f); shader.COLOR_MODULATOR.upload(); }
+                    if (shader.COLOR_MODULATOR != null) {
+                        shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f);
+                        shader.COLOR_MODULATOR.upload();
+                    }
                 }
                 m.vb.bind();
                 m.vb.draw();
             }
         }
         shader.clear();
-        com.mojang.blaze3d.vertex.VertexBuffer.unbind();
+        VertexBuffer.unbind();
         RenderSystem.setShaderFogStart(fogStart0);
         RenderSystem.setShaderFogEnd(fogEnd0);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        if (nether) Lighting.setupNetherLevel(); else Lighting.setupLevel();
+        if (nether) Lighting.setupNetherLevel();
+        else Lighting.setupLevel();
         rt.clearRenderState();
-        glass.add(new Glass(entity, view, proj, units, sliced, lod, lit * (1f - 0.2f * dying), hurt, e.state.red, fs, fe, l0w, l1w, shown));
+        glass.add(new Glass(
+                entity,
+                view,
+                proj,
+                units,
+                sliced,
+                lod,
+                lit * (1f - 0.2f * dying),
+                hurt,
+                e.state.red,
+                fs,
+                fe,
+                l0w,
+                l1w,
+                shown));
     }
 
     /**
@@ -241,7 +321,12 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         l1.set(-5f, -5f, -5f);
     }
 
-    private static void upload(Uniform u, Matrix4f m) { if (u != null) { u.set(m); u.upload(); } }
+    private static void upload(Uniform u, Matrix4f m) {
+        if (u != null) {
+            u.set(m);
+            u.upload();
+        }
+    }
 
     /**
      * How bright a glowing block of him is: full, with a slow pulse (each part in its own time), pushed brighter
@@ -251,7 +336,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         float t = e.state.time;
         float sl = e.state.sleep;
         // asleep: the glow sinks to a dim, slow breathing
-        float pulse = 0.88f + 0.12f * Mth.sin(t * Mth.lerp(sl, 0.045f, 0.02f) + rig.part[b] * 1.9f + rig.kind[b].ordinal());
+        float pulse =
+                0.88f + 0.12f * Mth.sin(t * Mth.lerp(sl, 0.045f, 0.02f) + rig.part[b] * 1.9f + rig.kind[b].ordinal());
         // each squeeze of the bell brightens him a little, each refill dims him
         float beat = Mth.clamp(e.state.squeeze, -0.4f, 1.6f);
         float k = (pulse + 0.18f * beat + 0.6f * e.state.glow) * (1f - 0.62f * sl);
@@ -261,9 +347,17 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     /** a popped pod goes dark and stays dark; everything flashes red when he is hurt */
     private float[] tint(HollowbellEntity e, int b, float k, float hurt, float dying) {
         float r = 1f, g = 1f - hurt, bb = 1f - hurt;
-        if (rig.kind[b] == BellRig.Kind.POD && e.isPodPopped(rig.part[b])) { r = 0.22f; g = 0.2f; bb = 0.26f; }
-        if (dying > 0f && (rig.kind[b] == BellRig.Kind.SPOT || rig.kind[b] == BellRig.Kind.CROWN)) { r *= 1f - 0.6f * dying; g *= 1f - 0.6f * dying; bb *= 1f - 0.5f * dying; }
-        return new float[]{r * k, g * k, bb * k};
+        if (rig.kind[b] == BellRig.Kind.POD && e.isPodPopped(rig.part[b])) {
+            r = 0.22f;
+            g = 0.2f;
+            bb = 0.26f;
+        }
+        if (dying > 0f && (rig.kind[b] == BellRig.Kind.SPOT || rig.kind[b] == BellRig.Kind.CROWN)) {
+            r *= 1f - 0.6f * dying;
+            g *= 1f - 0.6f * dying;
+            bb *= 1f - 0.5f * dying;
+        }
+        return new float[] {r * k, g * k, bb * k};
     }
 
     /**
@@ -278,7 +372,11 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         RenderType rt = RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
         rt.setupRenderState();
         ShaderInstance shader = RenderSystem.getShader();
-        if (shader == null) { rt.clearRenderState(); glass.clear(); return; }
+        if (shader == null) {
+            rt.clearRenderState();
+            glass.clear();
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         float fogStart0 = RenderSystem.getShaderFogStart(), fogEnd0 = RenderSystem.getShaderFogEnd();
         Matrix4f mv = new Matrix4f(), boneWorld = new Matrix4f(), inv = new Matrix4f();
@@ -297,13 +395,14 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 int b = gl.sliced ? pieces.bone[u] : u;
                 if (!gl.shown[b]) continue;
                 boolean redLoops = gl.red && rig.kind[b] == BellRig.Kind.ARM;
-                BellMeshes.Mesh m = meshes.mesh(gl.lod, redLoops && gl.lod == BellMeshes.FULL ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
+                BellMeshes.Mesh m = meshes.mesh(
+                        gl.lod, redLoops && gl.lod == BellMeshes.FULL ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
                 if (m == null) continue;
                 float[] bb = gl.sliced ? pieces.bounds[u] : model.bounds[b];
                 if (bb == null) continue;
                 boneWorld.set(gl.entity).mul(gl.units[u]);
                 boneWorld.transformPosition(c.set((bb[0] + bb[3]) / 2, (bb[1] + bb[4]) / 2, (bb[2] + bb[5]) / 2));
-                order.add(new float[]{c.lengthSquared(), u, redLoops && gl.lod == BellMeshes.FULL ? 1 : 0});
+                order.add(new float[] {c.lengthSquared(), u, redLoops && gl.lod == BellMeshes.FULL ? 1 : 0});
             }
             order.sort((a, b2) -> Float.compare(b2[0], a[0]));
             float unit = Math.max(1e-3f, gl.entity.getScale(new Vector3f()).x);
@@ -322,17 +421,26 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 boneWorld.get3x3(rot).normal().transpose();
                 rot.transform(l0.set(gl.l0)).normalize();
                 rot.transform(l1.set(gl.l1)).normalize();
-                if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
-                if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
+                if (shader.LIGHT0_DIRECTION != null) {
+                    shader.LIGHT0_DIRECTION.set(l0);
+                    shader.LIGHT0_DIRECTION.upload();
+                }
+                if (shader.LIGHT1_DIRECTION != null) {
+                    shader.LIGHT1_DIRECTION.set(l1);
+                    shader.LIGHT1_DIRECTION.upload();
+                }
                 float k = gl.lit;
                 float a = 1f;
-                if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(k, k * (1f - gl.hurt), k * (1f - gl.hurt), a); shader.COLOR_MODULATOR.upload(); }
+                if (shader.COLOR_MODULATOR != null) {
+                    shader.COLOR_MODULATOR.set(k, k * (1f - gl.hurt), k * (1f - gl.hurt), a);
+                    shader.COLOR_MODULATOR.upload();
+                }
                 m.vb.bind();
                 m.vb.draw();
             }
         }
         shader.clear();
-        com.mojang.blaze3d.vertex.VertexBuffer.unbind();
+        VertexBuffer.unbind();
         RenderSystem.setShaderFogStart(fogStart0);
         RenderSystem.setShaderFogEnd(fogEnd0);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
@@ -341,5 +449,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     }
 
     /** a frame that never reached the glass pass (a screenshot, a paused frame) must not leave it for the next */
-    public static void forgetFrame() { glass.clear(); }
+    public static void forgetFrame() {
+        glass.clear();
+    }
 }

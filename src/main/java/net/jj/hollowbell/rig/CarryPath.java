@@ -1,12 +1,11 @@
 package net.jj.hollowbell.rig;
 
-import net.minecraft.util.Mth;
-import org.joml.Vector3f;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.util.Mth;
+import org.joml.Vector3f;
 
 /**
  * The way a strand carries somebody up onto his crown ("ride him"). Shared by the server (where the one carried
@@ -27,17 +26,21 @@ public final class CarryPath {
     private static float[] all;
     /** the same for the dome, the rim and the crown only (what the rope must not cut through) */
     private static float[] shell;
+
     private static int top;
     /** how far out the rim goes (as built, all the way round) */
     private static float rimEdge;
+
     private static int[] candidates;
     private static final Map<Long, CarryPath> CACHE = new ConcurrentHashMap<>();
 
     /** the strand, its angle round him, and how far from him the one carried is kept */
     public final int strand;
+
     public final float theta, d;
     /** the way, sampled every block: r and y, and the height at the very top (straight over the crown) */
     private final float[] tr, ty;
+
     private final float yTop;
     /** the lowest point on the way from which the rope from the root no longer has to go round the rim */
     private final float visibleTo;
@@ -54,8 +57,8 @@ public final class CarryPath {
         yTop = top + d;
         // sample the edge of everything within d of him, from low on his side to straight over his crown
         List<float[]> raw = new ArrayList<>();
-        for (float y = lo; y <= yTop; y += 0.05f) raw.add(new float[]{Math.max(0f, offset(y, d)), y});
-        raw.add(new float[]{0f, yTop});
+        for (float y = lo; y <= yTop; y += 0.05f) raw.add(new float[] {Math.max(0f, offset(y, d)), y});
+        raw.add(new float[] {0f, yTop});
         // the same, every block along it
         List<float[]> even = new ArrayList<>();
         even.add(raw.get(0));
@@ -67,7 +70,7 @@ public final class CarryPath {
             float pos = 1f - carry;
             while (pos <= seg) {
                 float f = pos / seg;
-                even.add(new float[]{prev[0] + (p[0] - prev[0]) * f, prev[1] + (p[1] - prev[1]) * f});
+                even.add(new float[] {prev[0] + (p[0] - prev[0]) * f, prev[1] + (p[1] - prev[1]) * f});
                 pos += 1f;
             }
             carry = seg - (pos - 1f);
@@ -110,7 +113,9 @@ public final class CarryPath {
         return Math.max(rho / Math.max(0.01f, scale) + 3f, 10f);
     }
 
-    /** the strands he carries people with: long ones hanging from the rim, nothing hanging from them, between two arms */
+    /**
+     * the strands he carries people with: long ones hanging from the rim, nothing hanging from them, between two arms
+     */
     public static int[] candidates(BellRig rig) {
         build(rig);
         return candidates;
@@ -119,14 +124,15 @@ public final class CarryPath {
     /** how far out from his middle the way is at a height (on his side, below the dome's top) */
     public float radiusAt(float y) {
         if (y <= ty[0]) return tr[0];
-        for (int i = 1; i <= sideEnd; i++) if (ty[i] >= y) {
-            float f = (y - ty[i - 1]) / Math.max(1e-4f, ty[i] - ty[i - 1]);
-            return tr[i - 1] + (tr[i] - tr[i - 1]) * f;
-        }
+        for (int i = 1; i <= sideEnd; i++)
+            if (ty[i] >= y) {
+                float f = (y - ty[i - 1]) / Math.max(1e-4f, ty[i] - ty[i - 1]);
+                return tr[i - 1] + (tr[i] - tr[i - 1]) * f;
+            }
         return tr[sideEnd];
     }
 
-    // ------------------------------------------------------------------ one carry
+    // one carry
 
     /**
      * One carry: from p0 (the middle of the one picked up, rest space) to yEnd straight over the crown (the middle
@@ -141,7 +147,9 @@ public final class CarryPath {
             this.yEnd = Math.min(yEnd, yTop);
             l0 = arcAtY(p0.y);
             Vector3f t0 = track(l0, new Vector3f());
-            dx = p0.x - t0.x; dy = p0.y - t0.y; dz = p0.z - t0.z;
+            dx = p0.x - t0.x;
+            dy = p0.y - t0.y;
+            dz = p0.z - t0.z;
             lTrack = tr.length - 1;
             lEnd = lTrack + (yTop - this.yEnd);
             float off = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
@@ -158,7 +166,9 @@ public final class CarryPath {
         }
 
         /** how long the whole way is, model blocks */
-        public float length() { return lEnd - l0; }
+        public float length() {
+            return lEnd - l0;
+        }
 
         /** where the middle of the one carried is at progress u (0 picked up, 1 over the crown), rest space */
         public Vector3f at(float u, Vector3f out) {
@@ -175,33 +185,47 @@ public final class CarryPath {
         public int rope(Vector3f root, float u, float[] pts) {
             float l = l0 + Mth.clamp(u, 0f, 1f) * (lEnd - l0);
             int n = 0;
-            pts[n++] = root.x; pts[n++] = root.y; pts[n++] = root.z;
+            pts[n++] = root.x;
+            pts[n++] = root.y;
+            pts[n++] = root.z;
             float lv = Math.max(visibleTo, l0);
             Vector3f v = new Vector3f();
             if (l > lv + 0.5f) {
                 track(lv, v);
-                pts[n++] = v.x; pts[n++] = v.y; pts[n++] = v.z;
+                pts[n++] = v.x;
+                pts[n++] = v.y;
+                pts[n++] = v.z;
                 for (int i = (int) Math.floor(lv) + 1; i < l && n + 6 <= pts.length; i++) {
                     track(i, v);
-                    pts[n++] = v.x; pts[n++] = v.y; pts[n++] = v.z;
+                    pts[n++] = v.x;
+                    pts[n++] = v.y;
+                    pts[n++] = v.z;
                 }
             }
             at(u, v);
-            pts[n++] = v.x; pts[n++] = v.y; pts[n++] = v.z;
+            pts[n++] = v.x;
+            pts[n++] = v.y;
+            pts[n++] = v.z;
             return n / 3;
         }
     }
 
     /** the most points a rope can have */
-    public int maxRopePoints() { return tr.length + 8; }
+    public int maxRopePoints() {
+        return tr.length + 8;
+    }
 
     /** a point on the way, l blocks along it (past the end: straight down onto the crown) */
     private Vector3f track(float l, Vector3f out) {
         float r, y;
         int n = tr.length - 1;
-        if (l >= n) { r = 0f; y = yTop - (l - n); }
-        else if (l <= 0f) { r = tr[0]; y = ty[0]; }
-        else {
+        if (l >= n) {
+            r = 0f;
+            y = yTop - (l - n);
+        } else if (l <= 0f) {
+            r = tr[0];
+            y = ty[0];
+        } else {
             int i = (int) Math.floor(l);
             float f = l - i;
             r = tr[i] + (tr[i + 1] - tr[i]) * f;
@@ -213,16 +237,20 @@ public final class CarryPath {
     /** how far along the way its side first reaches a height */
     private float arcAtY(float y) {
         if (y <= ty[0]) return 0f;
-        for (int i = 1; i <= sideEnd; i++) if (ty[i] >= y) {
-            float f = (y - ty[i - 1]) / Math.max(1e-4f, ty[i] - ty[i - 1]);
-            return i - 1 + f;
-        }
+        for (int i = 1; i <= sideEnd; i++)
+            if (ty[i] >= y) {
+                float f = (y - ty[i - 1]) / Math.max(1e-4f, ty[i] - ty[i - 1]);
+                return i - 1 + f;
+            }
         return sideEnd;
     }
 
-    static float smooth(float k) { k = Mth.clamp(k, 0f, 1f); return k * k * (3 - 2 * k); }
+    static float smooth(float k) {
+        k = Mth.clamp(k, 0f, 1f);
+        return k * k * (3 - 2 * k);
+    }
 
-    // ------------------------------------------------------------------ laying the strand out as a rope
+    // laying the strand out as a rope
 
     /** how far the rope keeps off his rim and dome (model blocks): half a strand's width and a little */
     public static final float ROPE_CLEAR = 5f;
@@ -235,14 +263,28 @@ public final class CarryPath {
      * close as it can and only stretches as much as it has to. Its stiffness shares a bend out along it rather than
      * letting one joint take it all, and nothing of it goes into his rim or dome, or under the ground (floorY).
      */
-    public static void step(float[] pos, float[] prev, float[] restLen, float rx, float ry, float rz, float tx, float ty, float tz, float floorY) {
+    public static void step(
+            float[] pos,
+            float[] prev,
+            float[] restLen,
+            float rx,
+            float ry,
+            float rz,
+            float tx,
+            float ty,
+            float tz,
+            float floorY) {
         build(null);
         int n = restLen.length + 1, e = 3 * (n - 1);
         float[] g = new float[2];
         // how much rope the way needs: the rope as it is, pulled tight between its two ends round his rim and dome
         float[] tight = pos.clone();
-        tight[0] = rx; tight[1] = ry; tight[2] = rz;
-        tight[e] = tx; tight[e + 1] = ty; tight[e + 2] = tz;
+        tight[0] = rx;
+        tight[1] = ry;
+        tight[2] = rz;
+        tight[e] = tx;
+        tight[e + 1] = ty;
+        tight[e + 2] = tz;
         for (int it = 0; it < 16; it++) {
             for (int i = 1; i < n - 1; i++) {
                 int o = 3 * i;
@@ -264,38 +306,64 @@ public final class CarryPath {
         // moving on: what speed it had (the water takes some), and its weight
         for (int i = 1; i < n - 1; i++) {
             int o = 3 * i;
-            float vx = (pos[o] - prev[o]) * DRAG, vy = (pos[o + 1] - prev[o + 1]) * DRAG - WEIGHT, vz = (pos[o + 2] - prev[o + 2]) * DRAG;
+            float vx = (pos[o] - prev[o]) * DRAG,
+                    vy = (pos[o + 1] - prev[o + 1]) * DRAG - WEIGHT,
+                    vz = (pos[o + 2] - prev[o + 2]) * DRAG;
             float v = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
-            if (v > SPEED) { vx *= SPEED / v; vy *= SPEED / v; vz *= SPEED / v; }
-            prev[o] = pos[o]; prev[o + 1] = pos[o + 1]; prev[o + 2] = pos[o + 2];
-            pos[o] += vx; pos[o + 1] += vy; pos[o + 2] += vz;
+            if (v > SPEED) {
+                vx *= SPEED / v;
+                vy *= SPEED / v;
+                vz *= SPEED / v;
+            }
+            prev[o] = pos[o];
+            prev[o + 1] = pos[o + 1];
+            prev[o + 2] = pos[o + 2];
+            pos[o] += vx;
+            pos[o + 1] += vy;
+            pos[o + 2] += vz;
         }
         // how fast its end is going this tick (the joints may go a few times that, and no more)
-        float endMove = (float) Math.sqrt((tx - pos[e]) * (tx - pos[e]) + (ty - pos[e + 1]) * (ty - pos[e + 1]) + (tz - pos[e + 2]) * (tz - pos[e + 2]));
+        float endMove = (float) Math.sqrt((tx - pos[e]) * (tx - pos[e])
+                + (ty - pos[e + 1]) * (ty - pos[e + 1])
+                + (tz - pos[e + 2]) * (tz - pos[e + 2]));
         float cap = Math.max(JOINT_MOVE, END_X * endMove);
-        prev[0] = pos[0]; prev[1] = pos[1]; prev[2] = pos[2];
-        prev[e] = pos[e]; prev[e + 1] = pos[e + 1]; prev[e + 2] = pos[e + 2];
-        pos[0] = rx; pos[1] = ry; pos[2] = rz;
-        pos[e] = tx; pos[e + 1] = ty; pos[e + 2] = tz;
+        prev[0] = pos[0];
+        prev[1] = pos[1];
+        prev[2] = pos[2];
+        prev[e] = pos[e];
+        prev[e + 1] = pos[e + 1];
+        prev[e + 2] = pos[e + 2];
+        pos[0] = rx;
+        pos[1] = ry;
+        pos[2] = rz;
+        pos[e] = tx;
+        pos[e + 1] = ty;
+        pos[e + 2] = tz;
         for (int it = 0; it < ITER; it++) {
             // stiffness: each joint drawn a little toward the line between its neighbours
             for (int i = 1; i < n - 1; i++) {
                 int o = 3 * i;
-                for (int k = 0; k < 3; k++) pos[o + k] += STIFF * (0.5f * (pos[o - 3 + k] + pos[o + 3 + k]) - pos[o + k]);
+                for (int k = 0; k < 3; k++)
+                    pos[o + k] += STIFF * (0.5f * (pos[o - 3 + k] + pos[o + 3 + k]) - pos[o + k]);
             }
             // each piece its own length, both ways along, the two ends held
-            for (int pass = 0; pass < 2; pass++) for (int j = 0; j < n - 1; j++) {
-                int i = pass == 0 ? j : n - 2 - j;
-                int a = 3 * i, b = a + 3;
-                float dx = pos[b] - pos[a], dy = pos[b + 1] - pos[a + 1], dz = pos[b + 2] - pos[a + 2];
-                float dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-                if (dl < 1e-5f) continue;
-                float diff = (dl - tl[i]) / dl;
-                boolean fa = i == 0, fb = i + 1 == n - 1;
-                float wa = fa ? 0f : fb ? 1f : 0.5f, wb = fb ? 0f : fa ? 1f : 0.5f;
-                pos[a] += dx * diff * wa; pos[a + 1] += dy * diff * wa; pos[a + 2] += dz * diff * wa;
-                pos[b] -= dx * diff * wb; pos[b + 1] -= dy * diff * wb; pos[b + 2] -= dz * diff * wb;
-            }
+            for (int pass = 0; pass < 2; pass++)
+                for (int j = 0; j < n - 1; j++) {
+                    int i = pass == 0 ? j : n - 2 - j;
+                    int a = 3 * i, b = a + 3;
+                    float dx = pos[b] - pos[a], dy = pos[b + 1] - pos[a + 1], dz = pos[b + 2] - pos[a + 2];
+                    float dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    if (dl < 1e-5f) continue;
+                    float diff = (dl - tl[i]) / dl;
+                    boolean fa = i == 0, fb = i + 1 == n - 1;
+                    float wa = fa ? 0f : fb ? 1f : 0.5f, wb = fb ? 0f : fa ? 1f : 0.5f;
+                    pos[a] += dx * diff * wa;
+                    pos[a + 1] += dy * diff * wa;
+                    pos[a + 2] += dz * diff * wa;
+                    pos[b] -= dx * diff * wb;
+                    pos[b + 1] -= dy * diff * wb;
+                    pos[b + 2] -= dz * diff * wb;
+                }
             // it bends, but never sharply at any one joint: two joints apart are kept far enough apart
             for (int i = 1; i < n - 1; i++) {
                 int a = 3 * (i - 1), b = 3 * (i + 1);
@@ -309,29 +377,49 @@ public final class CarryPath {
                 boolean fa = i - 1 == 0, fb = i + 1 == n - 1;
                 if (fa && fb) continue;
                 float wa = fa ? 0f : fb ? 1f : 0.5f, wb = fb ? 0f : fa ? 1f : 0.5f;
-                pos[a] += dx * diff * wa; pos[a + 1] += dy * diff * wa; pos[a + 2] += dz * diff * wa;
-                pos[b] -= dx * diff * wb; pos[b + 1] -= dy * diff * wb; pos[b + 2] -= dz * diff * wb;
+                pos[a] += dx * diff * wa;
+                pos[a + 1] += dy * diff * wa;
+                pos[a + 2] += dz * diff * wa;
+                pos[b] -= dx * diff * wb;
+                pos[b + 1] -= dy * diff * wb;
+                pos[b + 2] -= dz * diff * wb;
                 // and the joint between them out to the side it bends to, so they don't just slide
             }
             // never into his rim or dome: the joints, and each piece along its length, kept off them
             keepOff(pos, n, g);
             for (int i = 1; i < n - 1; i++) if (pos[3 * i + 1] < floorY) pos[3 * i + 1] = floorY;
-            pos[0] = rx; pos[1] = ry; pos[2] = rz;
-            pos[e] = tx; pos[e + 1] = ty; pos[e + 2] = tz;
+            pos[0] = rx;
+            pos[1] = ry;
+            pos[2] = rz;
+            pos[e] = tx;
+            pos[e + 1] = ty;
+            pos[e + 2] = tz;
         }
-        // however it's pulled about, no joint goes much faster than its end (the rope catches up over the next few ticks)
+        // however it's pulled about, no joint goes much faster than its end (the rope catches up over the next few
+        // ticks)
         for (int i = 1; i < n - 1; i++) {
             int o = 3 * i;
             float dx = pos[o] - prev[o], dy = pos[o + 1] - prev[o + 1], dz = pos[o + 2] - prev[o + 2];
             float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (d > cap) {
                 float f = cap / d;
-                pos[o] = prev[o] + dx * f; pos[o + 1] = prev[o + 1] + dy * f; pos[o + 2] = prev[o + 2] + dz * f;
+                pos[o] = prev[o] + dx * f;
+                pos[o + 1] = prev[o + 1] + dy * f;
+                pos[o + 2] = prev[o + 2] + dz * f;
             }
         }
     }
 
-    public static float DRAG = 0.8f, WEIGHT = 0.3f, SPEED = 4f, STIFF = 0.25f, PAY_SLACK = 1.05f, STUB = 0.04f, MAX_BEND = 45f, OUT_PAST = 4f, JOINT_MOVE = 3f, END_X = 2f;
+    public static float DRAG = 0.8f,
+            WEIGHT = 0.3f,
+            SPEED = 4f,
+            STIFF = 0.25f,
+            PAY_SLACK = 1.05f,
+            STUB = 0.04f,
+            MAX_BEND = 45f,
+            OUT_PAST = 4f,
+            JOINT_MOVE = 3f,
+            END_X = 2f;
     public static int ITER = 30;
 
     /**
@@ -357,7 +445,9 @@ public final class CarryPath {
             boolean fb = i + 1 == n - 1;
             for (int q = 1; q <= 3; q++) {
                 float f = q / 4f;
-                float mx = pos[a] + (pos[b] - pos[a]) * f, my = pos[a + 1] + (pos[b + 1] - pos[a + 1]) * f, mz = pos[a + 2] + (pos[b + 2] - pos[a + 2]) * f;
+                float mx = pos[a] + (pos[b] - pos[a]) * f,
+                        my = pos[a + 1] + (pos[b + 1] - pos[a + 1]) * f,
+                        mz = pos[a + 2] + (pos[b + 2] - pos[a + 2]) * f;
                 float mr = (float) Math.sqrt(mx * mx + mz * mz);
                 float dd = shellDist(mr, my);
                 if (dd >= ROPE_CLEAR) continue;
@@ -382,7 +472,10 @@ public final class CarryPath {
     private static void moveR(float[] p, int o, float[] g, float amt) {
         float r = (float) Math.sqrt(p[o] * p[o] + p[o + 2] * p[o + 2]);
         float nr = Math.max(0f, r + g[0] * amt);
-        if (r > 1e-4f) { p[o] *= nr / r; p[o + 2] *= nr / r; }
+        if (r > 1e-4f) {
+            p[o] *= nr / r;
+            p[o + 2] *= nr / r;
+        }
         p[o + 1] += g[1] * amt;
     }
 
@@ -401,7 +494,10 @@ public final class CarryPath {
         int i = (int) fr, j = (int) fy;
         float a = fr - i, b = fy - j;
         int w = SY1 - SY0 + 1;
-        float v00 = sdf[i * w + j], v01 = sdf[i * w + j + 1], v10 = sdf[(i + 1) * w + j], v11 = sdf[(i + 1) * w + j + 1];
+        float v00 = sdf[i * w + j],
+                v01 = sdf[i * w + j + 1],
+                v10 = sdf[(i + 1) * w + j],
+                v11 = sdf[(i + 1) * w + j + 1];
         float v = (v00 * (1 - a) + v10 * a) * (1 - b) + (v01 * (1 - a) + v11 * a) * b;
         // past the edge of the table: add on how far past
         return v + Math.max(0f, r - (SR - 1)) + Math.max(0f, Math.max(SY0 - y, y - SY1));
@@ -411,8 +507,13 @@ public final class CarryPath {
         float gx = shellDist(r + 0.5f, y) - shellDist(Math.max(0f, r - 0.5f), y);
         float gy = shellDist(r, y + 0.5f) - shellDist(r, y - 0.5f);
         float l = (float) Math.sqrt(gx * gx + gy * gy);
-        if (l < 1e-5f) { g[0] = 0f; g[1] = 1f; return; }
-        g[0] = gx / l; g[1] = gy / l;
+        if (l < 1e-5f) {
+            g[0] = 0f;
+            g[1] = 1f;
+            return;
+        }
+        g[0] = gx / l;
+        g[1] = gy / l;
     }
 
     private static boolean inShellAt(float r, float y) {
@@ -424,31 +525,33 @@ public final class CarryPath {
         int w = SY1 - SY0 + 1;
         float[] f = new float[SR * w];
         List<int[]> edge = new ArrayList<>();
-        for (int i = 0; i < SR; i++) for (int j = 0; j < w; j++) {
-            float r = i, y = j + SY0;
-            boolean in = inShellAt(r, y);
-            // a point of the edge: in, with a neighbour out (or out, with a neighbour in)
-            boolean edgeP = false;
-            for (int k = 0; k < 4 && !edgeP; k++) {
-                float nr = r + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = y + (k == 2 ? 1 : k == 3 ? -1 : 0);
-                if (nr >= 0 && inShellAt(nr, ny) != in) edgeP = true;
+        for (int i = 0; i < SR; i++)
+            for (int j = 0; j < w; j++) {
+                float r = i, y = j + SY0;
+                boolean in = inShellAt(r, y);
+                // a point of the edge: in, with a neighbour out (or out, with a neighbour in)
+                boolean edgeP = false;
+                for (int k = 0; k < 4 && !edgeP; k++) {
+                    float nr = r + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = y + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                    if (nr >= 0 && inShellAt(nr, ny) != in) edgeP = true;
+                }
+                if (edgeP && in) edge.add(new int[] {i, j});
             }
-            if (edgeP && in) edge.add(new int[]{i, j});
-        }
-        for (int i = 0; i < SR; i++) for (int j = 0; j < w; j++) {
-            float best = Float.MAX_VALUE;
-            for (int[] p : edge) {
-                float dx = p[0] - i, dy = p[1] - j;
-                float d2 = dx * dx + dy * dy;
-                if (d2 < best) best = d2;
+        for (int i = 0; i < SR; i++)
+            for (int j = 0; j < w; j++) {
+                float best = Float.MAX_VALUE;
+                for (int[] p : edge) {
+                    float dx = p[0] - i, dy = p[1] - j;
+                    float d2 = dx * dx + dy * dy;
+                    if (d2 < best) best = d2;
+                }
+                float d = (float) Math.sqrt(best);
+                f[i * w + j] = inShellAt(i, j + SY0) ? -d : d;
             }
-            float d = (float) Math.sqrt(best);
-            f[i * w + j] = inShellAt(i, j + SY0) ? -d : d;
-        }
         sdf = f;
     }
 
-    // ------------------------------------------------------------------ his outline
+    // his outline
 
     private static int firstRow() {
         for (int i = 0; i < all.length; i++) if (all[i] > 0f) return i + Y0;
@@ -469,7 +572,9 @@ public final class CarryPath {
         return best;
     }
 
-    /** a straight rope from the root (ra, ya) to (r, y): does it stay clear of the rim and dome (by a strand's width) */
+    /**
+     * a straight rope from the root (ra, ya) to (r, y): does it stay clear of the rim and dome (by a strand's width)
+     */
     private static boolean clearOfShell(float ra, float ya, float r, float y) {
         float len = (float) Math.hypot(r - ra, y - ya);
         int n = Math.max(2, (int) (len * 2));
@@ -485,7 +590,8 @@ public final class CarryPath {
 
     private static boolean inShell(float r, float y, float m) {
         int a = (int) Math.floor(y - m) - Y0, b = (int) Math.floor(y + m) - Y0;
-        for (int i = Math.max(0, a); i <= Math.min(shell.length - 1, b); i++) if (shell[i] > 0f && r < shell[i] + m) return true;
+        for (int i = Math.max(0, a); i <= Math.min(shell.length - 1, b); i++)
+            if (shell[i] > 0f && r < shell[i] + m) return true;
         return false;
     }
 
@@ -498,7 +604,10 @@ public final class CarryPath {
         int hi = 0;
         for (int b = 0; b < m.boneCount(); b++) {
             BellRig.Kind k = rig.kind[b];
-            boolean body = k == BellRig.Kind.BELL || k == BellRig.Kind.RIM || k == BellRig.Kind.CROWN || k == BellRig.Kind.SPOT;
+            boolean body = k == BellRig.Kind.BELL
+                    || k == BellRig.Kind.RIM
+                    || k == BellRig.Kind.CROWN
+                    || k == BellRig.Kind.SPOT;
             short[] xs = m.x[b], ys = m.y[b], zs = m.z[b];
             for (int i = 0; i < xs.length; i++) {
                 int row = ys[i] - Y0;
@@ -507,7 +616,10 @@ public final class CarryPath {
                 float r = (float) Math.sqrt(cx * cx + cz * cz);
                 // the bell swells a little when he's worn out or sinking: leave room for it
                 if (k == BellRig.Kind.RIM) rimEdge = Math.max(rimEdge, r);
-                if (body) { r = r * 1.07f + 1f; sh[row] = Math.max(sh[row], r); }
+                if (body) {
+                    r = r * 1.07f + 1f;
+                    sh[row] = Math.max(sh[row], r);
+                }
                 a[row] = Math.max(a[row], r);
                 hi = Math.max(hi, ys[i] + 1);
             }
@@ -517,7 +629,9 @@ public final class CarryPath {
         // the strands that can do the carrying
         List<Integer> c = new ArrayList<>();
         boolean[] hasBranch = new boolean[rig.strands.length];
-        for (BellRig.Chain ch : rig.chains) if (!ch.arm && ch.parentChain >= 0 && !rig.chains[ch.parentChain].arm) hasBranch[rig.chains[ch.parentChain].index] = true;
+        for (BellRig.Chain ch : rig.chains)
+            if (!ch.arm && ch.parentChain >= 0 && !rig.chains[ch.parentChain].arm)
+                hasBranch[rig.chains[ch.parentChain].index] = true;
         for (BellRig.StrandDef S : rig.strands) {
             int pb = rig.parent[S.bones()[0]];
             if (pb < 0 || rig.kind[pb] != BellRig.Kind.RIM || hasBranch[S.k()]) continue;

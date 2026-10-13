@@ -1,7 +1,11 @@
 package net.jj.hollowbell.block;
 
 import com.mojang.serialization.MapCodec;
+import net.jj.hollowbell.Adv;
+import net.jj.hollowbell.world.LootBeams;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -28,6 +32,7 @@ public class LootCacheBlock extends BaseEntityBlock {
     public static final MapCodec<LootCacheBlock> CODEC = simpleCodec(LootCacheBlock::new);
     /** something is still in it: the beam stands and it glows */
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
+
     private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 14, 15);
 
     public LootCacheBlock(Properties p) {
@@ -35,20 +40,37 @@ public class LootCacheBlock extends BaseEntityBlock {
         registerDefaultState(stateDefinition.any().setValue(LIT, false));
     }
 
-    @Override protected MapCodec<? extends BaseEntityBlock> codec() { return CODEC; }
-    @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> b) { b.add(LIT); }
-    @Override protected RenderShape getRenderShape(BlockState st) { return RenderShape.MODEL; }
-    @Override protected VoxelShape getShape(BlockState st, BlockGetter g, BlockPos p, CollisionContext c) { return SHAPE; }
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState st) { return new LootCacheBlockEntity(pos, st); }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> b) {
+        b.add(LIT);
+    }
+
+    @Override
+    protected RenderShape getRenderShape(BlockState st) {
+        return RenderShape.MODEL;
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState st, BlockGetter g, BlockPos p, CollisionContext c) {
+        return SHAPE;
+    }
+
+    @Override
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState st) {
+        return new LootCacheBlockEntity(pos, st);
+    }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState st, Level l, BlockPos pos, Player p, BlockHitResult hit) {
         if (l.isClientSide) return InteractionResult.SUCCESS;
         if (l.getBlockEntity(pos) instanceof LootCacheBlockEntity be) {
             p.openMenu(be);
-            if (p instanceof net.minecraft.server.level.ServerPlayer sp) net.jj.hollowbell.HollowbellMod.award(sp, "loot_cache");
+            if (p instanceof ServerPlayer sp) Adv.grant(sp, "loot_cache");
         }
         return InteractionResult.CONSUME;
     }
@@ -56,8 +78,9 @@ public class LootCacheBlock extends BaseEntityBlock {
     /** broken: whatever is still in it drops out */
     @Override
     protected void onRemove(BlockState st, Level l, BlockPos pos, BlockState now, boolean moved) {
-        if (!st.is(now.getBlock()) && l.getBlockEntity(pos) instanceof LootCacheBlockEntity be) Containers.dropContents(l, pos, be);
-        if (!st.is(now.getBlock()) && l instanceof net.minecraft.server.level.ServerLevel sl) net.jj.hollowbell.world.LootBeams.mark(sl, pos, false);
+        if (!st.is(now.getBlock()) && l.getBlockEntity(pos) instanceof LootCacheBlockEntity be)
+            Containers.dropContents(l, pos, be);
+        if (!st.is(now.getBlock()) && l instanceof ServerLevel sl) LootBeams.mark(sl, pos, false);
         super.onRemove(st, l, pos, now, moved);
     }
 }

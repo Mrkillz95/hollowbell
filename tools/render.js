@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Draws the converted model (src/main/resources/hollowbell/hollowbell_model.bin) to PNG so it can be checked
-// against the pictures of the build in reference/. Writes to reference/converted/:
+// against pictures of the build. Writes to build/converted/:
 //   front, side, top, iso: block colours, glass see-through (blended)
 //   cutaway: the front half cut away
 //   parts_front, parts_iso: every part in its own colour
@@ -12,7 +12,7 @@ const { blockColour, partColour } = require('./lib/view');
 
 const ROOT = path.join(__dirname, '..');
 const RES = path.join(ROOT, 'src', 'main', 'resources', 'hollowbell');
-const OUT = path.join(ROOT, 'reference', 'converted');
+const OUT = path.join(ROOT, 'build', 'converted');
 
 function readModel(file = path.join(RES, 'hollowbell_model.bin')) {
   const b = zlib.gunzipSync(fs.readFileSync(file));

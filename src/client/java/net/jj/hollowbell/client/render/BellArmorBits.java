@@ -29,26 +29,39 @@ final class BellArmorBits {
     private static TextureAtlasSprite bone, calcite, copper, froglight, glass;
 
     private static TextureAtlasSprite sprite(String name) {
-        return Minecraft.getInstance().getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS)
+        return Minecraft.getInstance()
+                .getModelManager()
+                .getAtlas(TextureAtlas.LOCATION_BLOCKS)
                 .getSprite(ResourceLocation.withDefaultNamespace("block/" + name));
     }
 
     private static void sprites() {
-        bone = sprite("bone_block_side"); calcite = sprite("calcite");
-        copper = sprite("oxidized_copper"); froglight = sprite("verdant_froglight_side"); glass = sprite("lime_stained_glass");
+        bone = sprite("bone_block_side");
+        calcite = sprite("calcite");
+        copper = sprite("oxidized_copper");
+        froglight = sprite("verdant_froglight_side");
+        glass = sprite("lime_stained_glass");
     }
 
-    static void render(PoseStack pose, MultiBufferSource buf, LivingEntity e, EquipmentSlot slot, int light, HumanoidModel<LivingEntity> m) {
-        sprites();                        // looked up each time: cheap, and right after a resource reload
+    static void render(
+            PoseStack pose,
+            MultiBufferSource buf,
+            LivingEntity e,
+            EquipmentSlot slot,
+            int light,
+            HumanoidModel<LivingEntity> m) {
+        sprites(); // looked up each time: cheap, and right after a resource reload
         float pt = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(true);
         float t = e.tickCount + pt;
-        float breath = 0.5f + 0.5f * Mth.sin(t * 0.07f + e.getId());               // the slow glow, like his spots
+        float breath = 0.5f + 0.5f * Mth.sin(t * 0.07f + e.getId()); // the slow glow, like his spots
         float walk = Mth.clamp(e.walkAnimation.speed(pt), 0f, 1f);
         float step = e.walkAnimation.position(pt);
         // two passes, the solid bone and copper first and then the glass and glow: one kind of buffer open at a time
         for (int pass = 0; pass < 2; pass++) {
-            VertexConsumer vc = buf.getBuffer(pass == 0 ? RenderType.entityCutoutNoCull(TextureAtlas.LOCATION_BLOCKS)
-                    : RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+            VertexConsumer vc = buf.getBuffer(
+                    pass == 0
+                            ? RenderType.entityCutoutNoCull(TextureAtlas.LOCATION_BLOCKS)
+                            : RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
             Pen solid = new Pen(vc, pass == 0), see = new Pen(vc, pass == 1);
             draw(pose, e, slot, light, m, solid, see, t, breath, walk, step);
         }
@@ -57,8 +70,18 @@ final class BellArmorBits {
     /** one pass: only the pen that's on draws */
     private record Pen(VertexConsumer vc, boolean on) {}
 
-    private static void draw(PoseStack pose, LivingEntity e, EquipmentSlot slot, int light, HumanoidModel<LivingEntity> m, Pen solid, Pen see,
-                             float t, float breath, float walk, float step) {
+    private static void draw(
+            PoseStack pose,
+            LivingEntity e,
+            EquipmentSlot slot,
+            int light,
+            HumanoidModel<LivingEntity> m,
+            Pen solid,
+            Pen see,
+            float t,
+            float breath,
+            float walk,
+            float step) {
         int glow = LightTexture.FULL_BRIGHT;
         int glowCol = shade(0xFFFFFF, 0.7f + 0.3f * breath);
         switch (slot) {
@@ -90,7 +113,22 @@ final class BellArmorBits {
                 box(pose, see, froglight, 5.05f, -6.5f, -2.6f, 5.35f, -4.8f, -0.9f, glowCol, glow);
                 // two short strands down the back of the neck
                 for (int s = -1; s <= 1; s += 2)
-                    strand(pose, see, solid, s * 2.2f, -2.2f, 5.3f, 3, 3.2f, 12f, -s * 4f, t, s * 1.3f, walk * 18f * Mth.sin(step * 0.66f), light, glowCol);
+                    strand(
+                            pose,
+                            see,
+                            solid,
+                            s * 2.2f,
+                            -2.2f,
+                            5.3f,
+                            3,
+                            3.2f,
+                            12f,
+                            -s * 4f,
+                            t,
+                            s * 1.3f,
+                            walk * 18f * Mth.sin(step * 0.66f),
+                            light,
+                            glowCol);
                 pose.popPose();
             }
             case CHEST -> {
@@ -126,7 +164,22 @@ final class BellArmorBits {
                     float x = Mth.sin(a) * 4.8f, z = Mth.cos(a) * 2.9f;
                     float out = 10f + 6f * Math.abs(Mth.cos(a));
                     float swing = Mth.cos(a) * legSwing;
-                    strand(pose, see, solid, x, 11.6f, z, 2, 2.6f, out * Math.signum(Mth.cos(a) + 1e-3f), -Mth.sin(a) * 10f, t, i * 0.9f, swing, light, glowCol);
+                    strand(
+                            pose,
+                            see,
+                            solid,
+                            x,
+                            11.6f,
+                            z,
+                            2,
+                            2.6f,
+                            out * Math.signum(Mth.cos(a) + 1e-3f),
+                            -Mth.sin(a) * 10f,
+                            t,
+                            i * 0.9f,
+                            swing,
+                            light,
+                            glowCol);
                 }
                 pose.popPose();
             }
@@ -137,7 +190,18 @@ final class BellArmorBits {
                     ring(pose, solid, copper, 2.75f, 8.2f, 9.3f, 0xFFFFFF, light);
                     // a bone spur at the heel and a small glow at the ankle
                     box(pose, solid, bone, -0.7f, 10.0f, 2.6f, 0.7f, 11.4f, 3.8f, 0xFFFFFF, light);
-                    box(pose, see, froglight, (s == 0 ? -2.95f : 2.65f), 8.4f, -0.6f, (s == 0 ? -2.65f : 2.95f), 9.1f, 0.6f, glowCol, glow);
+                    box(
+                            pose,
+                            see,
+                            froglight,
+                            (s == 0 ? -2.95f : 2.65f),
+                            8.4f,
+                            -0.6f,
+                            (s == 0 ? -2.65f : 2.95f),
+                            9.1f,
+                            0.6f,
+                            glowCol,
+                            glow);
                     pose.popPose();
                 }
             }
@@ -145,16 +209,51 @@ final class BellArmorBits {
         }
     }
 
-    private static void shoulder(PoseStack pose, Pen see, Pen solid, HumanoidModel<LivingEntity> m, boolean right,
-                                 float t, float walk, float step, int light, int glowCol) {
+    private static void shoulder(
+            PoseStack pose,
+            Pen see,
+            Pen solid,
+            HumanoidModel<LivingEntity> m,
+            boolean right,
+            float t,
+            float walk,
+            float step,
+            int light,
+            int glowCol) {
         pose.pushPose();
         (right ? m.rightArm : m.leftArm).translateAndRotate(pose);
-        float s = right ? -1 : 1;          // outward
+        float s = right ? -1 : 1; // outward
         float x0 = right ? -4.4f : -0.6f, x1 = right ? 0.6f : 4.4f;
         box(pose, solid, bone, x0, -3.2f, -3.2f, x1, -1.6f, 3.2f, 0xFFFFFF, light);
-        box(pose, solid, calcite, x0 + (right ? -0.3f : 0.6f), -2.2f, -2.2f, x1 + (right ? -0.6f : 0.3f), -1.2f, 2.2f, 0xFFFFFF, light);
+        box(
+                pose,
+                solid,
+                calcite,
+                x0 + (right ? -0.3f : 0.6f),
+                -2.2f,
+                -2.2f,
+                x1 + (right ? -0.6f : 0.3f),
+                -1.2f,
+                2.2f,
+                0xFFFFFF,
+                light);
         for (int i = -1; i <= 1; i++)
-            strand(pose, see, solid, s * 3.9f, -1.6f, i * 2.2f, 2, 2.4f, i * 6f, s * -14f, t, i * 1.7f + (right ? 0 : 3), walk * 10f * Mth.sin(step * 0.66f + i), light, glowCol);
+            strand(
+                    pose,
+                    see,
+                    solid,
+                    s * 3.9f,
+                    -1.6f,
+                    i * 2.2f,
+                    2,
+                    2.4f,
+                    i * 6f,
+                    s * -14f,
+                    t,
+                    i * 1.7f + (right ? 0 : 3),
+                    walk * 10f * Mth.sin(step * 0.66f + i),
+                    light,
+                    glowCol);
         pose.popPose();
     }
 
@@ -162,8 +261,22 @@ final class BellArmorBits {
      * A hanging strand: a few glass segments, each bending a little more than the last, with a glowing tip. Its sway
      * is a slow drift in time plus whatever the walk adds; the lower segments lag behind (follow-through).
      */
-    private static void strand(PoseStack pose, Pen see, Pen solid, float x, float y, float z, int segs, float len,
-                               float tiltX, float tiltZ, float t, float phase, float swing, int light, int glowCol) {
+    private static void strand(
+            PoseStack pose,
+            Pen see,
+            Pen solid,
+            float x,
+            float y,
+            float z,
+            int segs,
+            float len,
+            float tiltX,
+            float tiltZ,
+            float t,
+            float phase,
+            float swing,
+            int light,
+            int glowCol) {
         pose.pushPose();
         pose.translate(x / 16f, y / 16f, z / 16f);
         pose.mulPose(Axis.XP.rotationDegrees(tiltX + swing));
@@ -182,7 +295,8 @@ final class BellArmorBits {
     }
 
     /** a flat band round a part: four thin boxes, from y0 to y1, half-width r */
-    private static void ring(PoseStack pose, Pen vc, TextureAtlasSprite s, float r, float y0, float y1, int col, int light) {
+    private static void ring(
+            PoseStack pose, Pen vc, TextureAtlasSprite s, float r, float y0, float y1, int col, int light) {
         float th = 0.45f;
         box(pose, vc, s, -r, y0, -r - th, r, y1, -r, col, light);
         box(pose, vc, s, -r, y0, r, r, y1, r + th, col, light);
@@ -191,17 +305,35 @@ final class BellArmorBits {
     }
 
     private static int shade(int rgb, float k) {
-        int r = (int) Math.min(255, ((rgb >> 16) & 255) * k), g = (int) Math.min(255, ((rgb >> 8) & 255) * k), b = (int) Math.min(255, (rgb & 255) * k);
+        int r = (int) Math.min(255, ((rgb >> 16) & 255) * k),
+                g = (int) Math.min(255, ((rgb >> 8) & 255) * k),
+                b = (int) Math.min(255, (rgb & 255) * k);
         return 0xFF000000 | r << 16 | g << 8 | b;
     }
 
-    /** a box in model pixels; the texture is cut to the face's size so it isn't stretched. col is ARGB (no alpha = opaque) */
-    static void box(PoseStack pose, Pen pen, TextureAtlasSprite s, float x0, float y0, float z0, float x1, float y1, float z1, int col, int light) {
+    /**
+     * a box in model pixels; the texture is cut to the face's size so it isn't stretched. col is ARGB (no alpha =
+     * opaque)
+     */
+    static void box(
+            PoseStack pose,
+            Pen pen,
+            TextureAtlasSprite s,
+            float x0,
+            float y0,
+            float z0,
+            float x1,
+            float y1,
+            float z1,
+            int col,
+            int light) {
         if (!pen.on()) return;
         VertexConsumer vc = pen.vc();
         if ((col >>> 24) == 0) col |= 0xFF000000;
         float a = x0 / 16f, b = y0 / 16f, c = z0 / 16f, d = x1 / 16f, e = y1 / 16f, f = z1 / 16f;
-        float sx = Math.min(1f, (x1 - x0) / 16f), sy = Math.min(1f, (y1 - y0) / 16f), sz = Math.min(1f, (z1 - z0) / 16f);
+        float sx = Math.min(1f, (x1 - x0) / 16f),
+                sy = Math.min(1f, (y1 - y0) / 16f),
+                sz = Math.min(1f, (z1 - z0) / 16f);
         PoseStack.Pose p = pose.last();
         // -y (model up is -y) ... each face: 4 corners, counter-clockwise from outside
         quad(vc, p, s, col, light, 0, -1, 0, sx, sz, a, b, c, d, b, c, d, b, f, a, b, f);
@@ -212,12 +344,26 @@ final class BellArmorBits {
         quad(vc, p, s, col, light, 1, 0, 0, sz, sy, d, b, f, d, b, c, d, e, c, d, e, f);
     }
 
-    private static void quad(VertexConsumer vc, PoseStack.Pose p, TextureAtlasSprite s, int col, int light, float nx, float ny, float nz,
-                             float su, float sv, float... v) {
+    private static void quad(
+            VertexConsumer vc,
+            PoseStack.Pose p,
+            TextureAtlasSprite s,
+            int col,
+            int light,
+            float nx,
+            float ny,
+            float nz,
+            float su,
+            float sv,
+            float... v) {
         float u0 = s.getU(0), u1 = s.getU(su), v0 = s.getV(0), v1 = s.getV(sv);
         float[][] uv = {{u0, v0}, {u1, v0}, {u1, v1}, {u0, v1}};
         for (int i = 0; i < 4; i++)
-            vc.addVertex(p, v[i * 3], v[i * 3 + 1], v[i * 3 + 2]).setColor(col).setUv(uv[i][0], uv[i][1])
-                    .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, nz);
+            vc.addVertex(p, v[i * 3], v[i * 3 + 1], v[i * 3 + 2])
+                    .setColor(col)
+                    .setUv(uv[i][0], uv[i][1])
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(light)
+                    .setNormal(p, nx, ny, nz);
     }
 }

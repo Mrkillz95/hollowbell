@@ -14,8 +14,18 @@ public record DrivePayload(int what, int arg, float forward, float strafe, float
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "drive"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, DrivePayload> CODEC = StreamCodec.of(
-            (buf, p) -> { buf.writeVarInt(p.what()); buf.writeVarInt(p.arg()); buf.writeFloat(p.forward()); buf.writeFloat(p.strafe()); buf.writeFloat(p.yaw()); },
-            buf -> new DrivePayload(buf.readVarInt(), buf.readVarInt(), buf.readFloat(), buf.readFloat(), buf.readFloat()));
+            (buf, p) -> {
+                buf.writeVarInt(p.what());
+                buf.writeVarInt(p.arg());
+                buf.writeFloat(p.forward());
+                buf.writeFloat(p.strafe());
+                buf.writeFloat(p.yaw());
+            },
+            buf -> new DrivePayload(
+                    buf.readVarInt(), buf.readVarInt(), buf.readFloat(), buf.readFloat(), buf.readFloat()));
 
-    @Override public CustomPacketPayload.Type<DrivePayload> type() { return TYPE; }
+    @Override
+    public CustomPacketPayload.Type<DrivePayload> type() {
+        return TYPE;
+    }
 }

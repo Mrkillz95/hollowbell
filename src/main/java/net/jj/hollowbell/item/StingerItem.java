@@ -1,19 +1,24 @@
 package net.jj.hollowbell.item;
 
+import java.util.List;
+import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.entity.StingerHook;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 
@@ -26,10 +31,12 @@ public class StingerItem extends SwordItem {
     /** ticks of holding before a throw goes, and the wait after one */
     public static final int CHARGE = 6, COOLDOWN = 50;
 
-    public StingerItem(Tier tier, Properties p) { super(tier, p); }
+    public StingerItem(Tier tier, Properties p) {
+        super(tier, p);
+    }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext ctx, java.util.List<Component> tip, net.minecraft.world.item.TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
         tip.add(Component.translatable("item.hollowbell.stinger.tip").withStyle(ChatFormatting.GOLD));
         tip.add(Component.translatable("item.hollowbell.stinger.tip2").withStyle(ChatFormatting.GOLD));
         tip.add(Component.translatable("item.hollowbell.stinger.tip3").withStyle(ChatFormatting.GRAY));
@@ -42,8 +49,15 @@ public class StingerItem extends SwordItem {
         return super.hurtEnemy(stack, target, by);
     }
 
-    @Override public UseAnim getUseAnimation(ItemStack stack) { return UseAnim.SPEAR; }
-    @Override public int getUseDuration(ItemStack stack, LivingEntity e) { return 72000; }
+    @Override
+    public UseAnim getUseAnimation(ItemStack stack) {
+        return UseAnim.SPEAR;
+    }
+
+    @Override
+    public int getUseDuration(ItemStack stack, LivingEntity e) {
+        return 72000;
+    }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player p, InteractionHand hand) {
@@ -59,19 +73,22 @@ public class StingerItem extends SwordItem {
         if (!level.isClientSide) throwIt(p, stack, Math.min(1f, held / 14f), p.isShiftKeyDown());
     }
 
-    /** the throw itself (the tests call this straight); power 0..1 from how long it was held */
+    /** the throw itself; power 0..1 from how long it was held */
     public static StingerHook throwIt(Player p, ItemStack stack, float power, boolean meAlways) {
         Level level = p.level();
         // one strand out at a time
-        for (StingerHook old : level.getEntitiesOfClass(StingerHook.class, p.getBoundingBox().inflate(StingerHook.RANGE + 8), h -> h.getOwner() == p))
+        for (StingerHook old : level.getEntitiesOfClass(
+                StingerHook.class, p.getBoundingBox().inflate(StingerHook.RANGE + 8), h -> h.getOwner() == p))
             old.discard();
         StingerHook h = new StingerHook(level, p, meAlways, 5f + 3f * power);
         h.setDeltaMovement(p.getLookAngle().scale(1.6 + 1.4 * power));
         level.addFreshEntity(h);
-        level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 1f, 1.2f);
+        level.playSound(
+                null, p.getX(), p.getY(), p.getZ(), SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 1f, 1.2f);
         p.getCooldowns().addCooldown(stack.getItem(), COOLDOWN);
-        if (p instanceof net.minecraft.server.level.ServerPlayer sp) net.jj.hollowbell.HollowbellMod.award(sp, "stinger_throw");
-        if (!p.getAbilities().instabuild) stack.hurtAndBreak(1, p, p.getMainHandItem() == stack ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
+        if (p instanceof ServerPlayer sp) Adv.grant(sp, "stinger_throw");
+        if (!p.getAbilities().instabuild)
+            stack.hurtAndBreak(1, p, p.getMainHandItem() == stack ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
         return h;
     }
 }

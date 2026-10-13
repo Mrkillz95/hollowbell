@@ -4,29 +4,53 @@ import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Seat;
 import net.jj.hollowbell.entity.Shot;
+import net.jj.hollowbell.entity.StingerHook;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 
 public final class ModEntities {
-    public static final EntityType<HollowbellEntity> HOLLOWBELL = register("hollowbell",
-            EntityType.Builder.of(HollowbellEntity::new, MobCategory.MONSTER).sized(8f, 8f).fireImmune()
-                    .clientTrackingRange(32).updateInterval(1));
-    public static final EntityType<Seat> SEAT = register("seat",
-            EntityType.Builder.<Seat>of(Seat::new, MobCategory.MISC).sized(0.5f, 0.5f).fireImmune().noSummon()
-                    .clientTrackingRange(24).updateInterval(1));
-    public static final EntityType<Shot> SHOT = register("shot",
-            EntityType.Builder.<Shot>of(Shot::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(12).updateInterval(1));
-    public static final EntityType<net.jj.hollowbell.entity.StingerHook> STINGER_HOOK = register("stinger_hook",
-            EntityType.Builder.<net.jj.hollowbell.entity.StingerHook>of(net.jj.hollowbell.entity.StingerHook::new, MobCategory.MISC)
-                    .sized(0.4f, 0.4f).noSave().noSummon().clientTrackingRange(10).updateInterval(1));
-    public static final EntityType<Belling> BELLING = register("belling",
-            EntityType.Builder.of(Belling::new, MobCategory.MONSTER).sized(1.5f, 1.75f).fireImmune()
-                    .clientTrackingRange(10).updateInterval(2));
+    public static final EntityType<HollowbellEntity> HOLLOWBELL = register(
+            "hollowbell",
+            EntityType.Builder.of(HollowbellEntity::new, MobCategory.MONSTER)
+                    .sized(8f, 8f)
+                    .fireImmune()
+                    .clientTrackingRange(32)
+                    .updateInterval(1));
+    public static final EntityType<Seat> SEAT = register(
+            "seat",
+            EntityType.Builder.<Seat>of(Seat::new, MobCategory.MISC)
+                    .sized(0.5f, 0.5f)
+                    .fireImmune()
+                    .noSummon()
+                    .clientTrackingRange(24)
+                    .updateInterval(1));
+    public static final EntityType<Shot> SHOT = register(
+            "shot",
+            EntityType.Builder.<Shot>of(Shot::new, MobCategory.MISC)
+                    .sized(0.5f, 0.5f)
+                    .clientTrackingRange(12)
+                    .updateInterval(1));
+    public static final EntityType<StingerHook> STINGER_HOOK = register(
+            "stinger_hook",
+            EntityType.Builder.<StingerHook>of(StingerHook::new, MobCategory.MISC)
+                    .sized(0.4f, 0.4f)
+                    .noSave()
+                    .noSummon()
+                    .clientTrackingRange(10)
+                    .updateInterval(1));
+    public static final EntityType<Belling> BELLING = register(
+            "belling",
+            EntityType.Builder.of(Belling::new, MobCategory.MONSTER)
+                    .sized(1.5f, 1.75f)
+                    .fireImmune()
+                    .clientTrackingRange(10)
+                    .updateInterval(2));
 
-    private static <T extends net.minecraft.world.entity.Entity> EntityType<T> register(String name, EntityType.Builder<T> b) {
+    private static <T extends Entity> EntityType<T> register(String name, EntityType.Builder<T> b) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, name);
         return Registry.register(BuiltInRegistries.ENTITY_TYPE, id, b.build(id.toString()));
     }
