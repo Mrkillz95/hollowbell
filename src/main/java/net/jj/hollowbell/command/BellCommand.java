@@ -25,6 +25,7 @@ import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.block.CrownBlock;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
+import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.item.FinderItem;
 import net.jj.hollowbell.net.CodexOrders;
 import net.jj.hollowbell.net.CodexPayload;
@@ -110,6 +111,7 @@ public final class BellCommand {
         d.register(Commands.literal("hollowbell")
                 .then(detailCommand())
                 .then(summonCommand())
+                .then(bookCommand())
                 .then(doCommand("do"))
                 .then(doCommand("move"))
                 .then(listCommand())
@@ -180,6 +182,26 @@ public final class BellCommand {
                                         FloatArgumentType.floatArg(
                                                 HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
                                 .executes(c -> summon(c, mood(c), FloatArgumentType.getFloat(c, "size")))));
+    }
+
+    /** book who: who has the book (anyone may ask); book free: nobody has it now (for one who quit for good) */
+    private static LiteralArgumentBuilder<CommandSourceStack> bookCommand() {
+        return Commands.literal("book")
+                .then(Commands.literal("who").executes(c -> {
+                    BookRule r = BookRule.get(c.getSource().getServer());
+                    c.getSource()
+                            .sendSuccess(
+                                    () -> r.holder() == null
+                                            ? Component.translatable("command.hollowbell.book_nobody")
+                                            : Component.translatable("command.hollowbell.book_who", r.holderName()),
+                                    false);
+                    return r.holder() == null ? 0 : 1;
+                }))
+                .then(Commands.literal("free").requires(OP).executes(c -> {
+                    BookRule.get(c.getSource().getServer()).free();
+                    c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.book_freed"), true);
+                    return 1;
+                }));
     }
 
     /** "move" is the name the other giants use for it */

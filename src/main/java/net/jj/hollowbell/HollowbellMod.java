@@ -20,6 +20,7 @@ import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.item.BellArmorItem;
+import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.item.Powers;
 import net.jj.hollowbell.net.ArmourPowerPayload;
 import net.jj.hollowbell.net.BeingHimPayload;
@@ -165,6 +166,8 @@ public class HollowbellMod implements ModInitializer {
             }
         });
         ServerTickEvents.END_SERVER_TICK.register(CodexOrders::serverTick);
+        ServerTickEvents.END_SERVER_TICK.register(BookRule::serverTick);
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BookRule.leaving(handler.player));
         ServerTickEvents.END_SERVER_TICK.register(Away::tick);
         ServerTickEvents.END_SERVER_TICK.register(WorldOne::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(FarSight::serverTick);

@@ -33,9 +33,21 @@ public class CodexItem extends Item {
         super(p);
     }
 
-    /** anywhere in the pack counts, not only the hand */
+    /** anywhere in the pack counts, not only the hand; only the working copy (see BookRule) */
     public static boolean carriedBy(@Nullable Entity e) {
         if (!(e instanceof Player p)) return false;
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (!s.is(ModItems.CODEX)) continue;
+            if (p instanceof ServerPlayer sp ? BookRule.get(sp.server).works(sp, s) : !BookRule.quiet(s)) return true;
+        }
+        return false;
+    }
+
+    /** has a copy, but not the working one: it says so instead of giving orders */
+    public static boolean onlyQuiet(ServerPlayer p) {
+        if (carriedBy(p)) return false;
         Inventory inv = p.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) if (inv.getItem(i).is(ModItems.CODEX)) return true;
         return false;
@@ -52,8 +64,14 @@ public class CodexItem extends Item {
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level lvl, Player player, InteractionHand hand) {
+        ItemStack s = player.getItemInHand(hand);
+        if (player instanceof ServerPlayer sp && !BookRule.get(sp.server).works(sp, s)) {
+            BookRule.get(sp.server).sayQuiet(sp);
+            return InteractionResultHolder.fail(s);
+        }
+        if (lvl.isClientSide && BookRule.quiet(s)) return InteractionResultHolder.fail(s);
         if (lvl.isClientSide) openPages.run();
-        return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), lvl.isClientSide);
+        return InteractionResultHolder.sidedSuccess(s, lvl.isClientSide);
     }
 
     @Override
@@ -61,6 +79,11 @@ public class CodexItem extends Item {
             ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (!(player.level() instanceof ServerLevel sl) || target instanceof HollowbellEntity)
             return InteractionResult.PASS;
+        ServerPlayer sp = (ServerPlayer) player;
+        if (!BookRule.get(sp.server).works(sp, stack)) {
+            BookRule.get(sp.server).sayQuiet(sp);
+            return InteractionResult.FAIL;
+        }
         // the same as "go after what I look at", with the book held right on it
         String said = CodexOrders.attackLooked(
                 (ServerPlayer) player, new CodexPayload(CodexPayload.ATTACK_THAT, target.getId()), true);

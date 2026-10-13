@@ -82,6 +82,7 @@ def allTests = [
     'net.jj.hollowbell.test.GroundTests',
     'net.jj.hollowbell.test.FarSightTests',
     'net.jj.hollowbell.test.OrdersTests',
+    'net.jj.hollowbell.test.BookTests',
     'net.jj.hollowbell.test.OpsTests',
     'net.jj.hollowbell.test.RestartTests',
     'net.jj.hollowbell.test.LootTests',

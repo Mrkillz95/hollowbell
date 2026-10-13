@@ -14,6 +14,7 @@ import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Mood;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.entity.Seat;
+import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.item.FinderItem;
 import net.jj.hollowbell.world.Away;
@@ -317,6 +318,10 @@ public final class CodexOrders {
         int action = pay.action();
         if (!(p.level() instanceof ServerLevel)) return;
         if (!CodexItem.carriedBy(p)) {
+            if (CodexItem.onlyQuiet(p)) {
+                BookRule.get(p.server).sayQuiet(p);
+                return;
+            }
             say(p, "codex_lost");
             return;
         }
