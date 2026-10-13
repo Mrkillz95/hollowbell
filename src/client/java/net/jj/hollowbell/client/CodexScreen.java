@@ -244,9 +244,15 @@ public class CodexScreen extends Screen {
         addRenderableWidget(
                 line(0, 3, m != null && m.ridden() ? "get_off" : "ride", "ride", new CodexPayload(CodexPayload.RIDE)));
         addRenderableWidget(line(1, 3, "where", "where", new CodexPayload(CodexPayload.WHERE)));
+        addRenderableWidget(line(
+                0,
+                4,
+                m != null && m.following() ? "unfollow" : "follow",
+                "follow",
+                new CodexPayload(CodexPayload.FOLLOW)));
         // send him to a spot: type an X and a Z (or fill them with where you're standing)
         int bw = 90;
-        int y = top() + 5 * pitch();
+        int y = top() + 6 * pitch();
         sendLabel = y - 11;
         boxX = new EditBox(this.font, left(), y, bw, H, Component.literal("X"));
         boxZ = new EditBox(this.font, left() + bw + GAP, y, bw, H, Component.literal("Z"));

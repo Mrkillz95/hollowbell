@@ -855,4 +855,44 @@ public class OrdersTests implements FabricGameTest {
             h.succeed();
         });
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 900, batch = "follow")
+    public void followMeKeepsHimNearYouTillYouSayStop(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 650);
+        h.runAfterDelay(20, () -> {
+            ServerPlayer p = player(h, e.position().add(20, 0, 0));
+            p.getInventory().add(new ItemStack(ModItems.CODEX));
+            CodexOrders.handle(p, new CodexPayload(CodexPayload.FOLLOW));
+            h.assertTrue(e.following() && p.getUUID().equals(e.followingWho()), "the book didn't make him follow");
+            // kept through a save
+            CompoundTag tag = new CompoundTag();
+            e.saveWithoutId(tag);
+            HollowbellEntity b = ModEntities.HOLLOWBELL.create(h.getLevel());
+            b.load(tag);
+            boolean kept = p.getUUID().equals(b.followingWho()) && b.following();
+            b.discard();
+            h.assertTrue(kept, "following was lost in a save");
+            // you go off: he comes after you
+            Vec3 to = e.position().add(0, 0, 90);
+            p.teleportTo(to.x, e.groundAt(to.x, to.z), to.z);
+            double d0 = e.horiz(p.position());
+            h.runAfterDelay(700, () -> {
+                double d1 = e.horiz(p.position());
+                boolean still = e.following();
+                // asked again, he stops; and Stay stops it too
+                CodexOrders.handle(p, new CodexPayload(CodexPayload.FOLLOW));
+                boolean stopped = !e.following();
+                e.follow(p);
+                e.setStay(true);
+                boolean stayStops = !e.following();
+                drop(p);
+                release(h, e);
+                h.assertTrue(still, "he stopped following on his own");
+                h.assertTrue(d1 < d0 - 15, "he didn't come after you: " + (int) d0 + " then " + (int) d1 + " blocks");
+                h.assertTrue(stopped, "pressing it again didn't stop him following");
+                h.assertTrue(stayStops, "Stay didn't stop him following");
+                h.succeed();
+            });
+        });
+    }
 }

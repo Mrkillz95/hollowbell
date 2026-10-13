@@ -1,5 +1,6 @@
 package net.jj.hollowbell.entity;
 
+import java.util.UUID;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.solid.GiantHull;
@@ -14,6 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -70,6 +72,56 @@ final class BellFlight {
             hb.holdThere = false;
             hb.comeLostAt = 0;
         }
+    }
+
+    /** who he follows (null: nobody), and whether he's on his way back to them just now */
+    @Nullable
+    UUID follow;
+
+    private boolean closing;
+
+    void follow(@Nullable Player p) {
+        closing = false;
+        if (p == null) {
+            follow = null;
+            hb.setFlag(HollowbellEntity.F_FOLLOW, false);
+            return;
+        }
+        if (hb.huntOrdered) hb.targets.dropHunt();
+        hb.goal = null;
+        hb.comeTo = null;
+        hb.holdThere = false;
+        hb.setStay(false);
+        hb.wakeUp();
+        follow = p.getUUID();
+        hb.setFlag(HollowbellEntity.F_FOLLOW, true);
+    }
+
+    /** the one he follows, while they're here in his world */
+    private @Nullable Player followed() {
+        if (follow == null || !(hb.level() instanceof ServerLevel sl)) return null;
+        ServerPlayer p = sl.getServer().getPlayerList().getPlayer(follow);
+        return p != null && p.level() == hb.level() && !p.isSpectator() && p.isAlive() ? p : null;
+    }
+
+    /** gone from his world, or into a woken crown's circle where he won't go: he stops following */
+    void followTick() {
+        if (follow == null || hb.tickCount % 20 != 0) return;
+        Player f = followed();
+        if (f == null || hb.warded(f.getX(), f.getZ())) follow(null);
+    }
+
+    /** where to go to keep near the one he follows, or null to stay where he is */
+    private @Nullable Vec3 followSpot() {
+        Player f = followed();
+        if (f == null) return null;
+        Vec3 fp = hb.keptIn(f.position());
+        // how far off he keeps: just past his rim. He sets off once you're a little further than that, and stops once
+        // he's back there (one line both ways would have him stopping and starting all the time)
+        double keep = hb.bellRadius() + 12, d = hb.horiz(fp);
+        if (!closing && d > keep * 1.25) closing = true;
+        else if (closing && d < keep) closing = false;
+        return closing ? fp : null;
     }
 
     /** his top speed across, blocks per tick */
@@ -246,6 +298,8 @@ final class BellFlight {
                         hb.setStay(true);
                     }
                 }
+            } else if (follow != null) {
+                want = followSpot();
             } else if (t != null) {
                 // hunting: he hangs right over you, so the strands can reach (another giant: he stops where his body
                 // meets its body across, and goes over it only once he's up over its top)

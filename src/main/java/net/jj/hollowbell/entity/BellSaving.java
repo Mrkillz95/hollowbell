@@ -61,6 +61,7 @@ final class BellSaving {
             tag.putDouble("HomeZ", hb.home.z);
         }
         tag.putBoolean("Stay", hb.stay);
+        if (hb.flight.follow != null) tag.putUUID("Follow", hb.flight.follow);
         tag.putBoolean("Settled", hb.settled);
         if (hb.hunted != null) tag.putUUID("Hunted", hb.hunted);
         if (hb.huntOrdered) tag.putBoolean("HuntOrdered", true);
@@ -164,6 +165,8 @@ final class BellSaving {
         if (tag.contains("HomeX"))
             hb.home = new Vec3(tag.getDouble("HomeX"), tag.getDouble("HomeY"), tag.getDouble("HomeZ"));
         hb.setStay(tag.getBoolean("Stay"));
+        hb.flight.follow = tag.hasUUID("Follow") ? tag.getUUID("Follow") : null;
+        hb.setFlag(HollowbellEntity.F_FOLLOW, hb.flight.follow != null);
         hb.goal = tag.contains("GoalX")
                 ? new Vec3(tag.getDouble("GoalX"), tag.getDouble("GoalY"), tag.getDouble("GoalZ"))
                 : null;

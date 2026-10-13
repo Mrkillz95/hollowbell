@@ -124,7 +124,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     static final EntityDataAccessor<Float> DATA_SLEEP =
             SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
 
-    static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4, F_FIGHT = 8;
+    static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4, F_FIGHT = 8, F_FOLLOW = 16;
 
     public final BellRig rig = BellRig.get();
     /** the pose the server works with (and the client, for aiming and hits) */
@@ -354,6 +354,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         if (asleep || isDeadOrDying()) return;
         asleep = true;
         quiet = 0;
+        flight.follow(null);
         goal = null;
         wanderTo = null;
         fetching = null;
@@ -474,6 +475,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         stay = on;
         setFlag(F_STAY, on);
         if (on) {
+            flight.follow(null);
             goal = null;
             vel = Vec3.ZERO;
         }
@@ -1000,6 +1002,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         if (!frozen) targets.meetTick(now);
         if (!asleep && !frozen) targets.pickTarget();
         if (comeTo != null && !frozen) flight.comeTick();
+        flight.followTick();
         if (!frozen) moves.tick();
         if (frozen) {
             vel = Vec3.ZERO;
@@ -1096,9 +1099,24 @@ public class HollowbellEntity extends Monster implements SolidBody {
         holdThere = false;
         comeLostAt = 0;
         if (g != null) {
+            flight.follow(null);
             setStay(false);
             wakeUp();
         }
+    }
+
+    /** "Follow me": he keeps near this player until told otherwise (null stops it) */
+    public void follow(@Nullable Player p) {
+        flight.follow(p);
+    }
+
+    /** following somebody (the client knows too, for the book) */
+    public boolean following() {
+        return (entityData.get(DATA_FLAGS) & F_FOLLOW) != 0;
+    }
+
+    public @Nullable UUID followingWho() {
+        return flight.follow;
     }
 
     /** who he is coming to (their spot is looked up again every ten seconds while he comes), or null */
