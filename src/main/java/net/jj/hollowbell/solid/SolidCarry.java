@@ -45,8 +45,7 @@ public final class SolidCarry {
             SolidCache c = Solid.frames(b);
             if (frame < c.toWorld.length && c.on[frame]) {
                 Vec3 d = Solid.toWorld(c, frame, rest).subtract(was);
-                double most = Solid.maxCarry(b);
-                if (d.lengthSqr() < most * most) {
+                if (d.lengthSqr() < 64) {
                     Vec3 to = new Vec3(p.getX() + d.x, p.getY() + d.y, p.getZ() + d.z);
                     if (air == 0) to = Solid.carriedTo(b, to);
                     // where his part goes down under the ground, you stay on top of it
