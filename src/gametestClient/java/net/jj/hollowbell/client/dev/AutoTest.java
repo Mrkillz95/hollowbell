@@ -45,6 +45,10 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
@@ -63,6 +67,10 @@ public final class AutoTest implements ClientModInitializer {
     private static int line, wait, joined, atWaited;
     private static boolean asked;
     private static String follow;
+    /** landtime: chunks out from the player to wait for, and when the wait began (real time) */
+    private static int landR = -1;
+
+    private static long landFrom;
 
     @Override
     public void onInitializeClient() {
@@ -93,6 +101,7 @@ public final class AutoTest implements ClientModInitializer {
         if (mc.player == null) return;
         if (++joined < 40) return;
         if (follow != null) view(mc, follow);
+        if (landR >= 0 && !landDone(mc)) return;
         if (wait > 0) {
             wait--;
             return;
@@ -261,6 +270,18 @@ public final class AutoTest implements ClientModInitializer {
             // often they were moved out of him
             if (s.equals("ridelog")) {
                 logRide(mc);
+                continue;
+            }
+            // landtime r: from now, how long until the land r chunks round the player is all loaded, to the log
+            if (s.startsWith("landtime ")) {
+                landR = Integer.parseInt(s.substring(9).trim());
+                landFrom = System.nanoTime();
+                return;
+            }
+            // landhash r name: a hash of every block of each chunk r chunks round the player, to the log
+            if (s.startsWith("landhash ")) {
+                String[] a = s.substring(9).trim().split("\\s+");
+                landHash(mc, Integer.parseInt(a[0]), a.length > 1 ? a[1] : "");
                 continue;
             }
             if (s.equals("quit")) {
@@ -674,6 +695,66 @@ public final class AutoTest implements ClientModInitializer {
                     cols,
                     ores,
                     tops);
+        });
+    }
+
+    /** all the land round the player is in on the server and in this game: the time it took, and the worst tick */
+    private static boolean landDone(Minecraft mc) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null || mc.player == null) return true;
+        // (what this game has been sent: the server sends a chunk once it's made)
+        int px = mc.player.getBlockX() >> 4, pz = mc.player.getBlockZ() >> 4;
+        boolean all = true;
+        for (int cx = px - landR; cx <= px + landR && all; cx++)
+            for (int cz = pz - landR; cz <= pz + landR && all; cz++)
+                if (mc.level.getChunkSource().getChunk(cx, cz, ChunkStatus.FULL, false) == null) all = false;
+        long ms = (System.nanoTime() - landFrom) / 1_000_000L;
+        if (!all && ms < 180_000L) return false;
+        long worst = 0;
+        for (long t : srv.getTickTimesNanos()) worst = Math.max(worst, t);
+        HollowbellMod.LOG.info(
+                "autotest landtime: {} chunks out, {} ms ({}), worst of the last 100 ticks {} ms",
+                landR,
+                ms,
+                all ? "all in" : "gave up",
+                worst / 1_000_000L);
+        landR = -1;
+        return true;
+    }
+
+    private static void landHash(Minecraft mc, int r, String name) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null || mc.player == null) return;
+        int px = mc.player.getBlockX() >> 4, pz = mc.player.getBlockZ() >> 4;
+        srv.execute(() -> {
+            var sl = srv.getPlayerList().getPlayers().get(0).serverLevel();
+            long total = 0;
+            int n = 0;
+            for (int cx = px - r; cx <= px + r; cx++)
+                for (int cz = pz - r; cz <= pz + r; cz++) {
+                    var c = sl.getChunkSource().getChunkNow(cx, cz);
+                    if (c == null) continue;
+                    long h = 1469598103934665603L;
+                    BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+                    for (int y = sl.getMinBuildHeight(); y < sl.getMaxBuildHeight(); y++)
+                        for (int x = 0; x < 16; x++)
+                            for (int z = 0; z < 16; z++) {
+                                BlockState st = c.getBlockState(m.set(x, y, z));
+                                // (what changes on its own after the land is made is left out: water and lava
+                                // running, grass and snow spreading, plants and leaves)
+                                if (st.isAir()
+                                        || !st.getFluidState().isEmpty()
+                                        || st.isRandomlyTicking()
+                                        || st.canBeReplaced()
+                                        || st.is(Blocks.DIRT)) continue;
+                                h ^= Block.getId(st) * 31L + y * 7919L + x * 131L + z;
+                                h *= 1099511628211L;
+                            }
+                    HollowbellMod.LOG.info("autotest landhash {} chunk {} {}: {}", name, cx, cz, Long.toHexString(h));
+                    total = total * 31 + h;
+                    n++;
+                }
+            HollowbellMod.LOG.info("autotest landhash {}: {} chunks, all {}", name, n, Long.toHexString(total));
         });
     }
 
