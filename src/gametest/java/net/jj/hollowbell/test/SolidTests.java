@@ -16,6 +16,7 @@ import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.solid.Solid;
+import net.jj.hollowbell.solid.SolidBody;
 import net.jj.hollowbell.solid.SolidCarry;
 import net.jj.hollowbell.solid.SolidShape;
 import net.minecraft.gametest.framework.GameTest;
@@ -142,6 +143,23 @@ public class SolidTests implements FabricGameTest {
 
     // riding along
 
+    /**
+     * What a player's own game does after carrying them (SolidClient.tick): a part that came up into them lifts them
+     * back onto it at once, and they keep riding.
+     */
+    static boolean unstickAsTheirGameDoes(ServerPlayer p, SolidCarry c) {
+        boolean onHim = c.riding() && c.air == 0;
+        for (SolidBody b : Solid.bodies(false)) {
+            if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
+            if (Solid.unstick(b, p, 0.08, onHim && c.on == b)) {
+                c.clear();
+                c.step(p, Solid.bodies(false));
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** players (carried as their own game would) and stands (carried by the server) on his parts while he drifts */
     static void rideCase(GameTestHelper h, float size, int slot, boolean full) {
         HollowbellEntity e = spawnAway(h, size, HollowbellEntity.CALM, slot);
@@ -165,7 +183,7 @@ public class SolidTests implements FabricGameTest {
                         slice(rig, "bell_6", 0),
                         slice(rig, "spot_0", 0),
                         BellPieces.get().first[rig.pods[11].bone()],
-                        slice(rig, rig.boneNames[rig.arms[2].bones()[0]], 0)
+                        slice(rig, rig.boneNames[rig.arms[2].bones()[0]], 2)
                     }
                     : new int[] {slice(rig, "crown", 0), slice(rig, "bell_2", 0)};
             // (a pod and an arm swing about on their own: they must carry you while he drifts, not through his big
@@ -204,6 +222,7 @@ public class SolidTests implements FabricGameTest {
             Vector3f[] rest0 = new Vector3f[n];
             int[] frame0 = new int[n];
             boolean[] wasOff = new boolean[n];
+            double[] fall = new double[n];
             for (int i = 0; i < n; i++) {
                 rest0[i] = new Vector3f(carries.get(i).rest);
                 frame0[i] = carries.get(i).frame;
@@ -218,13 +237,21 @@ public class SolidTests implements FabricGameTest {
                     for (int i = 0; i < n; i++) {
                         SolidCarry c = carries.get(i);
                         c.step(ps.get(i), Solid.bodies(false));
+                        // (lifted back onto the part that came up into them: what it slides is measured from there)
+                        if (unstickAsTheirGameDoes(ps.get(i), c) && c.riding()) {
+                            rest0[i] = new Vector3f(c.rest);
+                            frame0[i] = c.frame;
+                        }
                         // (thrown off: they fall, as their own game would have them, and land on him again if he's
                         // under them)
+                        // (gravity as the game has it, kept under 1.5 a tick so they can't fall through a part)
                         if (!c.riding()) {
                             ServerPlayer pl = ps.get(i);
-                            pl.setPos(pl.getX(), pl.getY() - 0.4, pl.getZ());
+                            fall[i] = Math.min(1.4, (fall[i] + 0.08) * 0.98);
+                            pl.setPos(pl.getX(), pl.getY() - fall[i], pl.getZ());
                             c.step(pl, Solid.bodies(false));
                         }
+                        if (c.riding()) fall[i] = 0;
                         // (landed on him again after coming off: what it slides is measured from there)
                         if (c.riding() && wasOff[i]) {
                             rest0[i] = new Vector3f(c.rest);
@@ -276,11 +303,9 @@ public class SolidTests implements FabricGameTest {
                             "%s: off %d ticks, slid %.2f drifting and %.2f in all; ",
                             on.get(i), offTicks[i], walkDrift[i], drift[i]));
                 for (int i = 0; i < n; i++) {
-                    // (a pod swings about and throws you now and then: you land on it again; an arm's swim beat can
-                    // throw you off it for good)
-                    boolean arm = on.get(i).equals("the root of an arm");
+                    // (a pod and an arm swing about and throw you now and then: you land on them again)
                     h.assertTrue(
-                            arm || offTicks[i] <= (keep.get(i) ? total / 50 : total / 10),
+                            offTicks[i] <= (keep.get(i) ? total / 50 : total / 10),
                             "the player on " + on.get(i) + " came off him for " + offTicks[i] + " ticks (" + sb + ")");
                     // (an arm bends under you: a little give there)
                     h.assertTrue(
