@@ -172,6 +172,36 @@ public class PaintDepthTests implements FabricGameTest {
         h.succeed();
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "paint_stop")
+    public void giantsPaintStopStopsThePainting(GameTestHelper h) {
+        ServerLevel lv = h.getLevel();
+        var server = lv.getServer();
+        BlockPos at = farSpot(h, 615);
+        int cx = at.getX(), cz = at.getZ();
+        for (int x = (cx - 48) >> 4; x <= (cx + 48) >> 4; x++)
+            for (int z = (cz - 48) >> 4; z <= (cz + 48) >> 4; z++) lv.getChunk(x, z);
+        ServerPlayer p = player(h, new Vec3(cx + 0.5, -40, cz + 0.5));
+        String b = "net.jj.hollowbell.GiantsBridge";
+        try {
+            GiantsCommand.ask(server, "paint", "48 full " + p.getUUID(), b);
+            h.assertTrue(Painter.busy(), "the painting didn't start");
+            var said = GiantsCommand.ask(server, "paintstop", "", b);
+            h.assertTrue(
+                    said.size() == 1 && said.get(0).equals("Hollowbell: stopped painting."),
+                    "a running paint wasn't stopped: " + said);
+            h.assertTrue(!Painter.busy(), "it's still painting");
+            h.assertTrue(
+                    GiantsCommand.ask(server, "paintstop", "", b).isEmpty(), "nothing painting should say nothing");
+            GiantsCommand.ask(server, "paint", "48 full " + p.getUUID(), b);
+            server.getCommands().performPrefixedCommand(op(h, p.position()), "giants paint stop");
+            h.assertTrue(!Painter.busy(), "/giants paint stop didn't stop it");
+        } finally {
+            Painter.forget();
+            drop(p);
+        }
+        h.succeed();
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "paint_depth_cmd")
     public void giantsPaintTakesADepthAndNeverGoesThroughBedrock(GameTestHelper h) throws Exception {
         ServerLevel lv = h.getLevel();
