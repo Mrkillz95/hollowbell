@@ -150,7 +150,11 @@ public final class CodexOrders {
             case CodexPayload.RIDE -> 0.06f;
             case CodexPayload.CALM, CodexPayload.HUNTER, CodexPayload.GUARDIAN -> 0.04f;
             case CodexPayload.ATTACK_THAT, CodexPayload.BIND_HERE, CodexPayload.FREE_ROAM -> 0.03f;
-            case CodexPayload.COME, CodexPayload.GO_THERE, CodexPayload.GO_TO_XZ, CodexPayload.SLEEP -> 0.02f;
+            case CodexPayload.COME,
+                    CodexPayload.FOLLOW,
+                    CodexPayload.GO_THERE,
+                    CodexPayload.GO_TO_XZ,
+                    CodexPayload.SLEEP -> 0.02f;
             default -> 0f;
         };
     }
@@ -356,7 +360,12 @@ public final class CodexOrders {
             default -> {}
         }
         if (m == null) {
-            // a movement order reaches him anywhere: out of the world, far off, or in land nobody has loaded
+            // a movement order reaches him anywhere: out of the world, far off, or in land nobody has loaded ("Follow
+            // me" brings him the way "Come to me" does)
+            if (action == CodexPayload.FOLLOW) {
+                pay = new CodexPayload(CodexPayload.COME);
+                action = CodexPayload.COME;
+            }
             if (action == CodexPayload.COME || action == CodexPayload.GO_THERE || action == CodexPayload.GO_TO_XZ)
                 farOrder(p, pay);
             else awayOrder(p, pay);
@@ -439,6 +448,12 @@ public final class CodexOrders {
                 m.clearHitList();
                 m.orderTo(p.position(), p);
                 say(p, "codex_come", (int) Math.sqrt(m.distanceToSqr(p)));
+            }
+            case CodexPayload.FOLLOW -> {
+                boolean on = !p.getUUID().equals(m.followingWho());
+                m.clearHitList();
+                m.follow(on ? p : null);
+                say(p, on ? "codex_follow" : "codex_unfollow");
             }
             case CodexPayload.GO_THERE -> {
                 HitResult h = looking(p, 320);
@@ -582,7 +597,7 @@ public final class CodexOrders {
     /** where this order would send him, if that spot is inside a woken crown's circle; null when it is fine */
     private static @Nullable Vec3 wardedDest(ServerPlayer p, CodexPayload pay) {
         Vec3 dest = switch (pay.action()) {
-            case CodexPayload.COME -> p.position();
+            case CodexPayload.COME, CodexPayload.FOLLOW -> p.position();
             case CodexPayload.GO_TO_XZ -> new Vec3(pay.x(), 0, pay.z());
             case CodexPayload.GO_THERE -> {
                 HitResult h = looking(p, 320);

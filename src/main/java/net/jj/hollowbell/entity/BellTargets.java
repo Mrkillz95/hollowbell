@@ -194,6 +194,7 @@ final class BellTargets {
         hb.holdThere = false;
         hb.comeLostAt = 0;
         hb.setStay(false);
+        hb.flight.follow(null);
         hb.hunted = e.getUUID();
         hb.huntOrdered = true;
         hb.huntSeen = e.position();

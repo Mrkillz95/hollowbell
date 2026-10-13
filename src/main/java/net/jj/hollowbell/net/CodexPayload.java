@@ -16,6 +16,7 @@ public record CodexPayload(int action, int arg, double x, double z) implements C
             HUNTER = 5,
             GUARDIAN = 6,
             RIDE = 7,
+            FOLLOW = 8,
             CALL_OFF = 10,
             ATTACK_MOVE = 11,
             BREAK_BLOCKS = 13,
