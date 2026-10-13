@@ -685,7 +685,8 @@ public final class Solid {
                     int n = c.stuck.merge(e.getId(), 1, Integer::sum);
                     if (n >= 10) {
                         c.stuck.remove(e.getId());
-                        if (unstick(b, e, 0.08)) unstuckServer++;
+                        // (one standing on him is kept on him, as their own game would have done)
+                        if (unstick(b, e, 0.08, anchorUnder(b, e, 1.5, 1.5) != null)) unstuckServer++;
                     }
                 } else if (dp <= 0.02) c.stuck.remove(e.getId());
                 continue;

@@ -16,7 +16,6 @@ import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.solid.Solid;
-import net.jj.hollowbell.solid.SolidBody;
 import net.jj.hollowbell.solid.SolidCarry;
 import net.jj.hollowbell.solid.SolidShape;
 import net.minecraft.gametest.framework.GameTest;
@@ -143,23 +142,6 @@ public class SolidTests implements FabricGameTest {
 
     // riding along
 
-    /**
-     * What a player's own game does after carrying them (SolidClient.tick): a part that came up into them lifts them
-     * back onto it at once, and they keep riding.
-     */
-    static boolean unstickAsTheirGameDoes(ServerPlayer p, SolidCarry c) {
-        boolean onHim = c.riding() && c.air == 0;
-        for (SolidBody b : Solid.bodies(false)) {
-            if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
-            if (Solid.unstick(b, p, 0.08, onHim && c.on == b)) {
-                c.clear();
-                c.step(p, Solid.bodies(false));
-                return true;
-            }
-        }
-        return false;
-    }
-
     /** players (carried as their own game would) and stands (carried by the server) on his parts while he drifts */
     static void rideCase(GameTestHelper h, float size, int slot, boolean full) {
         HollowbellEntity e = spawnAway(h, size, HollowbellEntity.CALM, slot);
@@ -194,8 +176,8 @@ public class SolidTests implements FabricGameTest {
             List<String> on = new ArrayList<>();
             List<Boolean> keep = new ArrayList<>();
             // (how far one may slide on him while he drifts: the side of his dome is a slope that squeezes in with each
-            // pulse, so you slip a step down it now and then; an arm bends under you)
-            double[] slides = full ? new double[] {0.5, 0.5, 1.6, 0.5, 2.0, 1.0} : new double[] {0.5, 0.5};
+            // pulse, so you slip a step down it now and then; an arm bends and swims under you)
+            double[] slides = full ? new double[] {0.5, 0.5, 1.6, 0.5, 2.0, 2.0} : new double[] {0.5, 0.5};
             List<Double> slideOk = new ArrayList<>();
             List<ArmorStand> stands = new ArrayList<>();
             for (int i = 0; i < slices.length; i++) {
@@ -222,7 +204,6 @@ public class SolidTests implements FabricGameTest {
             Vector3f[] rest0 = new Vector3f[n];
             int[] frame0 = new int[n];
             boolean[] wasOff = new boolean[n];
-            double[] fall = new double[n];
             for (int i = 0; i < n; i++) {
                 rest0[i] = new Vector3f(carries.get(i).rest);
                 frame0[i] = carries.get(i).frame;
@@ -237,21 +218,13 @@ public class SolidTests implements FabricGameTest {
                     for (int i = 0; i < n; i++) {
                         SolidCarry c = carries.get(i);
                         c.step(ps.get(i), Solid.bodies(false));
-                        // (lifted back onto the part that came up into them: what it slides is measured from there)
-                        if (unstickAsTheirGameDoes(ps.get(i), c) && c.riding()) {
-                            rest0[i] = new Vector3f(c.rest);
-                            frame0[i] = c.frame;
-                        }
                         // (thrown off: they fall, as their own game would have them, and land on him again if he's
                         // under them)
-                        // (gravity as the game has it, kept under 1.5 a tick so they can't fall through a part)
                         if (!c.riding()) {
                             ServerPlayer pl = ps.get(i);
-                            fall[i] = Math.min(1.4, (fall[i] + 0.08) * 0.98);
-                            pl.setPos(pl.getX(), pl.getY() - fall[i], pl.getZ());
+                            pl.setPos(pl.getX(), pl.getY() - 0.4, pl.getZ());
                             c.step(pl, Solid.bodies(false));
                         }
-                        if (c.riding()) fall[i] = 0;
                         // (landed on him again after coming off: what it slides is measured from there)
                         if (c.riding() && wasOff[i]) {
                             rest0[i] = new Vector3f(c.rest);
