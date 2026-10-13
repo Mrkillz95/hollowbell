@@ -13,11 +13,11 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 |---|---|
 | Giants Guide | 1.4.8 |
 | Pitchgut | 1.35.0 |
-| Furrowmaw | 1.16.0 |
+| Furrowmaw | 1.16.1 |
 | Fire & Ice Cerberus | 2.17.1 |
 | Hollowbell | 1.12.3 |
 | Lantern Willow | 1.10.1 |
-| Wreckback | 1.1.1 |
+| Wreckback | 1.1.2 |
 | The Swarmforge | 1.4.2 |
 
 ## Install
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.24.jar` in. Keep Fabric API in there.
+`giants-all-1.4.25.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -58,6 +58,15 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.25
+
+- Wreckback: far away he keeps his face, you can stand on even a tiny one, `/giants paint stop` stops his paint,
+  people he holds or carries into another world are let go there, and his replies match the other giants.
+- Furrowmaw: a smaller, tidier jar. Nothing changes in game.
+
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.1.2,
+Swarmforge 1.4.2.
 
 ## New in 1.4.24
 
