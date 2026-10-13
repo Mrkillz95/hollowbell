@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
@@ -1268,6 +1269,7 @@ public final class BellMoves {
 
     /** after the pose is worked out each tick: move the seats and trees to where the strands and arms are now */
     public void afterPose() {
+        letGoOfTaken();
         if (gentle && move == Moves.GRAB && grabSeat != null && grabbed != null && arg >= 0) {
             // carried up onto his crown: held round the middle by the end of the strand, wherever it is now
             grabSeat.follow(Seat.CARRY, arg);
@@ -1305,6 +1307,23 @@ public final class BellMoves {
             }
             if (in.tree != null) holds.placeTree(in.tree, at);
         }
+    }
+
+    /**
+     * Whatever another giant has taken off him, or that went to another world, is let go: pulling it back every tick
+     * would fight the other giant for it for ever.
+     */
+    private void letGoOfTaken() {
+        List<LivingEntity> taken = new ArrayList<>();
+        if (grabbed != null && takenAway(grabbed, grabSeat)) taken.add(grabbed);
+        if (wrapped != null && takenAway(wrapped, wrapSeat)) taken.add(wrapped);
+        for (Inside in : inside) if (in.e != null && takenAway(in.e, in.seat)) taken.add(in.e);
+        for (LivingEntity e : taken) holds.letGo(e);
+    }
+
+    private boolean takenAway(LivingEntity e, @Nullable Seat mine) {
+        if (mine == null || e.getVehicle() == mine) return false;
+        return e.level() != h.level() || Giants.onGiantSeat(e, HollowbellMod.MOD_ID);
     }
 
     // inside the dome

@@ -3,6 +3,7 @@ package net.jj.hollowbell.entity;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.net.BeingHimPayload;
 import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.world.NoWait;
@@ -18,7 +19,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -207,7 +207,7 @@ final class BellRiding {
                 double x = hb.getX() + dx * r, z = hb.getZ() + dz * r;
                 BlockPos col = BlockPos.containing(x, hb.getY(), z);
                 if (!NoWait.loaded(hb.level(), col)) continue;
-                int top = hb.level().getHeight(Heightmap.Types.MOTION_BLOCKING, col.getX(), col.getZ());
+                int top = NoWait.standY(hb.level(), col.getX(), col.getZ(), who.getBlockY());
                 for (int up = 0; up < 6; up++) {
                     AABB box = who.getDimensions(Pose.STANDING).makeBoundingBox(x, top + up, z);
                     if (hb.level().noCollision(who, box)
@@ -266,8 +266,11 @@ final class BellRiding {
             hb.riderSeat.discard();
             hb.riderSeat = null;
         }
-        // (taken off to another world, they stay where that put them)
-        if (who != null && who.isAlive() && who.level() == hb.level()) {
+        // (taken off to another world or by another giant, they stay where that put them)
+        if (who != null
+                && who.isAlive()
+                && who.level() == hb.level()
+                && !Giants.onGiantSeat(who, HollowbellMod.MOD_ID)) {
             // set down on the ground beside him, gently
             double a = hb.getRandom().nextDouble() * Math.PI * 2, r = hb.bellRadius() + 3;
             double x = hb.getX() + Math.cos(a) * r, z = hb.getZ() + Math.sin(a) * r;
@@ -291,7 +294,10 @@ final class BellRiding {
 
     void riderTick() {
         if (hb.rider == null) return;
-        if (!hb.rider.isAlive() || hb.rider.isRemoved() || hb.rider.level() != hb.level()) {
+        if (!hb.rider.isAlive()
+                || hb.rider.isRemoved()
+                || hb.rider.level() != hb.level()
+                || Giants.onGiantSeat(hb.rider, HollowbellMod.MOD_ID)) {
             dropRider();
             return;
         }
