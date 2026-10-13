@@ -8,10 +8,11 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * /hollowbell detail: the setting lives on the player's own computer, so the server only passes the word on.
- * ASK says which it is, ON and OFF switch it, FAR sets how far off he can be seen (arg, in blocks).
+ * ASK says which it is, ON and OFF switch it, FAR sets how far off he can be seen (arg, in blocks), AT how far off
+ * he starts to be drawn simpler (arg, in blocks).
  */
 public record DetailPayload(int what, int arg) implements CustomPacketPayload {
-    public static final int ASK = 0, ON = 1, OFF = 2, FAR = 3;
+    public static final int ASK = 0, ON = 1, OFF = 2, FAR = 3, AT = 4;
 
     public DetailPayload(int what) {
         this(what, 0);

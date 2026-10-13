@@ -68,6 +68,28 @@ public final class GiantsCommand {
         return false;
     }
 
+    /**
+     * The mod that registered /giants is an older one that doesn't list this one yet (a mixed install): then this one
+     * registers it again, after it, so /giants reaches him too.
+     */
+    public static boolean electedIsOld() {
+        for (String b : BRIDGES) {
+            if (find(b) == null) continue;
+            if (b.equals(MINE)) return false;
+            String pkg = b.substring(0, b.lastIndexOf('.'));
+            Class<?> theirs = find(pkg + ".command.GiantsCommand");
+            if (theirs == null) return false;
+            try {
+                String[] list = (String[]) theirs.getField("BRIDGES").get(null);
+                return !Arrays.asList(list).contains(MINE);
+            } catch (ReflectiveOperationException | ClassCastException e) {
+                // another mod's copy without a list of its own
+                return false;
+            }
+        }
+        return false;
+    }
+
     private static Class<?> find(String name) {
         try {
             return Class.forName(name, false, GiantsCommand.class.getClassLoader());
@@ -186,6 +208,18 @@ public final class GiantsCommand {
                 c,
                 "paint",
                 radius + " " + mode + " " + c.getSource().getPlayerOrException().getUUID() + " depth=" + depth);
+    }
+
+    /**
+     * /giants paint stop: every giant's mod drops the paint jobs it has running. Each answers a line only if it was
+     * painting (an older one that doesn't know the word says so, and that's left out).
+     */
+    private static int paintStop(CommandContext<CommandSourceStack> c) {
+        boolean any =
+                ask(c.getSource().getServer(), "paintstop", "").stream().anyMatch(s -> s.endsWith("stopped painting."));
+        String said = any ? "Stopped painting." : "Nothing is painting.";
+        c.getSource().sendSuccess(() -> Component.literal(said), true);
+        return any ? 1 : 0;
     }
 
     /** the depth a paint command was given */
@@ -360,6 +394,7 @@ public final class GiantsCommand {
                                                         + StringArgumentType.getString(c, "value"))))))
                 .then(Commands.literal("paint")
                         .requires(s -> s.hasPermission(2))
+                        .then(Commands.literal("stop").executes(GiantsCommand::paintStop))
                         .then(Commands.argument("which", StringArgumentType.word())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
                                 .executes(c -> paint(c, 64, "full", PAINT_DEPTH))

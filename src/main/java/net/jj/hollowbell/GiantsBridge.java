@@ -36,8 +36,8 @@ public final class GiantsBridge {
     /**
      * action: natural|limit|fight|meetings|meet (the other giant's
      * UUID)|away|volume|shake|bossbar|griefing|heavydelay|where|list|kill|remove|status|goto ("x z")|tp (player
-     * UUID)|paint ("radius full|biome playerUUID"). arg: the value as text, or "". Returns lines to show the caller
-     * (prefixed with the boss's name, plain words); empty list = nothing; null = unknown action.
+     * UUID)|paint ("radius full|biome playerUUID")|paintstop. arg: the value as text, or "". Returns lines to show the
+     * caller (prefixed with the boss's name, plain words); empty list = nothing; null = unknown action.
      */
     public static List<String> giants(MinecraftServer server, String action, String arg) {
         List<String> out = new ArrayList<>();
@@ -60,6 +60,7 @@ public final class GiantsBridge {
             case "goto" -> goTo(server, a, out);
             case "config" -> config(arg, out);
             case "paint" -> paint(server, a, arg, out);
+            case "paintstop" -> paintStop(out);
             case "tp" -> tp(server, arg, out);
             case "status" -> status(server, out);
             default -> {
@@ -200,6 +201,13 @@ public final class GiantsBridge {
         }
         out.add(WHO + "boss bars show "
                 + (V.bossBarRange > 0 ? V.bossBarRange + " blocks off." : "as far as his size says."));
+    }
+
+    /** /giants paint stop: his paint jobs, if any are running, are dropped */
+    private static void paintStop(List<String> out) {
+        if (!Painter.busy()) return;
+        Painter.forget();
+        out.add(WHO + "stopped painting.");
     }
 
     private static void heavyDelay(String a, List<String> out) {

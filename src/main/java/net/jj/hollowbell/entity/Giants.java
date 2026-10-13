@@ -35,6 +35,14 @@ public final class Giants {
             "fire_ice_cerberus:cerberus", "fire_ice_cerberus:cerberus_part",
             "hollowbell:hollowbell", "lanternwillow:lanternwillow",
             "wreckback:wreckback", "swarmforge:swarmforge");
+    private static final Set<String> MODS = Set.of(
+            "mountain_breathes",
+            "furrowmaw",
+            "fire_ice_cerberus",
+            "hollowbell",
+            "lanternwillow",
+            "wreckback",
+            "swarmforge");
 
     /** one of the giants, or a part of one */
     public static boolean isGiant(@Nullable Entity e) {
@@ -138,5 +146,13 @@ public final class Giants {
             e = e.getVehicle();
         }
         return false;
+    }
+
+    /** on a seat of another of the giants (riding it, held or swallowed by it): never this one's to take */
+    public static boolean onGiantSeat(@Nullable Entity e, String myModId) {
+        Entity v = e == null ? null : e.getVehicle();
+        if (v == null || v instanceof LivingEntity) return false;
+        String ns = BuiltInRegistries.ENTITY_TYPE.getKey(v.getType()).getNamespace();
+        return !ns.equals(myModId) && MODS.contains(ns);
     }
 }

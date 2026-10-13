@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.1
+# Hollowbell (Java mod), version 1.12.2
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -8,13 +8,15 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
-In 1.12.0 he got more weight: each swim beat shuts the bell fast and fills it slowly, his big blows hit the ground
-hard and spring back, the screen shakes once per blow, and his lights beat with him. This version only makes the jar
-smaller; nothing changes in game.
+1.12.2: far away he's drawn in the same smooth curves as up close, so his strands no longer break into loose
+pieces and he no longer turns into a solid ball. Press V with the book to send him after what you look at.
+Another giant can't fight him over someone he holds any more. In the Nether he sets you down on the floor, not the
+roof. New: `/giants paint stop`, `/hollowbell ground new <x> <z>`, `/hollowbell detail <distance>`, and `move` works
+like `do`.
 
 ## Install
 
-You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.1.jar` in your `mods` folder
+You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.2.jar` in your `mods` folder
 and take any older Hollowbell jar out. For a server, put the same jar in the server's `mods` folder too. Everyone who
 joins needs it as well.
 
@@ -45,6 +47,7 @@ his crown and blocks from his body.
 
 Craft the Hollowbell Codex from a pod, three bell glass and a book. Carry it and the nearest Hollowbell within 600
 blocks is yours: he leaves you alone, drifts where you point and grabs what you point at. Right-click to open it.
+With the book on you, press V (the middle mouse button while you ride him) to send him after what you're looking at.
 
 ## Main commands (cheats on)
 

@@ -165,7 +165,7 @@ public class SolidTests implements FabricGameTest {
                         slice(rig, "bell_6", 0),
                         slice(rig, "spot_0", 0),
                         BellPieces.get().first[rig.pods[11].bone()],
-                        slice(rig, rig.boneNames[rig.arms[2].bones()[0]], 0)
+                        slice(rig, rig.boneNames[rig.arms[2].bones()[0]], 2)
                     }
                     : new int[] {slice(rig, "crown", 0), slice(rig, "bell_2", 0)};
             // (a pod and an arm swing about on their own: they must carry you while he drifts, not through his big
@@ -176,8 +176,8 @@ public class SolidTests implements FabricGameTest {
             List<String> on = new ArrayList<>();
             List<Boolean> keep = new ArrayList<>();
             // (how far one may slide on him while he drifts: the side of his dome is a slope that squeezes in with each
-            // pulse, so you slip a step down it now and then; an arm bends under you)
-            double[] slides = full ? new double[] {0.5, 0.5, 1.6, 0.5, 2.0, 1.0} : new double[] {0.5, 0.5};
+            // pulse, so you slip a step down it now and then; an arm bends and swims under you)
+            double[] slides = full ? new double[] {0.5, 0.5, 1.6, 0.5, 2.0, 2.0} : new double[] {0.5, 0.5};
             List<Double> slideOk = new ArrayList<>();
             List<ArmorStand> stands = new ArrayList<>();
             for (int i = 0; i < slices.length; i++) {
@@ -276,11 +276,9 @@ public class SolidTests implements FabricGameTest {
                             "%s: off %d ticks, slid %.2f drifting and %.2f in all; ",
                             on.get(i), offTicks[i], walkDrift[i], drift[i]));
                 for (int i = 0; i < n; i++) {
-                    // (a pod swings about and throws you now and then: you land on it again; an arm's swim beat can
-                    // throw you off it for good)
-                    boolean arm = on.get(i).equals("the root of an arm");
+                    // (a pod and an arm swing about and throw you now and then: you land on them again)
                     h.assertTrue(
-                            arm || offTicks[i] <= (keep.get(i) ? total / 50 : total / 10),
+                            offTicks[i] <= (keep.get(i) ? total / 50 : total / 10),
                             "the player on " + on.get(i) + " came off him for " + offTicks[i] + " ticks (" + sb + ")");
                     // (an arm bends under you: a little give there)
                     h.assertTrue(

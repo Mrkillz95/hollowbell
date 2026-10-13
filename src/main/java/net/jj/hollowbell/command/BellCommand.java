@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -68,6 +69,13 @@ public final class BellCommand {
         return 1;
     }
 
+    /** /hollowbell detail <distance>: how far off (at full size) he starts to be drawn simpler, in their own game */
+    private static int detailAt(CommandContext<CommandSourceStack> c, int blocks) throws CommandSyntaxException {
+        ServerPlayer p = c.getSource().getPlayerOrException();
+        ServerPlayNetworking.send(p, new DetailPayload(DetailPayload.AT, blocks));
+        return 1;
+    }
+
     /** /hollowbell detail far: how far off he can be seen coming */
     private static int farSay(CommandContext<CommandSourceStack> c) {
         int b = BellConfig.V.farSightBlocks;
@@ -102,7 +110,8 @@ public final class BellCommand {
         d.register(Commands.literal("hollowbell")
                 .then(detailCommand())
                 .then(summonCommand())
-                .then(doCommand())
+                .then(doCommand("do"))
+                .then(doCommand("move"))
                 .then(listCommand())
                 .then(whereCommand())
                 .then(awayCommand())
@@ -150,6 +159,8 @@ public final class BellCommand {
                 .executes(c -> detail(c, DetailPayload.ASK))
                 .then(Commands.literal("on").executes(c -> detail(c, DetailPayload.ON)))
                 .then(Commands.literal("off").executes(c -> detail(c, DetailPayload.OFF)))
+                .then(Commands.argument("distance", IntegerArgumentType.integer(20, 4000))
+                        .executes(c -> detailAt(c, IntegerArgumentType.getInteger(c, "distance"))))
                 .then(Commands.literal("far")
                         .executes(BellCommand::farSay)
                         .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 4096))
@@ -171,8 +182,9 @@ public final class BellCommand {
                                 .executes(c -> summon(c, mood(c), FloatArgumentType.getFloat(c, "size")))));
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> doCommand() {
-        return Commands.literal("do")
+    /** "move" is the name the other giants use for it */
+    private static LiteralArgumentBuilder<CommandSourceStack> doCommand(String name) {
+        return Commands.literal(name)
                 .requires(OP)
                 .then(Commands.argument("move", StringArgumentType.word())
                         .suggests((c, b) -> SharedSuggestionProvider.suggest(
@@ -237,7 +249,8 @@ public final class BellCommand {
                                     h.setVariant(mood(c));
                                     if (h.isGuardian()) h.setHome(h.position());
                                 },
-                                "mood")));
+                                "mood",
+                                StringArgumentType.getString(c, "mood").toLowerCase(Locale.ROOT))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> sizeCommand() {
@@ -246,7 +259,11 @@ public final class BellCommand {
                 .then(Commands.argument(
                                 "size",
                                 FloatArgumentType.floatArg(HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE))
-                        .executes(c -> near(c, h -> h.setBellScale(FloatArgumentType.getFloat(c, "size")), "size")));
+                        .executes(c -> near(
+                                c,
+                                h -> h.setBellScale(FloatArgumentType.getFloat(c, "size")),
+                                "size",
+                                String.format("%.2f", FloatArgumentType.getFloat(c, "size")))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> hurtCommand() {
@@ -327,26 +344,35 @@ public final class BellCommand {
                 .requires(OP)
                 .then(Commands.literal("freeze")
                         .then(Commands.argument("value", BoolArgumentType.bool())
-                                .executes(c -> near(c, h -> h.setFrozen(BoolArgumentType.getBool(c, "value")), "set")))
-                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setFrozen(true), "set")))
-                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setFrozen(false), "set"))))
+                                .executes(c -> near(
+                                        c,
+                                        h -> h.setFrozen(BoolArgumentType.getBool(c, "value")),
+                                        BoolArgumentType.getBool(c, "value") ? "freeze_on" : "freeze_off")))
+                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setFrozen(true), "freeze_on")))
+                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setFrozen(false), "freeze_off"))))
                 .then(Commands.literal("speed")
                         .then(Commands.argument("times", FloatArgumentType.floatArg(0.1f, 5f))
-                                .executes(c ->
-                                        near(c, h -> h.setSpeedMul(FloatArgumentType.getFloat(c, "times")), "set"))))
+                                .executes(c -> near(
+                                        c,
+                                        h -> h.setSpeedMul(FloatArgumentType.getFloat(c, "times")),
+                                        "speed",
+                                        FloatArgumentType.getFloat(c, "times")))))
                 .then(Commands.literal("invulnerable")
-                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setInvulnerable(true), "set")))
-                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setInvulnerable(false), "set"))))
+                        .then(Commands.literal("on")
+                                .executes(c -> near(c, h -> h.setInvulnerable(true), "invulnerable_on")))
+                        .then(Commands.literal("off")
+                                .executes(c -> near(c, h -> h.setInvulnerable(false), "invulnerable_off"))))
                 .then(Commands.literal("glow")
-                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setGlowingTag(true), "set")))
-                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setGlowingTag(false), "set"))))
+                        .then(Commands.literal("on").executes(c -> near(c, h -> h.setGlowingTag(true), "glow_on")))
+                        .then(Commands.literal("off").executes(c -> near(c, h -> h.setGlowingTag(false), "glow_off"))))
                 .then(Commands.literal("name")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(c -> near(
                                         c,
                                         h -> h.setCustomName(
                                                 Component.literal(StringArgumentType.getString(c, "name"))),
-                                        "set"))))
+                                        "name",
+                                        StringArgumentType.getString(c, "name")))))
                 .then(Commands.literal("target")
                         .then(Commands.argument("target", EntityArgument.entity())
                                 .executes(c -> {
@@ -357,7 +383,7 @@ public final class BellCommand {
                                                 .sendFailure(Component.translatable("command.hollowbell.not_alive"));
                                         return 0;
                                     }
-                                    return near(c, h -> h.sendAfter(le), "set");
+                                    return near(c, h -> h.sendAfter(le), "target", le.getDisplayName());
                                 }))
                         // what the player giving it is looking at, by the book's rules
                         .then(Commands.literal("look").executes(c -> {
@@ -367,11 +393,15 @@ public final class BellCommand {
                                     true);
                             return said.startsWith("look_going") ? 1 : 0;
                         }))
-                        .then(Commands.literal("none").executes(c -> near(c, HollowbellEntity::clearHitList, "set"))))
+                        .then(Commands.literal("none")
+                                .executes(c -> near(c, HollowbellEntity::clearHitList, "target_none"))))
                 .then(Commands.literal("wind")
                         .then(Commands.argument("wind", FloatArgumentType.floatArg(0f, 1f))
-                                .executes(c ->
-                                        near(c, h -> h.mood().setWind(FloatArgumentType.getFloat(c, "wind")), "set"))))
+                                .executes(c -> near(
+                                        c,
+                                        h -> h.mood().setWind(FloatArgumentType.getFloat(c, "wind")),
+                                        "wind",
+                                        Math.round(100 * FloatArgumentType.getFloat(c, "wind"))))))
                 .then(Commands.literal("grudge")
                         .then(Commands.argument("player", EntityArgument.player())
                                 .then(Commands.argument("grudge", FloatArgumentType.floatArg(0f, 1f))
@@ -383,19 +413,20 @@ public final class BellCommand {
                                                             .setSour(
                                                                     pl.getUUID(),
                                                                     FloatArgumentType.getFloat(c, "grudge")),
-                                                    "set");
+                                                    "grudge",
+                                                    pl.getDisplayName());
                                         }))))
                 .then(Commands.literal("home")
-                        .executes(c -> near(c, h -> h.setHome(c.getSource().getPosition()), "set")))
+                        .executes(c -> near(c, h -> h.setHome(c.getSource().getPosition()), "home")))
                 .then(Commands.literal("cooldowns")
                         .then(Commands.literal("clear")
-                                .executes(c -> near(c, h -> h.moves().clearCooldowns(), "set"))));
+                                .executes(c -> near(c, h -> h.moves().clearCooldowns(), "cooldowns"))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> podsCommand() {
         return Commands.literal("pods")
                 .requires(OP)
-                .then(Commands.literal("mend").executes(c -> near(c, HollowbellEntity::mendPods, "set")))
+                .then(Commands.literal("mend").executes(c -> near(c, HollowbellEntity::mendPods, "mend")))
                 .then(Commands.literal("pop")
                         .then(Commands.argument("how many", IntegerArgumentType.integer(0, 64))
                                 .executes(c -> near(
@@ -427,7 +458,7 @@ public final class BellCommand {
         return Commands.literal("tp")
                 .requires(OP)
                 .executes(c -> tp(c, 0))
-                .then(Commands.argument("which", IntegerArgumentType.integer(1, 999))
+                .then(Commands.argument("which", IntegerArgumentType.integer(1, 100))
                         .executes(c -> tp(c, IntegerArgumentType.getInteger(c, "which"))));
     }
 
@@ -435,7 +466,11 @@ public final class BellCommand {
         return Commands.literal("ground")
                 .requires(OP)
                 .executes(BellCommand::groundSay)
-                .then(Commands.literal("new").executes(BellCommand::groundNew))
+                .then(Commands.literal("new")
+                        .executes(c -> groundNew(c, false))
+                        .then(Commands.argument("x", IntegerArgumentType.integer(-29_000_000, 29_000_000))
+                                .then(Commands.argument("z", IntegerArgumentType.integer(-29_000_000, 29_000_000))
+                                        .executes(c -> groundNew(c, true)))))
                 // check: goes over his whole ground on the real world and says what came out wrong (a map in
                 // the world folder)
                 .then(Commands.literal("check")
@@ -447,11 +482,25 @@ public final class BellCommand {
     private static LiteralArgumentBuilder<CommandSourceStack> stayCommand() {
         return Commands.literal("stay")
                 .requires(OP)
-                .executes(c -> near(c, h -> h.setStay(!h.staying()), "stay"))
-                .then(Commands.literal("on").executes(c -> near(c, h -> h.setStay(true), "stay")))
-                .then(Commands.literal("off").executes(c -> near(c, h -> h.setStay(false), "stay")))
+                .executes(c -> stay(c, null))
+                .then(Commands.literal("on").executes(c -> stay(c, true)))
+                .then(Commands.literal("off").executes(c -> stay(c, false)))
                 .then(Commands.argument("value", BoolArgumentType.bool())
-                        .executes(c -> near(c, h -> h.setStay(BoolArgumentType.getBool(c, "value")), "stay")));
+                        .executes(c -> stay(c, BoolArgumentType.getBool(c, "value"))));
+    }
+
+    /** stay [on|off]: no word turns it over */
+    private static int stay(CommandContext<CommandSourceStack> c, @Nullable Boolean on) {
+        HollowbellEntity h = nearest(c.getSource());
+        if (h == null) return none(c);
+        boolean now = on == null ? !h.staying() : on;
+        h.setStay(now);
+        c.getSource()
+                .sendSuccess(
+                        () -> Component.translatable(
+                                now ? "command.hollowbell.stay_on" : "command.hollowbell.stay_off"),
+                        false);
+        return 1;
     }
 
     /** sleep: he drifts down and sleeps, or wakes up (a toggle) */
@@ -459,8 +508,8 @@ public final class BellCommand {
         return Commands.literal("sleep")
                 .requires(OP)
                 .executes(BellCommand::sleepToggle)
-                .then(Commands.literal("on").executes(c -> near(c, HollowbellEntity::goToSleep, "sleep")))
-                .then(Commands.literal("off").executes(c -> near(c, HollowbellEntity::wakeUp, "sleep")));
+                .then(Commands.literal("on").executes(c -> near(c, HollowbellEntity::goToSleep, "asleep")))
+                .then(Commands.literal("off").executes(c -> near(c, HollowbellEntity::wakeUp, "awake")));
     }
 
     /** the safe list of whoever runs it: players, single creatures, or whole kinds */
@@ -674,7 +723,7 @@ public final class BellCommand {
         return Commands.literal("kill").requires(OP).executes(c -> {
             int n = FarOrders.killAll(c.getSource().getServer());
             if (n == 0) return none(c);
-            c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_kill"), true);
+            c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_kill", n), true);
             return n;
         });
     }
@@ -686,17 +735,15 @@ public final class BellCommand {
             int out = Away.get(server).count() + FarOrders.removeLying(server);
             for (Away.Rec r : Away.get(server).all()) w.removed(server.overworld(), r.id);
             Away.get(server).forgetAll();
-            if (allOf(c.getSource()).isEmpty() && out > 0) {
-                c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove"), true);
-                return out;
+            List<HollowbellEntity> here = allOf(c.getSource());
+            if (here.isEmpty() && out == 0) return none(c);
+            for (HollowbellEntity h : here) {
+                h.discard();
+                w.removed(server.overworld(), h.getUUID());
             }
-            return all(
-                    c,
-                    h -> {
-                        h.discard();
-                        w.removed(server.overworld(), h.getUUID());
-                    },
-                    "remove");
+            int n = out + here.size();
+            c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_remove", n), true);
+            return n;
         });
     }
 
@@ -847,7 +894,7 @@ public final class BellCommand {
             Map.entry("bookCosts", "The book tiring him"),
             Map.entry("windSeconds", "Seconds to get his wind back"),
             Map.entry("grudgeRate", "How fast he holds a grudge"),
-            Map.entry("offscreenTravel", "Travelling while nobody is near"),
+            Map.entry("offscreenTravel", "Stepping out of the world when nobody is near"),
             Map.entry("awayBlocks", "How far off nobody counts as near"));
 
     private static String plain(String key) {
@@ -995,7 +1042,11 @@ public final class BellCommand {
             return 0;
         }
         String now = OpsCommand.get(key);
-        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.set", key, now), true);
+        Component said = now.equals("true") || now.equals("false")
+                ? Component.translatable(
+                        now.equals("true") ? "command.hollowbell.set_on" : "command.hollowbell.set_off", plain(key))
+                : Component.translatable("command.hollowbell.set", plain(key), now);
+        c.getSource().sendSuccess(() -> said, true);
         return 1;
     }
 
@@ -1104,7 +1155,12 @@ public final class BellCommand {
             c.getSource().sendFailure(Component.translatable("command.hollowbell.cannot", name));
             return 0;
         }
-        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.doing", name), false);
+        c.getSource()
+                .sendSuccess(
+                        () -> Component.translatable(
+                                "command.hollowbell.doing",
+                                Component.translatable("move.hollowbell." + Moves.NAMES[which])),
+                        false);
         return 1;
     }
 
@@ -1236,11 +1292,12 @@ public final class BellCommand {
         void on(HollowbellEntity h) throws CommandSyntaxException;
     }
 
-    private static int near(CommandContext<CommandSourceStack> c, Act a, String what) throws CommandSyntaxException {
+    private static int near(CommandContext<CommandSourceStack> c, Act a, String what, Object... args)
+            throws CommandSyntaxException {
         HollowbellEntity h = nearest(c.getSource());
         if (h == null) return none(c);
         a.on(h);
-        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_" + what), false);
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.done_" + what, args), false);
         return 1;
     }
 
@@ -1257,7 +1314,11 @@ public final class BellCommand {
         BellConfig.save();
         c.getSource()
                 .sendSuccess(
-                        () -> Component.translatable("command.hollowbell.set", plain(what), String.valueOf(v)), true);
+                        () -> v instanceof Boolean on
+                                ? Component.translatable(
+                                        on ? "command.hollowbell.set_on" : "command.hollowbell.set_off", plain(what))
+                                : Component.translatable("command.hollowbell.set", plain(what), String.valueOf(v)),
+                        true);
         return 1;
     }
 
@@ -1304,16 +1365,21 @@ public final class BellCommand {
         return 1;
     }
 
-    /** /hollowbell ground new: a fresh ground in land the world hasn't made yet (the old one stays as it is) */
-    private static int groundNew(CommandContext<CommandSourceStack> c) {
+    /**
+     * /hollowbell ground new [x z]: a fresh ground, in land the world hasn't made yet or at x z (the old one stays as
+     * it is)
+     */
+    private static int groundNew(CommandContext<CommandSourceStack> c, boolean there) {
         ServerLevel over = c.getSource().getServer().overworld();
         WorldOne w = WorldOne.get(c.getSource().getServer());
-        BlockPos at = w.newGround(over);
+        BlockPos at = there
+                ? w.newGround(over, IntegerArgumentType.getInteger(c, "x"), IntegerArgumentType.getInteger(c, "z"))
+                : w.newGround(over);
         boolean alive = w.aliveNow();
         c.getSource()
                 .sendSuccess(
                         () -> Component.translatable(
-                                alive ? "command.hollowbell.ground_new" : "command.hollowbell.ground_new_next",
+                                "command.hollowbell.ground_new" + (there ? "_at" : "") + (alive ? "" : "_next"),
                                 at.getX(),
                                 at.getZ()),
                         true);
