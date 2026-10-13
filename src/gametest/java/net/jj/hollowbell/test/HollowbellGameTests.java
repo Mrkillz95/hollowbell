@@ -65,7 +65,9 @@ public class HollowbellGameTests implements FabricGameTest {
                 h.getLevel().setChunkForced(cx, cz, true);
                 h.getLevel().getChunk(cx, cz);
             }
-        runsEntities(h, x, z, rc - 2);
+        // (all of it: what a test puts in or on him far out from his middle must be in land that runs, or it stands
+        // still, and the server doesn't even find it to move it out of him)
+        runsEntities(h, x, z, rc);
         int y = h.getLevel().getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(h.getLevel());
         e.moveTo(x + 0.5, y, z + 0.5, 0f, 0f);
