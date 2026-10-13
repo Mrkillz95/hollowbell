@@ -1,6 +1,7 @@
 package net.jj.hollowbell.entity;
 
 import net.jj.hollowbell.ModEntities;
+import net.jj.hollowbell.world.NoWait;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -15,7 +16,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -96,8 +96,8 @@ public class Seat extends Entity {
         for (Entity e : getPassengers()) {
             e.fallDistance = 0;
             if (e instanceof LivingEntity le) {
-                double over =
-                        e.getY() - level().getHeight(Heightmap.Types.MOTION_BLOCKING, e.getBlockX(), e.getBlockZ());
+                int ground = NoWait.standY(level(), e.getBlockX(), e.getBlockZ(), e.getBlockY());
+                double over = ground == NoWait.NOT_YET ? 300 : e.getY() - ground;
                 int ticks = Mth.clamp((int) Math.ceil(over / 0.45) + 60, 100, 2400);
                 le.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, ticks, 0, false, false));
             }

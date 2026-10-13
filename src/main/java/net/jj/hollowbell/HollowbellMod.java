@@ -2,6 +2,7 @@ package net.jj.hollowbell;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -47,6 +48,7 @@ import net.jj.hollowbell.world.LootBeams;
 import net.jj.hollowbell.world.NoWait;
 import net.jj.hollowbell.world.Painter;
 import net.jj.hollowbell.world.WorldOne;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -152,6 +154,15 @@ public class HollowbellMod implements ModInitializer {
             BellCommand.register(d);
             // one of the giant mods registers /giants for everyone (see GiantsCommand)
             if (GiantsCommand.elected()) GiantsCommand.register(d);
+        });
+        var late = ResourceLocation.fromNamespaceAndPath(MOD_ID, "after_giants");
+        CommandRegistrationCallback.EVENT.addPhaseOrdering(Event.DEFAULT_PHASE, late);
+        CommandRegistrationCallback.EVENT.register(late, (d, access, env) -> {
+            if (GiantsCommand.electedIsOld()) {
+                LOG.info("The /giants command here comes from a mod that doesn't know the Hollowbell yet: this newer"
+                        + " copy answers it.");
+                GiantsCommand.register(d);
+            }
         });
         ServerTickEvents.END_SERVER_TICK.register(CodexOrders::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(Away::tick);

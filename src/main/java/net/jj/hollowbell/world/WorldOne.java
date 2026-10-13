@@ -242,6 +242,20 @@ public class WorldOne extends SavedData {
         findSpot(level);
         keepOffOldGround();
         claimFresh(level);
+        return movedHome(level, keepX, keepZ);
+    }
+
+    /** /hollowbell ground new x z: his ground there, wherever that is (land made there before stays as it is) */
+    public BlockPos newGround(ServerLevel level, int atX, int atZ) {
+        int keepX = x, keepZ = z;
+        x = atX;
+        z = atZ;
+        claimHome(level, atX, atZ);
+        return movedHome(level, keepX, keepZ);
+    }
+
+    /** the next one comes down on the new ground, unless one is out already */
+    private BlockPos movedHome(ServerLevel level, int keepX, int keepZ) {
         BlockPos at = new BlockPos(homeX, 0, homeZ);
         if (alive) {
             x = keepX;

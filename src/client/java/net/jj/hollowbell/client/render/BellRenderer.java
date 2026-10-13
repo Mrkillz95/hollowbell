@@ -189,8 +189,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             default -> BellMeshes.FULL;
         };
         // up close his arms and strands are drawn in slices laid along a smooth curve (see BellPieces), so they bend
-        // with no gaps; further off a piece at a time
-        boolean sliced = lod == BellMeshes.FULL;
+        // with no gaps; very far off a piece at a time
+        boolean sliced = lod != BellMeshes.TINY;
         Matrix4f[] units = draw;
         if (sliced) {
             units = kept[2];
@@ -395,14 +395,14 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 int b = gl.sliced ? pieces.bone[u] : u;
                 if (!gl.shown[b]) continue;
                 boolean redLoops = gl.red && rig.kind[b] == BellRig.Kind.ARM;
-                BellMeshes.Mesh m = meshes.mesh(
-                        gl.lod, redLoops && gl.lod == BellMeshes.FULL ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
+                BellMeshes.Mesh m =
+                        meshes.mesh(gl.lod, redLoops && gl.sliced ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
                 if (m == null) continue;
                 float[] bb = gl.sliced ? pieces.bounds[u] : model.bounds[b];
                 if (bb == null) continue;
                 boneWorld.set(gl.entity).mul(gl.units[u]);
                 boneWorld.transformPosition(c.set((bb[0] + bb[3]) / 2, (bb[1] + bb[4]) / 2, (bb[2] + bb[5]) / 2));
-                order.add(new float[] {c.lengthSquared(), u, redLoops && gl.lod == BellMeshes.FULL ? 1 : 0});
+                order.add(new float[] {c.lengthSquared(), u, redLoops && gl.sliced ? 1 : 0});
             }
             order.sort((a, b2) -> Float.compare(b2[0], a[0]));
             float unit = Math.max(1e-3f, gl.entity.getScale(new Vector3f()).x);

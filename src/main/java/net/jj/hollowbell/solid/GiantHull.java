@@ -1,5 +1,6 @@
 package net.jj.hollowbell.solid;
 
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -286,12 +287,34 @@ public final class GiantHull {
 
     /** the least gap across between a's and b's columns at the same height (below 0: they overlap) */
     public static double gap(double[] a, double[] b) {
+        int n = b.length / STRIDE;
+        if (n == 0) return Double.MAX_VALUE;
+        // b's columns sorted by x, so each of a's only looks at those near enough in x to beat the best so far
+        int[] order = new int[n];
+        double rb = 0;
+        for (int k = 0; k < n; k++) {
+            order[k] = k * STRIDE;
+            rb = Math.max(rb, b[k * STRIDE + 2]);
+        }
+        IntArrays.quickSort(order, (p, q) -> Double.compare(b[p], b[q]));
         double g = Double.MAX_VALUE;
-        for (int i = 0; i < a.length; i += STRIDE)
-            for (int j = 0; j < b.length; j += STRIDE) {
+        for (int i = 0; i < a.length; i += STRIDE) {
+            double reach = a[i + 2] + rb;
+            double from = a[i] - (g + reach);
+            int lo = 0, hi = n;
+            while (lo < hi) {
+                int mid = (lo + hi) >>> 1;
+                if (b[order[mid]] < from) lo = mid + 1;
+                else hi = mid;
+            }
+            for (int k = lo; k < n; k++) {
+                int j = order[k];
+                if (b[j] - a[i] > g + reach) break;
                 if (a[i + 4] <= b[j + 3] || b[j + 4] <= a[i + 3]) continue;
+                if (Math.abs(a[i + 1] - b[j + 1]) - a[i + 2] - b[j + 2] >= g) continue;
                 g = Math.min(g, Math.hypot(a[i] - b[j], a[i + 1] - b[j + 1]) - a[i + 2] - b[j + 2]);
             }
+        }
         return g;
     }
 
