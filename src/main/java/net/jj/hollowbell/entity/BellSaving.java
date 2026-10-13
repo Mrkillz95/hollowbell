@@ -101,7 +101,7 @@ final class BellSaving {
     }
 
     void readSave(CompoundTag tag) {
-        if (tag.contains("BellScale"))
+        if (tag.contains("BellScale") && Float.isFinite(tag.getFloat("BellScale")))
             hb.getEntityData()
                     .set(
                             HollowbellEntity.DATA_SCALE,
