@@ -16,7 +16,8 @@
     "TrackingMixin",
     "UnloadSpinMixin",
     "SolidCollideMixin",
-    "SolidFloatingMixin"
+    "SolidFloatingMixin",
+    "SolidMoveMixin"
   ],
   "injectors": {
     "defaultRequire": 1

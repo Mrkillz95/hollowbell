@@ -546,6 +546,25 @@ public final class Solid {
     public record Anchor(int frame, Vector3f rest) {}
 
     /**
+     * The furthest a spot of him can move in a tick and still carry what stands on it (blocks). Further than that is
+     * a teleport, not a move. A big one crashing down moves his far end over ten blocks a tick.
+     */
+    public static double maxCarry(SolidBody b) {
+        return 8 + 16 * b.solidScale();
+    }
+
+    /** the furthest e may move in a tick riding on any of them, or 0 if it isn't on one */
+    public static double carryAllowance(Entity e) {
+        List<SolidBody> bs = e.level().isClientSide ? CLIENT : SERVER;
+        double most = 0;
+        for (SolidBody b : bs) {
+            if (!live(b, e) || !b.solidBox().inflate(0, 8, 0).intersects(e.getBoundingBox())) continue;
+            if (anchorUnder(b, e, 8.0, 3.0) != null) most = Math.max(most, maxCarry(b));
+        }
+        return most;
+    }
+
+    /**
      * The spot of him e stands on: the top nearest its feet among the columns under it, from `over` blocks under its
      * feet up to `under` over them; e's own position as a point fixed to that frame (or null).
      */
@@ -636,7 +655,8 @@ public final class Solid {
             SolidCache fc = frames(b);
             if (cd.frame >= fc.toWorld.length || !fc.on[cd.frame]) continue;
             Vec3 d = toWorld(fc, cd.frame, cd.rest).subtract(cd.was);
-            if (d.lengthSqr() > 64) continue;
+            double most = maxCarry(b);
+            if (d.lengthSqr() > most * most) continue;
             Vec3 to = carriedTo(b, new Vec3(r.getX() + d.x, r.getY() + d.y, r.getZ() + d.z));
             // never into the ground or a wall: where he goes under, it's left standing on top
             AABB moved = r.getBoundingBox().move(to.x - r.getX(), to.y - r.getY(), to.z - r.getZ());
