@@ -602,15 +602,16 @@ public class SolidTests implements FabricGameTest {
             int[] inside = {0, 0};
             for (int k = 1; k <= 60; k++)
                 after(h, k, () -> {
-                    Vec3 p = e.podWorld(11);
-                    Vec3 d = new Vec3(p.x - cow2.getX(), 0, p.z - cow2.getZ());
-                    if (d.lengthSqr() > 0.01)
-                        cow2.move(MoverType.SELF, d.normalize().scale(0.3));
-                    // (the pod swings: it may come into the cow now and then, and shoves it out at once)
+                    // (the pod swings: it may come into the cow now and then, and shoves it out at once. Looked at
+                    // before this tick's step at the pod, so it's what his tick left, not the step itself)
                     if (Solid.inside(e, cow2, 0.08)) {
                         inside[1]++;
                         inside[0] = Math.max(inside[0], inside[1]);
                     } else inside[1] = 0;
+                    Vec3 p = e.podWorld(11);
+                    Vec3 d = new Vec3(p.x - cow2.getX(), 0, p.z - cow2.getZ());
+                    if (d.lengthSqr() > 0.01)
+                        cow2.move(MoverType.SELF, d.normalize().scale(0.3));
                 });
             after(h, 62, () -> {
                 h.assertTrue(
