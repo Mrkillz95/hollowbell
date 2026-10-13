@@ -14,8 +14,8 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giants Guide | 1.4.8 |
 | Pitchgut | 1.34.2 |
 | Furrowmaw | 1.15.0 |
-| Fire & Ice Cerberus | 2.16.0 |
-| Hollowbell | 1.12.0 |
+| Fire & Ice Cerberus | 2.17.0 |
+| Hollowbell | 1.12.1 |
 | Lantern Willow | 1.9.1 |
 | Wreckback | 1.1.1 |
 | The Swarmforge | 1.4.1 |
@@ -27,13 +27,10 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.16.jar` in. Keep Fabric API in there.
+`giants-all-1.4.17.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
-
-To get new versions on their own, run `watch-all.sh` in the Hollowbell folder. It waits for a new all-in-one jar
-and installs it.
 
 ## The Giants Guide
 
@@ -61,6 +58,16 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.17
+
+- `/giants paint stop` stops every giant's paint. It works from the server console too.
+- Cerberus: "Put me down" sets you on clear ground beside him, no more see-through square on your screen after
+  riding him, and `/cerberus detail <distance>`.
+- Hollowbell: a smaller jar, nothing changes in game.
+
+Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.9.1, Wreckback 1.1.1,
+Swarmforge 1.4.1.
 
 ## New in 1.4.16
 
