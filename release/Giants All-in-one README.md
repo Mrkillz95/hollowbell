@@ -14,7 +14,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giants Guide | 1.4.8 |
 | Pitchgut | 1.35.2 |
 | Furrowmaw | 1.17.0 |
-| Fire & Ice Cerberus | 2.17.1 |
+| Fire & Ice Cerberus | 2.17.2 |
 | Hollowbell | 1.12.5 |
 | Lantern Willow | 1.10.3 |
 | Wreckback | 1.2.4 |
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.37.jar` in. Keep Fabric API in there.
+`giants-all-1.4.38.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -58,6 +58,16 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.38
+
+- Cerberus: getting off is smooth, he lifts you off his back and sets you down on clear ground beside him. People on
+  his heads stay on through a pounce, his land loads much faster, his heads stop at another giant's side, and only one
+  player at a time can have his book.
+- Every giant now has the one-book rule: `/<giant> book who` says who has it, `/<giant> book free` (ops) lets it go.
+
+Inside: Pitchgut 1.35.2, Furrowmaw 1.17.0, Cerberus 2.17.2, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.4,
+Swarmforge 1.4.4.
 
 ## New in 1.4.37
 
