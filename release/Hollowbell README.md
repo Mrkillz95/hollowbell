@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.4
+# Hollowbell (Java mod), version 1.12.5
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -8,12 +8,12 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
-1.12.4: his land loads much faster. Going to his ground no longer makes the server fall behind while it's made, and
-it looks exactly the same.
+1.12.5: only one player can have the Hollowbell book at a time, even while they're offline. Any other copy goes
+quiet. `/hollowbell book who` says who has it, and an op can free it with `/hollowbell book free`.
 
 ## Install
 
-You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.4.jar` in your `mods` folder
+You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.5.jar` in your `mods` folder
 and take any older Hollowbell jar out. For a server, put the same jar in the server's `mods` folder too. Everyone who
 joins needs it as well.
 
