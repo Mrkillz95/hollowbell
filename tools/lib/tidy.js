@@ -190,4 +190,4 @@ function armStrays(vox, bones, palette) {
   return gone;
 }
 
-module.exports = { thinSpeckles, dropFloating, eggBitsAway, armStrays, key, index };
+module.exports = { thinSpeckles, dropFloating, eggBitsAway, armStrays, key, index, N26 };
