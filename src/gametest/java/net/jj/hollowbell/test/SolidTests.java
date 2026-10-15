@@ -16,6 +16,7 @@ import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.solid.Solid;
+import net.jj.hollowbell.solid.SolidBody;
 import net.jj.hollowbell.solid.SolidCarry;
 import net.jj.hollowbell.solid.SolidShape;
 import net.minecraft.gametest.framework.GameTest;
@@ -143,6 +144,23 @@ public class SolidTests implements FabricGameTest {
 
     // riding along
 
+    /**
+     * What a player's own game does after carrying them (SolidClient.tick): a part that came up into them lifts them
+     * back onto it at once, and they keep riding.
+     */
+    static boolean unstickAsTheirGameDoes(ServerPlayer p, SolidCarry c) {
+        boolean onHim = c.riding() && c.air == 0;
+        for (SolidBody b : Solid.bodies(false)) {
+            if (b.solidSelf().level() != p.level() || !b.solidReady() || b.solidIgnores(p)) continue;
+            if (Solid.unstick(b, p, 0.08, onHim && c.on == b)) {
+                c.clear();
+                c.step(p, Solid.bodies(false));
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** players (carried as their own game would) and stands (carried by the server) on his parts while he drifts */
     static void rideCase(GameTestHelper h, float size, int slot, boolean full) {
         HollowbellEntity e = spawnAway(h, size, HollowbellEntity.CALM, slot);
@@ -219,6 +237,11 @@ public class SolidTests implements FabricGameTest {
                     for (int i = 0; i < n; i++) {
                         SolidCarry c = carries.get(i);
                         c.step(ps.get(i), Solid.bodies(false));
+                        // (lifted back onto the part that came up into them: what it slides is measured from there)
+                        if (unstickAsTheirGameDoes(ps.get(i), c) && c.riding()) {
+                            rest0[i] = new Vector3f(c.rest);
+                            frame0[i] = c.frame;
+                        }
                         // (thrown off: they fall, as their own game would have them, and land on him again if he's
                         // under them)
                         if (!c.riding()) {
