@@ -18,7 +18,8 @@ function art(rows, pal) { const px = []; rows.forEach((r, y) => [...r].forEach((
 const P = {
   B: [229, 225, 207], c: [205, 206, 200], O: [82, 162, 132], o: [60, 120, 98], W: [108, 153, 110], L: [112, 185, 25], l: [160, 220, 90],
   Y: [248, 197, 39], y: [255, 230, 140], G: [62, 68, 71], g: [142, 142, 134], K: [20, 21, 25], T: [21, 137, 145], t: [90, 190, 200],
-  V: [229, 244, 228], D: [40, 60, 50], n: [130, 90, 60], w: [233, 236, 236],
+  V: [229, 244, 228], D: [40, 60, 50], n: [130, 90, 60], w: [233, 236, 236], d: [14, 92, 98],
+  h: [190, 200, 196],
 };
 const items = {
   stinger: [
@@ -72,23 +73,24 @@ const items = {
     '......LYYL......',
     '.......YY.......',
     '................'],
+  // his own cover: the dome with its glowing spot, and strands hanging under it
   hollowbell_codex: [
     '................',
     '..oOOOOOOOOOOo..',
-    '..OTTTTTTTTTTOB.',
-    '..OTtTTTTTTTTOB.',
-    '..OTTTTYYTTTTOB.',
-    '..OTTTYyyYTTTOB.',
-    '..OTTTYyyYTTTOB.',
-    '..OTTTTYYTTTTOB.',
-    '..OTTLTTTTLTTOB.',
-    '..OTLTTTTTTLTOB.',
-    '..OTTTTTTTTTTOB.',
-    '..OTTTTTTTTTTOB.',
-    '..OTTTTTTTTTTOB.',
+    '..OddddddddddOB.',
+    '..OdddLLLLdddOB.',
+    '..OddLllllLddOB.',
+    '..OdLllVyllLdOB.',
+    '..OdLllyVllLdOB.',
+    '..OdLLLLLLLLdOB.',
+    '..OddwdwdwdwdOB.',
+    '..OddwddwwwddOB.',
+    '..OdwdddwdwddOB.',
+    '..OdhddhddhhdOB.',
+    '..OddddhdddhdOB.',
     '..oOOOOOOOOOOoB.',
     '...BBBBBBBBBBBB.',
-    '................'],
+    '................',],
   // the bell glass armor icons and worn layers are drawn by tools/armor_textures.py
 };
 for (const [n, rows] of Object.entries(items)) png(path.join(ROOT, 'item', n + '.png'), 16, 16, art(rows, P));
