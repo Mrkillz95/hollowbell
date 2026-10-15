@@ -147,9 +147,11 @@ final class BellHolds {
                 return;
             }
         }
-        int slot = freeSlot();
+        if (mv.t == into0) mv.grabPod = mv.grabbed instanceof Player ? freePod(mv.intoFrom) : -1;
+        int slot = mv.grabPod >= 0 ? -1 : freeSlot();
         float k = Mth.clamp((mv.t - into0) / (float) Moves.INTO, 0f, 1f);
-        Vec3 to = mv.slotWorld(slot, mv.grabbed);
+        // a player is shut in one of his pods; anything else goes in the dome
+        Vec3 to = mv.grabPod >= 0 ? h.seatSpot(Seat.POD, mv.grabPod, mv.grabbed) : mv.slotWorld(slot, mv.grabbed);
         Vec3 at = mv.intoFrom.lerp(to, k * k * (3 - 2 * k));
         if (mv.grabSeat != null) {
             mv.grabSeat.follow(Seat.FREE, 0);
@@ -167,9 +169,12 @@ final class BellHolds {
             in.seat = mv.grabSeat;
             in.tree = mv.grabbedTree;
             in.slot = slot;
+            in.pod = mv.grabPod;
             mv.inside.add(in);
             if (mv.grabbed instanceof ServerPlayer sp) {
-                sp.displayClientMessage(Component.translatable("message.hollowbell.inside"), false);
+                sp.displayClientMessage(
+                        Component.translatable(in.pod >= 0 ? "message.hollowbell.in_pod" : "message.hollowbell.inside"),
+                        false);
                 Adv.grant(sp, "inside");
             }
             mv.grabbed = null;
@@ -659,6 +664,23 @@ final class BellHolds {
         st.discard();
     }
 
+    /** the whole pod nearest this spot that a player fits in and nobody is shut in yet, or -1 */
+    int freePod(Vec3 near) {
+        boolean[] used = new boolean[rig.pods.length];
+        for (BellMoves.Inside in : mv.inside) if (in.pod >= 0) used[in.pod] = true;
+        int best = -1;
+        double bestD = Double.MAX_VALUE;
+        for (int i = 0; i < rig.pods.length; i++) {
+            if (used[i] || h.isPodPopped(i) || rig.pods[i].radius() * mv.s() < 1.6f) continue;
+            double d = h.podWorld(i).distanceToSqr(near);
+            if (d < bestD) {
+                bestD = d;
+                best = i;
+            }
+        }
+        return best;
+    }
+
     int freeSlot() {
         boolean[] used = new boolean[BellMoves.SLOTS];
         for (BellMoves.Inside in : mv.inside) if (in.slot >= 0 && in.slot < BellMoves.SLOTS) used[in.slot] = true;
@@ -677,6 +699,15 @@ final class BellHolds {
             if (in.e != null) {
                 if (!in.e.isAlive() || in.e.isRemoved() || in.e.level() != h.level()) {
                     if (in.seat != null) in.seat.discard();
+                    it.remove();
+                    continue;
+                }
+                // the pod they're shut in has popped: they drop free
+                if (in.pod >= 0 && h.isPodPopped(in.pod)) {
+                    dropSeat(in.seat);
+                    h.floatDown(in.e);
+                    if (in.e instanceof ServerPlayer sp)
+                        sp.displayClientMessage(Component.translatable("message.hollowbell.spat_out"), true);
                     it.remove();
                     continue;
                 }
