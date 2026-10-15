@@ -117,7 +117,10 @@ public class GrabTests implements FabricGameTest {
         h.runAfterDelay(at + 3, () -> {
             h.assertTrue(!e.moves().isInside(pl[0]) && !pl[0].isPassenger(), "still held once the pod popped");
             h.assertTrue(pl[0].hasEffect(MobEffects.SLOW_FALLING), "dropped with no slow fall");
-            h.assertTrue(!Solid.inside(e, pl[0], 0.3), "dropped inside his body");
+            h.assertTrue(
+                    !Solid.inside(e, pl[0], 0.3),
+                    "dropped inside his body at " + pl[0].position() + " "
+                            + SolidTests.runs(e, pl[0].getX(), pl[0].getZ(), pl[0].getY() - 1, pl[0].getY() + 3));
             drop(pl[0]);
             release(h, e);
             h.succeed();

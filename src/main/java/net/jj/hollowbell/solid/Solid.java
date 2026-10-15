@@ -35,7 +35,7 @@ import org.joml.Vector3f;
  *
  * A player is only ever moved by their own game: the server adds no parts of him to what a player bumps into (the
  * two would disagree and snap you back), doesn't call standing on him flying, and only moves a player out of him if
- * they have been well inside him for half a second (their game should have done it).
+ * they have been in him for 8 ticks running (their game should have done it).
  */
 public final class Solid {
     private Solid() {}
@@ -614,7 +614,7 @@ public final class Solid {
 
     /**
      * End of his server tick: mobs and dropped things on him move and turn with him (players are carried by their
-     * own game); whatever is inside him is moved out at once (a player only after half a second well inside); soft
+     * own game); whatever is inside him is moved out at once (a player only after 8 ticks in him); soft
      * parts nudge things aside.
      */
     public static void serverTick(SolidBody b) {
@@ -660,15 +660,26 @@ public final class Solid {
                 // their own game moves them out at once; this is for when it didn't. (Measured on their whole box, as
                 // their game does: a box shrunk to a sliver looks at other columns than the ones they're in, and by
                 // his hollow dome it read nothing now and then, which started the count again every few ticks.)
-                double dp = depthIn(b, e.getBoundingBox(), 0.08, null, true);
-                if (dp > 0.15) {
+                // (anything of him in them for 8 ticks running counts)
+                int[] in = {-1};
+                double dp = depthIn(b, e.getBoundingBox(), 0.08, in, true);
+                if (dp > 0.02 && in[0] >= 0) {
+                    // the server sees them where their game had them a tick ago: carried on by the move of the part
+                    // they stand on, they're on top of it, not in it
+                    SolidCache fc = frames(b);
+                    Vec3 mv = motion(fc, in[0], toRest(fc, in[0], e.getX(), e.getY(), e.getZ(), new Vector3f()));
+                    dp = Math.min(dp, depthIn(b, e.getBoundingBox().move(mv), 0.08, null, true));
+                }
+                // (feet a little sunk into a top they stand on is standing on him: their game lifts them)
+                if (dp > 0.02 && dp < 0.6 * Math.min(1f, b.solidScale()) && anchorUnder(b, e, 0.9, 1.5) != null) dp = 0;
+                if (dp > 0.02) {
                     int n = c.stuck.merge(e.getId(), 1, Integer::sum);
                     if (n >= 8) {
                         c.stuck.remove(e.getId());
                         // (one standing on him is kept on him, as their own game would have done)
                         if (unstick(b, e, 0.08, anchorUnder(b, e, 1.5, 1.5) != null)) unstuckServer++;
                     }
-                } else if (dp <= 0.02) c.stuck.remove(e.getId());
+                } else c.stuck.remove(e.getId());
                 continue;
             }
             // (one look up the columns under it does for all three: is it in him, in his soft parts, on him)

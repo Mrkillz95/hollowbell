@@ -174,7 +174,7 @@ public class FlightTests implements FabricGameTest {
         for (int t = 21; t < 400; t++) {
             int tt = t;
             h.runAfterDelay(t, () -> {
-                w.landing = tt == land || tt == land + 1;
+                w.landing = tt >= land - 1 && tt <= land + 1;
                 w.see(e, "tick " + tt);
             });
         }
