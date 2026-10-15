@@ -661,9 +661,9 @@ public final class Solid {
                 // their game does: a box shrunk to a sliver looks at other columns than the ones they're in, and by
                 // his hollow dome it read nothing now and then, which started the count again every few ticks.)
                 double dp = depthIn(b, e.getBoundingBox(), 0.08, null, true);
-                if (dp > 0.3) {
+                if (dp > 0.15) {
                     int n = c.stuck.merge(e.getId(), 1, Integer::sum);
-                    if (n >= 10) {
+                    if (n >= 8) {
                         c.stuck.remove(e.getId());
                         // (one standing on him is kept on him, as their own game would have done)
                         if (unstick(b, e, 0.08, anchorUnder(b, e, 1.5, 1.5) != null)) unstuckServer++;

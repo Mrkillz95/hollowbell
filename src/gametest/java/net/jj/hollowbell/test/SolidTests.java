@@ -492,6 +492,77 @@ public class SolidTests implements FabricGameTest {
         });
     }
 
+    /**
+     * Players put deep in his body (his bell, an arm, a pod, his crown), while he hangs still and again in the middle of
+     * a sweep: within ten ticks each is out of him, unhurt. (Test players have no game of their own, so this is the
+     * server's push out; a player's own game does it at once.)
+     */
+    static void pushedOut(GameTestHelper h, float size, int slot) {
+        HollowbellEntity e = spawnAway(h, size, HollowbellEntity.CALM, slot);
+        after(h, 60, () -> {
+            e.setStay(true);
+            putIn(h, e, "still");
+        });
+        after(h, 90, () -> {
+            h.assertTrue(e.forceMove(Moves.SWEEP), "no sweep");
+        });
+        after(h, 110, () -> putIn(h, e, "in a sweep"));
+        after(h, 140, () -> {
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    private static void putIn(GameTestHelper h, HollowbellEntity e, String when) {
+        BellRig rig = e.rig;
+        BellPieces pc = BellPieces.get();
+        // (not a pod: the strands it hangs among sting, which is his doing, not the push)
+        int[] tries = {slice(rig, "bell_2", 0), pc.first[rig.arms[1].bones()[0]] + 3, slice(rig, "crown", 0)};
+        List<ServerPlayer> ps = new ArrayList<>();
+        for (int sl : tries) {
+            Vec3 at = deepIn(e, sl, 0.2);
+            // (a tiny one's parts are thinner than a player: sunk into the top of one instead)
+            if (at == null && e.topOfSlice(sl) != null) at = e.topOfSlice(sl).subtract(0, 0.5, 0);
+            if (at == null) continue;
+            ServerPlayer p = player(h, at.subtract(0, 0.4, 0));
+            if (Solid.inside(e, p, 0.08)) ps.add(p);
+            else HollowbellGameTests.drop(p);
+        }
+        h.assertTrue(!ps.isEmpty(), "nowhere deep enough in him to put anyone (" + when + ")");
+        float[] hp = new float[ps.size()];
+        for (int i = 0; i < ps.size(); i++) hp[i] = ps.get(i).getHealth();
+        // (moved out within ten ticks; a moving part may come back onto them after, and they're moved out again)
+        boolean[] out = new boolean[ps.size()];
+        for (int k = 1; k <= 10; k++)
+            after(h, k, () -> {
+                for (int i = 0; i < ps.size(); i++) out[i] |= !Solid.inside(e, ps.get(i), 0.3);
+            });
+        after(h, 11, () -> {
+            for (int i = 0; i < ps.size(); i++) {
+                ServerPlayer p = ps.get(i);
+                h.assertTrue(
+                        out[i], "a player put in him " + when + " wasn't moved out within 10 ticks: " + p.position());
+                h.assertTrue(p.getHealth() >= hp[i], "and was hurt: " + p.getHealth() + " of " + hp[i]);
+                HollowbellGameTests.drop(p);
+            }
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "push_out_tiny")
+    public void aPlayerInATinyOneIsPushedOut(GameTestHelper h) {
+        pushedOut(h, 0.1f, 520);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "push_out_full")
+    public void aPlayerInAFullSizeOneIsPushedOut(GameTestHelper h) {
+        pushedOut(h, 1f, 523);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "push_out_big")
+    public void aPlayerInABigOneIsPushedOut(GameTestHelper h) {
+        pushedOut(h, 2f, 526);
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "solid_hollow")
     public void theInsideOfHisDomeIsAPlaceYouCanBe(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, SZ, HollowbellEntity.CALM, 504);
