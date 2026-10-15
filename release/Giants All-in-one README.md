@@ -12,12 +12,12 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giant | Version |
 |---|---|
 | Giants Guide | 1.4.8 |
-| Pitchgut | 1.35.3 |
-| Furrowmaw | 1.17.1 |
+| Pitchgut | 1.35.4 |
+| Furrowmaw | 1.17.2 |
 | Fire & Ice Cerberus | 2.17.3 |
 | Hollowbell | 1.12.5 |
-| Lantern Willow | 1.10.4 |
-| Wreckback | 1.2.6 |
+| Lantern Willow | 1.10.5 |
+| Wreckback | 1.2.7 |
 | The Swarmforge | 1.4.4 |
 
 ## Install
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.41.jar` in. Keep Fabric API in there.
+`giants-all-1.4.42.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -58,6 +58,16 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.42
+
+- Furrowmaw: far away he stays in one piece, even where the land is only partly loaded.
+- Pitchgut: a low rumble and a small shake as he walks, and a big one far away no longer stands frozen.
+- Pitchgut, Furrowmaw, Lantern Willow and Wreckback: anyone stuck inside him is moved out to clear ground straight
+  away, and standing on him while he moves no longer makes you slide.
+
+Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Cerberus 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.5, Wreckback 1.2.7,
+Swarmforge 1.4.4.
 
 ## New in 1.4.41
 
