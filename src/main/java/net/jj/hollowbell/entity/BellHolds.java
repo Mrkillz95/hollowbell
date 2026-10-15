@@ -13,6 +13,7 @@ import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.CarryPath;
+import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.world.NoWait;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -702,9 +703,10 @@ final class BellHolds {
                     it.remove();
                     continue;
                 }
-                // the pod they're shut in has popped: they drop free
+                // the pod they're shut in has popped: they drop free, out of him
                 if (in.pod >= 0 && h.isPodPopped(in.pod)) {
                     dropSeat(in.seat);
+                    outOfHim(in.e, in.pod);
                     h.floatDown(in.e);
                     if (in.e instanceof ServerPlayer sp)
                         sp.displayClientMessage(Component.translatable("message.hollowbell.spat_out"), true);
@@ -738,11 +740,24 @@ final class BellHolds {
         }
     }
 
+    /**
+     * let go of from a pod: set under it, clear of it as it bursts (it swells before it shrinks away), and clear of
+     * the rest of him
+     */
+    private void outOfHim(LivingEntity e, int pod) {
+        double r = rig.pods[pod].radius() * mv.s() * 1.4;
+        Vec3 under = h.podWorld(pod).subtract(0, r + e.getBbHeight(), 0);
+        Vec3 to = Solid.freeSpot(h, e, under, Vec3.ZERO);
+        e.teleportTo(to.x, to.y, to.z);
+        e.fallDistance = 0;
+    }
+
     public void dropEveryoneInside() {
         for (Iterator<BellMoves.Inside> it = mv.inside.iterator(); it.hasNext(); ) {
             BellMoves.Inside in = it.next();
             if (in.e instanceof Player p) {
                 dropSeat(in.seat);
+                if (in.pod >= 0) outOfHim(p, in.pod);
                 h.floatDown(p);
                 if (p instanceof ServerPlayer sp)
                     sp.displayClientMessage(Component.translatable("message.hollowbell.spat_out"), true);

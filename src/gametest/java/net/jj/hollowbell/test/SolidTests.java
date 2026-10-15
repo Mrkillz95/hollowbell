@@ -21,6 +21,7 @@ import net.jj.hollowbell.solid.SolidShape;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -529,8 +530,6 @@ public class SolidTests implements FabricGameTest {
             else HollowbellGameTests.drop(p);
         }
         h.assertTrue(!ps.isEmpty(), "nowhere deep enough in him to put anyone (" + when + ")");
-        float[] hp = new float[ps.size()];
-        for (int i = 0; i < ps.size(); i++) hp[i] = ps.get(i).getHealth();
         // (moved out within ten ticks; a moving part may come back onto them after, and they're moved out again)
         boolean[] out = new boolean[ps.size()];
         for (int k = 1; k <= 10; k++)
@@ -542,7 +541,11 @@ public class SolidTests implements FabricGameTest {
                 ServerPlayer p = ps.get(i);
                 h.assertTrue(
                         out[i], "a player put in him " + when + " wasn't moved out within 10 ticks: " + p.position());
-                h.assertTrue(p.getHealth() >= hp[i], "and was hurt: " + p.getHealth() + " of " + hp[i]);
+                // (his own moves may hit them; being moved out never hurts)
+                var last = p.getLastDamageSource();
+                h.assertTrue(
+                        last == null || !(last.is(DamageTypes.IN_WALL) || last.is(DamageTypes.FALL)),
+                        "and was hurt by it: " + last);
                 HollowbellGameTests.drop(p);
             }
         });
