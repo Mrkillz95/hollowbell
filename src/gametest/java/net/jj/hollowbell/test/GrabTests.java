@@ -3,11 +3,14 @@ package net.jj.hollowbell.test;
 import static net.jj.hollowbell.test.HollowbellGameTests.*;
 
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
+import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.rig.BellModel;
+import net.jj.hollowbell.solid.Solid;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
@@ -58,9 +61,8 @@ public class GrabTests implements FabricGameTest {
         });
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "inside")
-    public void pulledIntoTheDomeAndSpatOut(GameTestHelper h) {
-        HollowbellEntity e = spawnAway(h, 0.25f, HollowbellEntity.HUNTER, 31);
+    /** a player pulled up is shut in one of his whole pods, and rides in it as it swings */
+    private static ServerPlayer[] pulledIntoAPod(GameTestHelper h, HollowbellEntity e) {
         ServerPlayer[] pl = new ServerPlayer[1];
         h.runAfterDelay(20, () -> {
             e.setStay(true);
@@ -68,22 +70,83 @@ public class GrabTests implements FabricGameTest {
             pl[0].setInvulnerable(true);
             h.assertTrue(e.forceMove(Moves.GRAB, pl[0]), "no grab");
         });
-        h.runAfterDelay(20 + Moves.length(Moves.GRAB) + 10, () -> {
-            h.assertTrue(e.moves().isInside(pl[0]), "the player didn't end up inside the dome");
-            // inside the dome: under the bell, above the rim
-            double y = pl[0].getY() - e.getY();
-            h.assertTrue(y > 100 * 0.25f && y < e.rig.crownY * 0.25f, "inside, but at height " + y);
-            h.assertTrue(e.horiz(pl[0].position()) < 70 * 0.25f, "inside, but out at " + e.horiz(pl[0].position()));
-            // a glowing spot is in reach from in there
-            h.assertTrue(
-                    e.raycast(pl[0].getEyePosition(), new Vec3(0, 1, 0), 6) != null,
-                    "nothing of him in reach over your head");
-            // hit him hard enough from inside and he lets you go
+        return pl;
+    }
+
+    private static int inPodCheck(GameTestHelper h, HollowbellEntity e, ServerPlayer p) {
+        h.assertTrue(e.moves().isInside(p), "the player wasn't taken in");
+        int pod = e.moves().podOf(p);
+        h.assertTrue(pod >= 0, "the player was taken into the dome, not a pod");
+        h.assertTrue(!e.isPodPopped(pod), "shut in a popped pod");
+        double off = p.position().add(0, p.getBbHeight() * 0.5, 0).distanceTo(e.podWorld(pod));
+        h.assertTrue(off < 1.5, "not in the middle of the pod: " + off + " blocks off");
+        return pod;
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "inside")
+    public void pulledIntoAPodAndLetGo(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.25f, HollowbellEntity.HUNTER, 31);
+        ServerPlayer[] pl = pulledIntoAPod(h, e);
+        int at = 20 + Moves.length(Moves.GRAB) + 10;
+        h.runAfterDelay(at, () -> inPodCheck(h, e, pl[0]));
+        // held: still in it a while later, wherever the pod has swung to
+        h.runAfterDelay(at + 40, () -> {
+            inPodCheck(h, e, pl[0]);
+            // hit him hard enough from in there and he lets you go
             for (int i = 0; i < 30 && e.moves().isInside(pl[0]); i++)
                 e.applyDamage(e.damageSources().playerAttack(pl[0]), 20f, e.rig.spots[0].bone(), true);
-            h.assertTrue(!e.moves().isInside(pl[0]), "hurting him from inside didn't get you out");
+            h.assertTrue(
+                    !e.moves().isInside(pl[0]) && !pl[0].isPassenger(), "hurting him from in there didn't let you go");
             drop(pl[0]);
             release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "inside_pop")
+    public void poppingThePodLetsYouDropFree(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.25f, HollowbellEntity.HUNTER, 34);
+        ServerPlayer[] pl = pulledIntoAPod(h, e);
+        int at = 20 + Moves.length(Moves.GRAB) + 10;
+        h.runAfterDelay(at, () -> {
+            int pod = inPodCheck(h, e, pl[0]);
+            for (int i = 0; i < 40 && !e.isPodPopped(pod); i++)
+                e.applyDamage(e.damageSources().generic(), 200f, e.rig.pods[pod].bone(), false);
+            h.assertTrue(e.isPodPopped(pod), "the pod wouldn't pop");
+        });
+        h.runAfterDelay(at + 3, () -> {
+            h.assertTrue(!e.moves().isInside(pl[0]) && !pl[0].isPassenger(), "still held once the pod popped");
+            h.assertTrue(pl[0].hasEffect(MobEffects.SLOW_FALLING), "dropped with no slow fall");
+            h.assertTrue(!Solid.inside(e, pl[0], 0.3), "dropped inside his body");
+            drop(pl[0]);
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "inside_saved")
+    public void heldInAPodThroughASave(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.25f, HollowbellEntity.HUNTER, 37);
+        ServerPlayer[] pl = pulledIntoAPod(h, e);
+        int at = 20 + Moves.length(Moves.GRAB) + 10;
+        HollowbellEntity[] b = new HollowbellEntity[1];
+        h.runAfterDelay(at, () -> {
+            inPodCheck(h, e, pl[0]);
+            // he goes out with his land and comes back: the one he held is let go, safely, never left in him
+            CompoundTag tag = new CompoundTag();
+            e.saveWithoutId(tag);
+            e.discard();
+            b[0] = ModEntities.HOLLOWBELL.create(h.getLevel());
+            b[0].load(tag);
+            h.getLevel().addFreshEntity(b[0]);
+        });
+        h.runAfterDelay(at + 10, () -> {
+            h.assertTrue(!pl[0].isPassenger(), "still riding a seat of the one that went");
+            h.assertTrue(!b[0].moves().isInside(pl[0]), "the reloaded one has the player inside");
+            h.assertTrue(pl[0].hasEffect(MobEffects.SLOW_FALLING), "let go with no slow fall");
+            h.assertTrue(!Solid.inside(b[0], pl[0], 0.3), "left inside his body");
+            drop(pl[0]);
+            release(h, b[0]);
             h.succeed();
         });
     }

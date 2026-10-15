@@ -31,8 +31,11 @@ public class Seat extends Entity {
 
     private static final EntityDataAccessor<Integer> DATA_INDEX =
             SynchedEntityData.defineId(Seat.class, EntityDataSerializers.INT);
-    /** CARRY: being carried up onto the crown, held round the middle by the end of a strand */
-    public static final int FREE = 0, STRAND_TIP = 1, ARM_TIP = 2, INSIDE = 3, CROWN = 4, CARRY = 5;
+    /**
+     * CARRY: being carried up onto the crown, held round the middle by the end of a strand; POD: shut in one of his
+     * pods, in its middle
+     */
+    public static final int FREE = 0, STRAND_TIP = 1, ARM_TIP = 2, INSIDE = 3, CROWN = 4, CARRY = 5, POD = 6;
 
     private int empty;
     private int ownerless;

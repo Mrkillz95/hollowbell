@@ -69,6 +69,8 @@ final class BellRiding {
             case Seat.ARM_TIP ->
                 index >= 0 && index < hb.rig.arms.length ? hb.armTipWorld(index).add(0, -hgt * 0.5, 0) : hb.position();
             case Seat.INSIDE -> slotWorld(Mth.clamp(index, 0, HollowbellEntity.SLOTS - 1));
+            case Seat.POD ->
+                index >= 0 && index < hb.rig.pods.length ? hb.podWorld(index).add(0, -hgt * 0.5, 0) : hb.position();
             case Seat.CROWN -> hb.crownWorld();
             // carried up onto the crown: their middle is right at the strand's end, held round the waist
             case Seat.CARRY ->

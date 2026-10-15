@@ -80,6 +80,9 @@ public final class BellMoves {
     @Nullable
     Seat grabSeat;
 
+    /** the pod a grabbed player is being taken up into (-1: the dome) */
+    int grabPod = -1;
+
     float lift;
     float strandHits;
     boolean gentle;
@@ -168,6 +171,8 @@ public final class BellMoves {
         Seat seat;
 
         int slot, age;
+        /** the pod a player is shut in (-1: in the dome) */
+        int pod = -1;
     }
 
     /** a tree he pulled up, as block displays hanging together */
@@ -368,6 +373,12 @@ public final class BellMoves {
     public boolean isInside(Entity e) {
         for (Inside i : inside) if (i.e == e) return true;
         return false;
+    }
+
+    /** the pod this one is shut in, or -1 */
+    public int podOf(Entity e) {
+        for (Inside i : inside) if (i.e == e) return i.pod;
+        return -1;
     }
 
     public boolean usesSeat(Seat s) {
@@ -1298,9 +1309,10 @@ public final class BellMoves {
             wrapped.fallDistance = 0;
         }
         for (Inside in : inside) {
-            Vec3 at = h.seatSpot(Seat.INSIDE, in.slot, in.e);
+            int mode = in.pod >= 0 ? Seat.POD : Seat.INSIDE, index = in.pod >= 0 ? in.pod : in.slot;
+            Vec3 at = h.seatSpot(mode, index, in.e);
             if (in.seat != null && in.e != null) {
-                in.seat.follow(Seat.INSIDE, in.slot);
+                in.seat.follow(mode, index);
                 in.seat.moveTo(at.x, at.y, at.z);
                 if (in.e.getVehicle() != in.seat) in.e.startRiding(in.seat, true);
                 in.e.fallDistance = 0;
