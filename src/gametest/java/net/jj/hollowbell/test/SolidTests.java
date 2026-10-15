@@ -223,6 +223,7 @@ public class SolidTests implements FabricGameTest {
             Vector3f[] rest0 = new Vector3f[n];
             int[] frame0 = new int[n];
             boolean[] wasOff = new boolean[n];
+            double[] fall = new double[n];
             for (int i = 0; i < n; i++) {
                 rest0[i] = new Vector3f(carries.get(i).rest);
                 frame0[i] = carries.get(i).frame;
@@ -244,11 +245,14 @@ public class SolidTests implements FabricGameTest {
                         }
                         // (thrown off: they fall, as their own game would have them, and land on him again if he's
                         // under them)
+                        // (gravity as the game has it, kept under 1.5 a tick so they can't fall through a part)
                         if (!c.riding()) {
                             ServerPlayer pl = ps.get(i);
-                            pl.setPos(pl.getX(), pl.getY() - 0.4, pl.getZ());
+                            fall[i] = Math.min(1.4, (fall[i] + 0.08) * 0.98);
+                            pl.setPos(pl.getX(), pl.getY() - fall[i], pl.getZ());
                             c.step(pl, Solid.bodies(false));
                         }
+                        if (c.riding()) fall[i] = 0;
                         // (landed on him again after coming off: what it slides is measured from there)
                         if (c.riding() && wasOff[i]) {
                             rest0[i] = new Vector3f(c.rest);
