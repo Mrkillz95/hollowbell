@@ -1,5 +1,7 @@
 package net.jj.hollowbell.client;
 
+import java.util.Map;
+import java.util.WeakHashMap;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -99,6 +101,7 @@ public class HollowbellClient implements ClientModInitializer {
             BeingHim.tick(c);
             BellSounds.tick(c);
             ArmourPowerKey.tick(c);
+            beats(c);
             LookKey.tick(c);
             FightMusic.tick(c);
             SolidClient.tick(c);
@@ -179,5 +182,19 @@ public class HollowbellClient implements ClientModInitializer {
                                 .player
                                 .displayClientMessage(Component.translatable(key, BellConfig.V.simpleFarAwayAt), false);
                 }));
+    }
+
+    private static final Map<HollowbellEntity, Long> LAST_BEAT = new WeakHashMap<>();
+
+    /** each new swim beat of one near you gives the camera a slight nudge */
+    private static void beats(Minecraft mc) {
+        if (mc.level == null || mc.player == null || mc.isPaused()) return;
+        for (var e : mc.level.entitiesForRendering()) {
+            if (!(e instanceof HollowbellEntity h)) continue;
+            long at = h.pulseStartedAt();
+            Long seen = LAST_BEAT.put(h, at);
+            if (seen != null && seen != at && mc.level.getGameTime() - at < 10)
+                Shake.beat(Math.sqrt(h.distanceToSqr(mc.player)), h.bellScale());
+        }
     }
 }
