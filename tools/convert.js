@@ -17,6 +17,7 @@ const { buildRig } = require('./lib/rig');
 const { isGlass } = require('./lib/names');
 const { thinSpeckles, dropFloating, eggBitsAway, armStrays } = require('./lib/tidy');
 const { rebuildStrands, offTheArms } = require('./lib/strands');
+const { armEnds } = require('./lib/tips');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'src', 'main', 'resources', 'hollowbell');
@@ -54,6 +55,11 @@ function main() {
   const st = strands;
   console.log(`strands drawn again, all alike: ${st.before} blocks before, ${st.after} now (${st.joined} tops joined,`
     + ` ${st.stalks} pod stalks, ${st.moved} points moved round arms and pods, ${st.shortened} cut short)`);
+  const ends = armEnds(vox, R.rig, palette, pal);
+  console.log('arm ends made again, all alike: '
+    + ends.map(e => `arm ${e.arm} r ${e.r} long ${e.long} (${e.cut} off, ${e.grown} on)`).join(', ')
+    + `; ${ends.loose} loose blocks taken off`);
+  for (const e of ends) console.log(`  arm ${e.arm}: point ${e.point}, old end ${e.oldTip}, farthest ${e.end} at ${e.sEnd}`);
   console.log(`tidied: ${R.stats.eggsTakenOff} egg clumps and ${R.stats.floatingTakenOff + floating} floating blocks taken off, ${thinned.arm} arm speckles and ${thinned.strand} strand dots thinned out`);
   const occupied = new Map();
   const key = (x, y, z) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
