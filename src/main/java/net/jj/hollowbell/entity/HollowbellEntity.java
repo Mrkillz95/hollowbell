@@ -1227,6 +1227,11 @@ public class HollowbellEntity extends Monster implements SolidBody {
     }
 
     /** a pulse of the bell: it squeezes in, and a strong one is the pulse wave */
+    /** when his last swim beat began (game time) */
+    public long pulseStartedAt() {
+        return entityData.get(DATA_PULSE_START);
+    }
+
     public void pulse(float power) {
         entityData.set(DATA_PULSE_START, level().getGameTime());
         entityData.set(DATA_PULSE_POWER, power);

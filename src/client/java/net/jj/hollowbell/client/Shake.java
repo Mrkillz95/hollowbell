@@ -20,6 +20,15 @@ public final class Shake {
         amount = Math.min(1.4f, amount + (0.12f + 0.95f * scale) * near * near);
     }
 
+    /** a swim beat close by: the softest of nudges, gone a little way off, and next to nothing from a small one */
+    public static void beat(double dist, float scale) {
+        if (!BellConfig.V.screenShake) return;
+        double reach = 40 + 120 * scale;
+        if (dist > reach) return;
+        float near = (float) (1.0 - dist / reach);
+        amount = Math.max(amount, 0.22f * Math.min(1f, scale) * near * near);
+    }
+
     /** he has come down: one long shove instead of a footfall */
     public static void crash(double dist, float scale) {
         if (!BellConfig.V.screenShake) return;
