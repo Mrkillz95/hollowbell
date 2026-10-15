@@ -4,6 +4,7 @@
   "package": "net.jj.hollowbell.test.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ArmsOnlyMixin",
     "ChunkCacheAccess"
   ],
   "injectors": {

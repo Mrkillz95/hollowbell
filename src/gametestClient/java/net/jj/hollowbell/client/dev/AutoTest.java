@@ -18,10 +18,12 @@ import net.jj.hollowbell.client.render.BellMeshes;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.fx.BigFx;
+import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.solid.SolidCarry;
 import net.jj.hollowbell.solid.client.SolidClient;
+import net.jj.hollowbell.test.DevView;
 import net.jj.hollowbell.world.BellGen;
 import net.jj.hollowbell.world.HomeGround;
 import net.jj.hollowbell.world.WorldOne;
@@ -272,18 +274,10 @@ public final class AutoTest implements ClientModInitializer {
                 logRide(mc);
                 continue;
             }
-            // landtime r: from now, how long until the land r chunks round the player is all loaded, to the log
-            if (s.startsWith("landtime ")) {
-                landR = Integer.parseInt(s.substring(9).trim());
-                landFrom = System.nanoTime();
-                return;
-            }
-            // landhash r name: a hash of every block of each chunk r chunks round the player, to the log
-            if (s.startsWith("landhash ")) {
-                String[] a = s.substring(9).trim().split("\\s+");
-                landHash(mc, Integer.parseInt(a[0]), a.length > 1 ? a[1] : "");
-                continue;
-            }
+            // the arms-only view and the land timings (see measure)
+            int m = measure(mc, s);
+            if (m == 1) continue;
+            if (m == 2) return;
             if (s.equals("quit")) {
                 HollowbellMod.LOG.info("autotest done");
                 mc.stop();
@@ -477,6 +471,11 @@ public final class AutoTest implements ClientModInitializer {
             carryView(srv, args.substring(6).trim().split("\\s+"));
             return;
         }
+        // arm <a> side|across|end <blocks>: close on the end of one of his arms, as it is posed now
+        if (args.startsWith("arm ")) {
+            armView(srv, args.substring(4).trim().split("\\s+"));
+            return;
+        }
         String[] a = args.split("\\s+");
         float[] v = new float[6];
         for (int i = 0; i < 6; i++) v[i] = Float.parseFloat(a[i]);
@@ -497,6 +496,54 @@ public final class AutoTest implements ClientModInitializer {
             float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
             player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);
             // the camera hangs where it's put, even when it stops following him
+            player.setNoGravity(true);
+            player.setDeltaMovement(Vec3.ZERO);
+        });
+    }
+
+    private static void armView(MinecraftServer srv, String[] a) {
+        int arm = Integer.parseInt(a[0]);
+        String mode = a[1];
+        float dist = Float.parseFloat(a[2]);
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var player = srv.getPlayerList().getPlayers().get(0);
+            var l = player.serverLevel()
+                    .getEntitiesOfClass(
+                            HollowbellEntity.class, player.getBoundingBox().inflate(3000));
+            if (l.isEmpty()) return;
+            var m = l.get(0);
+            var def = m.rig.arms[arm];
+            int b = def.bones()[def.bones().length - 1];
+            Vector3f piv = def.joints()[def.joints().length - 1];
+            // the arm's end: its block furthest from the last joint
+            BellModel model = BellModel.get();
+            Vector3f end = new Vector3f(piv);
+            float best = -1;
+            for (int i = 0; i < model.count(b); i++) {
+                Vector3f v = new Vector3f(model.x[b][i] + 0.5f, model.y[b][i] + 0.5f, model.z[b][i] + 0.5f);
+                if (v.distanceSquared(piv) > best) {
+                    best = v.distanceSquared(piv);
+                    end = v;
+                }
+            }
+            float s = m.bellScale();
+            Vec3 p = m.boneWorld(b, end),
+                    q = m.boneWorld(b, piv),
+                    u = p.subtract(q).normalize();
+            Vec3 across = u.cross(new Vec3(0, 1, 0));
+            if (across.lengthSqr() < 1e-4) across = new Vec3(1, 0, 0);
+            across = across.normalize();
+            Vec3 other = u.cross(across).normalize();
+            Vec3 tgt = p.subtract(u.scale(3 * s));
+            Vec3 cam = switch (mode) {
+                case "across" -> tgt.add(other.scale(dist * s));
+                case "end" -> p.add(u.scale(dist * s));
+                default -> tgt.add(across.scale(dist * s));
+            };
+            var d = tgt.subtract(cam).normalize();
+            float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
+            player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);
             player.setNoGravity(true);
             player.setDeltaMovement(Vec3.ZERO);
         });
@@ -696,6 +743,28 @@ public final class AutoTest implements ClientModInitializer {
                     ores,
                     tops);
         });
+    }
+
+    /** armsonly, landtime and landhash: 0 not one of them, 1 done (go on to the next line), 2 wait from here */
+    private static int measure(Minecraft mc, String s) {
+        // armsonly on|off: his strands, pods and eggs left out of the picture
+        if (s.startsWith("armsonly ")) {
+            DevView.armsOnly = s.endsWith("on");
+            return 1;
+        }
+        // landtime r: from now, how long until the land r chunks round the player is all loaded, to the log
+        if (s.startsWith("landtime ")) {
+            landR = Integer.parseInt(s.substring(9).trim());
+            landFrom = System.nanoTime();
+            return 2;
+        }
+        // landhash r name: a hash of every block of each chunk r chunks round the player, to the log
+        if (s.startsWith("landhash ")) {
+            String[] a = s.substring(9).trim().split("\s+");
+            landHash(mc, Integer.parseInt(a[0]), a.length > 1 ? a[1] : "");
+            return 1;
+        }
+        return 0;
     }
 
     /** all the land round the player is in on the server and in this game: the time it took, and the worst tick */
