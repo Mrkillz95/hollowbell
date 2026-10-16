@@ -59,6 +59,13 @@ A book about every giant you have. Right-click it to open it.
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
 
+## New in 1.4.46
+
+- Cerberus: his fire and frost breath come out as thick streams now, from all three mouths in Triple Breath.
+
+Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Cerberus 2.18.1, Hollowbell 1.12.6, Lantern Willow 1.10.5, Wreckback 1.2.7,
+Swarmforge 1.4.6.
+
 ## New in 1.4.45
 
 - Cerberus: his moves land where he aims them on hills and in dips. New moves: Triple Breath, Fire and Frost Rift
