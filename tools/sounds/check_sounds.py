@@ -9,7 +9,7 @@ pictures/sounds/ to look at.
   loudness  the fight theme about -14 LUFS (as loud as the game's own music); the ground's music calmer
   ground    the ground's sounds: the loop at least 60 s and quiet, no hiss over 8 kHz, no sudden loud moments,
             five or more of each now-and-then sound
-  size      all of the mod's .ogg files together under 4 MB
+  size      all of the mod's .ogg files together under 6 MB (the first fight and ground tracks are kept too)
 
     python3 tools/sounds/check_sounds.py
 """
@@ -166,8 +166,8 @@ def main(pictures=True):
     if moods < 5 or chimes < 5:
         bad.append(f'only {moods} mood and {chimes} chime sounds, five of each wanted')
     print(f'all .ogg files: {total / 1024:.0f} KB')
-    if total > 4 * 1024 * 1024:
-        bad.append('over 4 MB')
+    if total > 6 * 1024 * 1024:
+        bad.append('over 6 MB')
     if bad:
         print('PROBLEMS:\n  ' + '\n  '.join(bad))
         sys.exit(1)

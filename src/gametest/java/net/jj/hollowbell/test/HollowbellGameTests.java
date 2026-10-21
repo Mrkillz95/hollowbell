@@ -120,10 +120,6 @@ public class HollowbellGameTests implements FabricGameTest {
     static final AtomicInteger PLAYERS = new AtomicInteger();
 
     static ServerPlayer player(GameTestHelper h, Vec3 at) {
-        return player(h, at, false);
-    }
-
-    static ServerPlayer player(GameTestHelper h, Vec3 at, boolean creative) {
         // each one its own name: tests run side by side, and a command naming a player takes the first one online by
         // that name (with every test player called the same, "set target" in one test picked another test's player)
         CommonListenerCookie cookie = CommonListenerCookie.createInitial(
@@ -138,7 +134,7 @@ public class HollowbellGameTests implements FabricGameTest {
 
                     @Override
                     public boolean isCreative() {
-                        return creative;
+                        return false;
                     }
                 };
         Connection c = new Connection(PacketFlow.SERVERBOUND);
@@ -152,7 +148,7 @@ public class HollowbellGameTests implements FabricGameTest {
         } catch (ReflectiveOperationException e) {
             HollowbellMod.LOG.warn("Test player keeps its spawn protection: {}", e.toString());
         }
-        p.setGameMode(creative ? GameType.CREATIVE : GameType.SURVIVAL);
+        p.setGameMode(GameType.SURVIVAL);
         return p;
     }
 

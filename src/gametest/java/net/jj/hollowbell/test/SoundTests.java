@@ -11,11 +11,11 @@ import java.util.Map;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.MusicBoard;
+import net.jj.hollowbell.ThemeHold;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.server.level.ServerPlayer;
 
 /** His sounds and the fight music. */
 public class SoundTests implements FabricGameTest {
@@ -125,63 +125,47 @@ public class SoundTests implements FabricGameTest {
         h.succeed();
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 120, batch = "sounds_fight_flag")
-    public void heSaysWhenAFightIsOn(GameTestHelper h) {
-        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 333);
-        h.runAfterDelay(20, () -> {
-            h.assertTrue(!e.fighting(), "fighting nobody");
-            ServerPlayer p = HollowbellGameTests.player(h, under(e).add(8, 0, 0));
-            e.setTarget(p);
-            h.runAfterDelay(25, () -> {
-                h.assertTrue(e.fighting(), "after a player, the fight should be on");
-                drop(p);
-                release(h, e);
-                h.succeed();
-            });
-        });
-    }
-
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "sounds_fight_creative")
-    public void aCreativePlayerHittingHimStartsTheFightMusic(GameTestHelper h) {
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "sounds_awake_flag")
+    public void heSaysWhenHesAwake(GameTestHelper h) {
         HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 730);
-        ServerPlayer[] p = new ServerPlayer[1];
-        h.runAfterDelay(20, () -> {
-            h.assertTrue(!e.fighting(), "fighting nobody");
-            p[0] = HollowbellGameTests.player(h, under(e).add(8, 0, 0), true);
-            h.assertTrue(p[0].isCreative(), "the player should be in creative");
-            e.applyDamage(e.damageSources().playerAttack(p[0]), 1f, -1, false);
+        h.runAfterDelay(10, () -> {
+            h.assertTrue(e.awake(), "a new one, up and about, should say he's awake");
+            e.goToSleep();
         });
-        h.runAfterDelay(40, () -> h.assertTrue(e.fighting(), "a creative player hit him: the music should be on"));
-        // the blow holds the fight on for half a minute, then it lingers 8 seconds more; nobody else is near
-        h.runAfterDelay(20 + 600 + 160 + 200, () -> {
-            h.assertTrue(e.getTarget() == null || e.getTarget() == p[0], "he found someone else to fight");
-            h.assertTrue(!e.fighting(), "long after the last blow, with nobody near, the music should be off");
-            drop(p[0]);
+        h.runAfterDelay(15, () -> {
+            h.assertTrue(!e.awake(), "asleep, he should say so");
+            e.wakeUp();
+        });
+        h.runAfterDelay(20, () -> {
+            h.assertTrue(e.awake(), "woken, he should be awake again");
+            e.setFrozen(true);
+        });
+        h.runAfterDelay(25, () -> {
+            h.assertTrue(!e.awake(), "held still by an operator, the music shouldn't go by him");
+            e.setFrozen(false);
             release(h, e);
             h.succeed();
         });
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "sounds_fight_linger")
-    public void theFightMusicLingersThenStops(GameTestHelper h) {
-        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 731);
-        ServerPlayer[] p = new ServerPlayer[1];
-        h.runAfterDelay(20, () -> {
-            p[0] = HollowbellGameTests.player(h, under(e).add(8, 0, 0));
-            e.setTarget(p[0]);
-        });
-        h.runAfterDelay(45, () -> {
-            h.assertTrue(e.fighting(), "after a player, the fight should be on");
-            drop(p[0]);
-            e.setTarget(null);
-        });
-        // a few seconds later it hasn't flickered off
-        h.runAfterDelay(45 + 100, () -> h.assertTrue(e.fighting(), "the music stopped the moment the fight did"));
-        // nobody near for ten seconds: off
-        h.runAfterDelay(45 + 200, () -> {
-            h.assertTrue(!e.fighting(), "ten seconds with nobody near, the music should be off");
-            release(h, e);
-            h.succeed();
-        });
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "sounds_theme_hold")
+    public void theThemeHoldsEightSecondsAndDoesntFlickerAtTheEdge(GameTestHelper h) {
+        ThemeHold hold = new ThemeHold();
+        double r = ThemeHold.range(1f);
+        h.assertTrue(r >= 128, "the range should be at least 128");
+        h.assertTrue(ThemeHold.range(3f) > 128, "a bigger one should be heard further off");
+        h.assertTrue(!hold.tick(false), "wanted with nobody near");
+        h.assertTrue(!hold.near(r + 1, r), "outside the range counts as near");
+        boolean in = hold.near(r - 1, r);
+        h.assertTrue(in && hold.tick(in), "in range, the theme should be wanted at once");
+        // once in, a few steps past the edge don't let go
+        boolean still = hold.near(r + 10, r);
+        h.assertTrue(still, "let go just past the edge");
+        hold.tick(still);
+        boolean out = hold.near(r + ThemeHold.LET_GO_MARGIN + 1, r);
+        h.assertTrue(!out, "still held well past the margin");
+        for (int t = 1; t < ThemeHold.HOLD_TICKS; t++) h.assertTrue(hold.tick(false), "dropped after " + t + " ticks");
+        h.assertTrue(!hold.tick(false), "still wanted after the hold");
+        h.succeed();
     }
 }

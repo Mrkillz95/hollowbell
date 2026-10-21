@@ -884,6 +884,12 @@
         "pitch": 1.0,
         "volume": 1.0,
         "stream": true
+      },
+      {
+        "name": "hollowbell:music/fight_classic",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "stream": true
       }
     ]
   },
@@ -892,6 +898,12 @@
     "sounds": [
       {
         "name": "hollowbell:music/ground",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "stream": true
+      },
+      {
+        "name": "hollowbell:music/ground_classic",
         "pitch": 1.0,
         "volume": 1.0,
         "stream": true
@@ -904,7 +916,7 @@
       {
         "name": "hollowbell:ambient/ground",
         "pitch": 1.0,
-        "volume": 0.6,
+        "volume": 1.0,
         "stream": true
       }
     ]

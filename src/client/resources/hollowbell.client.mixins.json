@@ -11,6 +11,7 @@
     "PickMixin",
     "VisibleMixin",
     "MusicMixin",
+    "BiomeMusicMixin",
     "LookGlowMixin",
     "SolidFrameMixin"
   ],

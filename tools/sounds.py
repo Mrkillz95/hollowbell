@@ -77,9 +77,12 @@ EVENTS = {
     'swoop': ("Hollowbell dives", v('mob/phantom/swoop', 0.45, 1.0, n=4, attenuation=128)),
     'click': ("Stingers rattle", v('mob/warden/tendril_clicks_', 0.7, 1.0, n=6, attenuation=32)),
     # his music and his ground's sounds (made by tools/sounds/make_music.py)
-    'music.fight': ("Hollowbell's fight music plays", own('music/fight', 1.0, 1.0, stream=True)),
-    'music.ground': ("Music plays", own('music/ground', 1.0, 1.0, stream=True)),
-    'ambient.ground': ("Air moves through glass", own('ambient/ground', 1.0, 0.6, stream=True)),
+    # (each music event picks the new track or the first one, music/*_classic.ogg, at random each time it starts)
+    'music.fight': ("Hollowbell's fight music plays",
+                    own('music/fight', 1.0, 1.0, stream=True) + own('music/fight_classic', 1.0, 1.0, stream=True)),
+    'music.ground': ("Music plays",
+                     own('music/ground', 1.0, 1.0, stream=True) + own('music/ground_classic', 1.0, 1.0, stream=True)),
+    'ambient.ground': ("Air moves through glass", own('ambient/ground', 1.0, 1.0, stream=True)),
     'ambient.mood': ("A bell tolls far away", sum((own(f'ambient/mood{k}', 1.0, 0.9) for k in range(1, 6)), [])),
     'ambient.additions': ("Glass chimes", sum((own(f'ambient/chime{k}', 1.0, 0.5) for k in range(1, 6)), [])),
     # the warning before each heavy move

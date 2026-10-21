@@ -28,9 +28,9 @@
     },
     "music": {
       "sound": "hollowbell:music.ground",
-      "min_delay": 1200,
-      "max_delay": 6000,
-      "replace_current_music": false
+      "min_delay": 20,
+      "max_delay": 600,
+      "replace_current_music": true
     }
   },
   "carvers": {

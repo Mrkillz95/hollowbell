@@ -124,7 +124,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     static final EntityDataAccessor<Float> DATA_SLEEP =
             SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
 
-    static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4, F_FIGHT = 8, F_FOLLOW = 16;
+    static final int F_STAY = 1, F_RIDDEN = 2, F_TIRED = 4, F_AWAKE = 8, F_FOLLOW = 16;
 
     public final BellRig rig = BellRig.get();
     /** the pose the server works with (and the client, for aiming and hits) */
@@ -489,27 +489,9 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public boolean ridden() {
         return (entityData.get(DATA_FLAGS) & F_RIDDEN) != 0;
     }
-    /** a fight is on, as fightNow says, or was a few seconds ago (the client's fight music goes by this) */
-    public boolean fighting() {
-        return (entityData.get(DATA_FLAGS) & F_FIGHT) != 0;
-    }
-    /** when a player last hurt him (any game mode but spectator), for the fight music */
-    long playerHitAt = -100000;
-    /** the fight music keeps on until then, so it doesn't flicker between a fight's moments */
-    long fightMusicUntil = -100000;
-    /** how long a player's blow keeps the fight on for the music, and how long it lingers after */
-    static final int FIGHT_HIT_HOLD = 600, FIGHT_MUSIC_LINGER = 160;
-
-    /**
-     * a fight is on for the music: he's after a player, a player hurt him in the last half minute, he's fighting
-     * another giant, or a move of his is aimed at a player. Creative players count here, though he never hunts them.
-     */
-    boolean fightNow(long now) {
-        LivingEntity t = getTarget();
-        if (t instanceof Player p && !p.isSpectator()) return true;
-        if (now - playerHitAt <= FIGHT_HIT_HOLD) return true;
-        if (meetFoe != null && t != null) return true;
-        return moveNow() != Moves.NONE && moves.moveTarget() instanceof Player p && !p.isSpectator();
+    /** he's up and about: not asleep and not held still by an operator (the client's fight music goes by this) */
+    public boolean awake() {
+        return (entityData.get(DATA_FLAGS) & F_AWAKE) != 0;
     }
 
     /** worn out after a heavy move: slower, and no moves for a few seconds */
@@ -1035,11 +1017,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
         health.stingTick();
         health.arrowsTick();
         barsTick();
-        if (tickCount % 10 == 0) {
-            if (fightNow(now)) fightMusicUntil = now + FIGHT_MUSIC_LINGER;
-            boolean fight = now <= fightMusicUntil;
-            if (fight != fighting()) setFlag(F_FIGHT, fight);
-        }
+        boolean up = !asleep && !frozen;
+        if (up != awake()) setFlag(F_AWAKE, up);
         if (partsDirty && tickCount - partsSentAt >= 4) {
             partsDirty = false;
             partsSentAt = tickCount;

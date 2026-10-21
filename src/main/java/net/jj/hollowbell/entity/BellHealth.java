@@ -194,7 +194,6 @@ final class BellHealth {
         hb.hp = Math.max(0f, hb.healthNow() - dealt);
         hb.getEntityData().set(HollowbellEntity.DATA_HP, hb.hp);
         hb.level().broadcastDamageEvent(hb, src);
-        if (att instanceof Player p && !p.isSpectator()) hb.playerHitAt = hb.level().getGameTime();
         if (att instanceof Player p && !p.isCreative()) {
             boolean had = hb.fighters.containsKey(p.getUUID());
             hb.fighters.put(p.getUUID(), hb.level().getGameTime());
