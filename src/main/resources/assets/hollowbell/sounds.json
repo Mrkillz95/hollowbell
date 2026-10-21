@@ -913,10 +913,29 @@
     "subtitle": "subtitles.hollowbell.ambient.mood",
     "sounds": [
       {
-        "name": "hollowbell:ambient/mood",
+        "name": "hollowbell:ambient/mood1",
         "pitch": 1.0,
-        "volume": 0.9,
-        "stream": true
+        "volume": 0.9
+      },
+      {
+        "name": "hollowbell:ambient/mood2",
+        "pitch": 1.0,
+        "volume": 0.9
+      },
+      {
+        "name": "hollowbell:ambient/mood3",
+        "pitch": 1.0,
+        "volume": 0.9
+      },
+      {
+        "name": "hollowbell:ambient/mood4",
+        "pitch": 1.0,
+        "volume": 0.9
+      },
+      {
+        "name": "hollowbell:ambient/mood5",
+        "pitch": 1.0,
+        "volume": 0.9
       }
     ]
   },
@@ -935,6 +954,16 @@
       },
       {
         "name": "hollowbell:ambient/chime3",
+        "pitch": 1.0,
+        "volume": 0.5
+      },
+      {
+        "name": "hollowbell:ambient/chime4",
+        "pitch": 1.0,
+        "volume": 0.5
+      },
+      {
+        "name": "hollowbell:ambient/chime5",
         "pitch": 1.0,
         "volume": 0.5
       }

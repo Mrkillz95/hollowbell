@@ -24,7 +24,7 @@
     "ambient_sound": "hollowbell:ambient.ground",
     "additions_sound": {
       "sound": "hollowbell:ambient.additions",
-      "tick_chance": 0.0035
+      "tick_chance": 0.002
     },
     "music": {
       "sound": "hollowbell:music.ground",

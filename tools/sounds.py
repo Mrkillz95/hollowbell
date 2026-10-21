@@ -80,8 +80,8 @@ EVENTS = {
     'music.fight': ("Hollowbell's fight music plays", own('music/fight', 1.0, 1.0, stream=True)),
     'music.ground': ("Music plays", own('music/ground', 1.0, 1.0, stream=True)),
     'ambient.ground': ("Air moves through glass", own('ambient/ground', 1.0, 0.6, stream=True)),
-    'ambient.mood': ("A bell tolls far away", own('ambient/mood', 1.0, 0.9, stream=True)),
-    'ambient.additions': ("Glass chimes", own('ambient/chime1', 1.0, 0.5) + own('ambient/chime2', 1.0, 0.5) + own('ambient/chime3', 1.0, 0.5)),
+    'ambient.mood': ("A bell tolls far away", sum((own(f'ambient/mood{k}', 1.0, 0.9) for k in range(1, 6)), [])),
+    'ambient.additions': ("Glass chimes", sum((own(f'ambient/chime{k}', 1.0, 0.5) for k in range(1, 6)), [])),
     # the warning before each heavy move
     'warn_drop': ("Hollowbell gathers himself", v('mob/warden/sonic_charge', 0.5, 1.0, n=4, attenuation=160)),
     'warn_whirlpool': ("A whirlpool stirs", v('block/bubble_column/whirlpool_ambient', 0.35, 1.0, n=5, attenuation=160)),
