@@ -12,8 +12,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 
 /**
- * His fight theme. It plays while a fight with him is on near you (he's after a player, or fighting another giant,
- * within 96 blocks times his size, at least 32), fading in over two seconds and out over four once it's over. It
+ * His fight theme. It plays while a fight with him is on near you (see HollowbellEntity.fightNow; within 96 blocks
+ * times his size, at least 32), fading in over two seconds and out over four once it's over. It
  * goes through the music slider, and the game's own music keeps quiet while it plays. Only one giant's theme plays
  * at a time (see MusicBoard). Off with fightMusic in the settings.
  */

@@ -489,10 +489,29 @@ public class HollowbellEntity extends Monster implements SolidBody {
     public boolean ridden() {
         return (entityData.get(DATA_FLAGS) & F_RIDDEN) != 0;
     }
-    /** a fight is on: he's after a player, or in a fight with another giant (the client's fight music goes by this) */
+    /** a fight is on, as fightNow says, or was a few seconds ago (the client's fight music goes by this) */
     public boolean fighting() {
         return (entityData.get(DATA_FLAGS) & F_FIGHT) != 0;
     }
+    /** when a player last hurt him (any game mode but spectator), for the fight music */
+    long playerHitAt = -100000;
+    /** the fight music keeps on until then, so it doesn't flicker between a fight's moments */
+    long fightMusicUntil = -100000;
+    /** how long a player's blow keeps the fight on for the music, and how long it lingers after */
+    static final int FIGHT_HIT_HOLD = 600, FIGHT_MUSIC_LINGER = 160;
+
+    /**
+     * a fight is on for the music: he's after a player, a player hurt him in the last half minute, he's fighting
+     * another giant, or a move of his is aimed at a player. Creative players count here, though he never hunts them.
+     */
+    boolean fightNow(long now) {
+        LivingEntity t = getTarget();
+        if (t instanceof Player p && !p.isSpectator()) return true;
+        if (now - playerHitAt <= FIGHT_HIT_HOLD) return true;
+        if (meetFoe != null && t != null) return true;
+        return moveNow() != Moves.NONE && moves.moveTarget() instanceof Player p && !p.isSpectator();
+    }
+
     /** worn out after a heavy move: slower, and no moves for a few seconds */
     public boolean tired() {
         return (entityData.get(DATA_FLAGS) & F_TIRED) != 0;
@@ -1017,8 +1036,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
         health.arrowsTick();
         barsTick();
         if (tickCount % 10 == 0) {
-            LivingEntity t = getTarget();
-            boolean fight = t instanceof Player p ? !p.isCreative() && !p.isSpectator() : meetFoe != null && t != null;
+            if (fightNow(now)) fightMusicUntil = now + FIGHT_MUSIC_LINGER;
+            boolean fight = now <= fightMusicUntil;
             if (fight != fighting()) setFlag(F_FIGHT, fight);
         }
         if (partsDirty && tickCount - partsSentAt >= 4) {

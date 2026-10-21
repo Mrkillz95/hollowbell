@@ -140,4 +140,48 @@ public class SoundTests implements FabricGameTest {
             });
         });
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "sounds_fight_creative")
+    public void aCreativePlayerHittingHimStartsTheFightMusic(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 730);
+        ServerPlayer[] p = new ServerPlayer[1];
+        h.runAfterDelay(20, () -> {
+            h.assertTrue(!e.fighting(), "fighting nobody");
+            p[0] = HollowbellGameTests.player(h, under(e).add(8, 0, 0), true);
+            h.assertTrue(p[0].isCreative(), "the player should be in creative");
+            e.applyDamage(e.damageSources().playerAttack(p[0]), 1f, -1, false);
+        });
+        h.runAfterDelay(40, () -> h.assertTrue(e.fighting(), "a creative player hit him: the music should be on"));
+        // the blow holds the fight on for half a minute, then it lingers 8 seconds more; nobody else is near
+        h.runAfterDelay(20 + 600 + 160 + 200, () -> {
+            h.assertTrue(e.getTarget() == null || e.getTarget() == p[0], "he found someone else to fight");
+            h.assertTrue(!e.fighting(), "long after the last blow, with nobody near, the music should be off");
+            drop(p[0]);
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "sounds_fight_linger")
+    public void theFightMusicLingersThenStops(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 731);
+        ServerPlayer[] p = new ServerPlayer[1];
+        h.runAfterDelay(20, () -> {
+            p[0] = HollowbellGameTests.player(h, under(e).add(8, 0, 0));
+            e.setTarget(p[0]);
+        });
+        h.runAfterDelay(45, () -> {
+            h.assertTrue(e.fighting(), "after a player, the fight should be on");
+            drop(p[0]);
+            e.setTarget(null);
+        });
+        // a few seconds later it hasn't flickered off
+        h.runAfterDelay(45 + 100, () -> h.assertTrue(e.fighting(), "the music stopped the moment the fight did"));
+        // nobody near for ten seconds: off
+        h.runAfterDelay(45 + 200, () -> {
+            h.assertTrue(!e.fighting(), "ten seconds with nobody near, the music should be off");
+            release(h, e);
+            h.succeed();
+        });
+    }
 }
