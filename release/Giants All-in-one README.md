@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.46.jar` in. Keep Fabric API in there.
+`giants-all-1.4.47.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -58,6 +58,14 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.47
+
+- Every giant: beating him always drops enough of his materials to make all his gear and items, at any size.
+  Pitchgut now also drops a goo bucket for the Goo Maw, and Wreckback drops wet logs.
+
+Inside: Pitchgut 1.35.5, Furrowmaw 1.17.3, Cerberus 2.18.2, Hollowbell 1.12.7, Lantern Willow 1.10.6, Wreckback 1.2.8,
+Swarmforge 1.4.7.
 
 ## New in 1.4.46
 
