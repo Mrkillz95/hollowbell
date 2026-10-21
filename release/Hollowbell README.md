@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.7
+# Hollowbell (Java mod), version 1.12.8
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -8,11 +8,11 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
-1.12.7: beating him always drops enough bell glass and pods to make all his gear.
+1.12.8: new fight music that plays whenever you fight him, even in creative, and a calmer Bell Hollows.
 
 ## Install
 
-You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.7.jar` in your `mods` folder
+You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.8.jar` in your `mods` folder
 and take any older Hollowbell jar out. For a server, put the same jar in the server's `mods` folder too. Everyone who
 joins needs it as well.
 
