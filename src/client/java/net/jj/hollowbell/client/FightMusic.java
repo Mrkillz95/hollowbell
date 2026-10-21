@@ -13,11 +13,11 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 
 /**
- * His fight theme. It plays while you're near an awake one (see ThemeHold: his music range by the flat distance, at
- * least 128 blocks), in any game mode but spectator, fading in over half a second; it keeps on eight seconds after
- * you leave or he dies, then fades out over four. It goes through the music slider, and the game's own music keeps
- * quiet while it plays. Only one giant's theme plays at a time, the nearest (see MusicBoard). Off with fightMusic in
- * the settings.
+ * His fight theme. It plays while you're near an awake one (see ThemeHold: within 96 blocks of his rim by the flat
+ * distance, at least 128 blocks from his middle), in any game mode but spectator, fading in over half a second. It
+ * keeps on eight seconds after you leave or he dies, then fades out over four. It goes through the music slider, and
+ * the game's own music keeps quiet while it plays. Only one giant's theme plays at a time, the nearest (see
+ * MusicBoard). Off with fightMusic in the settings.
  */
 public final class FightMusic {
     private FightMusic() {}

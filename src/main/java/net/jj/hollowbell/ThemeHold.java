@@ -11,9 +11,9 @@ public final class ThemeHold {
     private boolean inRange;
     private int hold;
 
-    /** his music range at this size */
+    /** his music range at this size: 96 blocks past his rim (he is about 200 blocks across at full size) */
     public static double range(float scale) {
-        return Math.max(MIN_RANGE, 96 * scale);
+        return Math.max(MIN_RANGE, 96 + 100 * scale);
     }
 
     /** is this flat distance within the range (with the margin, once you're in) */
