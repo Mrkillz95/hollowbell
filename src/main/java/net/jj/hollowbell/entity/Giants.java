@@ -15,8 +15,8 @@ import net.minecraft.world.entity.projectile.Projectile;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The giants: the seven bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback
- * and the Swarmforge). They all follow the same rules with each other: a blow from one giant lands on another by the
+ * The giants: the eight bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback,
+ * the Swarmforge and the Gloamwick). They all follow the same rules with each other: a blow from one giant lands on another by the
  * other's own armour against giants, and none of them ever picks another up, swallows it or drags it about. Each one
  * tags itself {@link #TAG}; the ids below catch the others even from older versions that don't.
  */
@@ -34,7 +34,8 @@ public final class Giants {
             "furrowmaw:furrowmaw", "furrowmaw:furrowmaw_part",
             "fire_ice_cerberus:cerberus", "fire_ice_cerberus:cerberus_part",
             "hollowbell:hollowbell", "lanternwillow:lanternwillow",
-            "wreckback:wreckback", "swarmforge:swarmforge");
+            "wreckback:wreckback", "swarmforge:swarmforge",
+            "gloamwick:gloamwick");
     private static final Set<String> MODS = Set.of(
             "mountain_breathes",
             "furrowmaw",
@@ -42,7 +43,8 @@ public final class Giants {
             "hollowbell",
             "lanternwillow",
             "wreckback",
-            "swarmforge");
+            "swarmforge",
+            "gloamwick");
 
     /** one of the giants, or a part of one */
     public static boolean isGiant(@Nullable Entity e) {

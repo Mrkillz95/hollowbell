@@ -29,8 +29,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * /giants: one command for all the bosses at once. Every one of the seven mods carries this class, but only
- * one registers it: the first of the seven bridges (in this fixed order) that is actually loaded. This
+ * /giants: one command for all the bosses at once. Every one of the giant mods carries this class, but only
+ * one registers it: the first of the bridges (in this fixed order) that is actually loaded. This
  * mod's bridge sorts first, so with the Cerberus installed it is this class that answers.
  *
  * The command asks every loaded bridge in turn, by name. Each one is asked on its own, and whatever goes wrong
@@ -40,8 +40,8 @@ import net.minecraft.world.phys.Vec3;
 public final class GiantsCommand {
     private GiantsCommand() {}
 
-    /** the seven bridges, in the order every copy elects them; the same list in every mod. (The Swarmforge came
-     *  seventh, so he goes on the end, not in his sorted place: the election doesn't change.) */
+    /** the bridges, in the order every copy elects them; the same list in every mod. New giants go on the end, not
+     *  in their sorted place, so the election doesn't change. */
     public static final String[] BRIDGES = {
         "net.jj.cerberus.GiantsBridge",
         "net.jj.furrowmaw.GiantsBridge",
@@ -49,7 +49,8 @@ public final class GiantsCommand {
         "net.jj.lanternwillow.GiantsBridge",
         "net.jj.mountain.GiantsBridge",
         "net.jj.wreckback.GiantsBridge",
-        "net.jj.swarmforge.GiantsBridge"
+        "net.jj.swarmforge.GiantsBridge",
+        "net.jj.gloamwick.GiantsBridge"
     };
 
     private static final String MINE = GiantsBridge.class.getName();
@@ -125,7 +126,7 @@ public final class GiantsCommand {
 
     /** the name /giants tp takes for each bridge, in the same order as BRIDGES */
     public static final String[] TP_NAMES = {
-        "cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback", "swarmforge"
+        "cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback", "swarmforge", "gloamwick"
     };
 
     /** every loaded bridge's answer, in order */
@@ -266,7 +267,8 @@ public final class GiantsCommand {
         "lanternwillow:lanternwillow",
         "mountain_breathes:mountain",
         "wreckback:wreckback",
-        "swarmforge:swarmforge"
+        "swarmforge:swarmforge",
+        "gloamwick:gloamwick"
     };
 
     /** which bridge (index into BRIDGES) owns this entity as a giant's main body, or -1 */

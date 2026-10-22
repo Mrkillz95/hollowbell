@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.14
+# Hollowbell (Java mod), version 1.12.15
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,8 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+1.12.15: Knows the Gloamwick: he fights or keeps away from him, and their grounds never overlap.
 
 1.12.14: the bell glass powers and the Stinger can now hit other players when PvP is on, but never farm
 animals, villagers, golems or your own pets; stuns and pins last half as long on players. With PvP on the Glass
@@ -31,7 +33,7 @@ lands on that part, at any size, still or drifting.
 
 ## Install
 
-You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.14.jar` in your `mods` folder
+You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.15.jar` in your `mods` folder
 and take any older Hollowbell jar out. For a server, put the same jar in the server's `mods` folder too. Everyone who
 joins needs it as well.
 

@@ -270,11 +270,14 @@ public class GiantsTests implements FabricGameTest {
             "hollowbell",
             "lanternwillow",
             "wreckback",
-            "swarmforge"
+            "swarmforge",
+            "gloamwick"
         };
-        String[] want = {"-ffaaff", "f-fafff", "ff-ffff", "aaf-aaa", "affa-af", "fffaa-a", "fffafa-"};
-        for (int a = 0; a < 7; a++)
-            for (int b = 0; b < 7; b++) {
+        String[] want = {
+            "-ffaafff", "f-fafffa", "ff-fffff", "aaf-aaaa", "affa-aff", "fffaa-aa", "fffafa-f", "fafafaf-"
+        };
+        for (int a = 0; a < 8; a++)
+            for (int b = 0; b < 8; b++) {
                 var w = Meeting.way(k[a], k[b]);
                 char c = want[a].charAt(b);
                 var expect = c == 'f' ? Meeting.Way.FIGHT : c == 'a' ? Meeting.Way.AVOID : Meeting.Way.NONE;

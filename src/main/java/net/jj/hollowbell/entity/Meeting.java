@@ -30,21 +30,30 @@ public final class Meeting {
 
     public static final String ME = "hollowbell";
 
-    /** the seven, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback, Swarmforge */
+    /** the eight, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback, Swarmforge,
+     *  Gloamwick */
     static final String[] KINDS = {
-        "mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell", "lanternwillow", "wreckback", "swarmforge"
+        "mountain_breathes",
+        "furrowmaw",
+        "fire_ice_cerberus",
+        "hollowbell",
+        "lanternwillow",
+        "wreckback",
+        "swarmforge",
+        "gloamwick"
     };
     /** f fight, a avoid (the same table in every giant mod) */
     private static final String[] TABLE = {
-        // P    F    C    H    W    WB
-        "-ffaaff", // Pitchgut
-        "f-fafff", // Furrowmaw
-        "ff-ffff", // Cerberus
-        "aaf-aaa", // Hollowbell
-        "affa-af", // Willow
-        "fffaa-a", // Wreckback
-        "fffafa-"
-    }; // Swarmforge
+        // P F C H W WB S G
+        "-ffaafff", // Pitchgut
+        "f-fafffa", // Furrowmaw
+        "ff-fffff", // Cerberus
+        "aaf-aaaa", // Hollowbell
+        "affa-aff", // Willow
+        "fffaa-aa", // Wreckback
+        "fffafa-f", // Swarmforge
+        "fafafaf-" // Gloamwick
+    };
 
     private static int index(@Nullable String kind) {
         if (kind == null) return -1;
@@ -105,6 +114,7 @@ public final class Meeting {
             case "lanternwillow" -> the + "Lantern Willow";
             case "wreckback" -> "Wreckback";
             case "swarmforge" -> the + "Swarmforge";
+            case "gloamwick" -> the + "Gloamwick";
             default -> the + "giant";
         };
     }
