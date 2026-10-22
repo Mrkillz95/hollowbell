@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.49.jar` in. Keep Fabric API in there.
+`giants-all-1.4.50.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -58,6 +58,16 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.50
+
+- Cerberus: much easier to hit. Aiming at any part of him you can see, in normal reach, now hits him.
+- Swarmforge: the Forge armour's helper robot builds itself again after it's destroyed (no iron), and the armour
+  power turns it into a big war robot for 30 seconds. The armour is as strong as the best giant set now.
+- Every giant: a book in your ender chest is nobody's now, like one in any chest.
+
+Inside: Pitchgut 1.35.8, Furrowmaw 1.17.6, Cerberus 2.18.5, Hollowbell 1.12.10, Lantern Willow 1.10.9, Wreckback 1.2.11,
+Swarmforge 1.4.10.
 
 ## New in 1.4.49
 
