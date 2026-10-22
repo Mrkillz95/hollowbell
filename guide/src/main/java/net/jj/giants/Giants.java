@@ -48,7 +48,7 @@ public final class Giants {
                                 "belly_crush"
                             },
                             new String[] {"goo_storm", "eye_storm", "draw_in", "tear_off", "quake", "tentacle_field"}),
-                    Set.of("furrowmaw", "cerberus", "wreckback", "swarmforge")),
+                    Set.of("furrowmaw", "cerberus", "wreckback", "swarmforge", "gloamwick")),
             new Giant(
                     "furrowmaw",
                     "furrowmaw",
@@ -57,21 +57,16 @@ public final class Giants {
                     moves(
                             "attack.furrowmaw.",
                             "codex.furrowmaw.move_tip.",
-                            new String[] {"bite", "spit", "tail_flick", "dust"},
+                            new String[] {"bite", "snap_lunge", "ring_shudder", "tail_swipe"},
                             new String[] {
                                 "slam",
                                 "swallow",
-                                "charge",
                                 "shriek",
-                                "vent",
-                                "tail_whip",
-                                "tremor",
-                                "thrash",
-                                "coil",
+                                "plow",
+                                "tail_sweep",
                                 "breach=codex.furrowmaw.breach_short"
                             },
-                            new String[] {"roll", "erupt", "sinkhole", "great_slam", "magma_storm", "rupture", "inhale"
-                            }),
+                            new String[] {"crush", "roll", "lava_breath", "burst", "great_slam", "geysers", "inhale"}),
                     Set.of("pitchgut", "cerberus", "lanternwillow", "wreckback", "swarmforge")),
             new Giant(
                     "cerberus",
@@ -96,7 +91,14 @@ public final class Giants {
                             new String[] {
                                 "pounce", "charge", "twin_breath", "firestorm", "frost_nova", "frenzy", "quake_slam"
                             }),
-                    Set.of("pitchgut", "furrowmaw", "hollowbell", "lanternwillow", "wreckback", "swarmforge")),
+                    Set.of(
+                            "pitchgut",
+                            "furrowmaw",
+                            "hollowbell",
+                            "lanternwillow",
+                            "wreckback",
+                            "swarmforge",
+                            "gloamwick")),
             new Giant(
                     "hollowbell",
                     "hollowbell",
@@ -158,7 +160,7 @@ public final class Giants {
                                 "drink_the_land",
                                 "pull_under"
                             }),
-                    Set.of("furrowmaw", "cerberus", "swarmforge")),
+                    Set.of("furrowmaw", "cerberus", "swarmforge", "gloamwick")),
             new Giant(
                     "wreckback",
                     "wreckback",
@@ -237,7 +239,50 @@ public final class Giants {
                                 "mortar_crawler"
                             },
                             new String[] {"crane_slam", "furnace_blast", "ram_charge", "overclock"}),
-                    Set.of("pitchgut", "furrowmaw", "cerberus", "lanternwillow")));
+                    Set.of("pitchgut", "furrowmaw", "cerberus", "lanternwillow", "gloamwick")),
+            new Giant(
+                    "gloamwick",
+                    "gloamwick",
+                    "gloamwick",
+                    "net.jj.gloamwick.GiantsBridge",
+                    moves(
+                            "move.gloamwick.",
+                            "codex.gloamwick.move_tip.",
+                            new String[] {
+                                "antler_hook",
+                                "antler_toss",
+                                "hoof_stamp",
+                                "rear_and_kick",
+                                "head_slam",
+                                "ember_flick",
+                                "snort"
+                            },
+                            new String[] {
+                                "wick_lash",
+                                "gloam_breath",
+                                "snuff_wave",
+                                "shadow_step",
+                                "charge",
+                                "antler_sweep",
+                                "soul_chains",
+                                "wandering_souls",
+                                "wax_spit",
+                                "grave_toll",
+                                "ghost_lunge",
+                                "candle_volley"
+                            },
+                            new String[] {
+                                "antler_flare",
+                                "candlefall",
+                                "night_bellow",
+                                "soul_harvest",
+                                "lantern_rite",
+                                "stampede_of_shades",
+                                "rearing_crash",
+                                "soul_pyre",
+                                "eclipse"
+                            }),
+                    Set.of("pitchgut", "cerberus", "lanternwillow", "swarmforge")));
 
     private Giants() {}
 

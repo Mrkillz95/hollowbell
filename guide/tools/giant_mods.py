@@ -2,7 +2,8 @@
 # test and picture runs (gradle ... -Pgiants) have the real giants loaded.  usage: python3 tools/giant_mods.py
 import zipfile, json, glob, os, re
 REPOS = {'pitchgut': 'pitchgut-', 'furrowmaw': 'furrowmaw-', 'cerberus': 'fire-ice-cerberus-',
-         'hollowbell': 'hollowbell-', 'lanternwillow': 'lanternwillow-', 'wreckback': 'wreckback-', 'swarmforge': 'swarmforge-'}
+         'hollowbell': 'hollowbell-', 'lanternwillow': 'lanternwillow-', 'wreckback': 'wreckback-', 'swarmforge': 'swarmforge-',
+         'gloamwick': 'gloamwick-'}
 def ver(p):
     m = re.search(r'-(\d+(?:\.\d+)*)\.jar$', p)
     return tuple(int(x) for x in m.group(1).split('.')) if m else ()
