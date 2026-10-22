@@ -8,6 +8,9 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
+The book shows how much wind each attack costs: a thin bar under each one, green, yellow or red if he hasn't enough
+wind left.
+
 1.12.11: much easier to hit: swing at any part of him you can see in reach, his long arms and strands too, and it
 lands on that part, at any size, still or drifting.
 

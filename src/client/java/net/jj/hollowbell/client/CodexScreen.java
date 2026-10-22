@@ -468,6 +468,7 @@ public class CodexScreen extends Screen {
         if (page == 1) tickMoveLines();
         renderBackground(g, mx, my, partial);
         super.render(g, mx, my, partial);
+        if (page == 1) drawCosts(g);
         g.drawCenteredString(this.font, this.title, this.width / 2, top() - 88, 0xFFE9C9BC);
         Minecraft mc = Minecraft.getInstance();
         HollowbellEntity m = him();
@@ -560,6 +561,23 @@ public class CodexScreen extends Screen {
                     ny + 11,
                     0xFF777777,
                     false);
+        }
+    }
+
+    /**
+     * A hair of a line under each move: how much of his wind it takes, and whether he has that much in him.
+     * Green he can do all day, yellow costs him, red is more wind than he has left.
+     */
+    private void drawCosts(GuiGraphics g) {
+        for (int k = 0; k < moveLines.size(); k++) {
+            Button b = moveLines.get(k);
+            float cost = CodexOrders.windCost(CodexPayload.ATTACK_MOVE, moveIds.get(k));
+            if (cost <= 0f) continue;
+            int x = b.getX() + 5, w = b.getWidth() - 10, y = b.getY() + b.getHeight() - 3;
+            g.fill(x, y, x + w, y + 2, 0xB0101010);
+            int fill = Math.max(1, Math.round(w * Math.min(1f, cost)));
+            int colour = mWind + 1.0E-4f < cost ? 0xFF7A2E22 : cost >= 0.45f ? 0xFFD8A63A : 0xFF5FBF6A;
+            g.fill(x, y, x + fill, y + 2, colour);
         }
     }
 
