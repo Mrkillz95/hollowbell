@@ -63,9 +63,9 @@ final class BellHealth {
     }
 
     /**
-     * A player's swing that the client says landed on him. The server looks for itself along the player's own
-     * line of sight (with a little give, since the two sides see him a tick apart) and passes the hit through the
-     * game's own attack so weapons, enchantments and crits all count.
+     * A player's swing that the client says landed on him. The server checks the player is in reach of that bone
+     * (or looks for itself along the player's own line of sight) and passes the hit through the game's own attack
+     * so weapons, enchantments and crits all count.
      */
     public void hitBy(ServerPlayer p, int claimedBone) {
         if (hb.isDeadOrDying() && !hb.isRemoved()) return;
@@ -76,13 +76,16 @@ final class BellHealth {
         hb.ensurePose();
         double reach = p.entityInteractionRange() + 1.5;
         Vec3 eye = p.getEyePosition(), look = p.getViewVector(1f);
-        BellRig.Hit h = hb.raycast(eye, look, reach);
-        int bone = h != null ? h.bone() : -1;
-        // the client saw it a moment ago: take its word if the player is in reach of that bone, as it is or was
-        if (bone < 0
-                && claimedBone >= 0
+        int bone = -1;
+        // the bone the client saw it land on, if the player is in reach of that bone as it is or was a moment ago
+        // (his arms and strands swing far in the time between the two sides); else what's along the player's look
+        if (claimedBone >= 0
                 && claimedBone < hb.rig.boneCount()
                 && inReach(claimedBone, eye, p.entityInteractionRange() + 1.0)) bone = claimedBone;
+        if (bone < 0) {
+            BellRig.Hit h = hb.raycast(eye, look, reach);
+            if (h != null) bone = h.bone();
+        }
         if (bone < 0) return;
         if (hb.lastSwing.size() > 64) hb.lastSwing.values().removeIf(t -> now - t > HollowbellEntity.SWING_GAP);
         hb.lastSwing.put(p.getUUID(), now);
