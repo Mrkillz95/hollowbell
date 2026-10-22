@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.11
+# Hollowbell (Java mod), version 1.12.13
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -8,6 +8,17 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
+1.12.13: the bell glass armour has two new powers (whole set on). **R: Great Toll** (every 12 seconds): on the
+ground you rise, hang and slam down. A ring goes out 10 blocks: 8 to 14 damage, and everything it hits is stunned
+for 3 seconds (it can't move or hit). A second, softer ring a second later does about half and pushes them back
+out. In the air R still glides. **Sneak + R: Glass Bell** (every 2 minutes): a glass dome closes over you for 20
+seconds. Creatures are pushed out of it, nothing shot or thrown gets through, and under water you breathe inside
+it. You can still hit and shoot out of it. The chestplate and the leggings by the hotbar show each wait.
+
+The Stinger is reworked: a hit gives Poison II and slows. Its throw is now a barbed harpoon, up to 36 blocks,
+every 6 seconds: what it hits takes 8, is pinned where it stands for 3 seconds (half on players, never giants or
+bosses) and gets Poison III. It no longer drags things to you. Sneak as you throw and it pulls you to where it stuck.
+
 The book shows how much wind each attack costs: a thin bar under each one, green, yellow or red if he hasn't enough
 wind left.
 
@@ -16,7 +27,7 @@ lands on that part, at any size, still or drifting.
 
 ## Install
 
-You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.11.jar` in your `mods` folder
+You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.13.jar` in your `mods` folder
 and take any older Hollowbell jar out. For a server, put the same jar in the server's `mods` folder too. Everyone who
 joins needs it as well.
 
