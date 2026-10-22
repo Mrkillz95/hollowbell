@@ -41,6 +41,9 @@ public class BellArmorItem extends ArmorItem {
         tip.add(Component.translatable(
                         "item.hollowbell.bell_glass.power", Component.keybind("key.hollowbell.armour_power"))
                 .withStyle(ChatFormatting.AQUA));
+        tip.add(Component.translatable(
+                        "item.hollowbell.bell_glass.power2", Component.keybind("key.hollowbell.armour_power"))
+                .withStyle(ChatFormatting.AQUA));
         super.appendHoverText(stack, ctx, tip, flag);
     }
 

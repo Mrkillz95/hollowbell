@@ -200,6 +200,7 @@ public final class OpsCommand {
     private static int powersReset(CommandContext<CommandSourceStack> c, Collection<ServerPlayer> who) {
         for (ServerPlayer p : who) {
             p.getCooldowns().removeCooldown(ModItems.BELL_CHESTPLATE);
+            p.getCooldowns().removeCooldown(ModItems.BELL_LEGGINGS);
             p.getCooldowns().removeCooldown(ModItems.STINGER);
             Powers.stop(p);
         }

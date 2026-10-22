@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.jj.hollowbell.Detail;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
@@ -18,6 +19,7 @@ import net.jj.hollowbell.client.render.BellMeshes;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.fx.BigFx;
+import net.jj.hollowbell.net.ArmourPowerPayload;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.solid.Solid;
@@ -278,6 +280,11 @@ public final class AutoTest implements ClientModInitializer {
             int m = measure(mc, s);
             if (m == 1) continue;
             if (m == 2) return;
+            // power / bell: the bell glass set's R or Sneak + R, as the key sends it
+            if (s.equals("power") || s.equals("bell")) {
+                ClientPlayNetworking.send(new ArmourPowerPayload(s.equals("bell")));
+                continue;
+            }
             if (s.equals("quit")) {
                 HollowbellMod.LOG.info("autotest done");
                 mc.stop();

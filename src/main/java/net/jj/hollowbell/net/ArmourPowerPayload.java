@@ -6,12 +6,15 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-/** Client to server: the "Armour power" key was pressed. The server checks the set and the wait itself. */
-public record ArmourPowerPayload() implements CustomPacketPayload {
+/**
+ * Client to server: the "Armour power" key was pressed (bell: with Sneak held). The server checks the set and the
+ * wait itself.
+ */
+public record ArmourPowerPayload(boolean bell) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<ArmourPowerPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "armour_power"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ArmourPowerPayload> CODEC =
-            StreamCodec.unit(new ArmourPowerPayload());
+            StreamCodec.of((buf, p) -> buf.writeBoolean(p.bell()), buf -> new ArmourPowerPayload(buf.readBoolean()));
 
     @Override
     public CustomPacketPayload.Type<ArmourPowerPayload> type() {

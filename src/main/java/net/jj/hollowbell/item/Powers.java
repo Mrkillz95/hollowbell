@@ -6,7 +6,9 @@ import java.util.UUID;
 import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
+import net.jj.hollowbell.entity.Giants;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.fx.BigFx;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -20,22 +22,31 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 /**
- * The bell glass set's own moves, on the "Armour power" key. On the ground: the Bell toll, you float up like he
- * does, hang for a moment ringing, then slam down and a ring goes out that knocks back and stuns everything round
- * you. In the air: a glide, you drift along the way you're looking and come down slowly. The wait after either
- * shows on the chestplate (and on the little icon by the hotbar).
+ * The bell glass set's own moves, on the "Armour power" key (R). On the ground: the Great Toll, you float up like he
+ * does, hang for a moment ringing, then slam down: a ring goes out 10 blocks, hurting and stunning everything it
+ * reaches for three seconds, and a second softer ring a second later pushes them back out. In the air: a glide, you
+ * drift along the way you're looking and come down slowly. The wait after either shows on the chestplate (and on the
+ * little icon by the hotbar). Sneak + R is the Glass Bell (see GlassBell).
  */
 public final class Powers {
     private Powers() {}
 
     public static final int TOLL_COOLDOWN = 240, GLIDE_COOLDOWN = 140;
     public static final int RISE = 10, HANG = 6, SLAM_MAX = 40, GLIDE = 50;
+    /** the last-ditch ring the set rings by itself */
     public static final double RING = 7;
+
     public static final float RING_DAMAGE = 8f;
+    /** the Great Toll's ring: how far, the most and least it hurts, how long it stuns, the softer ring after it */
+    public static final double TOLL_RING = 10;
+
+    public static final float TOLL_MOST = 14f, TOLL_LEAST = 8f;
+    public static final int STUN = 60, SECOND_RING = 20;
     private static final Vector3f GLASS = new Vector3f(0.72f, 0.95f, 0.72f);
 
     public enum Kind {
@@ -47,6 +58,7 @@ public final class Powers {
         Kind kind;
         int t;
         boolean rung;
+        int rungAt;
 
         Doing(Kind k) {
             kind = k;
@@ -80,13 +92,16 @@ public final class Powers {
 
     public static void clear() {
         DOING.clear();
+        GlassBell.clear();
     }
     /** whatever power a player is in the middle of stops (a command resetting their powers) */
     public static void stop(Player p) {
         DOING.remove(p.getUUID());
+        GlassBell.stop(p);
     }
 
     public static void tick(MinecraftServer server) {
+        GlassBell.tick(server);
         if (DOING.isEmpty()) return;
         DOING.entrySet().removeIf(en -> {
             ServerPlayer p = server.getPlayerList().getPlayer(en.getKey());
@@ -117,17 +132,18 @@ public final class Powers {
             if (d.t == RISE + 1)
                 l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.TOLL, SoundSource.PLAYERS, 0.9f, 1.6f);
             l.sendParticles(ParticleTypes.END_ROD, p.getX(), p.getY() + 1, p.getZ(), 2, 0.4, 0.4, 0.4, 0.01);
-        } else {
+        } else if (!d.rung) {
             boolean landed = d.t > RISE + HANG + 2 && (p.onGround() || p.isInWater());
             if (!landed && d.t < RISE + HANG + SLAM_MAX) {
                 p.setDeltaMovement(0, -2.2, 0);
                 p.hurtMarked = true;
                 return false;
             }
-            if (!d.rung) {
-                ring(p, 1f);
-                d.rung = true;
-            }
+            tollRing(p, false);
+            d.rung = true;
+            d.rungAt = d.t;
+        } else if (d.t - d.rungAt >= SECOND_RING) {
+            tollRing(p, true);
             return true;
         }
         return false;
@@ -158,6 +174,69 @@ public final class Powers {
         if (d.t == GLIDE || d.t > 3 && p.onGround())
             p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, true, false, true));
         return false;
+    }
+
+    /**
+     * The Great Toll's rings where you land. The first: everything within 10 blocks (not you, not your pets, not
+     * players in creative) takes 8 to 14 damage, more the nearer it is, and is stunned for three seconds (it can't
+     * move or hit). The second, softer one a second later: about half that, and it pushes them back out.
+     */
+    public static int tollRing(ServerPlayer p, boolean second) {
+        ServerLevel l = p.serverLevel();
+        double r = TOLL_RING;
+        int n = 0;
+        AABB near = p.getBoundingBox().inflate(r, 4, r);
+        for (LivingEntity e : l.getEntitiesOfClass(LivingEntity.class, near, e -> e != p && e.isAlive())) {
+            if (e instanceof OwnableEntity o && p.getUUID().equals(o.getOwnerUUID())) continue;
+            if (e instanceof Player q && (q.isCreative() || q.isSpectator())) continue;
+            if (e instanceof HollowbellEntity || e.isPassengerOfSameVehicle(p)) continue;
+            Vec3 d = e.position().subtract(p.position());
+            double dist = Math.max(0.5, Math.sqrt(d.x * d.x + d.z * d.z));
+            if (dist > r) continue;
+            float hurt = TOLL_LEAST + (TOLL_MOST - TOLL_LEAST) * (float) (1 - dist / r);
+            e.invulnerableTime = 0;
+            e.hurt(p.damageSources().playerAttack(p), second ? hurt * 0.5f : hurt);
+            if (second) {
+                if (!Giants.isGiant(e)) {
+                    Vec3 out = new Vec3(d.x / dist, 0, d.z / dist).scale(1.4);
+                    e.setDeltaMovement(out.x, 0.45, out.z);
+                    e.hurtMarked = true;
+                }
+            } else {
+                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, STUN, 6), p);
+                e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, STUN, 9), p);
+                if (!Giants.isGiant(e)) {
+                    e.setDeltaMovement(0, 0.25, 0);
+                    e.hurtMarked = true;
+                }
+                l.sendParticles(ParticleTypes.ELECTRIC_SPARK, e.getX(), e.getEyeY(), e.getZ(), 6, 0.3, 0.2, 0.3, 0);
+            }
+            n++;
+        }
+        float k = second ? 0.6f : 1f, high = second ? 0.5f : 0f;
+        l.playSound(null, p.blockPosition(), ModSounds.TOLL_BIG, SoundSource.PLAYERS, 1.8f * k, 1.1f + high);
+        l.playSound(null, p.blockPosition(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 2.0f * k, 0.5f + high);
+        for (int i = 0; i < 64; i++) {
+            double a = i * Math.PI * 2 / 64;
+            for (double rr = 1.5; rr <= r; rr += 1.6)
+                l.sendParticles(
+                        new DustParticleOptions(GLASS, second ? 1.0f : 1.8f),
+                        p.getX() + Math.cos(a) * rr,
+                        p.getY() + 0.15,
+                        p.getZ() + Math.sin(a) * rr,
+                        1,
+                        0,
+                        0.02,
+                        0,
+                        0);
+        }
+        if (!second) {
+            l.sendParticles(ParticleTypes.SONIC_BOOM, p.getX(), p.getY() + 0.3, p.getZ(), 1, 0, 0, 0, 0);
+            BigFx.send(l, BigFx.SHOCKWAVE, p.position(), (float) r);
+        } else {
+            BigFx.send(l, BigFx.DUST_RING, p.position(), (float) r);
+        }
+        return n;
     }
 
     /**

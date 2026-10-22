@@ -1,5 +1,6 @@
 package net.jj.hollowbell.entity;
 
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.core.particles.ParticleTypes;
@@ -28,14 +29,16 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 /**
- * The Stinger thrown like a harpoon, on a strand that stays tied to your hand. What it sticks in gets reeled:
- * something your size or smaller is dragged to you; a wall, the ground, something big, or him, and you are the one
- * pulled in. Sneak as you throw and you always go to it. The Stinger itself never leaves your hand; this is the
- * strand end that flies.
+ * The Stinger thrown like a barbed harpoon, on a strand that stays tied to your hand, up to 36 blocks. What it sticks
+ * in is hurt, pinned where it stands for three seconds and badly poisoned. Sneak as you throw and the strand reels
+ * you to wherever it stuck: a creature, a wall, the ground, or him. The Stinger itself never leaves your hand; this
+ * is the strand end that flies.
  */
 public class StingerHook extends Projectile {
-    public static final int FLYING = 0, REEL_THEM = 1, REEL_ME = 2;
+    public static final int FLYING = 0, REEL_ME = 2;
     public static final double RANGE = 36;
+    /** how long the barb pins what it sticks in (ticks; half on a player, never a giant or a boss) */
+    public static final int PIN = 60;
     private static final EntityDataAccessor<Integer> DATA_STATE =
             SynchedEntityData.defineId(StingerHook.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_HOOKED =
@@ -114,7 +117,6 @@ public class StingerHook extends Projectile {
         }
         switch (state()) {
             case FLYING -> fly(me);
-            case REEL_THEM -> reelThem(me);
             case REEL_ME -> reelMe(me);
             default -> discard();
         }
@@ -133,6 +135,10 @@ public class StingerHook extends Projectile {
             Vec3 at = h.boneWorld(hit.bone(), rest);
             setPos(at.x, at.y, at.z);
             if (me instanceof Player p) h.applyDamage(damageSources().thrown(this, p), damage, hit.bone(), false);
+            if (!meAlways) {
+                barb();
+                return;
+            }
             anchorBell = h.getId();
             anchorBone = hit.bone();
             anchorRest = rest;
@@ -148,21 +154,24 @@ public class StingerHook extends Projectile {
             setPos(r.getLocation());
             if (le != null) {
                 le.hurt(damageSources().thrown(this, me), damage);
-                le.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0), me);
+                le.addEffect(new MobEffectInstance(MobEffects.POISON, PIN, 2), me);
+                pin(le, me);
             }
-            Entity pull = le != null ? le : e;
-            boolean big = meAlways
-                    || Giants.isGiant(pull)
-                    || pull.getBbWidth() > 1.6f
-                    || pull.getBbHeight() > 2.8f
-                    || pull.getTags().contains(Giants.TAG);
-            if (big) anchor = null;
-            stick(big ? REEL_ME : REEL_THEM, pull);
+            if (!meAlways) {
+                barb();
+                return;
+            }
+            anchor = null;
+            stick(REEL_ME, le != null ? le : e);
             return;
         }
         if (r.getType() == HitResult.Type.BLOCK) {
             BlockHitResult b = (BlockHitResult) r;
             setPos(b.getLocation());
+            if (!meAlways) {
+                barb();
+                return;
+            }
             anchor = b.getLocation();
             stick(REEL_ME, null);
             return;
@@ -170,6 +179,23 @@ public class StingerHook extends Projectile {
         setPos(to.x, to.y, to.z);
         // too far and nothing caught: the strand pulls it back
         if (++flown > 24 || me.distanceTo(this) > RANGE) discard();
+    }
+
+    /** held where it stands: it can't move for a moment (not a giant or a boss, and a player only half as long) */
+    public static void pin(LivingEntity e, LivingEntity by) {
+        if (Giants.isGiant(e) || e.getType().is(ConventionalEntityTypeTags.BOSSES)) return;
+        int ticks = e instanceof Player ? PIN / 2 : PIN;
+        e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ticks, 6), by);
+        e.setDeltaMovement(0, Math.min(0, e.getDeltaMovement().y), 0);
+        e.hurtMarked = true;
+    }
+
+    /** not reeling: the barb bites and the strand pulls the end back */
+    private void barb() {
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.TRIDENT_HIT, SoundSource.PLAYERS, 1f, 1.5f);
+        if (level() instanceof ServerLevel sl)
+            sl.sendParticles(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 10, 0.2, 0.2, 0.2, 0.05);
+        discard();
     }
 
     private void stick(int how, @Nullable Entity what) {
@@ -200,29 +226,6 @@ public class StingerHook extends Projectile {
         if (anchor != null) return anchor;
         Entity e = hooked();
         return e != null && e.isAlive() ? e.position().add(0, e.getBbHeight() * 0.5, 0) : null;
-    }
-
-    /** a small one is dragged to your feet, a bit up off the ground so it doesn't snag */
-    private void reelThem(LivingEntity me) {
-        Entity e = hooked();
-        if (e == null || !e.isAlive() || ++reeled > 30) {
-            discard();
-            return;
-        }
-        Vec3 to = me.position().add(me.getLookAngle().multiply(1.2, 0, 1.2));
-        Vec3 d = to.subtract(e.position());
-        double dist = d.length();
-        setPos(e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ());
-        if (dist < 1.8) {
-            e.setDeltaMovement(e.getDeltaMovement().scale(0.2));
-            e.hurtMarked = true;
-            discard();
-            return;
-        }
-        double speed = Math.min(1.25, 0.35 + dist * 0.12);
-        e.setDeltaMovement(d.normalize().scale(speed).add(0, reeled < 3 ? 0.35 : 0.06, 0));
-        e.hurtMarked = true;
-        e.resetFallDistance();
     }
 
     /** you are pulled along the strand to where it stuck, and let go just short of it */

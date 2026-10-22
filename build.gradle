@@ -79,6 +79,7 @@ def allTests = [
     'net.jj.hollowbell.test.CarryTests',
     'net.jj.hollowbell.test.WorldOneTests',
     'net.jj.hollowbell.test.GearTests',
+    'net.jj.hollowbell.test.BellPowerTests',
     'net.jj.hollowbell.test.GroundTests',
     'net.jj.hollowbell.test.FarSightTests',
     'net.jj.hollowbell.test.OrdersTests',

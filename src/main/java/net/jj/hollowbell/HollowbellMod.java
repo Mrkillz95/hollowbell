@@ -21,6 +21,7 @@ import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.item.BellArmorItem;
 import net.jj.hollowbell.item.BookRule;
+import net.jj.hollowbell.item.GlassBell;
 import net.jj.hollowbell.item.Powers;
 import net.jj.hollowbell.net.ArmourPowerPayload;
 import net.jj.hollowbell.net.BeingHimPayload;
@@ -29,6 +30,7 @@ import net.jj.hollowbell.net.CodexPayload;
 import net.jj.hollowbell.net.DetailPayload;
 import net.jj.hollowbell.net.DrivePayload;
 import net.jj.hollowbell.net.FarSightPayload;
+import net.jj.hollowbell.net.GlassBellPayload;
 import net.jj.hollowbell.net.HitPayload;
 import net.jj.hollowbell.net.LookMarkPayload;
 import net.jj.hollowbell.net.LootBeamsPayload;
@@ -86,6 +88,7 @@ public class HollowbellMod implements ModInitializer {
         BigFx.register();
         PayloadTypeRegistry.playS2C().register(FarSightPayload.TYPE, FarSightPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(LootBeamsPayload.TYPE, LootBeamsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(GlassBellPayload.TYPE, GlassBellPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(
                 CodexPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> CodexOrders.handle(ctx.player(), pay)));
@@ -93,7 +96,11 @@ public class HollowbellMod implements ModInitializer {
                 SafeDropPayload.TYPE,
                 (pay, ctx) -> ctx.server().execute(() -> CodexOrders.dropFromSafeList(ctx.player(), pay.id())));
         ServerPlayNetworking.registerGlobalReceiver(
-                ArmourPowerPayload.TYPE, (pay, ctx) -> ctx.server().execute(() -> Powers.use(ctx.player())));
+                ArmourPowerPayload.TYPE,
+                (pay, ctx) -> ctx.server().execute(() -> {
+                    if (pay.bell()) GlassBell.ring(ctx.player());
+                    else Powers.use(ctx.player());
+                }));
         ServerPlayNetworking.registerGlobalReceiver(
                 HitPayload.TYPE,
                 (pay, ctx) -> ctx.server().execute(() -> {

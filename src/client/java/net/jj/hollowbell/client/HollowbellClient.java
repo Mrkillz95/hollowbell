@@ -31,6 +31,7 @@ import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.net.BeingHimPayload;
 import net.jj.hollowbell.net.DetailPayload;
 import net.jj.hollowbell.net.FarSightPayload;
+import net.jj.hollowbell.net.GlassBellPayload;
 import net.jj.hollowbell.net.LookMarkPayload;
 import net.jj.hollowbell.net.LootBeamsPayload;
 import net.jj.hollowbell.net.MoodPayload;
@@ -120,7 +121,11 @@ public class HollowbellClient implements ClientModInitializer {
             FarSightClient.render(ctx);
             BellRenderer.drawGlass();
             LootBeamsClient.render(ctx);
+            GlassBellClient.render(ctx);
         });
+        ClientPlayNetworking.registerGlobalReceiver(
+                GlassBellPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> GlassBellClient.receive(p)));
+        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> c.execute(GlassBellClient::clear));
         ClientPlayNetworking.registerGlobalReceiver(
                 LootBeamsPayload.TYPE, (p, ctx) -> ctx.client().execute(() -> LootBeamsClient.receive(p)));
         ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> c.execute(LootBeamsClient::clear));

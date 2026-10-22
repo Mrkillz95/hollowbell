@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
@@ -57,7 +58,8 @@ public final class ArmourPowerKey {
                 && mc.player != null
                 && !mc.player.isPassenger()
                 && !BeingHim.inside()
-                && BellArmorItem.fullSet(mc.player)) ClientPlayNetworking.send(new ArmourPowerPayload());
+                && BellArmorItem.fullSet(mc.player))
+            ClientPlayNetworking.send(new ArmourPowerPayload(mc.player.isShiftKeyDown()));
         wasDown = now;
         motes(mc);
     }
@@ -81,18 +83,23 @@ public final class ArmourPowerKey {
         }
     }
 
-    /** the chestplate icon right of the hotbar, with the wait drawn over it like any item cooldown */
+    /** right of the hotbar: the chestplate for R and the leggings for Sneak + R, each with its wait drawn over it */
     public static void hud(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.options.hideGui || BeingHim.inside() || !BellArmorItem.fullSet(mc.player)) return;
-        ItemStack st = new ItemStack(ModItems.BELL_CHESTPLATE);
         int x = g.guiWidth() / 2 + 91 + 8;
         boolean left = mc.player.getMainArm() == HumanoidArm.LEFT;
         if (left && !mc.player.getOffhandItem().isEmpty()) x += 29; // the off-hand slot is on this side
         if (!left && mc.options.attackIndicator().get() == AttackIndicatorStatus.HOTBAR)
             x += 22; // so is the swing meter
         int y = g.guiHeight() - 20;
-        boolean ready = !mc.player.getCooldowns().isOnCooldown(ModItems.BELL_CHESTPLATE);
+        icon(g, mc, ModItems.BELL_CHESTPLATE, x, y);
+        icon(g, mc, ModItems.BELL_LEGGINGS, x + 22, y);
+    }
+
+    private static void icon(GuiGraphics g, Minecraft mc, Item item, int x, int y) {
+        ItemStack st = new ItemStack(item);
+        boolean ready = !mc.player.getCooldowns().isOnCooldown(item);
         g.fill(x - 2, y - 2, x + 18, y + 18, ready ? 0x6040A060 : 0x60202020);
         g.renderItem(st, x, y);
         g.renderItemDecorations(mc.font, st, x, y);

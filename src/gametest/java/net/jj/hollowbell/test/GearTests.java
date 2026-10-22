@@ -35,9 +35,9 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
@@ -147,7 +147,7 @@ public class GearTests implements FabricGameTest {
         h.succeed();
     }
 
-    private static void wearBellGlass(ServerPlayer p) {
+    static void wearBellGlass(ServerPlayer p) {
         p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.BELL_HELMET));
         p.setItemSlot(EquipmentSlot.CHEST, new ItemStack(ModItems.BELL_CHESTPLATE));
         p.setItemSlot(EquipmentSlot.LEGS, new ItemStack(ModItems.BELL_LEGGINGS));
@@ -310,12 +310,14 @@ public class GearTests implements FabricGameTest {
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 120, batch = "stinger_reel_them")
-    public void theStingerReelsASmallThingIn(GameTestHelper h) {
+    public void theStingerPinsAndPoisonsWhatItHits(GameTestHelper h) {
         Vec3 at = openGround(h, 316);
         ServerPlayer p = player(h, at);
         var pig = EntityType.PIG.create(h.getLevel());
         Vec3 pigAt = at.add(11, 0, 0);
         pig.moveTo(pigAt.x, pigAt.y, pigAt.z, 0, 0);
+        pig.getAttribute(Attributes.MAX_HEALTH).setBaseValue(40);
+        pig.setHealth(40);
         h.getLevel().addFreshEntity(pig);
         ItemStack st = new ItemStack(ModItems.STINGER);
         p.setItemInHand(InteractionHand.MAIN_HAND, st);
@@ -323,14 +325,23 @@ public class GearTests implements FabricGameTest {
             face(p, pig.position().add(0, pig.getBbHeight() * 0.5, 0));
             var hook = StingerItem.throwIt(p, st, 1f, false);
             h.assertTrue(p.getCooldowns().isOnCooldown(ModItems.STINGER), "no wait after a throw");
+            h.assertTrue(StingerItem.COOLDOWN == 6 * 20, "a 6 second wait");
             h.assertTrue(hook.isAlive(), "the strand end didn't fly");
         });
         double[] best = {99};
-        for (int t = 4; t < 60; t++)
-            h.runAfterDelay(t, () -> best[0] = Math.min(best[0], pig.position().distanceTo(p.position())));
-        h.runAfterDelay(62, () -> {
-            h.assertTrue(best[0] < 4.5, "the pig was never reeled in: closest " + best[0]);
-            h.assertTrue(pig.getHealth() < pig.getMaxHealth(), "the stinger didn't hurt the pig");
+        boolean[] pinned = {false};
+        for (int t = 4; t < 40; t++)
+            h.runAfterDelay(t, () -> {
+                best[0] = Math.min(best[0], pig.position().distanceTo(p.position()));
+                var slow = pig.getEffect(MobEffects.MOVEMENT_SLOWDOWN);
+                var poison = pig.getEffect(MobEffects.POISON);
+                if (slow != null && slow.getAmplifier() >= 6 && poison != null && poison.getAmplifier() >= 2)
+                    pinned[0] = true;
+            });
+        h.runAfterDelay(42, () -> {
+            h.assertTrue(pinned[0], "the pig was never pinned and badly poisoned");
+            h.assertTrue(pig.getHealth() <= 40 - 7, "the barb hurts about 8: " + pig.getHealth());
+            h.assertTrue(best[0] > 8, "and it isn't reeled in any more: closest " + best[0]);
             pig.discard();
             drop(p);
             letGo(h, at);
@@ -351,7 +362,7 @@ public class GearTests implements FabricGameTest {
         // (a few ticks first, so the freshly loaded chunks here are running)
         h.runAfterDelay(10, () -> {
             face(p, Vec3.atCenterOf(w.above()));
-            hook[0] = StingerItem.throwIt(p, new ItemStack(ModItems.STINGER), 1f, false);
+            hook[0] = StingerItem.throwIt(p, new ItemStack(ModItems.STINGER), 1f, true);
         });
         // a tick after it sticks in the wall, the pull is on (when it sticks depends on the throw's own ticks)
         int[] seen = {0};
@@ -389,7 +400,7 @@ public class GearTests implements FabricGameTest {
             pl[0] = player(h, from.subtract(0, 1.62, 0));
             pl[0].setNoGravity(true);
             face(pl[0], spot);
-            hook[0] = StingerItem.throwIt(pl[0], new ItemStack(ModItems.STINGER), 1f, false);
+            hook[0] = StingerItem.throwIt(pl[0], new ItemStack(ModItems.STINGER), 1f, true);
         });
         int[] seen = {0};
         for (int t = 22; t < 50; t++)
@@ -408,46 +419,6 @@ public class GearTests implements FabricGameTest {
         h.runAfterDelay(
                 52,
                 () -> h.fail("the stinger never stuck in him (alive " + (hook[0] != null && hook[0].isAlive()) + ")"));
-    }
-
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 140, batch = "armour_toll")
-    public void theBellTollFloatsSlamsAndStuns(GameTestHelper h) {
-        Powers.clear();
-        Vec3 at = onGround(h, 1, 1);
-        ServerPlayer p = player(h, at);
-        var z = EntityType.ZOMBIE.create(h.getLevel());
-        z.moveTo(at.x + 3, at.y, at.z, 0, 0);
-        z.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.LEATHER_HELMET));
-        z.setNoAi(true);
-        h.getLevel().addFreshEntity(z);
-        // three pieces: no power
-        wearBellGlass(p);
-        p.setItemSlot(EquipmentSlot.FEET, ItemStack.EMPTY);
-        p.setOnGround(true);
-        h.assertTrue(Powers.use(p) == null, "the power worked without the full set");
-        wearBellGlass(p);
-        float zHp = z.getHealth();
-        h.runAfterDelay(2, () -> {
-            p.setOnGround(true);
-            var k = Powers.use(p);
-            h.assertTrue(k == Powers.Kind.TOLL, "on the ground the key should toll, did " + k);
-            h.assertTrue(p.getCooldowns().isOnCooldown(ModItems.BELL_CHESTPLATE), "no wait shown on the chestplate");
-            h.assertTrue(Powers.use(p) == null, "a second toll right away");
-        });
-        h.runAfterDelay(
-                6, () -> h.assertTrue(p.getDeltaMovement().y > 0.2, "not floating up: " + p.getDeltaMovement()));
-        h.runAfterDelay(
-                3 + Powers.RISE + Powers.HANG + 3,
-                () -> h.assertTrue(p.getDeltaMovement().y < -1, "not slamming down: " + p.getDeltaMovement()));
-        h.runAfterDelay(3 + Powers.RISE + Powers.HANG + Powers.SLAM_MAX + 4, () -> {
-            h.assertTrue(!Powers.busy(p), "the toll never finished");
-            h.assertTrue(z.getHealth() < zHp, "the ring didn't hurt the zombie");
-            var slow = z.getEffect(MobEffects.MOVEMENT_SLOWDOWN);
-            h.assertTrue(slow != null && slow.getAmplifier() >= 3, "the zombie wasn't stunned");
-            z.discard();
-            drop(p);
-            h.succeed();
-        });
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 80, batch = "armour_glide")
