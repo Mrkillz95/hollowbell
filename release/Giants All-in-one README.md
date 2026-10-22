@@ -11,14 +11,14 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.8 |
-| Pitchgut | 1.35.4 |
-| Furrowmaw | 1.17.2 |
-| Fire & Ice Cerberus | 2.18.0 |
-| Hollowbell | 1.12.6 |
-| Lantern Willow | 1.10.5 |
-| Wreckback | 1.2.7 |
-| The Swarmforge | 1.4.6 |
+| Giants Guide | 1.4.9 |
+| Pitchgut | 1.35.12 |
+| Furrowmaw | 1.17.10 |
+| Fire & Ice Cerberus | 2.18.9 |
+| Hollowbell | 1.12.14 |
+| Lantern Willow | 1.10.14 |
+| Wreckback | 1.2.16 |
+| The Swarmforge | 1.4.15 |
 
 ## Install
 
@@ -27,7 +27,7 @@ and puts this one in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.50.jar` in. Keep Fabric API in there.
+`giants-all-1.4.51.jar` in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -48,7 +48,7 @@ A book about every giant you have. Right-click it to open it.
 | Moves | every move, light, medium and heavy (and Wreckback's sea moves), with what it does (the same words as his own book) |
 | Army | the Swarmforge only: every robot and unit he sends out, and the army orders in his book |
 | Fighting | where to hit him, what hurts him most, and tips |
-| Drops | his weapon, his armour and its Armour power (R), his ward, the rest of his loot and his book, with pictures of the real items and their recipes |
+| Drops | his weapon, his armour and its two powers (R and Sneak + R), his ward, the rest of his loot and his book, with pictures of the real items and their recipes |
 | Commands | the commands anyone can use, and the ones that need cheats |
 
 - **Giants together** (the last one on the left): who fights whom and who keeps away when they meet, and every
@@ -58,6 +58,28 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.4.51
+
+- Every giant: much easier to hit. A swing at any part of him you can see in reach lands on that part, at any size,
+  standing or moving.
+- Every giant's book shows how much wind each attack costs: a thin bar under each one, green, yellow or red if he
+  hasn't enough wind left.
+- Every armour set has two powers now (whole set on): R for fighting and Sneak + R for getting about, finding things
+  or making things. Pitchgut: Goo Geyser and All Eyes Open. Furrowmaw: Burrow Strike and Earth Swim. Cerberus:
+  Three-Headed Fury and Hellhound's Hunt. Hollowbell: Great Toll and Glass Bell. Lantern Willow: Drowning Roots and
+  Angler's Lure. Wreckback: Broadside and Anchor Throw. Swarmforge: War Form and Field Forge. The chestplate and the
+  leggings by the hotbar show each wait.
+- Every weapon is reworked to be about as strong as the others, each in its own way: the Goo Maw devours, the
+  Mandible Blade breaks armour, the Twin Fangs are evened out, the Root Maul heals you and roots, the Anchor Hook
+  keelhauls, the Wrench Hammer throws lightning and the Stinger pins with a barbed harpoon.
+- Who powers hit: armour powers and weapon powers can hurt other players when the server has PvP on (never you), and
+  they leave farm animals and other peaceful animals, villagers, golems and your own pets alone. Holds and stuns last
+  half as long on players. The Lantern Willow's roots no longer kill cows and sheep.
+- The Giants Guide's Drops pages show the new powers and weapons.
+
+Inside: Pitchgut 1.35.12, Furrowmaw 1.17.10, Cerberus 2.18.9, Hollowbell 1.12.14, Lantern Willow 1.10.14,
+Wreckback 1.2.16, Swarmforge 1.4.15.
 
 ## New in 1.4.50
 
