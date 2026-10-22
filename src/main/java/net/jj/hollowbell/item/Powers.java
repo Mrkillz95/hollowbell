@@ -20,7 +20,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -177,19 +176,18 @@ public final class Powers {
     }
 
     /**
-     * The Great Toll's rings where you land. The first: everything within 10 blocks (not you, not your pets, not
-     * players in creative) takes 8 to 14 damage, more the nearer it is, and is stunned for three seconds (it can't
-     * move or hit). The second, softer one a second later: about half that, and it pushes them back out.
+     * The Great Toll's rings where you land. The first: everything within 10 blocks that PowerTargets lets an area
+     * power hit takes 8 to 14 damage, more the nearer it is, and is stunned for three seconds (half that on a
+     * player; it can't move or hit). The second, softer one a second later: about half that, and it pushes them
+     * back out.
      */
     public static int tollRing(ServerPlayer p, boolean second) {
         ServerLevel l = p.serverLevel();
         double r = TOLL_RING;
         int n = 0;
         AABB near = p.getBoundingBox().inflate(r, 4, r);
-        for (LivingEntity e : l.getEntitiesOfClass(LivingEntity.class, near, e -> e != p && e.isAlive())) {
-            if (e instanceof OwnableEntity o && p.getUUID().equals(o.getOwnerUUID())) continue;
-            if (e instanceof Player q && (q.isCreative() || q.isSpectator())) continue;
-            if (e instanceof HollowbellEntity || e.isPassengerOfSameVehicle(p)) continue;
+        for (LivingEntity e : l.getEntitiesOfClass(LivingEntity.class, near, e -> PowerTargets.area(p, e))) {
+            if (e instanceof HollowbellEntity) continue;
             Vec3 d = e.position().subtract(p.position());
             double dist = Math.max(0.5, Math.sqrt(d.x * d.x + d.z * d.z));
             if (dist > r) continue;
@@ -203,8 +201,9 @@ public final class Powers {
                     e.hurtMarked = true;
                 }
             } else {
-                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, STUN, 6), p);
-                e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, STUN, 9), p);
+                int stun = PowerTargets.holdTicks(e, STUN);
+                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, stun, 6), p);
+                e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, stun, 9), p);
                 if (!Giants.isGiant(e)) {
                     e.setDeltaMovement(0, 0.25, 0);
                     e.hurtMarked = true;
@@ -240,18 +239,16 @@ public final class Powers {
     }
 
     /**
-     * The ring where you land: everything close (not you, not your pets, not other players in creative) is hurt a
-     * little, thrown back and stunned for a moment. Strength 1 is the full toll; the set's last-ditch ring uses less.
+     * The ring where you land: everything close that an area power may hit (see PowerTargets) is hurt a little,
+     * thrown back and stunned for a moment. Strength 1 is the full toll; the set's last-ditch ring uses less.
      */
     public static int ring(ServerPlayer p, float strength) {
         ServerLevel l = p.serverLevel();
         double r = RING * (0.6 + 0.4 * strength);
         int n = 0;
         for (LivingEntity e : l.getEntitiesOfClass(
-                LivingEntity.class, p.getBoundingBox().inflate(r, 3, r), e -> e != p && e.isAlive())) {
-            if (e instanceof OwnableEntity o && p.getUUID().equals(o.getOwnerUUID())) continue;
-            if (e instanceof Player q && (q.isCreative() || q.isSpectator())) continue;
-            if (e instanceof HollowbellEntity || e.isPassengerOfSameVehicle(p)) continue;
+                LivingEntity.class, p.getBoundingBox().inflate(r, 3, r), e -> PowerTargets.area(p, e))) {
+            if (e instanceof HollowbellEntity) continue;
             Vec3 d = e.position().subtract(p.position());
             double dist = Math.max(0.5, Math.sqrt(d.x * d.x + d.z * d.z));
             if (dist > r) continue;
@@ -261,8 +258,10 @@ public final class Powers {
             e.setDeltaMovement(e.getDeltaMovement().add(out.x, 0.35 + 0.2 * strength, out.z));
             e.hurtMarked = true;
             // stunned: rooted and weak for a moment
-            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, (int) (50 * strength) + 10, 4), p);
-            e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, (int) (60 * strength) + 10, 1), p);
+            int root = PowerTargets.holdTicks(e, (int) (50 * strength) + 10);
+            int weak = PowerTargets.holdTicks(e, (int) (60 * strength) + 10);
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, root, 4), p);
+            e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, weak, 1), p);
             n++;
         }
         l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.TOLL_BIG, SoundSource.PLAYERS, 1.4f * strength, 1.3f);

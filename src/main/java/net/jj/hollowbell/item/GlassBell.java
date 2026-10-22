@@ -27,8 +27,9 @@ import org.joml.Vector3f;
 
 /**
  * The bell glass set's other power (Sneak + the Armour power key): the Glass Bell. A dome of his glass closes over
- * you where you stand for 20 seconds. Creatures can't come in (they're pushed back out), nothing shot or thrown gets
- * through, and under water you breathe inside it. It doesn't stop you: you can hit and shoot out of it.
+ * you where you stand for 20 seconds. Creatures can't come in (they're pushed back out; other players too, when PvP
+ * is on), nothing shot or thrown gets through, and under water you breathe inside it. It doesn't stop you: you can
+ * hit and shoot out of it.
  */
 public final class GlassBell {
     private GlassBell() {}
@@ -124,6 +125,18 @@ public final class GlassBell {
             m.setDeltaMovement(out.x * 0.4, 0.1, out.z * 0.4);
             m.hurtMarked = true;
         }
+        // other players are kept out too, but only when they could fight you anyway
+        if (owner != null)
+            for (ServerPlayer q : l.getEntitiesOfClass(ServerPlayer.class, near, q -> PowerTargets.ok(owner, q))) {
+                Vec3 d = q.position().add(0, q.getBbHeight() * 0.5, 0).subtract(c);
+                double reach = RADIUS + q.getBbWidth() * 0.5;
+                if (d.length() >= reach || q.isPassenger()) continue;
+                Vec3 out = d.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : d.normalize();
+                Vec3 to = c.add(out.scale(reach + 0.1)).subtract(0, q.getBbHeight() * 0.5, 0);
+                q.teleportTo(to.x, Math.max(to.y, q.getY()), to.z);
+                q.setDeltaMovement(out.x * 0.4, 0.1, out.z * 0.4);
+                q.hurtMarked = true;
+            }
         for (Projectile pr : l.getEntitiesOfClass(Projectile.class, near, Entity::isAlive)) {
             Entity shooter = pr.getOwner();
             if (shooter != null && (shooter == owner || shooter.position().distanceTo(c) < RADIUS)) continue;

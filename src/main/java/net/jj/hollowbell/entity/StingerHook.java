@@ -2,6 +2,7 @@ package net.jj.hollowbell.entity;
 
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.ModEntities;
+import net.jj.hollowbell.item.PowerTargets;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -30,7 +31,7 @@ import org.joml.Vector3f;
 
 /**
  * The Stinger thrown like a barbed harpoon, on a strand that stays tied to your hand, up to 36 blocks. What it sticks
- * in is hurt, pinned where it stands for three seconds and badly poisoned. Sneak as you throw and the strand reels
+ * in is hurt, pinned where it stands for three seconds and badly poisoned (if PowerTargets lets it be hit). Sneak as you throw and the strand reels
  * you to wherever it stuck: a creature, a wall, the ground, or him. The Stinger itself never leaves your hand; this
  * is the strand end that flies.
  */
@@ -152,7 +153,7 @@ public class StingerHook extends Projectile {
             LivingEntity le =
                     e.getTags().contains(Giants.TAG) ? Giants.ownerOf(e) : e instanceof LivingEntity l ? l : null;
             setPos(r.getLocation());
-            if (le != null) {
+            if (le != null && PowerTargets.ok(me, le)) {
                 le.hurt(damageSources().thrown(this, me), damage);
                 le.addEffect(new MobEffectInstance(MobEffects.POISON, PIN, 2), me);
                 pin(le, me);
@@ -184,8 +185,7 @@ public class StingerHook extends Projectile {
     /** held where it stands: it can't move for a moment (not a giant or a boss, and a player only half as long) */
     public static void pin(LivingEntity e, LivingEntity by) {
         if (Giants.isGiant(e) || e.getType().is(ConventionalEntityTypeTags.BOSSES)) return;
-        int ticks = e instanceof Player ? PIN / 2 : PIN;
-        e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ticks, 6), by);
+        e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, PowerTargets.holdTicks(e, PIN), 6), by);
         e.setDeltaMovement(0, Math.min(0, e.getDeltaMovement().y), 0);
         e.hurtMarked = true;
     }
