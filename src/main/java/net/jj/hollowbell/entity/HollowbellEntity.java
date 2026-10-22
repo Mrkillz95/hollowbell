@@ -1012,6 +1012,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
         flight.giantsApart();
         animTick();
         ensurePose();
+        health.recordPose();
         moves.afterPose();
         Solid.serverTick(this);
         health.stingTick();

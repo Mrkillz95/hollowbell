@@ -78,11 +78,11 @@ final class BellHealth {
         Vec3 eye = p.getEyePosition(), look = p.getViewVector(1f);
         BellRig.Hit h = hb.raycast(eye, look, reach);
         int bone = h != null ? h.bone() : -1;
-        if (bone < 0 && claimedBone >= 0 && claimedBone < hb.rig.boneCount()) {
-            // the client saw it a moment ago: take its word if that bone is right there in front of the player
-            Vec3 c = boneCentreWorld(claimedBone);
-            if (c != null && nearestOnBone(claimedBone, eye, reach + 2.5 + 4 * hb.bellScale())) bone = claimedBone;
-        }
+        // the client saw it a moment ago: take its word if the player is in reach of that bone, as it is or was
+        if (bone < 0
+                && claimedBone >= 0
+                && claimedBone < hb.rig.boneCount()
+                && inReach(claimedBone, eye, p.entityInteractionRange() + 1.0)) bone = claimedBone;
         if (bone < 0) return;
         if (hb.lastSwing.size() > 64) hb.lastSwing.values().removeIf(t -> now - t > HollowbellEntity.SWING_GAP);
         hb.lastSwing.put(p.getUUID(), now);
@@ -103,12 +103,35 @@ final class BellHealth {
         return hb.boneWorld(b, new Vector3f((bb[0] + bb[3]) / 2, (bb[1] + bb[4]) / 2, (bb[2] + bb[5]) / 2));
     }
 
-    boolean nearestOnBone(int b, Vec3 eye, double within) {
-        Vector3f m = hb.toModel(eye);
+    /**
+     * Is a spot (a swinger's eye) within reach of a bone of his, now or over the last half second? What a player sees
+     * of him is a moment behind him here, and his arms and strands swing a long way in that time.
+     */
+    boolean inReach(int b, Vec3 eye, double reach) {
+        float s = hb.bellScale();
         Matrix4f inv = new Matrix4f();
-        int pad = (int) Math.ceil(within / hb.bellScale());
-        if (pad > 12) pad = 12;
-        return hb.rig.touches(hb.pose, hb.slicesNow(), b, m, pad, inv);
+        if (hb.rig.within(hb.pose, hb.slicesNow(), b, hb.toModel(eye), (float) (reach / s), inv)) return true;
+        for (int k = 0; k < recentCount; k++) {
+            int i = Math.floorMod(recentNext - 1 - k, RECENT);
+            Vector3f m = hb.toModel(eye.subtract(recentAt[i]).add(hb.position()));
+            if (hb.rig.within(recent[i], null, b, m, (float) (reach / s), inv)) return true;
+        }
+        return false;
+    }
+
+    private static final int RECENT = 10;
+    private final Matrix4f[][] recent = new Matrix4f[RECENT][];
+    private final Vec3[] recentAt = new Vec3[RECENT];
+    private int recentNext, recentCount;
+
+    /** his pose this tick, kept for a half second (server) */
+    void recordPose() {
+        Matrix4f[] m = recent[recentNext];
+        if (m == null) m = recent[recentNext] = hb.rig.newPose();
+        for (int i = 0; i < m.length; i++) m[i].set(hb.pose[i]);
+        recentAt[recentNext] = hb.position();
+        recentNext = (recentNext + 1) % RECENT;
+        recentCount = Math.min(recentCount + 1, RECENT);
     }
 
     /** how much of a hit reaches him, by the block it landed on */

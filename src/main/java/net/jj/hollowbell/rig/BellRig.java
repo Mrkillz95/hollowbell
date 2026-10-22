@@ -924,6 +924,55 @@ public final class BellRig {
         return false;
     }
 
+    /** is a model-space point within r (his blocks) of one of this bone's blocks, as drawn up close if slices given */
+    public boolean within(Matrix4f[] pose, @Nullable Matrix4f[] slices, int b, Vector3f p, float r, Matrix4f inv) {
+        BellModel m = BellModel.get();
+        BellPieces pc = BellPieces.get();
+        if (slices == null || pc.num[b] == 1) {
+            Matrix4f at = slices == null ? pose[b] : slices[pc.first[b]];
+            return withinIn(m, null, -1, b, at, m.bounds[b], p, r, inv);
+        }
+        for (int u = pc.first[b]; u < pc.first[b] + pc.num[b]; u++)
+            if (withinIn(m, pc, u, b, slices[u], pc.bounds[u], p, r, inv)) return true;
+        return false;
+    }
+
+    private static boolean withinIn(
+            BellModel m,
+            @Nullable BellPieces pc,
+            int slice,
+            int b,
+            Matrix4f at,
+            float @Nullable [] bb,
+            Vector3f p,
+            float r,
+            Matrix4f inv) {
+        if (bb == null) return false;
+        at.invert(inv);
+        Vector3f q = inv.transformPosition(p, new Vector3f());
+        float bx = Math.max(0, Math.max(bb[0] - q.x, q.x - bb[3]));
+        float by = Math.max(0, Math.max(bb[1] - q.y, q.y - bb[4]));
+        float bz = Math.max(0, Math.max(bb[2] - q.z, q.z - bb[5]));
+        if (bx * bx + by * by + bz * bz > r * r) return false;
+        int x0 = Mth.floor(Math.max(bb[0], q.x - r)), x1 = Mth.floor(Math.min(bb[3], q.x + r));
+        int y0 = Mth.floor(Math.max(bb[1], q.y - r)), y1 = Mth.floor(Math.min(bb[4], q.y + r));
+        int z0 = Mth.floor(Math.max(bb[2], q.z - r)), z1 = Mth.floor(Math.min(bb[5], q.z + r));
+        for (int x = x0; x <= x1; x++) {
+            float dx = Math.max(0, Math.max(x - q.x, q.x - (x + 1)));
+            for (int y = y0; y <= y1; y++) {
+                float dy = Math.max(0, Math.max(y - q.y, q.y - (y + 1)));
+                if (dx * dx + dy * dy > r * r) continue;
+                for (int z = z0; z <= z1; z++) {
+                    float dz = Math.max(0, Math.max(z - q.z, q.z - (z + 1)));
+                    if (dx * dx + dy * dy + dz * dz <= r * r
+                            && m.has(b, x, y, z)
+                            && (slice < 0 || pc.in(slice, b, x, y, z))) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static boolean touchesIn(
             BellModel m,
             @Nullable BellPieces pc,
