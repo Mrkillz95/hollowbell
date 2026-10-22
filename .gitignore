@@ -14,3 +14,5 @@ autotest*.txt
 watch-release.sh
 watch-all.sh
 run-mods/
+release/download/
+release/giants-all-*.jar
