@@ -12,7 +12,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.Slot;
@@ -22,10 +21,10 @@ import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * One Hollowbell book at a time. Whoever has it (in their pack, their ender chest, on their cursor or crafting grid,
- * online or not) is its holder, kept in the world's data with the book's own id. Nobody else can craft one, pick one
- * up or take one out of a container while it's held, and any other copy has gone quiet: it gives no orders. The
- * holder only changes when the book is seen leaving them (they're online then), or when an op frees it.
+ * One Hollowbell book at a time. Whoever has it (in their pack, on their cursor or crafting grid, online or not) is
+ * its holder, kept in the world's data with the book's own id. A book in an ender chest is nobody's. Nobody else can
+ * craft one, pick one up or take one out of a container while it's held, and any other copy has gone quiet: it gives
+ * no orders. The holder only changes when the book is seen leaving them (they're online then), or when an op frees it.
  */
 public final class BookRule extends SavedData {
     private static final String NAME = "hollowbell_book";
@@ -161,19 +160,16 @@ public final class BookRule extends SavedData {
         p.displayClientMessage(Component.translatable("message.hollowbell.book_quiet", holderName), true);
     }
 
-    /** a slot of a container that isn't the player's own (their pack and ender chest are theirs) */
+    /** a slot of a container that isn't the player's own pack (their ender chest is outside, like any chest) */
     public static boolean outside(Slot slot, Player p) {
-        Container c = slot.container;
-        return c != p.getInventory() && c != p.getEnderChestInventory();
+        return slot.container != p.getInventory();
     }
 
-    /** every copy of the book a player has: pack, ender chest, cursor, crafting grids */
+    /** every copy of the book a player has: pack, cursor, crafting grids (not their ender chest) */
     static List<ItemStack> booksOf(ServerPlayer p) {
         List<ItemStack> out = new ArrayList<>();
         for (int i = 0; i < p.getInventory().getContainerSize(); i++)
             add(out, p.getInventory().getItem(i));
-        for (int i = 0; i < p.getEnderChestInventory().getContainerSize(); i++)
-            add(out, p.getEnderChestInventory().getItem(i));
         add(out, p.containerMenu.getCarried());
         for (int i = 0; i < p.inventoryMenu.getCraftSlots().getContainerSize(); i++)
             add(out, p.inventoryMenu.getCraftSlots().getItem(i));

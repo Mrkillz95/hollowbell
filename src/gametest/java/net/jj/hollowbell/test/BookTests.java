@@ -20,6 +20,7 @@ import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
@@ -199,6 +200,60 @@ public class BookTests implements FabricGameTest {
         h.assertTrue(working == 1, "working books: " + working);
         drop(a);
         drop(b);
+        rule(h).free();
+        h.succeed();
+    }
+
+    /** the holder's book goes from their pack into their ender chest */
+    private static void putAway(ServerPlayer p) {
+        p.getEnderChestInventory().setItem(0, p.getInventory().removeItemNoUpdate(bookSlot(p)));
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "book_ender_in")
+    public void puttingItInYourEnderChestFreesIt(GameTestHelper h) {
+        rule(h).free();
+        ServerPlayer a = holder(h), b = player(h, at(h, 2));
+        putAway(a);
+        rule(h).look(List.of(a, b));
+        h.assertTrue(rule(h).holder() == null, "the book was still held from the ender chest");
+        h.assertTrue(!CodexItem.carriedBy(a), "the book in the ender chest still gives orders");
+        ItemEntity it = onGround(h, b, oldCopy());
+        it.playerTouch(b);
+        h.assertTrue(books(b) == 1 && b.getUUID().equals(rule(h).holder()), "the second player couldn't pick one up");
+        drop(a);
+        drop(b);
+        rule(h).free();
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "book_ender_out")
+    public void noTakingItOutOfAnEnderChestWhileSomeoneElseHasIt(GameTestHelper h) {
+        rule(h).free();
+        ServerPlayer a = holder(h), b = player(h, at(h, 2));
+        putAway(a);
+        rule(h).look(List.of(a, b));
+        onGround(h, b, oldCopy()).playerTouch(b);
+        h.assertTrue(b.getUUID().equals(rule(h).holder()), "the second player doesn't hold the book");
+        Slot inChest = new Slot(a.getEnderChestInventory(), 0, 0, 0);
+        h.assertFalse(inChest.mayPickup(a), "the first took theirs out of the ender chest");
+        drop(b);
+        rule(h).look(List.of(a));
+        h.assertFalse(inChest.mayPickup(a), "the first took it out while the holder is away");
+        drop(a);
+        rule(h).free();
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "book_ender_login")
+    public void aHolderWithItInTheirEnderChestIsFreedOnLogin(GameTestHelper h) {
+        rule(h).free();
+        ServerPlayer a = holder(h);
+        drop(a);
+        // from a world where the ender chest still counted: the working book waits there while they are away
+        putAway(a);
+        h.assertTrue(a.getUUID().equals(rule(h).holder()), "the book was freed while its holder was away");
+        rule(h).look(List.of(a));
+        h.assertTrue(rule(h).holder() == null, "back on with it only in the ender chest, still held");
         rule(h).free();
         h.succeed();
     }
