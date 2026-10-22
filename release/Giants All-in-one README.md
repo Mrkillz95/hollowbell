@@ -1,8 +1,8 @@
-# JJ's Giants: all seven in one jar
+# JJ's Giants: all eight in one jar
 
-One jar with all seven giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
-Willow, Wreckback and the Swarmforge, and the **Giants Guide**, a book about all of them. It works the same as having
-the seven jars.
+One jar with all eight giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
+Willow, Wreckback, the Swarmforge and the Gloamwick, and the **Giants Guide**, a book about all of them. It works the
+same as having the eight jars.
 Each giant keeps its own name inside, so your worlds keep working.
 
 Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reserved.
@@ -11,26 +11,27 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.9 |
-| Pitchgut | 1.35.12 |
-| Furrowmaw | 1.17.10 |
-| Fire & Ice Cerberus | 2.18.9 |
-| Hollowbell | 1.12.14 |
-| Lantern Willow | 1.10.14 |
-| Wreckback | 1.2.16 |
-| The Swarmforge | 1.4.15 |
+| Giants Guide | 1.4.10 |
+| Pitchgut | 1.35.13 |
+| Furrowmaw | 1.17.11 |
+| Fire & Ice Cerberus | 2.18.10 |
+| Hollowbell | 1.12.15 |
+| Lantern Willow | 1.10.15 |
+| Wreckback | 1.2.17 |
+| The Swarmforge | 1.4.16 |
+| The Gloamwick | 1.0.0 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.4.51), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.5.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
 the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
-`wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.51.jar` (from the Releases page) in. Keep Fabric API in there.
+`wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
+`giants-all-1.5.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -46,7 +47,7 @@ A book about every giant you have. Right-click it to open it.
 
 | Tab | What's on it |
 |---|---|
-| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial, fortress, warship or factory), his moods |
+| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial, fortress, warship, factory or spirit), his moods |
 | Where | his ground and what it looks like, how to find him (the finder and its recipe), whether the world keeps one of him out there and how many at once. On a server it also says where he is right now. |
 | Moves | every move, light, medium and heavy (and Wreckback's sea moves), with what it does (the same words as his own book) |
 | Army | the Swarmforge only: every robot and unit he sends out, and the army orders in his book |
@@ -61,6 +62,21 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+
+## New in 1.5.0
+
+- **The Gloamwick joins**, JJ's eighth giant: a huge spirit moose of souls, light and darkness, with lantern ribs and
+  antlers of melting wax. He puts out lights as he walks, breathes dark mist and lashes blue soul fire. His biome is
+  the Gloaming, a forest stuck at dusk with the Antler Hollow in the middle. His gear: Wickbark armour (R: Soul Lash,
+  Sneak + R: Soul Form), the Gloam Antler with Reap, the Undying Wick, his Codex and the Finder.
+- All the giants know him: each one fights him or keeps away from him when they meet, and their grounds never
+  overlap. He fights Pitchgut, the Cerberus, the Lantern Willow and the Swarmforge, and keeps away from the
+  Furrowmaw, the Hollowbell and Wreckback.
+- The Giants Guide has his pages: who he is, his ground, all his moves, how to fight him, his drops and commands.
+  Its Furrowmaw moves list matches his book again.
+
+Inside: Pitchgut 1.35.13, Furrowmaw 1.17.11, Cerberus 2.18.10, Hollowbell 1.12.15, Lantern Willow 1.10.15,
+Wreckback 1.2.17, Swarmforge 1.4.16, Gloamwick 1.0.0.
 
 ## New in 1.4.51
 
