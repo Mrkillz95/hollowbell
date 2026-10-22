@@ -22,12 +22,15 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 ## Install
 
-Easy way: run `install-all.ps1` in the Hollowbell folder. It takes the seven single jars out of your mods folder
-and puts this one in.
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.4.51), not in this folder: it's too big
+to keep in git.
+
+Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
+the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…` and `swarmforge-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.4.51.jar` in. Keep Fabric API in there.
+`giants-all-1.4.51.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
