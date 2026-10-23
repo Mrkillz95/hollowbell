@@ -974,7 +974,7 @@
   "guide.jj_giants.gloamwick.fight.4": "| The rest of him | the full hit.",
   "guide.jj_giants.gloamwick.fight.5": "# How he changes",
   "guide.jj_giants.gloamwick.fight.6": "At half health the wax on his antlers runs and his flames burn white. At a quarter, wisps pour off him and his moves come faster.",
-  "guide.jj_giants.gloamwick.fight.7": "Eclipse: once a fight, under a third of his health, the sky goes black for 20 seconds and he hunts by sound. Stand still or sneak and he loses you.",
+  "guide.jj_giants.gloamwick.fight.7": "Eclipse: once a fight, under a third of his health, the sky goes black round him for 20 seconds, and while it is black, the Hush, his shadow got up, hunts by sound. Keep still or sneak. It can't be killed, only driven off for a moment.",
   "guide.jj_giants.gloamwick.fight.8": "# Tips",
   "guide.jj_giants.gloamwick.fight.9": "- Soul Chains hold you for 2 seconds: hit them to break free.",
   "guide.jj_giants.gloamwick.fight.10": "- One hit swats the soul wisps of Wandering Souls before they burst.",
@@ -1067,5 +1067,5 @@
   "guide.jj_giants.gloamwick.move.soul_pyre": "Soul pyre",
   "guide.jj_giants.gloamwick.move.soul_pyre.what": "Pyres of soul fire rise where he marks.",
   "guide.jj_giants.gloamwick.move.eclipse": "Eclipse",
-  "guide.jj_giants.gloamwick.move.eclipse.what": "The sky goes black round him. He hunts by sound."
+  "guide.jj_giants.gloamwick.move.eclipse.what": "The sky goes black round him, and while it is black, the Hush hunts by sound. Keep still or sneak."
 }

@@ -65,6 +65,8 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.11: every giant's moves match his own book again, with the Cerberus's triple breath, rift
   and leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and his ward, the
   Gloam Lantern.
+- New in the Guide 1.4.12 (in the next all-in-one): the Gloamwick's Eclipse has the Hush, his shadow got up, that
+  hunts by sound while the sky is black. Keep still or sneak; it can't be killed, only driven off for a moment.
 
 ## New in 1.6.1
 
