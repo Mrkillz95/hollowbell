@@ -19,11 +19,11 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Lantern Willow | 1.10.16 |
 | Wreckback | 1.2.19 |
 | The Swarmforge | 1.4.18 |
-| The Gloamwick | 1.1.3 |
+| The Gloamwick | 1.1.4 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.1), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.1.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -65,6 +65,14 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.11: every giant's moves match his own book again, with the Cerberus's triple breath, rift
   and leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and his ward, the
   Gloam Lantern.
+
+## New in 1.6.1
+
+- **The Gloamwick 1.1.4:** in a fight with another giant he keeps fighting when it shoves him a long way off from
+  you. Before, he could stop dead in the middle of it while the other giant got its health back.
+
+Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Cerberus 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
+Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.1.4.
 
 ## New in 1.6.0
 
