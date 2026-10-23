@@ -11,7 +11,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.11 |
+| Giants Guide | 1.4.12 |
 | Pitchgut | 1.35.14 |
 | Furrowmaw | 1.17.13 |
 | Fire & Ice Cerberus | 2.18.12 |
@@ -19,11 +19,11 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Lantern Willow | 1.10.16 |
 | Wreckback | 1.2.19 |
 | The Swarmforge | 1.4.18 |
-| The Gloamwick | 1.1.4 |
+| The Gloamwick | 1.2.0 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.1), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.2), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.1.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.2.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -65,8 +65,18 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.11: every giant's moves match his own book again, with the Cerberus's triple breath, rift
   and leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and his ward, the
   Gloam Lantern.
-- New in the Guide 1.4.12 (in the next all-in-one): the Gloamwick's Eclipse has the Hush, his shadow got up, that
-  hunts by sound while the sky is black. Keep still or sneak; it can't be killed, only driven off for a moment.
+- New in the Guide 1.4.12: the Gloamwick's Eclipse has the Hush, his shadow got up, that hunts by sound while the
+  sky is black. Keep still or sneak; it can't be killed, only driven off for a moment.
+
+## New in 1.6.2
+
+- **The Gloamwick 1.2.0: the Hush.** During his Eclipse a new horror creature climbs out of his shadow and hunts
+  you by sound. Keep still or sneak to hide from it. It can't be killed, a hit only makes it flicker away for a
+  moment, and its bite hits very hard.
+- **Giants Guide 1.4.12:** the Gloamwick's Eclipse tells you about the Hush.
+
+Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Cerberus 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
+Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.2.0.
 
 ## New in 1.6.1
 
