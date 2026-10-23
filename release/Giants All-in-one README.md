@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.10 |
-| Pitchgut | 1.35.13 |
-| Furrowmaw | 1.17.11 |
-| Fire & Ice Cerberus | 2.18.10 |
-| Hollowbell | 1.12.15 |
-| Lantern Willow | 1.10.15 |
-| Wreckback | 1.2.17 |
-| The Swarmforge | 1.4.16 |
-| The Gloamwick | 1.0.0 |
+| Giants Guide | 1.4.11 |
+| Pitchgut | 1.35.14 |
+| Furrowmaw | 1.17.13 |
+| Fire & Ice Cerberus | 2.18.12 |
+| Hollowbell | 1.12.16 |
+| Lantern Willow | 1.10.16 |
+| Wreckback | 1.2.19 |
+| The Swarmforge | 1.4.18 |
+| The Gloamwick | 1.1.3 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.5.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.5.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -62,9 +62,52 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
-- New in the Guide 1.4.11 (in the next all-in-one): every giant's moves match his own book again, with the
-  Cerberus's triple breath, rift and leaping slam, and the Gloamwick's pages have his real size, his new look, his
-  dark wood and his ward, the Gloam Lantern.
+- New in the Guide 1.4.11: every giant's moves match his own book again, with the Cerberus's triple breath, rift
+  and leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and his ward, the
+  Gloam Lantern.
+
+## New in 1.6.0
+
+- **Every giant's moves look like what they do.** All of them had an animation and effects pass: real fire, frost,
+  water, dust and smoke instead of round puffs and blocks, a wind-up before the big blows, and the ground shakes,
+  cracks and flashes where they land. Their feet stand on the ground now, on slabs, paths and snow too, instead of
+  sinking in or floating.
+  - Pitchgut: real knees that fold as he steps, a scream you can see roll out, a long breath that drags the dust in,
+    real drops of goo and thin threads of dark vapour from his holes.
+  - Furrowmaw: his lava breath pours out in an arc and leaves pools that cool, his geysers stand up out of glowing
+    cracks, thin smoke rises from his vents, and his legs paw the air like a centipede's.
+  - Cerberus: flickering flame and frost crystals, tall roaring pillars in the firestorm, rings of shaken air when he
+    roars or howls, and ice spikes, cinders, hail and boulders that are real shapes, not blocks.
+  - Hollowbell: rings of sound when he tolls, trails behind his strands and arms, goo pouring from his pods, real sun
+    lance beams and stingers with a green streak.
+  - Lantern Willow: real curling roots bursting out of the ground, eyes that glare in two beams, a lantern nova that
+    gathers in his canopy and goes off in rays, and motes, drips and leaves coming off him.
+  - Wreckback: wide sheets of spray off his claws, guns that fire with a flash and a bank of powder smoke, splinters
+    off his ship, crust and rust flaking off, and water streaming off him.
+  - Swarmforge: a roaring furnace blast, a crane slam with a white flash and molten metal, forge smoke and steam,
+    lightning over his core, and treads that leave prints.
+- **The Gloamwick is redone (1.1).** A new look: long moose legs with knees and hocks, a dark face with fire in his
+  eyes, palm antlers with six tines, hide over his ribs and a bell under his throat. He walks, trots and gallops like
+  a moose, and every attack winds up and only hurts where his antlers, head or hooves land. His moves show what they
+  do: a herd of ghost moose, pillars of soul fire, whips of blue fire, chains bursting out of the ground, real wax
+  dripping off his antlers. He has a boss bar and a riding camera, the Gloaming is a dark wood of dark oaks and pale
+  ghost trees, his armour and the Gloam Antler are redone, and his new ward, the Gloam Lantern, keeps him 700 blocks
+  away for 20 minutes. One sleeps in the Gloaming in every new world, and he fights back when another giant starts on
+  him.
+- **Fixes:**
+  - Furrowmaw no longer freezes or steps out of the world when you're near his tail but far from his head.
+  - The Lantern Willow's roots come down where and when they hurt, the same on everyone's screen.
+  - The Cerberus no longer stops in the middle of a move when the only one watching is a spectator far off.
+  - Pitchgut's sweeping leg, the Hollowbell's strand lash and the Swarmforge's crane swing, tread crush and ram only
+    hit what they really pass through.
+  - Wreckback: being dragged, flung or dropped by an anchor or its chain never gives fall damage.
+  - The Gloamwick: his book reaches him from anywhere, even out of the world, his front hooves stay down when he
+    stands still, his legs step round when he spins, and no more yellow glow on the ground under him at night.
+- **Giants Guide 1.4.11:** every giant's moves match his own book again, with the Cerberus's triple breath, rift and
+  leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and the Gloam Lantern.
+
+Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Cerberus 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
+Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.1.3.
 
 ## New in 1.5.0
 
