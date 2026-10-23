@@ -110,6 +110,11 @@ public final class BellPieces {
         }
     }
 
+    /** the slice the block of bone b at (x, y, z) is in */
+    public int sliceOf(int b, int x, int y, int z) {
+        return where[b] == null ? first[b] : where[b].getOrDefault(BellModel.key(x, y, z), first[b]);
+    }
+
     /** is the block of bone b at (x, y, z) in slice s (a bone not cut into slices is all one) */
     public boolean in(int s, int b, int x, int y, int z) {
         return where[b] == null || where[b].getOrDefault(BellModel.key(x, y, z), -1) == s;

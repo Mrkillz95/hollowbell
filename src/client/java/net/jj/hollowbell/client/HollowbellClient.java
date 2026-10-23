@@ -27,6 +27,7 @@ import net.jj.hollowbell.client.render.StingerHookRenderer;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Shot;
 import net.jj.hollowbell.fx.client.BigFxClient;
+import net.jj.hollowbell.fx.client.MoveFx;
 import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.net.BeingHimPayload;
 import net.jj.hollowbell.net.DetailPayload;
@@ -94,6 +95,7 @@ public class HollowbellClient implements ClientModInitializer {
             FightMusic.clear();
             Solid.forgetAll(true);
             SolidClient.clear();
+            MoveFx.clear();
         });
         ArmourPowerKey.init();
         LookKey.init();
@@ -106,7 +108,10 @@ public class HollowbellClient implements ClientModInitializer {
             LookKey.tick(c);
             FightMusic.tick(c);
             SolidClient.tick(c);
+            MoveFx.tick(c);
         });
+        // what his moves look like beyond his body: rings of sound, trails, goo, beams
+        WorldRenderEvents.AFTER_TRANSLUCENT.register(MoveFx::render);
         // he's ticked even when the game would skip him for having his middle too far off (see tickIfSkipped)
         ClientTickEvents.END_WORLD_TICK.register(level -> {
             for (var e : level.entitiesForRendering()) if (e instanceof HollowbellEntity h) h.tickIfSkipped();

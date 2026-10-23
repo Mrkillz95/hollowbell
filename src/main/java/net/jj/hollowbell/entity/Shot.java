@@ -142,10 +142,15 @@ public class Shot extends ThrowableItemProjectile {
         entityData.set(DATA_FROM_Y, (float) getY());
     }
 
-    /** eggs are big: seen from a long way off */
+    /** a stinger: how big he is (it's drawn bigger off a bigger one) */
+    public void setSize(float size) {
+        entityData.set(DATA_SIZE, size);
+    }
+
+    /** eggs are big, and stingers come in swarms off a giant: both seen from a long way off */
     @Override
     public boolean shouldRenderAtSqrDistance(double d) {
-        return kind() == EGG ? d < 256 * 256 : super.shouldRenderAtSqrDistance(d);
+        return kind() == EGG ? d < 256 * 256 : d < 160 * 160;
     }
 
     @Override
@@ -181,8 +186,6 @@ public class Shot extends ThrowableItemProjectile {
             return;
         }
         if (!level().isClientSide && --life <= 0) discard();
-        if (level().isClientSide && kind() == STINGER && tickCount % 2 == 0)
-            level().addParticle(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 0, 0, 0);
         if (level().isClientSide && kind() == EGG) eggFx.accept(this);
     }
 
@@ -304,17 +307,9 @@ public class Shot extends ThrowableItemProjectile {
         if (kind() == EGG) {
             burst();
             return;
-        } else if (level() instanceof ServerLevel sl)
-            sl.sendParticles(
-                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.defaultBlockState()),
-                    getX(),
-                    getY(),
-                    getZ(),
-                    6,
-                    0.1,
-                    0.1,
-                    0.1,
-                    0.05);
+        }
+        // a splash of the poison where it strikes
+        BigFx.send(level(), BigFx.SPARKS, position(), 0.8f + size(), Vec3.ZERO, 0x9CFF6A);
         discard();
     }
 

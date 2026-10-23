@@ -868,6 +868,12 @@ public class HollowbellEntity extends Monster implements SolidBody {
         poseTick = Long.MIN_VALUE;
         solidVer++;
         solidCache.touch();
+        // what lies on the ground lies on its top, by where its blocks really are
+        // (every fourth tick: it settles over a few seconds, and costs little)
+        if (!ghost && (tickCount + getId()) % 4 == 0 && anim.anyResting()) {
+            ensurePose();
+            anim.fitSoles(slicesNow(), BellPieces.get(), BellModel.get());
+        }
     }
 
     /** the ground under a point of him, in his own model heights (NaN if that ground isn't loaded) */
@@ -880,7 +886,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
         int y = level().dimensionType().hasCeiling()
                 ? NoWait.standY(level(), p.getX(), p.getZ(), p.getY())
                 : level().getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
-        return (float) ((y - getY()) / bellScale());
+        // (on the real top of what's there: a slab, a path or snow is lower than a whole block)
+        return (float) ((NoWait.realTop(level(), p.getX(), y, p.getZ()) - getY()) / bellScale());
     }
 
     /** the joints of one of his chains (an arm or strand) as they are this tick, model space */

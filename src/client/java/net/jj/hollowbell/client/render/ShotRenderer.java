@@ -65,7 +65,12 @@ public class ShotRenderer extends EntityRenderer<Shot> {
     @Override
     public void render(Shot e, float yaw, float partial, PoseStack ps, MultiBufferSource buf, int light) {
         if (e.kind() != Shot.EGG) {
-            item.render(e, yaw, partial, ps, buf, light);
+            // (a little bigger off a bigger one; its glowing trail is drawn with his moves, fx/client/MoveFx)
+            float k = 1f + 0.6f * Math.min(e.size(), 2f);
+            ps.pushPose();
+            ps.scale(k, k, k);
+            item.render(e, yaw, partial, ps, buf, LightTexture.FULL_BRIGHT);
+            ps.popPose();
             return;
         }
         if (e.stage() == Shot.FALLING) marker(e, partial, ps, buf);

@@ -2,14 +2,13 @@ package net.jj.hollowbell.entity;
 
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.ModEntities;
+import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.item.PowerTargets;
 import net.jj.hollowbell.rig.BellRig;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -40,6 +39,9 @@ public class StingerHook extends Projectile {
     public static final double RANGE = 36;
     /** how long the barb pins what it sticks in (ticks; half on a player, never a giant or a boss) */
     public static final int PIN = 60;
+    /** the poison's green, for its splash where it bites */
+    private static final int POISON = 0x9CFF6A;
+
     private static final EntityDataAccessor<Integer> DATA_STATE =
             SynchedEntityData.defineId(StingerHook.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_HOOKED =
@@ -103,8 +105,6 @@ public class StingerHook extends Projectile {
         super.tick();
         Entity owner = getOwner();
         if (level().isClientSide) {
-            if (state() == FLYING && tickCount % 2 == 0)
-                level().addParticle(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 0, 0, 0);
             Vec3 v = getDeltaMovement();
             setPos(getX() + v.x, getY() + v.y, getZ() + v.z);
             return;
@@ -193,8 +193,7 @@ public class StingerHook extends Projectile {
     /** not reeling: the barb bites and the strand pulls the end back */
     private void barb() {
         level().playSound(null, getX(), getY(), getZ(), SoundEvents.TRIDENT_HIT, SoundSource.PLAYERS, 1f, 1.5f);
-        if (level() instanceof ServerLevel sl)
-            sl.sendParticles(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 10, 0.2, 0.2, 0.2, 0.05);
+        BigFx.send(level(), BigFx.SPARKS, position(), 1f, Vec3.ZERO, POISON);
         discard();
     }
 
@@ -212,8 +211,7 @@ public class StingerHook extends Projectile {
                         SoundSource.PLAYERS,
                         1f,
                         0.7f);
-        if (level() instanceof ServerLevel sl)
-            sl.sendParticles(ParticleTypes.ITEM_SLIME, getX(), getY(), getZ(), 10, 0.2, 0.2, 0.2, 0.05);
+        BigFx.send(level(), BigFx.SPARKS, position(), 1.2f, Vec3.ZERO, POISON);
     }
 
     /** where the strand is tied, right now */

@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -104,6 +105,23 @@ public final class NoWait {
             if (c.getBlockState(m.set(x, y + 1, z)).getCollisionShape(l, m).isEmpty()) return y;
         }
         return top;
+    }
+
+    /**
+     * The real top of the ground at x z, given y, the first free block over it (a heightmap height): a slab, a path,
+     * snow or a fence is not a whole block, and water is as high as it stands.
+     */
+    public static double realTop(Level l, int x, int y, int z) {
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos(x, y - 1, z);
+        for (int i = 0; i < 2; i++) {
+            BlockState st = l.getBlockState(m);
+            if (!st.getFluidState().isEmpty())
+                return m.getY() + st.getFluidState().getHeight(l, m);
+            VoxelShape sh = st.getCollisionShape(l, m);
+            if (!sh.isEmpty()) return m.getY() + Math.min(1.0, sh.max(Direction.Axis.Y));
+            m.move(Direction.DOWN);
+        }
+        return y;
     }
 
     /** standY, or where the ground is likely to be when the land isn't there yet (under a roof: nearY itself) */

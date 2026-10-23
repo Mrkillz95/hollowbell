@@ -6,6 +6,7 @@ import com.mojang.math.Axis;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.StingerHook;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -59,28 +60,36 @@ public class StingerHookRenderer extends EntityRenderer<StingerHook> {
         items.renderStatic(
                 look, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, pose, buf, e.level(), e.getId());
         pose.popPose();
-        if (owner != null) strand(pose, buf, hand.subtract(me), e.state() == StingerHook.FLYING, e.tickCount + pt);
+        if (owner != null) strand(pose, buf, me, hand.subtract(me), e.state() == StingerHook.FLYING, e.tickCount + pt);
         super.render(e, yaw, pt, pose, buf, light);
     }
 
-    /** a sagging pale green strand, tight once it has caught */
-    private static void strand(PoseStack pose, MultiBufferSource buf, Vec3 to, boolean slack, float t) {
-        VertexConsumer vc = buf.getBuffer(RenderType.lineStrip());
+    /**
+     * A sagging pale green strand, tight once it has caught: a thin band turned to face you (a line would be a pixel
+     * wide however near), wet and glinting along its length.
+     */
+    private void strand(PoseStack pose, MultiBufferSource buf, Vec3 me, Vec3 to, boolean slack, float t) {
+        VertexConsumer vc = buf.getBuffer(RenderType.leash());
         Matrix4f m = pose.last().pose();
-        int n = 24;
+        Vec3 cam = entityRenderDispatcher.camera.getPosition().subtract(me);
+        int n = 32;
         double len = to.length();
         double sag = slack ? Math.min(1.5, len * 0.06) : Math.min(0.4, len * 0.015);
         for (int i = 0; i <= n; i++) {
             float f = i / (float) n;
             double wob = slack ? 0 : Math.sin(f * Math.PI * 3 + t * 0.9) * 0.05 * Math.sin(f * Math.PI);
-            float x = (float) (to.x * f), y = (float) (to.y * f - sag * 4 * f * (1 - f) + wob), z = (float) (to.z * f);
-            float nx = (float) to.x, ny = (float) to.y, nz = (float) to.z;
-            float l = Mth.sqrt(nx * nx + ny * ny + nz * nz);
-            if (l < 1e-4) l = 1;
-            int g = 200 + (int) (40 * Math.sin(f * 12 + t * 0.3));
-            vc.addVertex(m, x, y, z)
-                    .setColor(170, Mth.clamp(g, 0, 255), 180, 255)
-                    .setNormal(pose.last(), nx / l, ny / l, nz / l);
+            Vec3 p = new Vec3(to.x * f, to.y * f - sag * 4 * f * (1 - f) + wob, to.z * f);
+            Vec3 side = to.cross(p.subtract(cam));
+            double sl = side.length();
+            side = sl < 1e-6 ? new Vec3(0.03, 0, 0) : side.scale(0.03 / sl);
+            float glint = 0.5f + 0.5f * Mth.sin(f * 18f - t * 0.6f);
+            int r = 150 + (int) (60 * glint), g = 215 + (int) (40 * glint), b = 150 + (int) (40 * glint);
+            vc.addVertex(m, (float) (p.x - side.x), (float) (p.y - side.y), (float) (p.z - side.z))
+                    .setColor(r, Math.min(255, g), b, 255)
+                    .setLight(LightTexture.FULL_BRIGHT);
+            vc.addVertex(m, (float) (p.x + side.x), (float) (p.y + side.y), (float) (p.z + side.z))
+                    .setColor(r, Math.min(255, g), b, 255)
+                    .setLight(LightTexture.FULL_BRIGHT);
         }
     }
 

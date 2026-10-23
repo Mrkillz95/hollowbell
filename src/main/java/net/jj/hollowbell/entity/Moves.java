@@ -284,7 +284,23 @@ public final class Moves {
                 if (arg < 0 || arg >= rig.strands.length) return;
                 st.lashStrand = arg;
                 st.lashT = Mth.clamp(t / len, 0f, 1f);
-                st.lashDir = (float) Math.atan2(tz, tx);
+                // sideways: wound back along his edge one way, then whipped through the other way past what it's
+                // aimed at, and his whole bell leans into it
+                st.lashDir = (float) Math.atan2(tz, tx) + (arg % 2 == 0 ? Mth.HALF_PI : -Mth.HALF_PI);
+                st.lashX = tx;
+                st.lashY = ty;
+                st.lashZ = tz;
+                float k = st.lashT;
+                float whip = k < 0.4f
+                        ? -smooth(k / 0.4f)
+                        : k < 0.6f
+                                ? Mth.lerp(smooth((k - 0.4f) / 0.2f), -1f, 1.6f)
+                                : 1.6f * (1f - smooth((k - 0.6f) / 0.4f));
+                lean(in, (float) Math.cos(st.lashDir), (float) Math.sin(st.lashDir), -0.03f * whip);
+                in.squeezeAdd = 0.15f * hump(t, LASH_AT - 6, LASH_AT, LASH_AT + 2, LASH_AT + 12);
+                // he sinks a little so the strand's end drags along the ground as it whips through
+                in.lowerAdd = BellAnim.LASH_DIP * hump(t, 0, LASH_AT - 6, LASH_AT + 6, len);
+                lean(in, tx, tz, -0.1f * hump(t, 0, LASH_AT - 6, LASH_AT + 6, len));
             }
             case FLASH -> {
                 // the glow builds, throbbing faster, the lights go out for a moment, then the flash
@@ -339,6 +355,22 @@ public final class Moves {
             case UNDERTOW -> poseUndertow(st, in, t);
             default -> {}
         }
+        // the bell rings when it's struck or slammed down: the rim shivers on after it, dying away
+        in.rippleAdd += switch (move) {
+            case PULSE -> ring(t, PULSE_AT - 5);
+            case DROP -> ring(t, DROP_WIND + DROP_FALL);
+            case WHIRLPOOL -> ring(t, WHIRL_CRUSH);
+            case UNDERTOW -> ring(t, UNDERTOW_SLAM);
+            case EGG_RAIN -> 0.6f * ring(t, EGG_AT - 8);
+            case FLASH -> 0.6f * ring(t, FLASH_AT);
+            case DEEP_TOLL -> 1.5f * ring(t, TOLL_BIG);
+            default -> 0f;
+        };
+    }
+
+    /** a bell rung at tick at: the shiver round its rim, strong at once and dying away over a second or so */
+    static float ring(float t, float at) {
+        return t < at ? 0f : 2.2f * (float) Math.exp(-(t - at) / 12f);
     }
 
     private static void poseGrab(

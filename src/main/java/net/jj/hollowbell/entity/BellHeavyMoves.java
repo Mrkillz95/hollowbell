@@ -9,10 +9,7 @@ import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.world.NoWait;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
@@ -66,12 +63,8 @@ final class BellHeavyMoves {
             mv.level().addFreshEntity(c);
             mv.clouds.add(c);
             mv.fx(BigFx.CLOUD, new Vec3(p.x, gy, p.z), mv.px(6, 4), Vec3.ZERO, 0x7FBF3F);
-            h.particles(
-                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.defaultBlockState()),
-                    p,
-                    30,
-                    2 * s + 0.5,
-                    0.2);
+            mv.fx(BigFx.DEBRIS, p, mv.px(4, 1.2), Vec3.ZERO, Block.getId(Blocks.BONE_BLOCK.defaultBlockState()));
+            mv.fx(BigFx.SPARKS, p, mv.px(5, 1.5), Vec3.ZERO, BellMoves.POISON);
         }
         h.sound(h.position().add(0, 50 * s, 0), ModSounds.SPORES, 3f, 0.7f);
         h.sound(h.position().add(0, 50 * s, 0), ModSounds.EGG_BURST, 3f, 0.6f);
@@ -96,6 +89,7 @@ final class BellHeavyMoves {
                     c.setPos(c.getX() + step.x, Math.max(gy, c.getY() + (gy + 1 - c.getY()) * 0.1), c.getZ() + step.z);
                 }
             }
+            if (c.tickCount % 30 == 15) mv.fx(BigFx.CLOUD, c.position(), c.getRadius() * 0.8, Vec3.ZERO, 0x7FBF3F);
             if (c.tickCount % 10 == 0) {
                 double r = c.getRadius();
                 for (LivingEntity e : mv.level()
@@ -129,22 +123,6 @@ final class BellHeavyMoves {
         for (int i = 0; i < rig.pods.length; i++) {
             if (h.isPodPopped(i)) continue;
             Vec3 c = h.podWorld(i);
-            for (int k = 0; k < 6; k++) {
-                double ox = (h.getRandom().nextDouble() - 0.5) * r,
-                        oz = (h.getRandom().nextDouble() - 0.5) * r;
-                mv.level()
-                        .sendParticles(
-                                ParticleTypes.ITEM_SLIME,
-                                c.x + ox * 0.3,
-                                c.y,
-                                c.z + oz * 0.3,
-                                0,
-                                ox * 0.06,
-                                -1.0,
-                                oz * 0.06,
-                                1.0);
-            }
-            mv.level().sendParticles(ParticleTypes.SNEEZE, c.x, c.y - 2 * s, c.z, 4, r * 0.3, 1, r * 0.3, 0.02);
             double gy = h.groundAt(c.x, c.z);
             for (LivingEntity e : mv.near(new AABB(c.x - r, gy - 1, c.z - r, c.x + r, c.y, c.z + r))) {
                 if (mv.struckThisMove.contains(e.getUUID()) || Math.hypot(mv.at(e).x - c.x, mv.at(e).z - c.z) > r)
@@ -164,29 +142,6 @@ final class BellHeavyMoves {
      */
     void eggRain() {
         float s = mv.s();
-        if (mv.t < Moves.EGG_AT && mv.t % 5 == 0 && mv.level() instanceof ServerLevel sl) {
-            // the clumps glow as it builds, seen from well off
-            int n = 0;
-            for (int i = 0; i < rig.eggs.length && n < 10; i++) {
-                if (h.state.eggGone[i]) continue;
-                n++;
-                Vec3 c = h.eggWorld(i);
-                for (ServerPlayer p : sl.players())
-                    if (p.distanceToSqr(c) < 160 * 160)
-                        sl.sendParticles(
-                                p,
-                                ParticleTypes.GLOW,
-                                true,
-                                c.x,
-                                c.y,
-                                c.z,
-                                2 + mv.t / 10,
-                                2 * s + 0.4,
-                                2 * s + 0.4,
-                                2 * s + 0.4,
-                                0.02);
-            }
-        }
         if (mv.t == Moves.EGG_AT - 8) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.TOLL, 3f, 1.35f);
         if (mv.t == Moves.EGG_AT)
             mv.fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), mv.px(20, 6), Vec3.ZERO, BellMoves.GLOW);
@@ -268,23 +223,6 @@ final class BellHeavyMoves {
                     mv.sting(e);
                 }
             }
-            if (mv.t % 3 == 0) {
-                double a = mv.t * 0.4;
-                for (int k = 0; k < 16; k++) {
-                    double aa = a + k * Math.PI / 8, rr = R * (0.3 + 0.7 * ((k * 37 + mv.t) % 16) / 16.0);
-                    mv.level()
-                            .sendParticles(
-                                    ParticleTypes.BUBBLE_POP,
-                                    c.x + Math.cos(aa) * rr,
-                                    mv.groundUnder() + 0.5,
-                                    c.z + Math.sin(aa) * rr,
-                                    2,
-                                    0.5,
-                                    0.2,
-                                    0.5,
-                                    0.05);
-                }
-            }
         }
         if (mv.t == Moves.WHIRL_CRUSH) {
             Vec3 c = h.position();
@@ -327,8 +265,7 @@ final class BellHeavyMoves {
                 h.sound(c, ModSounds.SHOCK, 5f, 0.5f);
                 h.sound(c, ModSounds.SLAM, 5f, 0.4f);
                 h.sound(c, ModSounds.SPLASH, 4f, 0.5f);
-                h.particles(ParticleTypes.EXPLOSION_EMITTER, c.add(0, 1, 0), 3, 6 * s, 0);
-                h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 250, R * 0.5, 0.25);
+                mv.fx(BigFx.DUST, c, mv.px(40, 10));
                 mv.fx(BellMoves.heavy(mv.px(45, 12)), c, mv.px(45, 12));
                 mv.fx(BigFx.SHOCKWAVE, c, R, Vec3.ZERO, BellMoves.DIVE_RING);
                 mv.fx(BigFx.FLASH, c.add(0, 4 * s, 0), mv.px(30, 8), Vec3.ZERO, BellMoves.GLOW);
@@ -478,6 +415,7 @@ final class BellHeavyMoves {
             Vec3 d = to.subtract(from);
             double horiz = Math.hypot(d.x, d.z);
             Shot sh = new Shot(mv.level(), h, Shot.STINGER, 10f, 1f);
+            sh.setSize(s);
             sh.setPos(from.x, from.y, from.z);
             double speed = 1.3 + 0.7 * s;
             double time = Math.max(8, horiz / speed);
@@ -498,11 +436,7 @@ final class BellHeavyMoves {
         float s = mv.s();
         double bell = h.bellRadius();
         int from = Moves.LANCE_FROM, to = Moves.LANCE_TO;
-        if (mv.t < from || mv.t > to) {
-            if (mv.t == from - 12)
-                for (int i = 0; i < 5; i++) h.particles(ParticleTypes.END_ROD, h.spotWorld(i), 30, 3 * s + 0.5, 0.05);
-            return;
-        }
+        if (mv.t < from || mv.t > to) return;
         float frac = (mv.t - from) / (float) (to - from);
         if (mv.t == from)
             for (int i = 0; i < 5; i++) mv.fx(BigFx.FLASH, h.spotWorld(i), mv.px(10, 3), Vec3.ZERO, 0xFFF2B0);
@@ -529,40 +463,10 @@ final class BellHeavyMoves {
                 ground = new Vec3(nx.x, h.groundAt(nx.x, nx.z), nx.z);
             }
             mv.lance[i] = ground;
+            // (the players' games draw the beams; the hunting one's spot is sent as his aim)
+            if (i == 4) h.setAim(h.toModel(ground));
             if (mv.t == from) mv.fx(BigFx.SPARKS, ground, mv.px(3, 1.5), Vec3.ZERO, 0);
-            if (mv.t % 2 == 0) {
-                Vec3 line = ground.subtract(top);
-                for (int k = 0; k <= 12; k++) {
-                    Vec3 p = top.add(line.scale(k / 12.0));
-                    mv.level().sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.3 * s, 0.3 * s, 0.3 * s, 0);
-                }
-                mv.level()
-                        .sendParticles(
-                                ParticleTypes.FLAME,
-                                ground.x,
-                                ground.y + 0.2,
-                                ground.z,
-                                8,
-                                beamR * 0.4,
-                                0.1,
-                                beamR * 0.4,
-                                0.02);
-                mv.level()
-                        .sendParticles(
-                                ParticleTypes.LAVA,
-                                ground.x,
-                                ground.y + 0.2,
-                                ground.z,
-                                1,
-                                beamR * 0.3,
-                                0.1,
-                                beamR * 0.3,
-                                0);
-            }
-            if (mv.t % 10 == i * 2) {
-                mv.fx(BigFx.EMBERS, ground, beamR * 1.6 + 1, Vec3.ZERO, 14);
-                mv.fx(BigFx.SMOKE, ground, beamR * 1.4 + 1);
-            }
+            if (mv.t % 10 == i * 2) mv.fx(BigFx.EMBERS, ground, beamR * 1.6 + 1, Vec3.ZERO, 14);
             for (LivingEntity e : mv.near(new AABB(
                     ground.x - beamR, ground.y - 2, ground.z - beamR, ground.x + beamR, top.y, ground.z + beamR))) {
                 if (Math.hypot(mv.at(e).x - ground.x, mv.at(e).z - ground.z) > beamR || !mv.every(e, 10)) continue;
@@ -615,23 +519,6 @@ final class BellHeavyMoves {
                             0);
                 }
             }
-            if (mv.t % 2 == 0) {
-                for (int k = 0; k < 12; k++) {
-                    double a = h.getRandom().nextDouble() * Math.PI * 2,
-                            r = R * (0.5 + 0.5 * h.getRandom().nextDouble());
-                    mv.level()
-                            .sendParticles(
-                                    ParticleTypes.BUBBLE_COLUMN_UP,
-                                    c.x + Math.cos(a) * r,
-                                    mv.groundUnder() + 1,
-                                    c.z + Math.sin(a) * r,
-                                    0,
-                                    -Math.cos(a),
-                                    0.2,
-                                    -Math.sin(a),
-                                    0.6);
-                }
-            }
         }
         if (mv.t == Moves.UNDERTOW_SLAM) {
             double r = bell * 0.95 + 5;
@@ -643,7 +530,7 @@ final class BellHeavyMoves {
             }
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);
             h.sound(c, ModSounds.SPLASH, 4f, 0.6f);
-            h.particles(ParticleTypes.CLOUD, new Vec3(c.x, mv.groundUnder() + 1, c.z), 150, r * 0.5, 0.1);
+            mv.fx(BigFx.DUST, mv.under(), r * 0.6);
             mv.fx(BellMoves.heavy(mv.px(40, 6)), mv.under(), mv.px(40, 6));
             mv.fx(BigFx.DUST_RING, mv.under(), bell * 0.95 + mv.px(0, 5));
         }

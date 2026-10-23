@@ -137,6 +137,15 @@ public final class BellAnim {
         Arrays.fill(knockedAt, -100);
         groundAt = new float[nc];
         Arrays.fill(groundAt, Float.NaN);
+        soleFix = new float[nc][];
+        onFloor = new boolean[nc][];
+        groundJ = new float[nc][];
+        for (int c = 0; c < nc; c++) {
+            groundJ[c] = new float[rig.chains[c].joints.length];
+            Arrays.fill(groundJ[c], Float.NaN);
+            soleFix[c] = new float[rig.chains[c].joints.length];
+            onFloor[c] = new boolean[rig.chains[c].joints.length];
+        }
         for (int c = 0; c < nc; c++) {
             prev[c] = now.chain[c].clone();
             last[c] = now.chain[c].clone();
@@ -402,7 +411,8 @@ public final class BellAnim {
                 System.arraycopy(raw, 0, tg, 0, raw.length);
                 System.arraycopy(raw, 0, p, 0, raw.length);
                 System.arraycopy(raw, 0, q, 0, raw.length);
-                groundAt[c] = in.ground.at(raw[3 * m], raw[3 * m + 2]);
+                for (int i = 0; i <= m; i++) groundJ[c][i] = in.ground.at(raw[3 * i], raw[3 * i + 2]);
+                groundAt[c] = groundJ[c][m];
                 held[c] = 0f;
                 if (!ch.arm && ch.index == st.carryStrand) carry(ch, c, p, q);
                 System.arraycopy(p, 0, last[c], 0, p.length);
@@ -418,8 +428,11 @@ public final class BellAnim {
             // grows longer when what it hangs from moves fast), and keeps the length asked for
             easeTargets(ch, raw, tg, ease);
             // the ground under this one, looked at now and then (and kept level with the world as he rises and sinks)
-            if ((tick + c) % 4 == 0) groundAt[c] = in.ground.at(p[3 * m], p[3 * m + 2]);
-            else groundAt[c] -= in.shiftY;
+            // (under each joint, so a strand lying over a bump or into a dip lies on it)
+            float[] gj = groundJ[c];
+            if ((tick + c) % 4 == 0) for (int i = 0; i <= m; i++) gj[i] = in.ground.at(p[3 * i], p[3 * i + 2]);
+            else for (int i = 0; i <= m; i++) gj[i] -= in.shiftY;
+            groundAt[c] = gj[m];
             float hk = held[c];
             float k0, damp, abs;
             if (ch.arm) {
@@ -475,8 +488,8 @@ public final class BellAnim {
                 p[o + 1] += my;
                 p[o + 2] += mz;
             }
-            float gy = groundAt[c];
             for (int i = 1; i <= m; i++) {
+                float gy = gj[i];
                 int o = 3 * i;
                 // held at its length from the joint above (the length the moment asks for)
                 float lx = tg[o] - tg[o - 3], ly = tg[o + 1] - tg[o - 2], lz = tg[o + 2] - tg[o - 1];
@@ -628,7 +641,8 @@ public final class BellAnim {
     private void onTheGround(BellRig.Chain ch, int c, float[] p, float[] q, int o, float gy, float want) {
         // (once he's dead and sinking away into the ground, the ground lets his arms and strands go under
         // with him)
-        float floor = gy + (ch.arm ? 1.2f : 0.5f) - sinkingIn * (rig.crownY + 30f);
+        float floor = gy + rig.sole()[c][o / 3] + soleFix[c][o / 3] - sinkingIn * (rig.crownY + 30f);
+        onFloor[c][o / 3] = p[o + 1] <= floor + 0.05f;
         if (p[o + 1] < floor) {
             // a strand lies on the ground and slides out along it, keeping its length (pushed straight up,
             // a piece pointing down would be squashed to nothing, a short stub or a ball at its end)
@@ -674,6 +688,75 @@ public final class BellAnim {
             q[o] += (p[o] - q[o]) * 0.35f;
             q[o + 2] += (p[o + 2] - q[o + 2]) * 0.35f;
         }
+    }
+
+    /**
+     * Per chain, per joint: what the sole worked out from the model (BellRig.sole) is off by, learned from where the
+     * blocks of each piece really came to lie when it rests on the ground (a piece is wider one way than another, and
+     * bends between its joints).
+     */
+    private final float[][] soleFix;
+
+    private final boolean[][] onFloor;
+    /** how far he sinks for the strand lash (Moves: lowerAdd), in his own blocks */
+    public static final float LASH_DIP = 28f;
+    /** per chain, per joint: the ground under it, in his own space (looked at every few ticks) */
+    private final float[][] groundJ;
+
+    private int fitNext;
+
+    /**
+     * Looks at a few of the chains each call: for the last two pieces of each, lying on the ground, how far the lowest
+     * block is over the ground (or into it), and moves the sole of the joint nearest it by part of that, so its blocks
+     * come to lie right on the ground's top. slices: the pieces as drawn this tick (BellPieces, rest to model).
+     */
+    public void fitSoles(Matrix4f[] slices, BellPieces pieces, BellModel m) {
+        int nc = rig.chains.length;
+        Vector3f v = new Vector3f();
+        for (int k = 0; k < 12; k++) {
+            int c = fitNext++ % nc;
+            if (fitNext >= nc) fitNext = 0;
+            if (sinkingIn > 0f) continue;
+            BellRig.Chain ch = rig.chains[c];
+            int nb = ch.bones.length;
+            for (int i = Math.max(0, nb - 2); i < nb; i++) {
+                int b = ch.bones[i];
+                Vector3f j0 = ch.joints[i], j1 = ch.joints[i + 1];
+                float lx = j1.x - j0.x, ly = j1.y - j0.y, lz = j1.z - j0.z;
+                float l2 = Math.max(1e-6f, lx * lx + ly * ly + lz * lz);
+                int n = m.count(b);
+                float low = Float.MAX_VALUE, lowU = 1f;
+                for (int j = 0; j < n; j++) {
+                    float bx = m.x[b][j] + 0.5f, by = m.y[b][j] + 0.5f, bz = m.z[b][j] + 0.5f;
+                    slices[pieces.sliceOf[b][j]].transformPosition(v.set(bx, by, bz));
+                    if (v.y - 0.5f < low) {
+                        low = v.y - 0.5f;
+                        lowU = ((bx - j0.x) * lx + (by - j0.y) * ly + (bz - j0.z) * lz) / l2;
+                    }
+                }
+                // (the joint nearer the lowest block carries it; the one he hangs from can't)
+                int at = lowU < 0.5f && i > 0 ? i : i + 1;
+                float gy = groundJ[c][at];
+                if (low == Float.MAX_VALUE || Float.isNaN(gy)) continue;
+                float gap = low - gy;
+                // lying on the ground it lies on the top; off the ground it is only kept out of it
+                if (!onFloor[c][at] && gap > 0f) continue;
+                float sole = rig.sole()[c][at];
+                // (a piece buckled under itself is pushed up only so far, so a coil never lifts a whole arm)
+                gap = Mth.clamp(gap, -sole - 2f, sole + 2f);
+                soleFix[c][at] = Mth.clamp(soleFix[c][at] - 0.8f * gap, -0.9f * sole, 3f * sole + 4f);
+            }
+        }
+    }
+
+    /** is anything of his lying on the ground, or hanging down near it (worth fitting soles for) */
+    public boolean anyResting() {
+        for (int c = 0; c < rig.chains.length; c++) {
+            int nb = rig.chains[c].bones.length;
+            if (steps - knockedAt[c] <= 8 || now.chain[c][3 * nb + 1] - groundJ[c][nb] <= 2f * rig.sole()[c][nb] + 6f)
+                return true;
+        }
+        return false;
     }
 
     private void stiffen(float[] p, float[] q, int m) {
@@ -928,7 +1011,23 @@ public final class BellAnim {
         // the lash: one strand wound back, then whipped across
         // (each piece a moment after the one above, so the whip runs down it and the end cracks past)
         if (S.k() == st.lashStrand) {
-            float k = st.lashT - 0.035f * sg;
+            // reaching out to what it's aimed at first, so the whip runs through it
+            if (sg == 0) {
+                // turned so it comes down to the ground short of what it's aimed at and the rest of it lies along the
+                // ground out to it (too short for that, it points straight at it)
+                float reach = BellRig.smooth(st.lashT / 0.3f) * (1f - BellRig.smooth((st.lashT - 0.7f) / 0.3f));
+                Vector3f rest = new Vector3f(S.bottom()).sub(top);
+                float lx = st.lashX - top.x, lz = st.lashZ - top.z;
+                float d = (float) Math.sqrt(lx * lx + lz * lz), h = Math.max(1f, top.y - st.lashY - LASH_DIP);
+                float len = rig.length(rig.strandChain[S.k()]);
+                float x = 0f;
+                if (len > d + 0.5f && d > 1e-3f)
+                    x = Mth.clamp(d - (h * h - (len - d) * (len - d)) / (2f * (len - d)), 0f, d);
+                Vector3f want = new Vector3f(
+                        lx * (1f - x / Math.max(d, 1e-3f)), st.lashY - top.y, lz * (1f - x / Math.max(d, 1e-3f)));
+                local.premul(new Quaternionf().slerp(new Quaternionf().rotationTo(rest, want), reach));
+            }
+            float k = st.lashT - 0.006f * sg;
             float a = k < 0.4f
                     ? -0.6f * BellRig.smooth(k / 0.4f)
                     : k < 0.6f
@@ -938,7 +1037,7 @@ public final class BellAnim {
                     qTmp,
                     (float) Math.cos(st.lashDir),
                     (float) Math.sin(st.lashDir),
-                    a * (sg == 0 ? 0.6f : 0.25f + 0.1f * sg / (float) m)));
+                    a * (sg == 0 ? 0.6f : 0.04f + 0.05f * sg / (float) m)));
         }
         // the curtain: the bottoms drawn in round the one inside
         if (st.curtain > 0f && sg == 0) {

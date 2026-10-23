@@ -82,6 +82,8 @@ public final class BellState {
     public int lashStrand = -1;
 
     public float lashT, lashDir;
+    /** where the lash is aimed, model x z: the strand reaches out to it as it whips through */
+    public float lashX, lashY, lashZ;
     /** every strand flicked up and back (sting volley, stinger storm), 0-1 */
     public float flick;
     /** the five strands nearest model x z flicked this much instead (the sting volley's shooters) */

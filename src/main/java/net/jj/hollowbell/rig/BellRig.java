@@ -422,6 +422,34 @@ public final class BellRig {
     /** which chain is arm a / strand s */
     public final int[] armChain, strandChain;
 
+    /**
+     * Per chain, per joint: how far the blocks of the piece ending at that joint reach out from its line. Lying on
+     * the ground, that much of it is under its line: the line rests that far over the ground, so its blocks lie on
+     * it and don't sink in.
+     */
+    private float[][] sole;
+
+    /** a chain's whole length at rest, joint to joint */
+    public float length(int chain) {
+        float l = 0f;
+        for (float r : chains[chain].restLen) l += r;
+        return l;
+    }
+
+    public synchronized float[][] sole() {
+        if (sole != null) return sole;
+        BellModel m = BellModel.get();
+        float[][] out = new float[chains.length][];
+        for (int c = 0; c < chains.length; c++) {
+            Chain ch = chains[c];
+            float[] r = new float[ch.joints.length];
+            for (int i = 0; i < ch.bones.length; i++) r[i + 1] = m.reach(ch.bones[i], ch.joints[i], ch.joints[i + 1]);
+            r[0] = r.length > 1 ? r[1] : 0.5f;
+            out[c] = r;
+        }
+        return sole = out;
+    }
+
     private static BlobDef[] blobs(JsonArray a) {
         BlobDef[] out = new BlobDef[a.size()];
         for (int i = 0; i < out.length; i++) {

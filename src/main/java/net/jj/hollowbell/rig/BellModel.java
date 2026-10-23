@@ -3,8 +3,10 @@ package net.jj.hollowbell.rig;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.io.DataInputStream;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.zip.GZIPInputStream;
 import net.jj.hollowbell.HollowbellMod;
+import org.joml.Vector3f;
 
 /**
  * The voxels of the build, one list per bone, read from hollowbell_model.bin (made by tools/convert.js).
@@ -78,6 +80,25 @@ public final class BellModel {
 
     public boolean has(int bone, int bx, int by, int bz) {
         return occupied[bone].contains(key(bx, by, bz));
+    }
+
+    /**
+     * How far the blocks of a bone reach out from the line a to b (rest space), to their outer faces: the most of
+     * all but the odd few that stick out.
+     */
+    public float reach(int bone, Vector3f a, Vector3f b) {
+        int n = x[bone].length;
+        if (n == 0) return 0.5f;
+        float[] d = new float[n];
+        Vector3f ab = new Vector3f(b).sub(a), p = new Vector3f();
+        float l2 = Math.max(1e-6f, ab.lengthSquared());
+        for (int i = 0; i < n; i++) {
+            p.set(x[bone][i] + 0.5f, y[bone][i] + 0.5f, z[bone][i] + 0.5f).sub(a);
+            float u = Math.clamp(p.dot(ab) / l2, 0f, 1f);
+            d[i] = p.distance(ab.x * u, ab.y * u, ab.z * u);
+        }
+        Arrays.sort(d);
+        return d[Math.min(n - 1, (int) (n * 0.6f))] + 0.5f;
     }
 
     public int count(int bone) {

@@ -17,14 +17,13 @@ import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.net.ThumpPayload;
+import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.CarryPath;
 import net.jj.hollowbell.solid.GiantHull;
 import net.jj.hollowbell.world.NoWait;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,6 +39,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -473,7 +473,7 @@ public final class BellMoves {
             case Moves.ARM_STORM ->
                 a = at != null ? nearestArm(at.position()) : h.getRandom().nextInt(rig.arms.length);
             case Moves.LASH -> {
-                a = nearestStrand(at != null ? at.position() : h.position().add(20 * s, 0, 0));
+                a = lashStrand(at != null ? at.position() : h.position().add(20 * s, 0, 0));
                 if (a < 0) return false;
             }
             case Moves.SHED -> {
@@ -506,6 +506,7 @@ public final class BellMoves {
         t = 0;
         arg = a;
         landed = false;
+        lashWas = null;
         diveWarned = false;
         diveAt = null;
         lastMove = which;
@@ -938,7 +939,7 @@ public final class BellMoves {
             }
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);
             h.sound(c, ModSounds.SPLASH, 3f, 0.6f);
-            h.particles(ParticleTypes.CLOUD, c.add(0, 1, 0), 200, bell, 0.15);
+            fx(BigFx.DUST, under(), bell * 0.7 + px(0, 4));
             // (the whole bell down on the ground: chunks, dust and a ring; on water a splash and a wave)
             fx(heavy(bell * 1.2 + px(0, 6)), under(), bell * 1.2 + px(0, 6));
             fx(BigFx.SHOCKWAVE, under(), bell * 2.4 + px(0, 10));
@@ -953,41 +954,68 @@ public final class BellMoves {
 
     private void runLash(float s, double bell) {
         if (t == Moves.LASH_AT - 3) h.sound(h.strandTipWorld(arg), ModSounds.WHIP, 2.5f, 0.6f);
+        // what the strand passes through between one tick and the next, while it whips past, is hit
+        Vec3[] now = strandLine(arg);
+        Vec3[] was = lashWas;
+        lashWas = now;
+        if (was == null || t < Moves.LASH_AT - 5 || t > Moves.LASH_AT + 8) return;
+        Vec3 tip = now[now.length - 1], tipWas = was[was.length - 1];
+        Vec3 way = tip.subtract(tipWas).multiply(1, 0, 1);
+        way = way.lengthSqr() > 1e-6 ? way.normalize() : Vec3.ZERO;
         if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
             // the end cracks past, dragging dust; where it meets the ground, a thud
-            Vec3 tip = h.strandTipWorld(arg);
             Vec3 low = new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z);
-            Vector3f a = h.aim();
-            Vec3 way = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10))
-                    .subtract(h.position())
-                    .normalize();
             fx(BigFx.TRAIL, low, px(4, 1.5), way, 0);
             if (t == Moves.LASH_AT) {
                 if (tip.y - low.y < 6 * s + 2) fx(BigFx.STOMP, low, px(6, 2), way, 0);
                 h.sound(tip, SoundEvents.TRIDENT_RIPTIDE_1.value(), 2f, 1.4f);
             }
         }
-        if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
-            Vector3f a = h.aim();
-            double dirA = Math.atan2(a.z, a.x);
-            Vec3 dir = h.toWorld(new Vector3f((float) Math.cos(dirA), 0, (float) Math.sin(dirA)).mul(10))
-                    .subtract(h.position())
-                    .normalize();
-            double r = bell * 1.35 + 3;
-            for (LivingEntity e :
-                    near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.9))) {
-                if (struckThisMove.contains(e.getUUID())) continue;
-                Vec3 to = at(e).subtract(h.position()).multiply(1, 0, 1);
-                double d = to.length();
-                if (d > r) continue;
-                // in the half of him the strand whips through
-                if (d > 2 * s + 1 && to.normalize().dot(dir) < 0.3) continue;
-                struckThisMove.add(e.getUUID());
-                blow(e, 14f, h.position(), 0.6, 0.5);
-                e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 1.8, 0, dir.z * 1.8));
-                sting(e);
+        double r = 3 * s + 1.5;
+        AABB box = new AABB(tip, tipWas);
+        for (int i = 0; i < now.length; i++) box = box.minmax(new AABB(now[i], was[i]));
+        for (LivingEntity e : near(box.inflate(r + 2))) {
+            if (struckThisMove.contains(e.getUUID()) || !swept(was, now, e, r)) continue;
+            struckThisMove.add(e.getUUID());
+            blow(e, 14f, h.position(), 0.6, 0.5);
+            e.setDeltaMovement(e.getDeltaMovement().add(way.x * 1.8, 0, way.z * 1.8));
+            sting(e);
+        }
+    }
+
+    /** the strand lash's last line (null between lashes) */
+    private Vec3[] lashWas;
+
+    /** strand k from where it hangs to its end, joint by joint, as posed now */
+    private Vec3[] strandLine(int k) {
+        var S = rig.strands[k];
+        int[] b = S.bones();
+        Vec3[] out = new Vec3[b.length + 1];
+        for (int i = 0; i < b.length; i++) out[i] = h.boneWorld(b[i], S.joints()[i]);
+        out[b.length] = h.boneWorld(b[b.length - 1], S.bottom());
+        return out;
+    }
+
+    /** did a line moving from was to now pass within r of e (its feet, middle or head) */
+    private boolean swept(Vec3[] was, Vec3[] now, LivingEntity e, double r) {
+        Vec3 c = at(e);
+        double rr = r + e.getBbWidth() * 0.5;
+        Vec3[] pts = {c, c.add(0, e.getBbHeight() * 0.5, 0), c.add(0, e.getBbHeight(), 0)};
+        for (int k = 0; k <= 4; k++) {
+            double f = k / 4.0;
+            for (int i = 0; i + 1 < now.length; i++) {
+                Vec3 a = was[i].lerp(now[i], f), b = was[i + 1].lerp(now[i + 1], f);
+                for (Vec3 p : pts) if (toSegment(p, a, b) <= rr) return true;
             }
         }
+        return false;
+    }
+
+    static double toSegment(Vec3 p, Vec3 a, Vec3 b) {
+        Vec3 ab = b.subtract(a);
+        double l2 = ab.lengthSqr();
+        double u = l2 < 1e-9 ? 0 : Mth.clamp(p.subtract(a).dot(ab) / l2, 0, 1);
+        return p.distanceTo(a.add(ab.scale(u)));
     }
 
     private void runFlash(float s) {
@@ -1005,12 +1033,8 @@ public final class BellMoves {
                 blow(e, night ? 8f : 5f, c, 0, 0);
             }
             h.sound(c, ModSounds.FLASH, 4f, 1.3f);
-            for (var S : rig.spots) {
-                h.particles(ParticleTypes.FLASH, h.spotWorld(S.k()), 1, 0, 0);
-                fx(BigFx.FLASH, h.spotWorld(S.k()), px(12, 4), Vec3.ZERO, GLOW);
-            }
+            for (var S : rig.spots) fx(BigFx.FLASH, h.spotWorld(S.k()), px(12, 4), Vec3.ZERO, GLOW);
             fx(BigFx.FLASH, c, px(40, 10), Vec3.ZERO, GLOW);
-            h.particles(ParticleTypes.END_ROD, c, 200, 40 * s + 4, 0.4);
         }
     }
 
@@ -1049,13 +1073,6 @@ public final class BellMoves {
         }
         h.sound(c, ModSounds.SLAM, 3f, 0.6f);
         h.sound(c, SoundEvents.COPPER_BREAK, 3f, 0.4f);
-        h.particles(
-                new BlockParticleOption(ParticleTypes.BLOCK, Blocks.WEATHERED_COPPER.defaultBlockState()),
-                c,
-                80,
-                6 * s + 1,
-                0.2);
-        h.particles(ParticleTypes.EXPLOSION, c, 6, 4 * s + 1, 0);
         fx(heavy(px(14, 4)), c, px(14, 4));
         // copper on stone
         fx(BigFx.SPARKS, c, px(3, 1.5), Vec3.ZERO, 0);
@@ -1126,6 +1143,7 @@ public final class BellMoves {
 
     private void shoot(Vec3 from, Vec3 to, int kind, float dmg, float radius, float speed, float spread) {
         Shot sh = new Shot(level(), h, kind, dmg, radius);
+        sh.setSize(s());
         sh.setPos(from.x, from.y, from.z);
         Vec3 d = to.subtract(from);
         sh.shoot(d.x, d.y, d.z, speed, spread);
@@ -1199,6 +1217,8 @@ public final class BellMoves {
 
     /** his glow, for the flashes */
     static final int GLOW = 0xBFFFD8;
+
+    static final int POISON = 0x9CFF6A;
 
     /** an instant kick of the camera, for a blow the kit's own shake (SLAM, SHOCKWAVE, SHAKE) doesn't cover */
     private void thump(Vec3 c, float k) {
@@ -1411,6 +1431,8 @@ public final class BellMoves {
             e.hurtMarked = marked;
         }
         h.sound(e.position(), ModSounds.STING, 1f, 1f);
+        // the poison going in
+        fx(BigFx.SPARKS, e.position().add(0, e.getBbHeight() * 0.6, 0), 1.2, Vec3.ZERO, POISON);
     }
 
     private void shed() {
@@ -1428,12 +1450,9 @@ public final class BellMoves {
             b.setOwner(h);
             if (target != null) b.setTarget(target);
             level().addFreshEntity(b);
-            h.particles(
-                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.BONE_BLOCK.defaultBlockState()),
-                    at,
-                    20,
-                    1.5 * s() + 0.3,
-                    0.1);
+            // the shell breaking off the strand
+            fx(BigFx.DEBRIS, at, px(4, 1.2), new Vec3(0, -1, 0), Block.getId(Blocks.BONE_BLOCK.defaultBlockState()));
+            fx(BigFx.SPARKS, at, px(3, 1), Vec3.ZERO, POISON);
             n++;
         }
         if (n > 0) h.sound(h.position().add(0, 50 * s(), 0), ModSounds.EGG_BURST, 3f, 0.8f);
@@ -1502,6 +1521,25 @@ public final class BellMoves {
     Vec3 at(LivingEntity e) {
         Vec3 p = giantAt.get(e);
         return p != null ? p : e.position();
+    }
+
+    /** the strand to lash at p with: one hanging near it, long enough to reach down to it */
+    private int lashStrand(Vec3 p) {
+        Vector3f to = h.toModel(p);
+        int best = -1;
+        double bd = Double.MAX_VALUE;
+        for (var S : rig.strands) {
+            if (S.hidden()) continue;
+            Vector3f top = S.joints()[0];
+            double across = Math.hypot(top.x - to.x, top.z - to.z);
+            double need = Math.hypot(across, Math.max(0, top.y - BellAnim.LASH_DIP - to.y));
+            double d = across + Math.max(0, need - rig.length(rig.strandChain[S.k()])) * 4;
+            if (d < bd) {
+                bd = d;
+                best = S.k();
+            }
+        }
+        return best;
     }
 
     private int nearestStrand(Vec3 p) {
