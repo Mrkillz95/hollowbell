@@ -89,7 +89,16 @@ public final class Giants {
                                 "howl"
                             },
                             new String[] {
-                                "pounce", "charge", "twin_breath", "firestorm", "frost_nova", "frenzy", "quake_slam"
+                                "pounce",
+                                "charge",
+                                "twin_breath",
+                                "firestorm",
+                                "frost_nova",
+                                "frenzy",
+                                "quake_slam",
+                                "triple_breath",
+                                "rift",
+                                "leap_slam"
                             }),
                     Set.of(
                             "pitchgut",

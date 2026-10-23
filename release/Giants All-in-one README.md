@@ -62,6 +62,9 @@ A book about every giant you have. Right-click it to open it.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
   tells you to use `/giants where`.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
+- New in the Guide 1.4.11 (in the next all-in-one): every giant's moves match his own book again, with the
+  Cerberus's triple breath, rift and leaping slam, and the Gloamwick's pages have his real size, his new look, his
+  dark wood and his ward, the Gloam Lantern.
 
 ## New in 1.5.0
 
