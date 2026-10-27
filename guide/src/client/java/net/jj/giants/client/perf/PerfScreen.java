@@ -79,7 +79,7 @@ public class PerfScreen extends Screen {
     private Button presetButton, saveButton, renameButton, deleteButton, okButton, cancelButton, featuresButton;
 
     // where things go (set in init)
-    private int px0, py0, pw, ph, navX, navW, lx, lw, ly0, ly1;
+    private int px0, py0, pw, ph, navX, navW, lx, lw, ly0, ly1, tabsEnd;
 
     /** open next time scrolled this far, with this search (the picture-taking uses this) */
     public static void showAt(double scroll, String query) {
@@ -286,6 +286,13 @@ public class PerfScreen extends Screen {
                 .bounds(px0 + pw - 6 - fwW, py0 + 62, fwW, 16)
                 .build());
         featuresButton.setTooltip(Tooltip.create(Component.translatable("perf.jj_giants.with_features.tip")));
+
+        // Settings | Controls
+        tabsEnd = px0 + 6;
+        for (Button b : ControlsScreen.tabs(this, back, false, px0 + 6, py0 + 2)) {
+            addRenderableWidget(b);
+            tabsEnd = b.getX() + b.getWidth();
+        }
 
         Button close = Button.builder(Component.literal("✕"), b -> onClose())
                 .bounds(px0 + pw - 19, py0 + 2, 16, 14)
@@ -632,7 +639,7 @@ public class PerfScreen extends Screen {
         super.renderBackground(g, mx, my, partial);
         g.fill(px0, py0, px0 + pw, py0 + ph, PANEL);
         g.renderOutline(px0, py0, pw, ph, EDGE);
-        g.drawCenteredString(font, title, px0 + pw / 2, py0 + 5, TITLE);
+        g.drawCenteredString(font, title, ControlsScreen.titleX(px0, pw, tabsEnd, font.width(title)), py0 + 5, TITLE);
         drawSummary(g, mx, my);
         g.fill(px0 + 6, ly0 - 4, px0 + pw - 6, ly0 - 3, EDGE);
         g.fill(lx - 5, ly0, lx - 4, ly1, EDGE);

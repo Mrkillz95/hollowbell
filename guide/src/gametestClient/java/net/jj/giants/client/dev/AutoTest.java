@@ -8,6 +8,14 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.jj.giants.GiantsGuideMod;
 import net.jj.giants.client.GuideScreen;
+import com.mojang.blaze3d.platform.InputConstants;
+import java.util.Map;
+import net.jj.giants.client.perf.ControlsClient;
+import net.jj.giants.client.perf.ControlsScreen;
+import net.jj.giants.controls.ControlsJson;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.MouseHandler;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.jj.giants.client.perf.PerfClient;
 import net.jj.giants.client.perf.PerfScreen;
 import net.minecraft.client.Minecraft;
@@ -32,7 +40,7 @@ import net.minecraft.world.level.levelgen.presets.WorldPresets;
  * Development only (-Djj_giants.autotest=<script>), the same idea as the giants' own: makes a creative flat world, runs
  * a list of lines with waits between them, takes screenshots, then quits. Never runs in a normal game. Lines: join
  * HOST:PORT (a real server instead), wait N, cmd ... (as an operator, own world only), chat /..., guiscale N, gui
- * on|off, guide KEY TAB [SCROLL], perf [SCROLL] [SEARCH], close, shot NAME, quit.
+ * on|off, guide KEY TAB [SCROLL], perf [SCROLL] [SEARCH], controls [SCROLL] [SEARCH], bind KEYNAME KEY, vanillacontrols, gesturedemo GIANT, mouse X Y, close, shot NAME, quit.
  */
 public final class AutoTest implements ClientModInitializer {
     private static List<String> script;
@@ -154,6 +162,50 @@ public final class AutoTest implements ClientModInitializer {
                 PerfScreen.showAt(
                         a.length > 0 && !a[0].isEmpty() ? Double.parseDouble(a[0]) : 0, a.length > 1 ? a[1] : "");
                 PerfClient.open(null);
+                continue;
+            }
+            // controls [SCROLL] [SEARCH...]: the same screen's Controls tab
+            if (s.equals("controls") || s.startsWith("controls ")) {
+                String[] a = s.substring(8).trim().split(" +", 2);
+                ControlsScreen.showAt(
+                        a.length > 0 && !a[0].isEmpty() ? Double.parseDouble(a[0]) : 0, a.length > 1 ? a[1] : "");
+                mc.setScreen(new ControlsScreen(null));
+                continue;
+            }
+            // bind KEYNAME KEY: sets a key the way the Controls tab does (KEY as in options.txt, key.keyboard.space)
+            if (s.startsWith("bind ")) {
+                String[] a = s.substring(5).trim().split("\\s+");
+                KeyMapping km = ControlsClient.mapping(a[0]);
+                if (km != null) ControlsClient.bind(km, InputConstants.getKey(a[1]));
+                else GiantsGuideMod.LOG.warn("autotest: no key {}", a[0]);
+                continue;
+            }
+            // vanillacontrols: Minecraft's own Controls screen (to see the same keys there)
+            if (s.equals("vanillacontrols")) {
+                mc.setScreen(new KeyBindsScreen(null, mc.options));
+                continue;
+            }
+            // gesturedemo GIANT: a gesture row for that giant, as if his jar had a giants_controls.json
+            if (s.startsWith("gesturedemo ")) {
+                String who = s.substring(12).trim();
+                ControlsClient.addFile(new ControlsJson.Controls(who, Map.of(), List.of(), List.of(new ControlsJson.Gesture(
+                        "triple_crouch_sit", "Triple crouch to sit",
+                        "Crouch three times within a second while standing on him (on his safe list) to sit down.",
+                        "tripleCrouchSit", "key." + who + ".sit_on_giant", true))));
+                continue;
+            }
+            // mouse X Y: puts the pointer there (window pixels), so no tooltip covers the picture
+            if (s.startsWith("mouse ")) {
+                String[] a = s.substring(6).trim().split("\\s+");
+                try {
+                    for (String f : new String[] {"xpos", "ypos"}) {
+                        java.lang.reflect.Field fd = MouseHandler.class.getDeclaredField(f);
+                        fd.setAccessible(true);
+                        fd.setDouble(mc.mouseHandler, Double.parseDouble(a[f.equals("xpos") ? 0 : 1]));
+                    }
+                } catch (ReflectiveOperationException e) {
+                    GiantsGuideMod.LOG.warn("autotest: can't move the mouse: {}", e.toString());
+                }
                 continue;
             }
             if (s.equals("close")) {
