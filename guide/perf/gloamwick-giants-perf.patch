@@ -1,0 +1,468 @@
+diff --git a/src/client/java/net/jj/gloamwick/client/FarSightClient.java b/src/client/java/net/jj/gloamwick/client/FarSightClient.java
+index a8c387f..52219ae 100644
+--- a/src/client/java/net/jj/gloamwick/client/FarSightClient.java
++++ b/src/client/java/net/jj/gloamwick/client/FarSightClient.java
+@@ -9,6 +9,7 @@ import java.util.Set;
+ import java.util.UUID;
+ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+ import net.jj.gloamwick.Detail;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.ModEntities;
+ import net.jj.gloamwick.client.render.GloamRenderer;
+@@ -117,7 +118,9 @@ public final class FarSightClient {
+         for (Entity e : mc.level.entitiesForRendering())
+             if (e instanceof GloamwickEntity h && !h.isRemoved()) real.put(h.getUUID(), h);
+         // (a stand-in is kept ready behind each real one far enough off to need one, so it can take over at once)
+-        int reach = Mth.clamp(GloamConfig.V.farSightBlocks, 0, 4096);
++        int reach = GiantsPerf.on("detail.farSight")
++                ? (int) (Mth.clamp(GloamConfig.V.farSightBlocks, 0, 4096) * GiantsPerf.f("detail.farSightDistance"))
++                : 0;
+         var me = mc.player;
+         for (GloamwickEntity h : real.values()) {
+             if (ghosts.containsKey(h.getUUID()) || h.isDeadOrDying() || me == null || reach <= 0) continue;
+@@ -193,7 +196,9 @@ public final class FarSightClient {
+         if (ghosts.isEmpty()) return;
+         Minecraft mc = Minecraft.getInstance();
+         if (mc.level == null || mc.level != level) return;
+-        int reach = Mth.clamp(GloamConfig.V.farSightBlocks, 0, 4096);
++        int reach = GiantsPerf.on("detail.farSight")
++                ? (int) (Mth.clamp(GloamConfig.V.farSightBlocks, 0, 4096) * GiantsPerf.f("detail.farSightDistance"))
++                : 0;
+         if (reach <= 0) return;
+         var cam = ctx.camera().getPosition();
+         float partial = ctx.tickCounter().getGameTimeDeltaPartialTick(false);
+diff --git a/src/client/java/net/jj/gloamwick/client/FightMusic.java b/src/client/java/net/jj/gloamwick/client/FightMusic.java
+index e5aae5f..5096cbe 100644
+--- a/src/client/java/net/jj/gloamwick/client/FightMusic.java
++++ b/src/client/java/net/jj/gloamwick/client/FightMusic.java
+@@ -1,5 +1,6 @@
+ package net.jj.gloamwick.client;
+ 
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.ModSounds;
+ import net.jj.gloamwick.MusicBoard;
+@@ -90,7 +91,8 @@ public final class FightMusic {
+         long now = System.currentTimeMillis();
+         double best = Double.MAX_VALUE;
+         int bestPhase = phase;
+-        if (mc.level != null && mc.player != null && !mc.player.isSpectator() && GloamConfig.V.fightMusic) {
++        if (mc.level != null && mc.player != null && !mc.player.isSpectator() && GloamConfig.V.fightMusic
++                && GiantsPerf.f("detail.music") > 0f) {
+             boolean on = held > 0;
+             for (var e : mc.level.entitiesForRendering()) {
+                 if (!(e instanceof GloamwickEntity h) || h.asleep() || h.isDeadOrDying()) continue;
+diff --git a/src/client/java/net/jj/gloamwick/client/GloamwickClient.java b/src/client/java/net/jj/gloamwick/client/GloamwickClient.java
+index ff03885..bd38779 100644
+--- a/src/client/java/net/jj/gloamwick/client/GloamwickClient.java
++++ b/src/client/java/net/jj/gloamwick/client/GloamwickClient.java
+@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+ import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+ import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.GloamwickMod;
+ import net.jj.gloamwick.ModBlocks;
+@@ -179,11 +180,12 @@ public class GloamwickClient implements ClientModInitializer {
+         WorldRenderEvents.AFTER_TRANSLUCENT.register(
+                 ctx -> SwipeTrails.draw(ctx.camera(), ctx.tickCounter().getGameTimeDeltaPartialTick(false)));
+         // his big moments: chunks of the ground, soot and dust, cracks, soul sparks, shake and late sound
++        // (each on top of his own config, times the Giants Guide's performance levels: 1 changes nothing)
+         BigFxClient.init(
+-                () -> GloamConfig.V.screenShake,
+-                () -> GloamConfig.V.soundVolume,
+-                () -> GloamConfig.V.simpleFarAway,
+-                () -> GloamConfig.V.bigEffects);
++                () -> GloamConfig.V.screenShake && GiantsPerf.f("fx.screenShake") > 0f,
++                () -> GloamConfig.V.soundVolume * GiantsPerf.f("detail.sounds"),
++                () -> GloamConfig.V.simpleFarAway || GiantsPerf.f("detail.model") < 1f,
++                () -> GloamConfig.V.bigEffects * GiantsPerf.f("fx.bigImpacts"));
+         // seen from far off: his stand-ins on the skyline and his loot cache's beam (see FarSight and LootBeams)
+         ClientPlayNetworking.registerGlobalReceiver(FarSightPayload.TYPE, (p, ctx) -> FarSightClient.receive(p));
+         ClientPlayNetworking.registerGlobalReceiver(LootBeamsPayload.TYPE, (p, ctx) -> LootBeamsClient.receive(p));
+diff --git a/src/client/java/net/jj/gloamwick/client/Shake.java b/src/client/java/net/jj/gloamwick/client/Shake.java
+index 502b079..d5781b2 100644
+--- a/src/client/java/net/jj/gloamwick/client/Shake.java
++++ b/src/client/java/net/jj/gloamwick/client/Shake.java
+@@ -1,5 +1,6 @@
+ package net.jj.gloamwick.client;
+ 
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.util.Mth;
+@@ -37,7 +38,7 @@ public final class Shake {
+     /** sideways, up-down and forward-back wobble for the camera this frame, or null */
+     public static float[] offset(float partial) {
+         if (amount <= 0f || !GloamConfig.V.screenShake) return null;
+-        float a = Mth.lerp(partial, last, amount);
++        float a = Mth.lerp(partial, last, amount) * GiantsPerf.f("fx.screenShake");
+         if (a <= 0.002f) return null;
+         Minecraft mc = Minecraft.getInstance();
+         float t = (mc.level == null ? 0 : mc.level.getGameTime() % 24000L) + partial;
+diff --git a/src/client/java/net/jj/gloamwick/client/fx/FxClient.java b/src/client/java/net/jj/gloamwick/client/fx/FxClient.java
+index 18d0054..c1104fd 100644
+--- a/src/client/java/net/jj/gloamwick/client/fx/FxClient.java
++++ b/src/client/java/net/jj/gloamwick/client/fx/FxClient.java
+@@ -1,6 +1,7 @@
+ package net.jj.gloamwick.client.fx;
+ 
+ import com.mojang.blaze3d.systems.RenderSystem;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.GloamwickMod;
+ import net.jj.gloamwick.client.Shake;
+@@ -113,7 +114,7 @@ public final class FxClient {
+         if (!GloamConfig.V.screenEffects) return;
+         Minecraft mc = Minecraft.getInstance();
+         float partial = dt.getGameTimeDeltaPartialTick(false);
+-        float scale = mc.options.screenEffectScale().get().floatValue();
++        float scale = mc.options.screenEffectScale().get().floatValue() * GiantsPerf.f("fx.screenEffects");
+         float f = Mth.lerp(partial, flashO, flash) * scale, v = Mth.lerp(partial, vignetteO, vignette) * scale;
+         float d = Math.max(dark(partial) * 0.45f, eclipse(partial) * 0.75f) * scale;
+         if (f <= 0.01f && v <= 0.01f && d <= 0.01f) return;
+diff --git a/src/client/java/net/jj/gloamwick/client/fx/LifeFx.java b/src/client/java/net/jj/gloamwick/client/fx/LifeFx.java
+index fc2c3b3..ed82002 100644
+--- a/src/client/java/net/jj/gloamwick/client/fx/LifeFx.java
++++ b/src/client/java/net/jj/gloamwick/client/fx/LifeFx.java
+@@ -4,6 +4,7 @@ import java.util.ArrayList;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.ModParticles;
+ import net.jj.gloamwick.client.render.ShotRenderer;
+@@ -62,15 +63,16 @@ public final class LifeFx {
+         float s = g.size();
+         cam = mc.gameRenderer.getMainCamera().getPosition();
+         double dist = Math.max(0, cam.distanceTo(g.position().add(0, 100 * s, 0)) - 120 * s);
+-        double reach = Math.min(GloamConfig.V.renderDistance, 120 + 450 * s);
++        double reach = Math.min(GloamConfig.V.renderDistance * GiantsPerf.f("detail.renderDistance"), 120 + 450 * s);
+         if (dist > reach) return;
+         float near = 48 + 140 * s;
+         // fewer far off (and with fewer particles asked for)
+-        float amount = setting(mc) / (float) Math.pow(Math.max(1.0, dist / near), 0.9);
++        float amount = setting(mc) * GiantsPerf.f("fx.particles") / (float) Math.pow(Math.max(1.0, dist / near), 0.9);
++        float wax = GiantsPerf.f("gloamwick.waxDrips");
+         sites();
+         RandomSource r = g.getRandom();
+-        drips(mc, g, s, amount, r);
+-        smoke(mc, g, s, amount, r);
++        drips(mc, g, s, amount * wax, r);
++        smoke(mc, g, s, amount * wax * GiantsPerf.f("fx.smokeTrails"), r);
+         embers(mc, g, s, amount, r);
+         wisps(mc, g, s, amount, r);
+     }
+diff --git a/src/client/java/net/jj/gloamwick/client/fx/SwipeTrails.java b/src/client/java/net/jj/gloamwick/client/fx/SwipeTrails.java
+index 559edb9..e54c4d0 100644
+--- a/src/client/java/net/jj/gloamwick/client/fx/SwipeTrails.java
++++ b/src/client/java/net/jj/gloamwick/client/fx/SwipeTrails.java
+@@ -6,6 +6,7 @@ import java.util.ArrayList;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.ModParticles;
+ import net.jj.gloamwick.entity.GloamwickEntity;
+ import net.jj.gloamwick.entity.Moves;
+@@ -122,7 +123,7 @@ public final class SwipeTrails {
+     }
+ 
+     public static void draw(Camera cam, float partial) {
+-        if (trails.isEmpty()) return;
++        if (trails.isEmpty() || GiantsPerf.f("fx.smokeTrails") <= 0f) return;
+         Minecraft mc = Minecraft.getInstance();
+         if (mc.level == null) return;
+         if (buffers == null) buffers = MultiBufferSource.immediate(new ByteBufferBuilder(1 << 16));
+diff --git a/src/client/java/net/jj/gloamwick/mixin/GloamFogMixin.java b/src/client/java/net/jj/gloamwick/mixin/GloamFogMixin.java
+index e876a0b..a17a95f 100644
+--- a/src/client/java/net/jj/gloamwick/mixin/GloamFogMixin.java
++++ b/src/client/java/net/jj/gloamwick/mixin/GloamFogMixin.java
+@@ -1,6 +1,7 @@
+ package net.jj.gloamwick.mixin;
+ 
+ import com.mojang.blaze3d.systems.RenderSystem;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.client.GloamingAir;
+ import net.jj.gloamwick.client.fx.FxClient;
+@@ -35,6 +36,7 @@ public abstract class GloamFogMixin {
+         float g = GloamingAir.gloom(partial) * 0.6f;
+         float k = GloamConfig.V.screenEffects
+                 ? Math.max(FxClient.dark(partial) * 0.75f, FxClient.eclipse(partial) * 0.92f)
++                        * GiantsPerf.f("fx.screenEffects")
+                 : 0f;
+         if (g <= 0.001f && k <= 0.001f) return;
+         fogRed += (0.045f - fogRed) * g;
+@@ -50,8 +52,10 @@ public abstract class GloamFogMixin {
+     private static void gloamwick$darkFog(
+             Camera camera, FogRenderer.FogMode mode, float far, boolean thick, float partial, CallbackInfo ci) {
+         if (mode != FogRenderer.FogMode.FOG_TERRAIN) return;
+-        float g = GloamingAir.closeIn(partial);
+-        float k = GloamConfig.V.screenEffects ? Math.max(FxClient.dark(partial), FxClient.eclipse(partial) * 0.8f) : 0f;
++        float g = GiantsPerf.on("fx.fog") ? GloamingAir.closeIn(partial) : 0f;
++        float k = GloamConfig.V.screenEffects
++                ? Math.max(FxClient.dark(partial), FxClient.eclipse(partial) * 0.8f) * GiantsPerf.f("fx.screenEffects")
++                : 0f;
+         if (g <= 0.001f && k <= 0.001f) return;
+         float end = RenderSystem.getShaderFogEnd(), start = RenderSystem.getShaderFogStart();
+         // the Gloaming's mist: from a few blocks out, thick by about a hundred
+diff --git a/src/client/java/net/jj/gloamwick/mixin/GloamSkyMixin.java b/src/client/java/net/jj/gloamwick/mixin/GloamSkyMixin.java
+index 29ec4f4..f0c7f8a 100644
+--- a/src/client/java/net/jj/gloamwick/mixin/GloamSkyMixin.java
++++ b/src/client/java/net/jj/gloamwick/mixin/GloamSkyMixin.java
+@@ -1,6 +1,7 @@
+ package net.jj.gloamwick.mixin;
+ 
+ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.client.GloamingAir;
+ import net.jj.gloamwick.client.fx.FxClient;
+@@ -19,8 +20,9 @@ public abstract class GloamSkyMixin {
+     @ModifyReturnValue(method = "getSkyColor", at = @At("RETURN"))
+     private Vec3 gloamwick$darkSky(Vec3 was, Vec3 pos, float partial) {
+         float g = GloamingAir.gloom(partial) * 0.5f;
+-        float k = GloamConfig.V.screenEffects
++        float k = GloamConfig.V.screenEffects && GiantsPerf.on("gloamwick.eclipseSky")
+                 ? Math.max(FxClient.eclipse(partial) * 0.97f, FxClient.dark(partial) * 0.5f)
++                        * GiantsPerf.f("fx.screenEffects")
+                 : 0f;
+         float m = 1f - Math.max(g, k);
+         return m >= 0.999f ? was : was.scale(m);
+@@ -29,7 +31,9 @@ public abstract class GloamSkyMixin {
+     @ModifyReturnValue(method = "getCloudColor", at = @At("RETURN"))
+     private Vec3 gloamwick$darkClouds(Vec3 was, float partial) {
+         float g = GloamingAir.gloom(partial) * 0.75f;
+-        float k = GloamConfig.V.screenEffects ? FxClient.eclipse(partial) * 0.95f : 0f;
++        float k = GloamConfig.V.screenEffects && GiantsPerf.on("gloamwick.eclipseSky")
++                ? FxClient.eclipse(partial) * 0.95f * GiantsPerf.f("fx.screenEffects")
++                : 0f;
+         float m = 1f - Math.max(g, k);
+         return m >= 0.999f ? was : was.scale(m);
+     }
+diff --git a/src/main/java/net/jj/gloamwick/Detail.java b/src/main/java/net/jj/gloamwick/Detail.java
+index a4f8b0a..403ba59 100644
+--- a/src/main/java/net/jj/gloamwick/Detail.java
++++ b/src/main/java/net/jj/gloamwick/Detail.java
+@@ -21,8 +21,10 @@ public final class Detail {
+ 
+     /** which version of him to draw, dist blocks from the camera, at size scale */
+     public static int lod(double dist, float scale) {
+-        if (!on()) return FULL;
+-        double at = GloamConfig.V.simpleFarAwayAt * Math.max(0.25f, scale);
++        // (the guide's model detail: under 100% the simpler drawing starts sooner, even with detail off)
++        float perf = GiantsPerf.f("detail.model");
++        if (!on() && perf >= 1f) return FULL;
++        double at = GloamConfig.V.simpleFarAwayAt * perf * Math.max(0.25f, scale);
+         if ((scale < 0.06f && dist > 40) || dist > at * 4) return TINY;
+         if (dist > at) return FAR;
+         return FULL;
+diff --git a/src/main/java/net/jj/gloamwick/GiantsBridge.java b/src/main/java/net/jj/gloamwick/GiantsBridge.java
+index 94184ce..ccb68cc 100644
+--- a/src/main/java/net/jj/gloamwick/GiantsBridge.java
++++ b/src/main/java/net/jj/gloamwick/GiantsBridge.java
+@@ -38,6 +38,9 @@ public final class GiantsBridge {
+     public static List<String> giants(MinecraftServer server, String action, String arg) {
+         List<String> out = new ArrayList<>();
+         String a = arg == null ? "" : arg.trim().toLowerCase(Locale.ROOT);
++        // the Giants Guide's performance screen: his settings out, the levels in (GiantsPerf)
++        if (action.equals("perf")) return GiantsPerf.describe();
++        if (action.equals("perfset")) return GiantsPerf.receive(arg);
+         switch (action) {
+             case "natural" -> natural(a, out);
+             case "limit" -> limit(server, a, out);
+diff --git a/src/main/java/net/jj/gloamwick/GiantsPerf.java b/src/main/java/net/jj/gloamwick/GiantsPerf.java
+new file mode 100644
+index 0000000..14ba598
+--- /dev/null
++++ b/src/main/java/net/jj/gloamwick/GiantsPerf.java
+@@ -0,0 +1,116 @@
++package net.jj.gloamwick;
++
++import com.google.gson.JsonArray;
++import com.google.gson.JsonElement;
++import com.google.gson.JsonObject;
++import com.google.gson.JsonParser;
++import java.util.ArrayList;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++
++/**
++ * The Giants Performance levels (the Giants Guide's screen, PERFORMANCE_BRIDGE.md in the guide). The guide asks
++ * GiantsBridge "perf" for the list below and sends "perfset" with the values; the fx code reads them here.
++ *
++ * Every level is a share or a switch on top of this mod's own config: 1 / true / 0 (the default) changes nothing,
++ * so without the guide, or at its Highest preset, he is exactly as he was.
++ */
++public final class GiantsPerf {
++    private GiantsPerf() {}
++
++    /** the protocol version this mod speaks */
++    public static final int VERSION = 1;
++
++    /** the guide's shared settings this mod reads (only these are listed as "read by Gloamwick") */
++    private static final String[] USES = {
++        "fx.particles", "fx.bigImpacts", "fx.smokeTrails", "fx.screenShake", "fx.screenEffects", "fx.fog",
++        "detail.model", "detail.farSight", "detail.farSightDistance", "detail.sounds", "detail.music",
++        "detail.renderDistance", "feature.meetings", "feature.keepAwake"
++    };
++
++    /** his own settings, one JSON object each (see the guide's PERFORMANCE_BRIDGE.md for the fields) */
++    private static final String[] OWN = {
++        "{\"id\":\"gloamwick.waxDrips\",\"section\":\"giant\",\"kind\":\"slider\",\"min\":0,\"max\":1,\"step\":0.25,"
++                + "\"default\":1,\"levels\":[1,1,0.75,0.5,0.25],\"cost\":\"med\",\"side\":\"client\","
++                + "\"name\":\"Wax drips and smoke\",\"what\":\"The wax that drips off him and the smoke off his wicks.\","
++                + "\"loses\":\"Fewer drips and wisps; he looks less like he's burning.\"}",
++        "{\"id\":\"gloamwick.eclipseSky\",\"section\":\"giant\",\"kind\":\"toggle\",\"default\":true,"
++                + "\"levels\":[true,true,true,true,true],\"cost\":\"low\",\"side\":\"client\","
++                + "\"name\":\"Eclipse: black sky\",\"what\":\"The sky and clouds going black in his Eclipse.\","
++                + "\"loses\":\"The Eclipse only darkens your screen, not the sky.\"}",
++        "{\"id\":\"gloamwick.hush\",\"section\":\"features\",\"kind\":\"toggle\",\"default\":true,"
++                + "\"levels\":[true,true,true,true,false],\"cost\":\"high\",\"side\":\"server\",\"ops\":true,"
++                + "\"name\":\"The Hush\",\"what\":\"In his Eclipse, his shadow gets up and hunts by sound.\","
++                + "\"loses\":\"No Hush: his Eclipse is only dark, and the hardest part of his fight is gone.\"}"
++    };
++
++    /** each id's default: what it is when the guide hasn't said (Highest) */
++    private static final Map<String, Double> DEFAULTS = new HashMap<>();
++
++    static {
++        for (String id : USES) DEFAULTS.put(id, 1.0);
++        DEFAULTS.put("gloamwick.waxDrips", 1.0);
++        DEFAULTS.put("gloamwick.eclipseSky", 1.0);
++        DEFAULTS.put("gloamwick.hush", 1.0);
++    }
++
++    // what the guide said, for this player's own game and for the world (read on any thread: swapped whole)
++    private static volatile Map<String, Double> client = Map.of(), server = Map.of();
++
++    /** GiantsBridge "perf": the header, then his own settings */
++    public static List<String> describe() {
++        JsonObject head = new JsonObject();
++        head.addProperty("perf", VERSION);
++        head.addProperty("giant", "gloamwick");
++        JsonArray uses = new JsonArray();
++        for (String u : USES) uses.add(u);
++        head.add("uses", uses);
++        List<String> out = new ArrayList<>();
++        out.add(head.toString());
++        for (String s : OWN) out.add(s);
++        return out;
++    }
++
++    /** GiantsBridge "perfset": {"perf":1,"side":"client"|"server","values":{...}}; null if it can't be read */
++    public static List<String> receive(String arg) {
++        try {
++            JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
++            if (o.get("perf").getAsInt() > VERSION) return null;
++            Map<String, Double> v = new HashMap<>();
++            for (Map.Entry<String, JsonElement> e : o.getAsJsonObject("values").entrySet()) {
++                if (!e.getValue().isJsonPrimitive()) continue;
++                var p = e.getValue().getAsJsonPrimitive();
++                double d = p.isBoolean() ? (p.getAsBoolean() ? 1 : 0) : p.getAsDouble();
++                if (Double.isFinite(d)) v.put(e.getKey(), Math.max(0, Math.min(8, d)));
++            }
++            if ("server".equals(o.get("side").getAsString())) server = Map.copyOf(v);
++            else client = Map.copyOf(v);
++            return new ArrayList<>(List.of("Gloamwick: performance levels taken."));
++        } catch (RuntimeException e) {
++            return null;
++        }
++    }
++
++    // reading them
++
++    /** a share for this player's own game, 0..1 (1 when the guide hasn't said) */
++    public static float f(String id) {
++        return (float) Math.max(0, Math.min(1, client.getOrDefault(id, DEFAULTS.getOrDefault(id, 1.0))));
++    }
++
++    /** a switch for this player's own game (on when the guide hasn't said) */
++    public static boolean on(String id) {
++        return client.getOrDefault(id, DEFAULTS.getOrDefault(id, 1.0)) >= 0.5;
++    }
++
++    /** a share for the whole world (the server's), 0..1 */
++    public static float world(String id) {
++        return (float) Math.max(0, Math.min(1, server.getOrDefault(id, DEFAULTS.getOrDefault(id, 1.0))));
++    }
++
++    /** a switch for the whole world */
++    public static boolean worldOn(String id) {
++        return server.getOrDefault(id, DEFAULTS.getOrDefault(id, 1.0)) >= 0.5;
++    }
++}
+diff --git a/src/main/java/net/jj/gloamwick/entity/Hush.java b/src/main/java/net/jj/gloamwick/entity/Hush.java
+index df69656..77cb531 100644
+--- a/src/main/java/net/jj/gloamwick/entity/Hush.java
++++ b/src/main/java/net/jj/gloamwick/entity/Hush.java
+@@ -5,6 +5,7 @@ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.ModEntities;
+ import net.jj.gloamwick.ModSounds;
+@@ -127,6 +128,8 @@ public class Hush extends Entity {
+     /** his Hush climbs up out of his shadow at his feet (any left from before goes first) */
+     static void rise(ServerLevel sl, GloamwickEntity g) {
+         clear(sl, g);
++        // an operator turned the Hush off for this world (the Giants Guide's performance screen)
++        if (!GiantsPerf.worldOn("gloamwick.hush")) return;
+         Hush h = ModEntities.HUSH.create(sl);
+         if (h == null) return;
+         h.ownerId = g.getUUID();
+diff --git a/src/main/java/net/jj/gloamwick/entity/Meeting.java b/src/main/java/net/jj/gloamwick/entity/Meeting.java
+index b96ab9f..aac66e2 100644
+--- a/src/main/java/net/jj/gloamwick/entity/Meeting.java
++++ b/src/main/java/net/jj/gloamwick/entity/Meeting.java
+@@ -8,6 +8,7 @@ import java.util.Properties;
+ import java.util.UUID;
+ import java.util.concurrent.ConcurrentHashMap;
+ import net.jj.gloamwick.Adv;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.GloamwickMod;
+ import net.minecraft.core.registries.BuiltInRegistries;
+@@ -202,7 +203,7 @@ public final class Meeting {
+                 if (g.getTarget() == o) g.setTarget(null);
+             }
+         }
+-        if (!GloamConfig.V.meetings) {
++        if (!GloamConfig.V.meetings || !GiantsPerf.worldOn("feature.meetings")) {
+             avoid = null;
+             return;
+         }
+diff --git a/src/main/java/net/jj/gloamwick/world/KeepAwake.java b/src/main/java/net/jj/gloamwick/world/KeepAwake.java
+index 3399bb0..de88111 100644
+--- a/src/main/java/net/jj/gloamwick/world/KeepAwake.java
++++ b/src/main/java/net/jj/gloamwick/world/KeepAwake.java
+@@ -1,6 +1,7 @@
+ package net.jj.gloamwick.world;
+ 
+ import java.util.UUID;
++import net.jj.gloamwick.GiantsPerf;
+ import net.jj.gloamwick.GloamConfig;
+ import net.jj.gloamwick.ModEntities;
+ import net.jj.gloamwick.entity.GloamwickEntity;
+@@ -25,11 +26,12 @@ public final class KeepAwake {
+     private static final TicketType<Integer> GLOAM = TicketType.create("gloamwick", Integer::compare, 100);
+ 
+     public static void tick(ServerLevel level) {
+-        if (!GloamConfig.V.chunkLoading || level.getGameTime() % 20 != 0) return;
++        float perf = GiantsPerf.world("feature.keepAwake");
++        if (!GloamConfig.V.chunkLoading || perf <= 0f || level.getGameTime() % 20 != 0) return;
+         for (GloamwickEntity h : level.getEntities(ModEntities.GLOAMWICK, e -> !e.isRemoved())) {
+             if (!watched(level, h)) continue;
+             // 2 chunks out from his middle keeps the middle moving; more keeps the ground under all of him there
+-            int radius = Math.min(10, (int) Math.ceil(150 * h.size() / 16.0) + 2);
++            int radius = Math.max(2, (int) Math.ceil(Math.min(10, (int) Math.ceil(150 * h.size() / 16.0) + 2) * perf));
+             level.getChunkSource().addRegionTicket(GLOAM, new ChunkPos(h.blockPosition()), radius, h.getId());
+         }
+     }
