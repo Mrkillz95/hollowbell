@@ -700,6 +700,8 @@ public final class BellAnim {
     private final boolean[][] onFloor;
     /** how far he sinks for the strand lash (Moves: lowerAdd), in his own blocks */
     public static final float LASH_DIP = 28f;
+    /** how far he sinks for the strand sweep, in his own blocks */
+    public static final float SWEEP_DIP = 63f;
     /** per chain, per joint: the ground under it, in his own space (looked at every few ticks) */
     private final float[][] groundJ;
 
@@ -952,8 +954,21 @@ public final class BellAnim {
             // reach out toward it, then the lower segments curl in round it
             float wx = st.wrapX - A.joints()[0].x, wz = st.wrapZ - A.joints()[0].z;
             float w = st.wrapAmt;
-            if (sg == 0) local.mul(swing(qTmp, wx, wz, 0.45f * w));
-            else out -= 0.8f * w;
+            if (sg == 0) {
+                local.mul(swing(qTmp, wx, wz, -0.3f * st.wrapBack));
+                // turned so the line from its root to its tip lies on the line from its root to what it wraps
+                Vector3f j0 = A.joints()[0];
+                Vector3f built = new Vector3f(A.tip()).sub(j0),
+                        want = new Vector3f(st.wrapX, st.wrapY, st.wrapZ).sub(j0);
+                if (st.wrapReach > 0f && built.lengthSquared() > 1 && want.lengthSquared() > 1) {
+                    Quaternionf aimQ = new Quaternionf().rotationTo(built.normalize(), want.normalize());
+                    local.mul(new Quaternionf().slerp(aimQ, st.wrapReach));
+                }
+                // hoisted out from under him, past his strands, where it can be seen struggling
+                out += 0.15f * st.wrapLift;
+            } else out += 0.6f * w + 0.3f * st.wrapLift * sg / (float) m; // hooked up round it
+            // the coil trembles, hardest toward its end
+            out += 0.03f * st.wrapStrain * (1 + sg);
         }
         local.mul(swing(qTmp, dx, dz, out));
         // trailing behind as he goes (the water does the rest)

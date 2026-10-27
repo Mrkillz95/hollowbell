@@ -308,8 +308,10 @@ public class Shot extends ThrowableItemProjectile {
             burst();
             return;
         }
-        // a splash of the poison where it strikes
-        BigFx.send(level(), BigFx.SPARKS, position(), 0.8f + size(), Vec3.ZERO, 0x9CFF6A);
+        // a splash of the poison where it strikes, and a little cloud of it hanging there
+        BigFx.send(level(), BigFx.SPARKS, position(), 1.5f + 2.5f * size(), Vec3.ZERO, 0x9CFF6A);
+        BigFx.send(level(), BigFx.CLOUD, position(), 1.2f + 2f * size(), Vec3.ZERO, 0x9CFF6A);
+        playSound(ModSounds.GOO, 0.8f + 0.6f * size(), 1.3f + random.nextFloat() * 0.3f);
         discard();
     }
 

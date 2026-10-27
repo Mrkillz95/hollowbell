@@ -265,14 +265,17 @@ public final class Moves {
             case GRAB, HARVEST -> poseGrab(rig, st, move, t, arg, tx, ty, tz, phase, carryD, carryEnd);
             case CURTAIN -> poseCurtain(st, in, t, tx, tz, len);
             case SWEEP -> {
-                // wound back and held there shivering, then swung right across, faster and faster, past and back
+                // wound back toward what it's aimed at and held there shivering, then swung right across through it
+                // and on under him, faster and faster, past and back
                 float s = sweepCurve(t);
                 st.sweep = s;
-                st.sweepDir = (float) Math.atan2(tz, tx);
+                st.sweepDir = (float) Math.atan2(-tz, -tx);
                 // the bell leads, a little ahead of the strands, and leans the way they go
                 in.spinning = true;
                 in.spin = 0.12f * sweepCurve(t + 4);
                 lean(in, (float) Math.cos(st.sweepDir), (float) Math.sin(st.sweepDir), -0.05f * sweepCurve(t + 2));
+                // he sinks as it winds back, so the strand ends drag along the ground right across the swing
+                in.lowerAdd = BellAnim.SWEEP_DIP * hump(t, 4, 19, 40, 62);
             }
             case SLAM -> poseSlam(rig, st, in, t, arg, tx, ty, tz, len);
             case WRAP -> poseWrap(st, t, arg, tx, ty, tz, len);
@@ -448,14 +451,17 @@ public final class Moves {
 
     private static void poseWrap(BellState st, float t, int arg, float tx, float ty, float tz, int len) {
         st.wrapArm = arg;
-        st.wrapAmt = t < WRAP_REACH
-                ? smooth(t / WRAP_REACH)
-                : t < WRAP_REACH + WRAP_HOLD
-                        ? 1f
-                        : 1f - smooth((t - WRAP_REACH - WRAP_HOLD) / (len - WRAP_REACH - WRAP_HOLD));
-        // each squeeze (one every 20 ticks of the hold) tightens the curl, then eases
-        if (t >= WRAP_REACH && t < WRAP_REACH + WRAP_HOLD)
-            st.wrapAmt += 0.15f * hump((t - WRAP_REACH) % 20f, 0, 2, 4, 10);
+        float hold = WRAP_REACH, free = WRAP_REACH + WRAP_HOLD;
+        // drawn back, then lashed out straight at it
+        st.wrapBack = hump(t, 0, 7, 9, 14);
+        // then it coils round it, hoists it up and out from under him, and lets it fall
+        st.wrapAmt = t < hold ? 0f : t < free ? smooth((t - hold) / 8f) : 1f - smooth((t - free) / (len - free));
+        st.wrapLift = t < hold ? 0f : t < free ? smooth((t - hold - 4) / 30f) : 1f - smooth((t - free) / 12f);
+        st.wrapReach = t < free ? smooth((t - 8) / (hold - 8)) : 1f - smooth((t - free) / (len - free));
+        // each squeeze (one every 20 ticks of the hold) wrings the coil tight, shaking, then eases a little
+        float q = t >= hold && t < free ? hump((t - hold) % 20f, 0, 2, 5, 11) : 0f;
+        st.wrapAmt += 0.3f * q;
+        st.wrapStrain = t >= hold && t < free ? (0.25f + q) * Mth.sin(t * 2.6f) : 0f;
         st.wrapX = tx;
         st.wrapY = ty;
         st.wrapZ = tz;
@@ -677,11 +683,6 @@ public final class Moves {
         if (t < 38f) return Mth.lerp(fall((t - 21f) / 17f), -1f, 1.2f);
         float settle = 1f - smooth((t - 38f) / 32f);
         return (1.2f + 0.15f * recoil(t, 38f, 20f)) * settle;
-    }
-
-    /** where the sweep's swing has got to across him, -1 (its back) to 1.2 (past the front), and when it can hit */
-    public static float sweepFront(float t) {
-        return Mth.lerp(smooth((t - 21f) / 21f), -1f, 1.2f);
     }
 
     /** how far down the bell is in the drop, 0-1 */

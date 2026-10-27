@@ -45,6 +45,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
@@ -153,6 +154,11 @@ public final class AutoTest implements ClientModInitializer {
             // view: the camera at a spot in his own model space, looking at another, and kept there as he moves
             if (s.startsWith("view ")) {
                 follow = s.substring(5).trim();
+                view(mc, follow);
+                continue;
+            }
+            if (s.startsWith("eye ")) {
+                follow = s.trim();
                 view(mc, follow);
                 continue;
             }
@@ -392,13 +398,18 @@ public final class AutoTest implements ClientModInitializer {
                 for (var l : sv.getAllLevels())
                     for (var hb : l.getEntities(ModEntities.HOLLOWBELL, x -> true))
                         HollowbellMod.LOG.info(
-                                "autotest status: hp {}/{} pods {} move {} inside {} at {}",
+                                "autotest status: hp {}/{} pods {} move {} inside {} at {} up {} target {} wrapped {}",
                                 hb.healthNow(),
                                 hb.healthMax(),
                                 hb.podsLeft(),
                                 hb.moveNow(),
                                 hb.moves().insideCount(),
-                                hb.position());
+                                hb.position(),
+                                hb.getY() - hb.groundAt(hb.getX(), hb.getZ()),
+                                hb.getTarget(),
+                                hb.moves().wrapped() == null
+                                        ? null
+                                        : hb.moves().wrapped().position());
             });
     }
 
@@ -476,6 +487,10 @@ public final class AutoTest implements ClientModInitializer {
         }
         if (args.startsWith("carry ")) {
             carryView(srv, args.substring(6).trim().split("\\s+"));
+            return;
+        }
+        if (args.startsWith("eye ")) {
+            eyeView(srv, args.substring(4).trim().split("\\s+"));
             return;
         }
         // arm <a> side|across|end <blocks>: close on the end of one of his arms, as it is posed now
@@ -580,6 +595,49 @@ public final class AutoTest implements ClientModInitializer {
             var d = tgt.subtract(cam).normalize();
             float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
             player.teleportTo(player.serverLevel(), cam.x, cam.y, cam.z, yaw, pitch);
+            player.setNoGravity(true);
+            player.setDeltaMovement(Vec3.ZERO);
+        });
+    }
+
+    /**
+     * eye dist angle (dx up dz | mob up | arm k): standing on the ground dist blocks out from his middle, the way
+     * angle points (degrees, 0 east, 90 south), eyes at a player's height, looking at a spot that far from the ground
+     * under his middle, at the zombie nearest (that far over its feet) or at the end of one of his arms
+     */
+    private static void eyeView(MinecraftServer srv, String[] a) {
+        double dist = Double.parseDouble(a[0]), ang = Math.toRadians(Double.parseDouble(a[1]));
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var player = srv.getPlayerList().getPlayers().get(0);
+            var l = player.serverLevel();
+            var hs = l.getEntitiesOfClass(
+                    HollowbellEntity.class, player.getBoundingBox().inflate(3000));
+            if (hs.isEmpty()) return;
+            var m = hs.get(0);
+            double x = m.getX() + Math.cos(ang) * dist, z = m.getZ() + Math.sin(ang) * dist;
+            l.getChunk(Mth.floor(x) >> 4, Mth.floor(z) >> 4);
+            double y = l.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z));
+            Vec3 tgt;
+            if (a[2].equals("mob")) {
+                var mobs = l.getEntitiesOfClass(Zombie.class, m.getBoundingBox().inflate(300));
+                if (mobs.isEmpty()) return;
+                Vec3 me = new Vec3(x, y, z);
+                mobs.sort((p, q) -> Double.compare(p.distanceToSqr(me), q.distanceToSqr(me)));
+                tgt = mobs.get(0).position().add(0, Double.parseDouble(a[3]), 0);
+            } else if (a[2].equals("arm")) tgt = m.armTipWorld(Integer.parseInt(a[3]));
+            else {
+                int o = a[2].equals("w") ? 3 : 2;
+                double gy = l.getHeight(Heightmap.Types.MOTION_BLOCKING, m.getBlockX(), m.getBlockZ());
+                tgt = new Vec3(
+                        m.getX() + Double.parseDouble(a[o]),
+                        gy + Double.parseDouble(a[o + 1]),
+                        m.getZ() + Double.parseDouble(a[o + 2]));
+            }
+            Vec3 cam = new Vec3(x, y, z);
+            Vec3 d = tgt.subtract(cam.add(0, 1.62, 0)).normalize();
+            float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
+            player.teleportTo(l, cam.x, cam.y, cam.z, yaw, pitch);
             player.setNoGravity(true);
             player.setDeltaMovement(Vec3.ZERO);
         });

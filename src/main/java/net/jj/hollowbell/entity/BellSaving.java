@@ -64,6 +64,7 @@ final class BellSaving {
         if (hb.flight.follow != null) tag.putUUID("Follow", hb.flight.follow);
         tag.putBoolean("Settled", hb.settled);
         if (hb.hunted != null) tag.putUUID("Hunted", hb.hunted);
+        if (!hb.targets.grudges.isEmpty()) tag.put("Grudges", hb.targets.grudges.save());
         if (hb.huntOrdered) tag.putBoolean("HuntOrdered", true);
         if (hb.huntSeen != null) {
             tag.putDouble("HuntX", hb.huntSeen.x);
@@ -177,6 +178,7 @@ final class BellSaving {
         // once he has lived a tick, and older saves without it never carry the egg's tag)
         hb.loadedFromSave = tag.contains("BornAt") || (tag.contains("BellHpMax") && !tag.contains("HollowbellEgg"));
         hb.hunted = tag.hasUUID("Hunted") ? tag.getUUID("Hunted") : null;
+        hb.targets.grudges.load(tag, hb.level().getGameTime());
         hb.huntOrdered = hb.hunted != null && tag.getBoolean("HuntOrdered");
         hb.huntSeen = tag.contains("HuntX")
                 ? new Vec3(tag.getDouble("HuntX"), tag.getDouble("HuntY"), tag.getDouble("HuntZ"))

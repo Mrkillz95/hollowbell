@@ -160,7 +160,8 @@ public class OrdersTests implements FabricGameTest {
         var lines = GiantsCommand.ask(server, "status", "");
         h.assertTrue(lines.stream().anyMatch(s -> s.startsWith("Hollowbell: ")), "no answer from Hollowbell: " + lines);
         h.assertTrue(GiantsBridge.giants(server, "nonsense", "") == null, "an unknown action should give null");
-        h.assertTrue(parses(h, "giants where", 0), "/giants where needs cheats");
+        h.assertFalse(parses(h, "giants where", 0), "/giants where works without cheats");
+        h.assertTrue(parses(h, "giants where", 2), "/giants where doesn't work with cheats");
         h.assertTrue(!parses(h, "giants limit 2", 0), "/giants limit works without cheats");
         h.assertTrue(
                 parses(h, "giants natural off", 2) && parses(h, "giants volume 1", 2),
@@ -705,9 +706,10 @@ public class OrdersTests implements FabricGameTest {
                 .withLevel(h.getLevel())
                 .withPermission(0)
                 .withSuppressedOutput();
+        // (finding him is the Finder's job: no command gives his spot away without cheats)
         h.assertTrue(
-                !d.parse("hollowbell where", nobody).getReader().canRead(),
-                "/hollowbell where should work without cheats");
+                d.parse("hollowbell where", nobody).getReader().canRead(),
+                "/hollowbell where shouldn't work without cheats");
         // the answers are words from the lang file, never English written in the code
         Vec3 at = Vec3.atCenterOf(h.absolutePos(new BlockPos(1, 2, 1)));
         for (String c : new String[] {

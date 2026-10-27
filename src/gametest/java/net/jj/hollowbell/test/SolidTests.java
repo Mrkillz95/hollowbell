@@ -742,7 +742,7 @@ public class SolidTests implements FabricGameTest {
             {"curtain", "4800"},
             {"sky_dive", "3200"},
             {"drop", "3600"},
-            {"sweep", "1600"},
+            {"sweep", "2000"},
             {"grab", "1100"},
             {"carry", "1500"},
             {"idle", "1000"}

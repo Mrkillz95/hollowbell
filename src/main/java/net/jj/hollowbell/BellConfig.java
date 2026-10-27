@@ -88,9 +88,13 @@ public final class BellConfig {
         /** How big the world's own one is. */
         public float worldScale = 1.0f;
         /** Days after he dies before the next one rises. */
-        public int worldRespawnDays = 10;
-        /** How far from where he fell the next one rises, in blocks. */
-        public int respawnBlocks = 7000;
+        public int worldRespawnDays = 3;
+        /** Days instead when the one killed was a player's (somebody held his book). */
+        public int ownedRespawnDays = 15;
+        /** A player's Hollowbell killed: their book burns, and the book passes to the next player carrying a copy. */
+        public boolean burnOwnersBook = true;
+        /** The most blocks from where the last one died that the next one rises. */
+        public int respawnBlocks = 10000;
         /**
          * How far his own ground, the Bell Hollows, reaches from its middle, in blocks (200 to 2000). A bigger number
          * only grows a ground, it never shrinks one.
@@ -158,7 +162,7 @@ public final class BellConfig {
     public static Values V = new Values();
 
     /** which version of the settings this build writes; save() and load() both stamp it */
-    private static final int VERSION = 7;
+    private static final int VERSION = 8;
     /**
      * the file on disk couldn't be read: it's kept as it is, and nothing is written over it until /hollowbell reload
      * reads it cleanly
@@ -248,6 +252,12 @@ public final class BellConfig {
         // (6: his ground is much bigger, and he can be seen from much further off)
         if (v.configVersion < 6 && (v.homeRadius == 0 || v.homeRadius == 320)) v.homeRadius = 900;
         if (v.configVersion < 6 && v.farSightBlocks == 0) v.farSightBlocks = 1024;
+        // (8: the next one rises sooner and nearer: 3 days, within 10000 blocks of where the last one died)
+        if (v.configVersion < 8 && v.worldRespawnDays == 10) v.worldRespawnDays = 3;
+        if (v.configVersion < 8 && v.respawnBlocks == 7000) v.respawnBlocks = 10000;
+        v.worldRespawnDays = Math.max(0, v.worldRespawnDays);
+        v.ownedRespawnDays = Math.max(0, v.ownedRespawnDays);
+        v.respawnBlocks = Math.max(0, v.respawnBlocks);
         v.homeRadius = Math.max(200, Math.min(2000, v.homeRadius));
         v.farSightBlocks = Math.max(0, Math.min(4096, v.farSightBlocks));
         v.soundVolume = Math.max(0f, Math.min(2f, v.soundVolume));

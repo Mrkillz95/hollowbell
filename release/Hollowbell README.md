@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.16
+# Hollowbell (Java mod), version 1.12.17
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,15 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+1.12.17: The strand sweep only hits what its strands drag through: he sinks low and drags them across the ground.
+The arm wrap reaches down for you, hoists you out from under him, squeezes green venom out of you while you
+struggle, and drops you. Stingers are bigger with a bright green streak you can see from across a fight. He keeps
+his grudges: whatever hurt him he hunts again when it's back in reach, through hiding, reloads and him stepping out
+of the world, until it dies, stays well away for ten minutes, or you tell him to forget. He picks moves that can
+land from where you are. The next one comes down within 10,000 blocks of where the last died, after 3 days; if he
+was yours, after 15 days, and your book burns (the next player carrying a copy gets it). `/hollowbell where` needs
+cheats now: his Finder shows the way.
 
 1.12.16: His moves look like what they do: rings of sound when he tolls, trails behind his swinging strands and
 arms, goo pouring from his pods, real sun lance beams, dust swirling in under the whirlpool and the undertow, and a
@@ -70,6 +79,7 @@ his crown and blocks from his body.
 Craft the Hollowbell Codex from a pod, three bell glass and a book. Carry it and the nearest Hollowbell within 600
 blocks is yours: he leaves you alone, drifts where you point and grabs what you point at. Right-click to open it.
 With the book on you, press V (the middle mouse button while you ride him) to send him after what you're looking at.
+If your Hollowbell is killed, your book burns.
 
 ## Main commands (cheats on)
 
@@ -77,7 +87,7 @@ With the book on you, press V (the middle mouse button while you ride him) to se
 |---|---|
 | `/hollowbell summon [calm/hunting/guardian] [size]` | makes one in front of you |
 | `/hollowbell do <move> [target]` | the nearest one does that move |
-| `/hollowbell where` | where every one is (no cheats needed) |
+| `/hollowbell where` | where every one is |
 | `/hollowbell tp [number]` | takes you to him |
 | `/hollowbell come [player]` | he comes to you, wherever he is |
 | `/hollowbell ride` | puts you on top of him, or takes you off |

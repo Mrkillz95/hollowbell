@@ -9,6 +9,7 @@ import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.item.BookRule;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -58,6 +59,10 @@ public class WorldOne extends SavedData {
     private boolean homeClaimed;
     /** 1: the first, smaller Hollows; 2: painted over loaded land; 3: made by the world's generation */
     private int groundVersion = GROUND_VERSION;
+    /** where the last one died (the next one comes down within respawnBlocks of it) */
+    private int deathX, deathZ;
+
+    private boolean deathKnown;
 
     public static final int GROUND_VERSION = 3;
 
@@ -429,6 +434,11 @@ public class WorldOne extends SavedData {
         w.homeRadius = tag.contains("HomeRadius") ? tag.getInt("HomeRadius") : 320;
         w.homeSeed = tag.getLong("HomeSeed");
         w.groundVersion = tag.contains("GroundVersion") ? tag.getInt("GroundVersion") : 1;
+        if (tag.contains("DeathX")) {
+            w.deathKnown = true;
+            w.deathX = tag.getInt("DeathX");
+            w.deathZ = tag.getInt("DeathZ");
+        }
         w.upgradeGround();
         if (tag.contains("WardUntil")) {
             w.wardX = tag.getInt("WardX");
@@ -456,6 +466,10 @@ public class WorldOne extends SavedData {
         tag.putInt("HomeRadius", homeRadius);
         tag.putLong("HomeSeed", homeSeed);
         tag.putInt("GroundVersion", groundVersion);
+        if (deathKnown) {
+            tag.putInt("DeathX", deathX);
+            tag.putInt("DeathZ", deathZ);
+        }
         if (wardUntil > 0 || wardRestUntil > 0) {
             tag.putInt("WardX", wardX);
             tag.putInt("WardY", wardY);
@@ -558,26 +572,53 @@ public class WorldOne extends SavedData {
         setDirty();
     }
 
-    /** he has been killed: the next one comes down a long way off, on fresh ground of his own */
+    /**
+     * He has been killed: the next one comes down on fresh ground of his own, at most respawnBlocks from where he
+     * fell. If he was a player's (somebody held his book) it takes longer and that player's book burns; the book
+     * passes to the next player carrying a copy, or the next one is nobody's.
+     */
     public void died(ServerLevel level, HollowbellEntity h) {
         alive = false;
         oneId = null;
-        double far = Math.max(600, BellConfig.V.respawnBlocks);
-        double a = level.random.nextDouble() * Math.PI * 2;
-        double d = Math.max(clearOfGround(), far * 0.25 + level.random.nextDouble() * far * 0.75);
         // measured from where he fell if that was the overworld, otherwise from where he was last seen in it
         boolean over = h.level().dimension() == Level.OVERWORLD;
-        double fx = over ? h.getX() : x, fz = over ? h.getZ() : z;
-        x = Mth.floor(fx + Math.cos(a) * d);
-        z = Mth.floor(fz + Math.sin(a) * d);
-        findSpot(level);
-        keepOffOldGround();
+        deathX = over ? Mth.floor(h.getX()) : x;
+        deathZ = over ? Mth.floor(h.getZ()) : z;
+        deathKnown = true;
+        nextSpot(level, deathX, deathZ);
         // his new ground is claimed now, in land not made yet, so it is ready when he comes down
         if (!IN_TESTS) claimFresh(level);
         placed = true;
-        dueAt = level.getGameTime() + Math.max(1200L, BellConfig.V.worldRespawnDays * 24000L);
+        BookRule book = BookRule.get(level.getServer());
+        boolean owned = book.holder() != null;
+        int days = owned ? BellConfig.V.ownedRespawnDays : BellConfig.V.worldRespawnDays;
+        dueAt = level.getGameTime() + Math.max(1200L, days * 24000L);
+        if (owned && BellConfig.V.burnOwnersBook) book.burn(level.getServer());
         setDirty();
         HollowbellMod.LOG.info("The Hollowbell has fallen; the next comes down near {}, {}", x, z);
+    }
+
+    /** where the next one comes down: clear of the old ground, at most respawnBlocks from (fromX, fromZ) */
+    private void nextSpot(ServerLevel level, double fromX, double fromZ) {
+        double clear = clearOfGround(), most = Math.max(clear, BellConfig.V.respawnBlocks);
+        double a = level.random.nextDouble() * Math.PI * 2;
+        double d = clear + level.random.nextDouble() * (most - clear);
+        x = Mth.floor(fromX + Math.cos(a) * d);
+        z = Mth.floor(fromZ + Math.sin(a) * d);
+        findSpot(level);
+        keepOffOldGround();
+        // (looking for good land can wander off: pulled back inside the circle)
+        double ox = x - fromX, oz = z - fromZ, out = Math.hypot(ox, oz);
+        if (out > most) {
+            x = Mth.floor(fromX + ox / out * most * 0.97);
+            z = Mth.floor(fromZ + oz / out * most * 0.97);
+            keepOffOldGround();
+        }
+    }
+
+    /** the spot the last one died at, or null if none is known */
+    public @Nullable BlockPos deathSpot() {
+        return deathKnown ? new BlockPos(deathX, 0, deathZ) : null;
     }
 
     /**

@@ -167,8 +167,8 @@ public class GiantsTests implements FabricGameTest {
         Husk[] z = new Husk[1];
         h.runAfterDelay(20, () -> {
             e.setStay(true);
-            // out past the box round his body (112 at full size), still inside the sweep (88 x 1.35 + 4)
-            double d = e.bellRadius() * 1.33 + 2;
+            // out past the box round his body (112 at full size), where the strands still drag along the ground
+            double d = e.bellRadius() * 1.2 + 4;
             double dx = e.getX() + d, dz = e.getZ();
             h.assertTrue(d > 112 * e.bellScale() + 2, "the test spot is inside his box anyway: " + d);
             z[0] = EntityType.HUSK.create(h.getLevel());
@@ -273,8 +273,7 @@ public class GiantsTests implements FabricGameTest {
             "swarmforge",
             "gloamwick"
         };
-        String[] want = {
-            "-ffaafff", "f-fafffa", "ff-fffff", "aaf-aaaa", "affa-aff", "fffaa-aa", "fffafa-f", "fafafaf-"
+        String[] want = {"-ffaafff", "f-fafffa", "ff-fffff", "aaf-aaaa", "affa-aff", "fffaa-aa", "fffafa-f", "fafafaf-"
         };
         for (int a = 0; a < 8; a++)
             for (int b = 0; b < 8; b++) {

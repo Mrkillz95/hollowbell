@@ -68,6 +68,12 @@ public final class BellState {
     public float slamT, slamX, slamY, slamZ;
     public int wrapArm = -1;
     public float wrapAmt, wrapX, wrapY, wrapZ;
+    /**
+     * the wrap: drawn back before it lashes out (0-1), how far it is turned to reach for what it wraps (0-1), hoisted
+     * up with what it holds (0-1), straining (-1 to 1)
+     */
+    public float wrapBack, wrapReach, wrapLift, wrapStrain;
+
     public int grabStrand = -1;
     public float grabReach, grabLift, grabX, grabY, grabZ;
     /**

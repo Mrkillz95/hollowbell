@@ -490,6 +490,8 @@ public final class CodexOrders {
                 else say(p, "codex_cannot_ride");
             }
             case CodexPayload.CALL_OFF -> {
+                // (called off what he's after: he lets that one go, other grudges stay)
+                if (m.getTarget() != null) m.grudges().drop(m.getTarget().getUUID());
                 m.clearHitList();
                 m.setGoal(null);
                 say(p, "codex_calloff");

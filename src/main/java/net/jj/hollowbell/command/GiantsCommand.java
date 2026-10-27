@@ -335,8 +335,8 @@ public final class GiantsCommand {
                 .executes(c -> {
                     if (!c.getSource().hasPermission(2)) {
                         c.getSource()
-                                .sendFailure(
-                                        Component.literal("You need cheats on for that. /giants where works without."));
+                                .sendFailure(Component.literal(
+                                        "You need cheats on for that. A giant's Finder shows the way to him."));
                         return 0;
                     }
 
@@ -373,7 +373,9 @@ public final class GiantsCommand {
                                         String.valueOf(IntegerArgumentType.getInteger(c, "seconds"))))))
                 .then(toggle("meetings"))
                 .then(Commands.literal("meet").requires(s -> s.hasPermission(2)).executes(GiantsCommand::meet))
-                .then(Commands.literal("where").executes(c -> run(c, "where", "")))
+                .then(Commands.literal("where")
+                        .requires(s -> s.hasPermission(2))
+                        .executes(c -> run(c, "where", "")))
                 .then(Commands.literal("goto")
                         .requires(s -> s.hasPermission(2))
                         .then(Commands.argument("x", DoubleArgumentType.doubleArg())

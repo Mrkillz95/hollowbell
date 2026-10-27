@@ -12,6 +12,7 @@ import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.item.FinderItem;
 import net.jj.hollowbell.net.CodexOrders;
 import net.jj.hollowbell.net.CodexPayload;
@@ -89,6 +90,8 @@ public class WorldOneTests implements FabricGameTest {
         clearAll(h);
         var w = WorldOne.get(h.getLevel().getServer());
         w.clearForTests();
+        // (nobody's: a player's one takes longer, see RespawnTests)
+        BookRule.get(h.getLevel().getServer()).free();
         boolean was = BellConfig.V.oneInTheWorld;
         BellConfig.V.oneInTheWorld = true;
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 200);

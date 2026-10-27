@@ -1315,6 +1315,14 @@ public class HollowbellEntity extends Monster implements SolidBody {
         targets.forgiveAll();
     }
 
+    public boolean holdsGrudge(@Nullable Entity e) {
+        return targets.holdsGrudge(e);
+    }
+
+    public Grudges grudges() {
+        return targets.grudges;
+    }
+
     // being hit
 
     /** set just before a hit is passed to the game so hurt() knows which block of him it landed on */

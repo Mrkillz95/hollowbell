@@ -25,6 +25,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Display;
@@ -612,6 +613,8 @@ final class BellHolds {
         Vec3 tip = h.armTipWorld(mv.arg);
         if (mv.t < Moves.WRAP_REACH) {
             if (mv.target != null && mv.target.isAlive()) h.setAim(h.toModel(mv.aimAt(mv.target)));
+            // the arm drawn back, then lashed out
+            if (mv.t == 9) h.sound(tip, ModSounds.WHIP, 2.5f, 0.5f);
             return;
         }
         if (mv.t == Moves.WRAP_REACH) {
@@ -623,19 +626,47 @@ final class BellHolds {
                 return;
             }
             mv.wrapped = mv.target;
+            mv.wrapHeight = h.getY();
             mv.wrapSeat = seat(mv.wrapped, tip);
             h.sound(tip, ModSounds.GRAB, 2.5f, 0.6f);
+            h.sound(tip, ModSounds.GOO, 2f, 0.7f);
+            venom(tip, 1f);
         }
         if (mv.t >= Moves.WRAP_REACH + Moves.WRAP_HOLD) {
+            if (mv.wrapped != null) {
+                h.sound(tip, ModSounds.STRAND, 2f, 0.8f);
+                venom(tip, 0.6f);
+            }
             letGoOfWrap();
             return;
         }
-        if (mv.wrapped != null && mv.t % 20 == 0) {
-            mv.blow(mv.wrapped, 8f, tip, 0, 0);
-            mv.wrapped.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
-            h.sound(tip, SoundEvents.COPPER_STEP, 2f, 0.5f);
-            mv.fx(BigFx.SPARKS, tip, mv.px(2, 1), Vec3.ZERO, 0);
+        if (mv.wrapped == null) return;
+        LivingEntity w = mv.wrapped;
+        int k = mv.t - Moves.WRAP_REACH;
+        if (k % 20 == 0) {
+            mv.blow(w, 8f, tip, 0, 0);
+            w.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
+            // the coil wrung tight: a creak through the arm, a wet crunch, venom squeezed out all round
+            h.sound(tip, ModSounds.STRAND, 2.5f, 0.35f);
+            h.sound(tip, ModSounds.GOO, 2f, 0.5f);
+            h.sound(w.position(), ModSounds.STING, 1.5f, 0.8f);
+            venom(w.position().add(0, w.getBbHeight() * 0.5, 0), 1f);
         }
+        // fighting to get out
+        if (k % 6 == 3) {
+            w.swing(k % 12 == 3 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND, true);
+            if (!(w instanceof Player)) {
+                float yaw = w.getYRot() + (h.getRandom().nextFloat() - 0.5f) * 90f;
+                w.setYRot(yaw);
+                w.setYHeadRot(yaw);
+            }
+        }
+    }
+
+    /** green venom wrung out of the arm: a spray, and a cloud that hangs */
+    private void venom(Vec3 at, float k) {
+        mv.fx(BigFx.SPARKS, at, mv.px(9, 3) * k, Vec3.ZERO, BellMoves.POISON);
+        mv.fx(BigFx.CLOUD, at, mv.px(11, 4) * k, Vec3.ZERO, BellMoves.POISON);
     }
 
     void letGoOfWrap() {

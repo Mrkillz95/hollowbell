@@ -58,6 +58,24 @@ final class BellRiding {
         return i < 8 ? w.add(0, -1, 0) : w;
     }
 
+    /** just past the end of arm a, where it holds what it has wrapped (inside it, it would be hidden) */
+    private Vec3 clutched(int a) {
+        var A = hb.rig.arms[a];
+        int[] b = A.bones();
+        Vec3 tip = hb.armTipWorld(a), last = hb.boneWorld(b[b.length - 1], A.joints()[b.length - 1]);
+        Vec3 d = tip.subtract(last);
+        return d.lengthSqr() < 1e-6 ? tip : tip.add(d.normalize().scale(4 * hb.bellScale() + 1));
+    }
+
+    /** held in the wrap: thrashing about in the coil, jolted hardest as it squeezes (both sides work it out) */
+    private Vec3 writhe() {
+        if (hb.moveNow() != Moves.WRAP) return Vec3.ZERO;
+        float t = hb.moveT(0f) - Moves.WRAP_REACH;
+        if (t < 0 || t >= Moves.WRAP_HOLD) return Vec3.ZERO;
+        double a = 0.18 + 0.35 * Moves.hump(t % 20f, 0, 2, 4, 9);
+        return new Vec3(Math.sin(t * 1.7) * a, Math.sin(t * 2.3 + 1) * a * 0.6, Math.cos(t * 1.3) * a);
+    }
+
     /** where a seat of the given kind is right now (see Seat), for whatever rides it */
     public Vec3 seatSpot(int mode, int index, @Nullable Entity who) {
         double hgt = who == null ? 1 : who.getBbHeight();
@@ -67,7 +85,9 @@ final class BellRiding {
                         ? hb.strandTipWorld(index).add(0, -hgt * 0.6, 0)
                         : hb.position();
             case Seat.ARM_TIP ->
-                index >= 0 && index < hb.rig.arms.length ? hb.armTipWorld(index).add(0, -hgt * 0.5, 0) : hb.position();
+                index >= 0 && index < hb.rig.arms.length
+                        ? clutched(index).add(0, -hgt * 0.5, 0).add(writhe())
+                        : hb.position();
             case Seat.INSIDE -> slotWorld(Mth.clamp(index, 0, HollowbellEntity.SLOTS - 1));
             case Seat.POD ->
                 index >= 0 && index < hb.rig.pods.length ? hb.podWorld(index).add(0, -hgt * 0.5, 0) : hb.position();

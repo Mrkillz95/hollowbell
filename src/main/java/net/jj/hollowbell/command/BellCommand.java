@@ -224,7 +224,8 @@ public final class BellCommand {
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> whereCommand() {
-        return Commands.literal("where").executes(BellCommand::where);
+        // (ops only: everyone else finds him with his Finder, or by looking)
+        return Commands.literal("where").requires(OP).executes(BellCommand::where);
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> awayCommand() {

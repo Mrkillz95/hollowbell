@@ -27,6 +27,8 @@ import org.jetbrains.annotations.Nullable;
 /** Who he goes after, who he leaves alone, and meeting the other giants. */
 final class BellTargets {
     private final HollowbellEntity hb;
+    /** everyone and everything that has hurt him and is still about */
+    final Grudges grudges = new Grudges();
 
     BellTargets(HollowbellEntity hb) {
         this.hb = hb;
@@ -137,6 +139,21 @@ final class BellTargets {
                 else if (now - hb.huntLostAt > HollowbellEntity.HUNT_LOST_TICKS) dropHunt();
             }
         }
+        if (hb.level() instanceof ServerLevel sl) {
+            if (hb.tickCount % 20 == 7) grudges.tick(sl, hb, hb.senseRange() * 1.6);
+            // he doesn't cool off while what hurt him is still about
+            if (t != null && grudges.has(t.getUUID())) hb.angerTicks = Math.max(hb.angerTicks, 200);
+            // and when it's back in reach after hiding or walking off a way, he goes for it again
+            if (t == null && hb.tickCount % 20 == 11 && !grudges.isEmpty() && freeForGrudges()) {
+                LivingEntity g =
+                        grudges.nearest(sl, hb, hb.senseRange(), e -> fairGame(e) && !pastHisCircle(e.position()));
+                if (g != null) {
+                    hb.setTarget(g);
+                    hb.angerTicks = Math.max(hb.angerTicks, 1200);
+                    return;
+                }
+            }
+        }
         if (hb.tickCount % 20 != 0 || t != null) return;
         if (hb.variant() == HollowbellEntity.CALM && hb.angerTicks <= 0) return;
         double r = hb.senseRange();
@@ -182,6 +199,29 @@ final class BellTargets {
             }
         }
         if (mob != null) hb.setTarget(mob);
+    }
+
+    /** not under an order, ridden or steered: a grudge may pick his target */
+    private boolean freeForGrudges() {
+        return hb.rider == null
+                && hb.goal == null
+                && hb.comeTo == null
+                && hb.fetching == null
+                && !hb.stay
+                && !hb.following()
+                && !hb.yielding()
+                && !hb.isDeadOrDying();
+    }
+
+    /** whatever hurt him (a player, a creature, another giant) is held against it */
+    void remember(@Nullable Entity e) {
+        if (!(e instanceof LivingEntity) || e == hb || hb.level().isClientSide) return;
+        LivingEntity g = giantOf(e);
+        grudges.hold((g != null ? g : e).getUUID(), hb.level().getGameTime());
+    }
+
+    public boolean holdsGrudge(@Nullable Entity e) {
+        return e != null && grudges.has(e.getUUID());
     }
 
     /** the book: go and get these */
@@ -259,6 +299,7 @@ final class BellTargets {
 
     public void forgiveAll() {
         hb.mood.settle(null);
+        grudges.clear();
         clearHitList();
     }
 
@@ -427,6 +468,7 @@ final class BellTargets {
         hb.fleeUntil = now + 1200;
         hb.meetFoe = null;
         clearHitList();
+        grudges.drop(from.getUUID());
         hb.stopFetch();
         hb.moves.stopNow();
         hb.metLately.put(from.getUUID(), now + BellConfig.V.meetCooldown * 1200L);

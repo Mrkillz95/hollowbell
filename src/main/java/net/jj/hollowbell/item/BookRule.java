@@ -8,10 +8,16 @@ import java.util.UUID;
 import net.jj.hollowbell.ModItems;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.Slot;
@@ -33,6 +39,8 @@ public final class BookRule extends SavedData {
 
     private @Nullable UUID holder, bookId;
     private String holderName = "";
+    /** books still to burn: the player whose Hollowbell was killed, and that book's id */
+    private final Map<UUID, UUID> toBurn = new HashMap<>();
 
     public static BookRule get(MinecraftServer server) {
         return server.overworld()
@@ -49,6 +57,11 @@ public final class BookRule extends SavedData {
             r.bookId = tag.getUUID("Book");
             r.holderName = tag.getString("Name");
         }
+        ListTag burn = tag.getList("ToBurn", Tag.TAG_COMPOUND);
+        for (int i = 0; i < burn.size(); i++) {
+            CompoundTag c = burn.getCompound(i);
+            if (c.hasUUID("Who") && c.hasUUID("Book")) r.toBurn.put(c.getUUID("Who"), c.getUUID("Book"));
+        }
         return r;
     }
 
@@ -58,6 +71,16 @@ public final class BookRule extends SavedData {
             tag.putUUID("Holder", holder);
             tag.putUUID("Book", bookId);
             tag.putString("Name", holderName);
+        }
+        if (!toBurn.isEmpty()) {
+            ListTag burn = new ListTag();
+            for (Map.Entry<UUID, UUID> e : toBurn.entrySet()) {
+                CompoundTag c = new CompoundTag();
+                c.putUUID("Who", e.getKey());
+                c.putUUID("Book", e.getValue());
+                burn.add(c);
+            }
+            tag.put("ToBurn", burn);
         }
         return tag;
     }
@@ -83,6 +106,42 @@ public final class BookRule extends SavedData {
         bookId = null;
         holderName = "";
         setDirty();
+    }
+
+    /**
+     * His holder's Hollowbell was killed: their book burns (now, or the moment they are next on), and the book is
+     * nobody's. Whoever else carries a copy takes it up next, so the next one is theirs.
+     */
+    public void burn(MinecraftServer server) {
+        if (holder != null && bookId != null) toBurn.put(holder, bookId);
+        free();
+        look(server.getPlayerList().getPlayers());
+    }
+
+    /** this player's book of a killed Hollowbell is still to burn */
+    public boolean burning(UUID who) {
+        return toBurn.containsKey(who);
+    }
+
+    /** their copy of the dead one's book goes up in flames in their hands, with a line saying why */
+    private void burnUp(ServerPlayer p) {
+        UUID id = toBurn.remove(p.getUUID());
+        if (id == null) return;
+        setDirty();
+        int burnt = 0;
+        for (ItemStack s : booksOf(p))
+            if (id.equals(idOf(s))) {
+                burnt += s.getCount();
+                s.setCount(0);
+            }
+        if (burnt == 0) return;
+        ServerLevel sl = p.serverLevel();
+        sl.sendParticles(ParticleTypes.FLAME, p.getX(), p.getY() + 1.0, p.getZ(), 40, 0.35, 0.5, 0.35, 0.03);
+        sl.sendParticles(ParticleTypes.LARGE_SMOKE, p.getX(), p.getY() + 1.2, p.getZ(), 16, 0.3, 0.4, 0.3, 0.02);
+        sl.sendParticles(ParticleTypes.ASH, p.getX(), p.getY() + 1.0, p.getZ(), 30, 0.5, 0.6, 0.5, 0.0);
+        sl.playSound(null, p.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.0f, 0.8f);
+        sl.playSound(null, p.blockPosition(), SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.8f, 0.6f);
+        p.sendSystemMessage(Component.translatable("message.hollowbell.book_burns"));
     }
 
     // a book's own id
@@ -194,6 +253,7 @@ public final class BookRule extends SavedData {
     }
 
     public void look(List<ServerPlayer> players) {
+        if (!toBurn.isEmpty()) for (ServerPlayer p : players) burnUp(p);
         // new copies (an op's /give, the creative menu) make whoever has them the holder
         for (ServerPlayer p : players) for (ItemStack s : booksOf(p)) if (idOf(s) == null) hold(p, giveId(s));
         // the holder, on and seen without the working copy: it has left them

@@ -38,12 +38,14 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -124,6 +126,8 @@ public final class BellMoves {
 
     @Nullable
     Seat wrapSeat;
+    /** how high he was when the wrap took hold */
+    double wrapHeight;
 
     float armHits;
     /** whatever is inside the dome */
@@ -318,6 +322,8 @@ public final class BellMoves {
             }
             // the strands and arms hit on the ground: down he comes to it
             case Moves.CURTAIN, Moves.SLAM, Moves.WRAP, Moves.SWEEP, Moves.LASH -> {
+                // (holding it in the wrap he stays put: it's lifted, not him)
+                if (move == Moves.WRAP && wrapped != null) return wrapHeight;
                 if (target != null) return tg - 2 * s;
             }
             case Moves.WHIRLPOOL, Moves.UNDERTOW, Moves.ARM_STORM -> {
@@ -507,6 +513,7 @@ public final class BellMoves {
         arg = a;
         landed = false;
         lashWas = null;
+        sweepWas = null;
         diveWarned = false;
         diveAt = null;
         lastMove = which;
@@ -525,7 +532,7 @@ public final class BellMoves {
             case Moves.SLAM -> h.sound(h.armTipWorld(a), SoundEvents.RAVAGER_ROAR, 2.5f, 0.5f);
             case Moves.CURTAIN -> h.sound(h.position().add(0, 20 * s, 0), ModSounds.STRAND, 3f, 0.6f);
             case Moves.SWEEP -> h.sound(h.position().add(0, 30 * s, 0), ModSounds.STRAND, 3f, 0.5f);
-            case Moves.WRAP -> h.sound(h.armTipWorld(a), SoundEvents.COPPER_PLACE, 2.5f, 0.5f);
+            case Moves.WRAP -> h.sound(h.armTipWorld(a), ModSounds.STRAND, 2.5f, 0.45f);
             case Moves.PULSE -> h.sound(mid, ModSounds.WARN_DROP, 2f, 1.2f);
             case Moves.SHED, Moves.SPORES -> h.sound(h.position().add(0, 60 * s, 0), ModSounds.CLICK, 3f, 0.6f);
             // the egg rain's tell: a rising glassy shiver while he tips and his glow builds (see eggRain)
@@ -664,9 +671,10 @@ public final class BellMoves {
         choose();
     }
 
-    /**
-     * picks a move for what he's after: what's in reach, what's up high, how many there are, whether a heavy one is his
-     */
+    /** dev only (-Dhollowbell.whymove): a line on why he picked each move */
+    static final boolean WHY_MOVE = Boolean.getBoolean("hollowbell.whymove");
+
+    /** picks a move for what he's after, from the ones that can land on it from where it is now */
     private void choose() {
         if (h.asleep()) return; // asleep: nothing is started
         LivingEntity tg = h.getTarget();
@@ -677,59 +685,115 @@ public final class BellMoves {
             }
             return;
         }
-        float s = s();
-        double d = h.horiz(tg.position());
-        double bell = h.bellRadius();
-        boolean flying = tg instanceof Player p && (p.isFallFlying() || p.getAbilities().flying)
-                || tg.getY() - h.groundAt(tg.getX(), tg.getZ()) > 8 + 20 * s;
-        int crowd = near(h.bodyBox().inflate(bell)).size();
-        boolean heavy = h.level().getGameTime() >= heavyReadyAt && heavyWaitOver() && !h.sunk();
-        boolean night = h.level().getSkyDarken() > 6;
-        List<int[]> opts = new ArrayList<>();
-        // light
-        boolean carry = HollowbellEntity.canCarry(tg);
-        if (d < bell * 0.85 && !h.sunk() && carry) opts.add(new int[] {Moves.GRAB, 4});
-        if (d < bell * 3) opts.add(new int[] {Moves.VOLLEY, flying ? 5 : 3});
-        if (d < bell * 1.3) opts.add(new int[] {Moves.LASH, 4});
-        if (d < 50 * s + 30) opts.add(new int[] {Moves.FLASH, night ? 3 : 1});
-        // medium
-        if (flying && d < bell * 2.5) opts.add(new int[] {Moves.PULSE, 6});
-        if (d < bell * 0.85) opts.add(new int[] {Moves.CURTAIN, 2});
-        if (d < bell * 1.4) opts.add(new int[] {Moves.SWEEP, 2});
-        if (d < bell * 1.7) opts.add(new int[] {Moves.SLAM, 3});
-        if (d < bell * 1.5 && carry) opts.add(new int[] {Moves.WRAP, 2});
-        if (d < bell * 1.6) opts.add(new int[] {Moves.PULSE, 1});
-        if (d < bell * 2) opts.add(new int[] {Moves.SPORES, 2});
-        if (d < bell * 0.8 && h.podsLeft() > 0) opts.add(new int[] {Moves.POD_BURST, 2});
-        if (d < bell * 2 && h.eggsLeft() > 0) opts.add(new int[] {Moves.EGG_RAIN, 2});
-        if (d < h.senseRange() && h.eggsLeft() > 0 && BellConfig.V.shedCount > 0 && bellingsNear() < 8)
-            opts.add(new int[] {Moves.SHED, 1});
-        // heavy: rare, and more likely the more there are to hit
-        if (heavy) {
-            int w = crowd >= 3 ? 4 : 2;
-            if (d < bell * 0.8) opts.add(new int[] {Moves.DROP, w});
-            if (d < bell * 1.8) opts.add(new int[] {Moves.WHIRLPOOL, w});
-            if (d < bell * 4) opts.add(new int[] {Moves.SKY_DIVE, flying ? 1 : w});
-            if (d < bell * 2.5) opts.add(new int[] {Moves.DEEP_TOLL, flying ? w + 2 : w});
-            if (d < bell * 1.8) opts.add(new int[] {Moves.ARM_STORM, w});
-            if (d < bell * 3) opts.add(new int[] {Moves.STINGER_STORM, flying ? w + 1 : w});
-            if (d < bell * 3) opts.add(new int[] {Moves.SUN_LANCES, w});
-            if (d < bell * 2) opts.add(new int[] {Moves.UNDERTOW, w});
-        }
+        StringBuilder why = WHY_MOVE ? new StringBuilder() : null;
+        int[] w = weights(tg, why);
         int total = 0;
-        for (int[] o : opts) {
-            if (o[0] == lastMove) o[1] = Math.max(1, o[1] / 2);
-            total += o[1];
+        for (int i = 0; i < w.length; i++) {
+            if (w[i] > 0 && i == lastMove) w[i] = Math.max(1, w[i] / 2);
+            total += w[i];
         }
         if (total == 0) return;
         int r = h.getRandom().nextInt(total);
-        for (int[] o : opts) {
-            r -= o[1];
+        for (int i = 0; i < w.length; i++) {
+            r -= w[i];
             if (r < 0) {
-                if (!start(o[0], tg)) cooldown = 10;
+                if (WHY_MOVE) HollowbellMod.LOG.info("Hollowbell picks {}: {}", Moves.NAMES[i], why);
+                if (!start(i, tg)) cooldown = 10;
                 return;
             }
         }
+    }
+
+    /**
+     * How likely each move is against this target right now, by move id (0: it can't land from here). A move is only
+     * in the running when the target is inside its real reach and shape: the arms and strands that hit along the
+     * ground are never thrown at something up in the air, short moves never at something far off, stingers only with
+     * a clear line to it, and no more Bellings while plenty are about. Far off, his dive closes the gap; up close, the
+     * moves of his strands and arms come first. why (dev only) is told what was ruled out.
+     */
+    public int[] weights(LivingEntity tg, @Nullable StringBuilder why) {
+        int[] w = new int[Moves.NAMES.length];
+        float s = s();
+        double d = h.horiz(aimAt(tg));
+        double bell = h.bellRadius();
+        double over = tg.getY() - h.groundAt(tg.getX(), tg.getZ());
+        boolean flying = tg instanceof Player p && (p.isFallFlying() || p.getAbilities().flying) || over > 8 + 20 * s;
+        // (up above his rim nothing hanging under him reaches it)
+        boolean above = tg.getY() > h.getY() + rig.rimY * s;
+        boolean ground = !flying;
+        int crowd = near(h.bodyBox().inflate(bell)).size();
+        boolean heavy = h.level().getGameTime() >= heavyReadyAt && heavyWaitOver() && !h.sunk();
+        boolean night = h.level().getSkyDarken() > 6;
+        boolean carry = HollowbellEntity.canCarry(tg);
+        boolean arm = armReaches(tg);
+        boolean clear = clearShot(tg);
+        boolean crowded = bellingsNear() >= 8;
+        // light
+        if (d < bell * 0.85 && !h.sunk() && carry && !above) w[Moves.GRAB] = 4;
+        if (d < bell * 3 && clear) w[Moves.VOLLEY] = flying ? 5 : 3;
+        if (d < bell * 1.3 && !above) w[Moves.LASH] = 4;
+        if (d < 50 * s + 30) w[Moves.FLASH] = night ? 3 : 1;
+        // medium
+        if (d < bell * 0.85 && !above) w[Moves.CURTAIN] = 2;
+        if (d < bell * 1.4 && ground) w[Moves.SWEEP] = 2;
+        if (arm && ground) w[Moves.SLAM] = 3;
+        if (arm && carry && !above) w[Moves.WRAP] = 2;
+        if (d < bell * (flying ? 2.5 : 1.6)) w[Moves.PULSE] = flying ? 6 : 1;
+        if (d < bell * 2) w[Moves.SPORES] = 2;
+        // (the goo falls straight down off his pods: it has to be under them)
+        if (d < bell * 0.8 && h.podsLeft() > 0 && tg.getY() < h.getY() + 10 * s) w[Moves.POD_BURST] = 2;
+        if (d < bell * 2 && h.eggsLeft() > 0 && ground && !crowded) w[Moves.EGG_RAIN] = 2;
+        if (d < h.senseRange() && h.eggsLeft() > 0 && BellConfig.V.shedCount > 0 && !crowded) w[Moves.SHED] = 1;
+        // heavy: rare, and more likely the more there are to hit
+        if (heavy) {
+            int k = crowd >= 3 ? 4 : 2;
+            if (d < bell * 0.8 && ground) w[Moves.DROP] = k;
+            if (d < bell * 1.8 && ground) w[Moves.WHIRLPOOL] = k;
+            // far off, the dive is how he gets there
+            if (d < bell * 4 && ground) w[Moves.SKY_DIVE] = d > bell * 2 ? k + 2 : k;
+            if (d < bell * 2.5 && !above) w[Moves.DEEP_TOLL] = flying ? k + 2 : k;
+            if (d < bell * 1.8 && ground) w[Moves.ARM_STORM] = k;
+            if (d < bell * 3) w[Moves.STINGER_STORM] = flying ? k + 1 : k;
+            if (d < bell * 3 && ground) w[Moves.SUN_LANCES] = k;
+            if (d < bell * 2 && ground) w[Moves.UNDERTOW] = k;
+        }
+        // up close, the strands and arms first
+        if (d < bell)
+            for (int m : new int[] {Moves.LASH, Moves.SWEEP, Moves.SLAM, Moves.WRAP, Moves.CURTAIN})
+                if (w[m] > 0) w[m]++;
+        if (why != null)
+            why.append(String.format(
+                    "%.0f out (%.1f bells), %.0f up%s%s%s%s%s",
+                    d,
+                    d / bell,
+                    over,
+                    flying ? ", in the air" : "",
+                    above ? ", above his rim" : "",
+                    arm ? "" : ", past his arms",
+                    clear ? "" : ", no clear shot",
+                    crowded ? ", Bellings enough" : ""));
+        return w;
+    }
+
+    /** whether one of his arms is long enough to reach it from where it hangs */
+    boolean armReaches(LivingEntity tg) {
+        Vec3 at = aimAt(tg);
+        var A = rig.arms[nearestArm(at)];
+        Vec3 root = h.boneWorld(A.bones()[0], A.joints()[0]);
+        double len = A.tip().distance(A.joints()[0]) * s();
+        return root.distanceTo(at) < len * 0.95;
+    }
+
+    /** a clear line from his strand ends on its side to it (a hill or a wall between them stops his stingers) */
+    boolean clearShot(LivingEntity tg) {
+        Vec3 to = tg.position().add(0, tg.getBbHeight() * 0.5, 0);
+        List<Integer> ends = nearestStrands(to, 3);
+        for (int k : ends) {
+            Vec3 from = h.strandTipWorld(k).add(0, 1 + 2 * s(), 0);
+            var hit = level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, h));
+            if (hit.getType() == HitResult.Type.MISS) return true;
+        }
+        return ends.isEmpty();
     }
 
     private int bellingsNear() {
@@ -783,7 +847,7 @@ public final class BellMoves {
         switch (move) {
             case Moves.GRAB, Moves.HARVEST -> holds.runGrab();
             case Moves.CURTAIN -> runCurtain(s);
-            case Moves.SWEEP -> runSweep(s, bell);
+            case Moves.SWEEP -> runSweep(s);
             case Moves.SLAM -> runSlam(s);
             case Moves.WRAP -> holds.runWrap();
             case Moves.PULSE -> runPulse(s, bell);
@@ -853,10 +917,11 @@ public final class BellMoves {
         if (t == Moves.CURTAIN_CLOSE) fx(BigFx.DUST_RING, new Vec3(mid.x, h.groundAt(mid.x, mid.z), mid.z), px(16, 4));
     }
 
-    private void runSweep(float s, double bell) {
+    private void runSweep(float s) {
+        // (the way the strands swing: from the side it's aimed at, across and away)
         Vector3f a = h.aim();
-        Vec3 dir = h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10))
-                .subtract(h.position())
+        Vec3 dir = h.position()
+                .subtract(h.toWorld(new Vector3f(a.x, 0, a.z).normalize().mul(10)))
                 .normalize();
         if (t >= 22 && t <= 40 && t % 4 == 2) {
             // dust dragged along by the strand ends at the front of the swing
@@ -865,24 +930,37 @@ public final class BellMoves {
                 fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(4, 1.5), dir, 0);
             }
         }
-        if (t >= 21 && t <= 44) {
-            double r = bell * 1.35 + 4;
-            // (only what the swing has reached so far: the strands run across from its back to its front)
-            double front = Moves.sweepFront(t);
-            // (the box round him only reaches 112 out; the sweep reaches further)
-            for (LivingEntity e :
-                    near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + rig.rimY * s * 0.8))) {
-                if (struckThisMove.contains(e.getUUID()) || h.horiz(at(e)) > r) continue;
-                Vec3 off = at(e).subtract(h.position()).multiply(1, 0, 1);
-                if (Mth.clamp(off.dot(dir) / r, -1, 1) > front) continue;
-                struckThisMove.add(e.getUUID());
-                blow(e, 18f, h.position(), 0, 0.6);
-                e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 2.0, 0, dir.z * 2.0));
-                sting(e);
-            }
-            if (t == 30) h.sound(h.position().add(0, 30 * s, 0), ModSounds.WHIP, 3f, 0.4f);
+        if (t == 30) h.sound(h.position().add(0, 30 * s, 0), ModSounds.WHIP, 3f, 0.4f);
+        // what any strand passes through between one tick and the next, while they swing across, is hit
+        if (t < 20 || t > 44) {
+            sweepWas = null;
+            return;
+        }
+        Vec3[][] now = new Vec3[rig.strands.length][];
+        AABB box = null;
+        for (int k = 0; k < now.length; k++) {
+            now[k] = strandLine(k);
+            for (Vec3 p : now[k]) box = box == null ? new AABB(p, p) : box.minmax(new AABB(p, p));
+        }
+        Vec3[][] was = sweepWas;
+        sweepWas = now;
+        if (was == null || box == null) return;
+        for (Vec3[] line : was) for (Vec3 p : line) box = box.minmax(new AABB(p, p));
+        double r = 3 * s + 1.5;
+        for (LivingEntity e : near(box.inflate(r + 2))) {
+            if (struckThisMove.contains(e.getUUID())) continue;
+            boolean hit = false;
+            for (int k = 0; k < now.length && !hit; k++) hit = swept(was[k], now[k], e, r);
+            if (!hit) continue;
+            struckThisMove.add(e.getUUID());
+            blow(e, 18f, h.position(), 0, 0.6);
+            e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 2.0, 0, dir.z * 2.0));
+            sting(e);
         }
     }
+
+    /** every strand's line last tick, while the sweep swings (null otherwise) */
+    private Vec3[][] sweepWas;
 
     private void runSlam(float s) {
         int hit = Math.round(BellRig.SLAM_HIT * Moves.length(Moves.SLAM));

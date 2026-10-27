@@ -301,6 +301,7 @@ public final class MoveFx {
                     }
                 }
             }
+            case Moves.WRAP -> wrapTick(h, from, t, rnd);
             case Moves.SKY_DIVE -> {
                 int back = Moves.DIVE_CLIMB + Moves.DIVE_TURN + Moves.DIVE_FALL;
                 // (the server jumps the move on to its turn back up the moment he lands)
@@ -317,6 +318,34 @@ public final class MoveFx {
                 }
             }
             default -> {}
+        }
+    }
+
+    /** the arm wrap: venom beading and dripping off the coil, squeezed out in a burst each time it wrings tight */
+    private static void wrapTick(HollowbellEntity h, float from, float t, RandomSource rnd) {
+        int arm = h.moveArg();
+        if (arm < 0 || arm >= RIG.arms.length) return;
+        float s = h.bellScale();
+        Vec3 tip = h.armTipWorld(arm);
+        float hold = t - Moves.WRAP_REACH;
+        if (hold < 0 || hold >= Moves.WRAP_HOLD) return;
+        if ((int) t % 2 == 0)
+            for (int k = 0; k < 2; k++) {
+                Vec3 p = tip.add(
+                        rnd.nextGaussian() * (3 * s + 0.8),
+                        -rnd.nextFloat() * 2 * s,
+                        rnd.nextGaussian() * (3 * s + 0.8));
+                glint(p, new Vec3(0, -0.5 * s - 0.15, 0), 2.2f * s + 0.5f, 18, GOO, false);
+            }
+        for (int k = 0; k < Moves.WRAP_HOLD; k += 20) {
+            if (!at(from, t, Moves.WRAP_REACH + k)) continue;
+            // a ring of venom wrung in tight round what it holds, and flung out
+            Ring r = ring(AIR, tip.x, tip.y, tip.z, 16 * s + 4, 2 * s + 0.5f, 8, 1f, s);
+            r.c = GOO;
+            for (int i = 0; i < 24; i++) {
+                Vec3 d = new Vec3(rnd.nextGaussian(), rnd.nextGaussian() * 0.5 + 0.3, rnd.nextGaussian()).normalize();
+                glint(tip, d.scale(1.4 * s + 0.4), 3f * s + 0.6f, 16, GOO, i % 3 == 0);
+            }
         }
     }
 
@@ -1050,8 +1079,11 @@ public final class MoveFx {
         if (t.n < 2 || t.quiet > 0) return;
         int n = t.n;
         double[] p = new double[3 * n];
-        float[] w = new float[n], a = new float[n];
-        float half = 0.4f + 1.4f * t.size;
+        float[] w = new float[n], wide = new float[n], a = new float[n], haze = new float[n];
+        float half = 0.5f + 1.6f * t.size;
+        // (past 40 blocks it is drawn wider the further off it is, so a volley still reads from across a fight)
+        double dx = t.p[0] - Draw.cx, dy = t.p[1] - Draw.cy, dz = t.p[2] - Draw.cz;
+        float far = 1f + (float) Math.max(0, Math.sqrt(dx * dx + dy * dy + dz * dz) - 40) / 55f;
         for (int i = 0; i < n; i++) {
             int o = Math.min(i + 1, n - 1);
             double f = i + 1 < n ? pt : 1;
@@ -1059,13 +1091,27 @@ public final class MoveFx {
             p[3 * i + 1] = Mth.lerp(f, t.p[3 * o + 1], t.p[3 * i + 1]);
             p[3 * i + 2] = Mth.lerp(f, t.p[3 * o + 2], t.p[3 * i + 2]);
             float u = i / (n - 1f);
-            w[i] = half * (1f - 0.8f * u);
-            a[i] = (1f - u);
+            w[i] = half * Math.min(far, 3.5f) * (1f - 0.8f * u);
+            wide[i] = half * far * 2.2f * (1f - 0.5f * u);
+            a[i] = 1f - u;
+            haze[i] = 0.45f * (1f - u) * (1f - u);
         }
-        Draw.ribbon(Draw.lay(Draw.BAND), p, n, w, 0.45f, 0.85f, 0.3f, a, 0f, 0f);
-        Draw.ribbon(Draw.glow(Draw.BAND), p, n, w, GOO[0] * 0.5f, GOO[1] * 0.7f, GOO[2] * 0.35f, a, 0f, 0f);
+        // a soft green haze round a bright venom streak, and a glowing head
+        Draw.ribbon(Draw.lay(Draw.WISP), p, n, wide, 0.4f, 0.85f, 0.25f, haze, 0f, 0.3f);
+        Draw.ribbon(Draw.lay(Draw.BAND), p, n, w, 0.3f, 0.75f, 0.15f, a, 0f, 0f);
+        Draw.ribbon(Draw.glow(Draw.BAND), p, n, w, GOO[0] * 0.35f, GOO[1] * 0.55f, GOO[2] * 0.25f, a, 0f, 0f);
         Draw.sprite(
-                Draw.glow(Draw.GLINTS), p[0], p[1], p[2], half * 2.2f, 0f, Draw.EMBER, GOO[0], GOO[1], GOO[2], 0.7f);
+                Draw.glow(Draw.GLINTS),
+                p[0],
+                p[1],
+                p[2],
+                half * far * 1.3f,
+                0f,
+                Draw.EMBER,
+                GOO[0],
+                GOO[1],
+                GOO[2],
+                0.45f);
     }
 
     private static double sq(double v) {
