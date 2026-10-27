@@ -10,9 +10,6 @@
       "net.jj.giants.duels.GiantDuelTests"
     ]
   },
-  "mixins": [
-    "jj_giants-duels.mixins.json"
-  ],
   "depends": {
     "jj_giants": "*"
   }

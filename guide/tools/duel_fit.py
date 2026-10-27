@@ -17,7 +17,7 @@ import csv, math, sys
 from collections import defaultdict
 
 ORDER = ['P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G']
-ARMOR = {'P': 0.55, 'F': 0.62, 'C': 0.80, 'H': 0.78, 'W': 0.52, 'WB': 0.6, 'S': 0.48, 'G': 0.6}
+ARMOR = {'P': 0.32, 'F': 0.63, 'C': 1.30, 'H': 1.13, 'W': 0.48, 'WB': 0.33, 'S': 0.45, 'G': 0.55}
 
 
 def rates(rows):

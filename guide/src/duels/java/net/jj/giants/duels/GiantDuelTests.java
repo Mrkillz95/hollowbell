@@ -56,8 +56,8 @@ import net.minecraft.world.phys.Vec3;
  * -Pduel_sea=true (the whole arena 8 deep) -Pduel_lake=false -Pduel_sprint=false -Pduel_out=name -Pduel_tag=label
  * -Pduel_tune="P.giantArmor=0.6;C.mobDamage=2.2;net.jj.cerberus.entity.CerberusEntity.snapGiantGap=30"
  * (a kind's code before the dot means that mod's config values; numbers patched at run time, no repo touched), or
- * -Pduel_tune=@C:/some/tune.txt (the same, one per line; # starts a comment). -Pduel_fix=grudge: a giant going
- * after the other giant's helper is put back on the giant (the proposed grudge fix, done from outside).
+ * -Pduel_tune=@C:/some/tune.txt (the same, one per line; # starts a comment). -Pduel_escape=true: the backing-down
+ * check (see ESCAPE).
  */
 public class GiantDuelTests implements FabricGameTest {
     /** short code, mod id, entity id, its GiantsBridge, its config class, size setter and getter, its move names */
@@ -93,7 +93,6 @@ public class GiantDuelTests implements FabricGameTest {
     static final boolean SPRINT = !"false".equals(System.getProperty("jj.duel.sprint"));
     static final String OUT = System.getProperty("jj.duel.out", "giant-duels");
     static final String TAG = System.getProperty("jj.duel.tag", "base");
-    /** grudge: emulate the proposed fix that a hit from the other giant's helper counts against that giant */
     /**
      * escape: the backing-down check. 45 s into each duel one side (a on even runs, b on odd) is put at 27 % health,
      * the other finishes it to the quarter where it backs down, and the harness watches the minute after: does the
@@ -103,7 +102,6 @@ public class GiantDuelTests implements FabricGameTest {
     /** also watch the minute after a natural backing down in a normal duel (off: the duel ends as it backs down) */
     static final boolean AFTER_ALWAYS = Boolean.getBoolean("jj.duel.after");
     static final int DROP_AT = 45 * 20, AFTER = 1200, NO_YIELD = 2400;
-    static final boolean FIX_GRUDGE = System.getProperty("jj.duel.fix", "").contains("grudge");
     static final String TUNE = tuneText(System.getProperty("jj.duel.tune", ""));
     static final Path CSV = Path.of(OUT + ".csv"), MOVES = Path.of(OUT + "-moves.csv");
 
@@ -277,10 +275,6 @@ public class GiantDuelTests implements FabricGameTest {
                 meet(false);
             }
             cull(l, a.e, b.e);
-            if (FIX_GRUDGE && ticks % 10 == 0) {
-                grudgeFix(a, b);
-                grudgeFix(b, a);
-            }
             if (ticks % 20 == 0) sample();
             if (ticks % 600 == 0)
                 timeline.append(String.format(Locale.ROOT, "%d:%.0f/%.0f;", ticks / 20, b.lost, a.lost));
@@ -309,22 +303,6 @@ public class GiantDuelTests implements FabricGameTest {
                 float fa = a.lost / Math.max(1f, a.max), fb = b.lost / Math.max(1f, b.max);
                 end(Math.abs(fa - fb) < 0.05f ? null : fa < fb ? a.k : b.k, "time");
             }
-        }
-
-        /**
-         * The proposed grudge fix, done from outside: when s is after one of other's helpers (its robots, crew,
-         * mudlings...), it lets go of that grudge and goes back to the giant itself. Counted in the notes.
-         */
-        int grudgeFixes;
-
-        void grudgeFix(Side s, Side other) {
-            if (!(s.e instanceof Mob m) || m.getTarget() == null || m.getTarget() == other.e) return;
-            String ns = BuiltInRegistries.ENTITY_TYPE.getKey(m.getTarget().getType()).getNamespace();
-            if (!ns.equals(other.k.mod)) return;
-            Object t = call(s.e, "targets");
-            if (t != null) call(t, "forgetGrudge");
-            m.setTarget(other.e);
-            grudgeFixes++;
         }
 
         /** the minute after backing down: how far the loser gets, how high, what it still takes, who follows */
@@ -404,10 +382,6 @@ public class GiantDuelTests implements FabricGameTest {
         }
 
         void write() {
-            int nan = NaNCount.STOPPED.getAndSet(0);
-            if (grudgeFixes > 0) notes.append("grudge fixes ").append(grudgeFixes).append(' ');
-            if (nan > 0) notes.append("NaN moves stopped ").append(nan).append(' ').append(NaNCount.WHO).append(' ');
-            NaNCount.WHO.clear();
             float sec = Math.max(1, ticks) / 20f;
             double wall = (System.nanoTime() - wall0) / 1e9;
             String head = "tag,run,a,b,west,size,sea,seconds,wall_s,how,winner,dmg_a_to_b,dmg_b_to_a,dps_a_to_b,dps_b_to_a,"
@@ -561,8 +535,7 @@ public class GiantDuelTests implements FabricGameTest {
             if (e == a || e == b || e instanceof Player) continue;
             double dx = Math.abs(e.getX() - CX), dz = Math.abs(e.getZ() - CZ);
             if (dx < edge && dz < edge && e.getY() < 700) continue;
-            // (only what flew off the arena, and anything whose position went NaN: a Swarmforge drone did against the
-            // Hollowbell, and the Hollowbell's line-of-sight check to it then loaded chunks without end)
+            // (only what flew off the arena, and anything whose position went NaN)
             if (dx > ARENA_R + 3000 || dz > ARENA_R + 3000) continue;
             String path = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath();
             // (the giants' own body parts go where the giant goes)

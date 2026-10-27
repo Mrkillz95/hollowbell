@@ -1,15 +1,15 @@
 # Runs the giant duel harness over all 28 pairs, a few pairs per server (one server runs out of memory after about
 # 20 full-size duels), through the shared Gradle slots. Every run appends to build/duels/<Out>.csv.
-# -Parallel N: N shards at once, each in its own copy of this project (build/shards/<i>, so their Gradle builds, run
+# -Parallel N: N shards at once, each in its own copy of this project (build/shards/<Out>-<i>, so their Gradle builds, run
 # folders and worlds never meet) and its own slot; their CSVs are merged into build/duels/<Out>*.csv at the end.
 # A server that writes no row for -StallMinutes is taken to be hung (it happened: a giant's line-of-sight check to a
 # robot whose position went NaN loaded chunks without end): it is stopped, the duel it was on is noted in
 # build/duels/<Out>-hung.txt, and the sweep goes on with the next group.
 # usage: powershell -NoProfile -File tools\duel_sweep.ps1 [-Out base] [-Runs 4] [-Seconds 300] [-Tune @file]
-#        [-PerServer 3] [-Pairs "P-G,C-H"] [-StallMinutes 8] [-Fix grudge] [-Escape] [-Parallel 4] [-Heap 4G]
+#        [-PerServer 3] [-Pairs "P-G,C-H"] [-StallMinutes 8] [-Escape] [-Sea] [-Parallel 4] [-Heap 4G]
 # (-Tune @file: the file is read from build/duels, copied into each shard)
 param([string]$Out = 'base', [int]$Runs = 4, [int]$Seconds = 300, [string]$Tune = '', [int]$PerServer = 3,
-    [string]$Pairs = '', [int]$StallMinutes = 8, [string]$Fix = '', [switch]$Escape, [int]$Parallel = 1,
+    [string]$Pairs = '', [int]$StallMinutes = 8, [switch]$Escape, [switch]$Sea, [int]$Parallel = 1,
     [string]$Heap = '4G', [string]$Guide = '')
 $self = $PSCommandPath
 $main = Split-Path -Parent $PSScriptRoot
@@ -26,7 +26,7 @@ if ($Parallel -gt 1) {
     for ($s = 0; $s -lt $Parallel; $s++) {
         $mine = @(for ($k = $s; $k -lt $all.Count; $k += $Parallel) { $all[$k] })
         if ($mine.Count -eq 0) { continue }
-        $copy = Join-Path $main "build\shards\$s"
+        $copy = Join-Path $main "build\shards\$Out-$s"
         New-Item -ItemType Directory -Force $copy | Out-Null
         foreach ($f in 'build.gradle', 'settings.gradle', 'gradle.properties', 'gradlew', 'gradlew.bat', 'LICENSE') {
             Copy-Item (Join-Path $main $f) $copy -Force
@@ -40,7 +40,7 @@ if ($Parallel -gt 1) {
         $a = @('-NoProfile', '-File', $self, '-Guide', $copy, '-Out', $Out, '-Runs', $Runs, '-Seconds', $Seconds,
             '-PerServer', $PerServer, '-Pairs', ($mine -join ','), '-StallMinutes', $StallMinutes, '-Heap', $Heap)
         if ($Tune) { $a += '-Tune', $Tune }
-        if ($Fix) { $a += '-Fix', $Fix }
+        if ($Sea) { $a += '-Sea' }
         if ($Escape) { $a += '-Escape' }
         Write-Host "duel_sweep: shard $s ($($mine -join ','))"
         $jobs += Start-Process powershell -ArgumentList $a -NoNewWindow -PassThru `
@@ -52,7 +52,7 @@ if ($Parallel -gt 1) {
     New-Item -ItemType Directory -Force (Join-Path $main 'build\duels') | Out-Null
     foreach ($f in "$Out.csv", "$Out-moves.csv", "$Out-hung.txt") {
         $dest = Join-Path $main "build\duels\$f"
-        $parts = 0..($Parallel - 1) | ForEach-Object { Join-Path $main "build\shards\$_\build\duels\$f" } | Where-Object { Test-Path $_ }
+        $parts = 0..($Parallel - 1) | ForEach-Object { Join-Path $main "build\shards\$Out-$_\build\duels\$f" } | Where-Object { Test-Path $_ }
         $first = -not (Test-Path $dest)
         foreach ($p in $parts) {
             $lines = @(Get-Content $p)
@@ -72,7 +72,7 @@ for ($k = 0; $k -lt $all.Count; $k += $PerServer) {
     $a = @('-NoProfile', '-File', $withslot, $Guide, 'runDuels', '-Pduels', "-Pduel_pairs=$group", "-Pduel_runs=$Runs",
         "-Pduel_seconds=$Seconds", "-Pduel_out=$Out", "-Pduel_tag=$Out", "-PduelHeap=$Heap", '--console=plain')
     if ($Tune) { $a += "-Pduel_tune=$Tune" }
-    if ($Fix) { $a += "-Pduel_fix=$Fix" }
+    if ($Sea) { $a += '-Pduel_sea=true' }
     if ($Escape) { $a += '-Pduel_escape=true' }
     $log = Join-Path $env:TEMP "duel_sweep_${Out}_$(Split-Path -Leaf $Guide).log"
     $p = Start-Process powershell -ArgumentList $a -NoNewWindow -PassThru -RedirectStandardOutput $log
@@ -89,6 +89,9 @@ for ($k = 0; $k -lt $all.Count; $k += $PerServer) {
         $batch = (Select-String -Path $mc -Pattern "Running test batch '([^']+)'" | Select-Object -Last 1).Matches.Groups[1].Value
         Add-Content (Join-Path $Guide "build\duels\$Out-hung.txt") "$(Get-Date -Format o) $batch"
         Write-Host "  hung on $batch, stopping the server"
+        # (where its server thread was stuck, for the report)
+        $jstack = Join-Path (Split-Path (Get-Command java).Source) 'jstack.exe'
+        $server | ForEach-Object { & $jstack $_.ProcessId 2>&1 | Out-File (Join-Path $Guide "build\duels\$Out-hung-$($batch.Replace(':', '_')).txt") }
         $server | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
         $since = Get-Date
     }
