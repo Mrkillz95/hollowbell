@@ -8,6 +8,8 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.jj.giants.GiantsGuideMod;
 import net.jj.giants.client.GuideScreen;
+import net.jj.giants.client.perf.PerfClient;
+import net.jj.giants.client.perf.PerfScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
@@ -30,7 +32,7 @@ import net.minecraft.world.level.levelgen.presets.WorldPresets;
  * Development only (-Djj_giants.autotest=<script>), the same idea as the giants' own: makes a creative flat world, runs
  * a list of lines with waits between them, takes screenshots, then quits. Never runs in a normal game. Lines: join
  * HOST:PORT (a real server instead), wait N, cmd ... (as an operator, own world only), chat /..., guiscale N, gui
- * on|off, guide KEY TAB [SCROLL], close, shot NAME, quit.
+ * on|off, guide KEY TAB [SCROLL], perf [SCROLL] [SEARCH], close, shot NAME, quit.
  */
 public final class AutoTest implements ClientModInitializer {
     private static List<String> script;
@@ -144,6 +146,14 @@ public final class AutoTest implements ClientModInitializer {
                 String[] a = s.substring(6).trim().split("\\s+");
                 GuideScreen.showPage(a[0], Integer.parseInt(a[1]), a.length > 2 ? Double.parseDouble(a[2]) : 0);
                 mc.setScreen(new GuideScreen());
+                continue;
+            }
+            // perf [SCROLL] [SEARCH...]: the Giants Performance screen, scrolled (and searched)
+            if (s.equals("perf") || s.startsWith("perf ")) {
+                String[] a = s.substring(4).trim().split(" +", 2);
+                PerfScreen.showAt(
+                        a.length > 0 && !a[0].isEmpty() ? Double.parseDouble(a[0]) : 0, a.length > 1 ? a[1] : "");
+                PerfClient.open(null);
                 continue;
             }
             if (s.equals("close")) {
