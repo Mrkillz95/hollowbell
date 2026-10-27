@@ -155,6 +155,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
     final BellSaving saving = new BellSaving(this);
     final BellRiding riding = new BellRiding(this);
     final BellTargets targets = new BellTargets(this);
+    final BellFlee flee = new BellFlee(this);
     final BellHealth health = new BellHealth(this);
 
     // ---- his parts
@@ -2002,6 +2003,16 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     public boolean startMeeting(LivingEntity other) {
         return targets.startMeeting(other);
+    }
+
+    /** the same; byPlayer: a player started it (/giants meet, the book), so he never backs down from it */
+    public boolean startMeeting(LivingEntity other, boolean byPlayer) {
+        return targets.startMeeting(other, byPlayer);
+    }
+
+    /** backing down: where he flies to, and his rest after */
+    public BellFlee flee() {
+        return flee;
     }
 
     public void backDown(Entity from) {

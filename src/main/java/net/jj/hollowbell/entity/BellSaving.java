@@ -88,6 +88,7 @@ final class BellSaving {
         }
         if (!met.isEmpty()) tag.put("MetLately", met);
         if (hb.meetFoe != null) tag.putUUID("MeetFoe", hb.meetFoe);
+        hb.flee.save(tag, hb.level().getGameTime());
         long gt = hb.level().getGameTime();
         if (hb.yieldUntil > gt) tag.putLong("YieldFor", hb.yieldUntil - gt);
         if (hb.fleeFrom != null && hb.fleeUntil > gt) {
@@ -197,6 +198,7 @@ final class BellSaving {
             if (o.hasUUID("Id")) hb.metLeft.put(o.getUUID("Id"), o.getLong("Left"));
         }
         hb.meetFoe = tag.hasUUID("MeetFoe") ? tag.getUUID("MeetFoe") : null;
+        hb.flee.load(tag);
         hb.yieldFor = tag.getLong("YieldFor");
         hb.fleeFor = tag.getLong("FleeFor");
         hb.fleeFrom = tag.contains("FleeX") ? new Vec3(tag.getDouble("FleeX"), 0, tag.getDouble("FleeZ")) : null;

@@ -60,6 +60,7 @@ public final class GiantsBridge {
             case "natural" -> natural(a, out);
             case "limit" -> limit(server, a, out);
             case "fight" -> fight(a, out);
+            case "flee" -> flee(a, out);
             case "meetings" -> meetings(a, out);
             case "meet" -> meet(server, arg, out);
             case "away" -> away(a, out);
@@ -168,6 +169,19 @@ public final class GiantsBridge {
         out.add(WHO + (V.maxInWorld <= 0 ? "no limit." : "at most " + V.maxInWorld + "."));
     }
 
+    /** /giants flee: backing down from a wild fight he's losing (one a player started, he never does) */
+    private static void flee(String a, List<String> out) {
+        Boolean on = onOff(a);
+        if (on != null) {
+            BellConfig.V.fleeInWildFights = on;
+            BellConfig.save();
+        }
+        out.add(WHO
+                + (BellConfig.V.fleeInWildFights
+                        ? "he backs down from a wild fight he's losing."
+                        : "he fights wild fights to the end."));
+    }
+
     private static void fight(String a, List<String> out) {
         var V = BellConfig.V;
         Boolean on = onOff(a);
@@ -218,7 +232,7 @@ public final class GiantsBridge {
                     best = h;
                 }
             }
-            if (best != null && best.startMeeting(og)) {
+            if (best != null && best.startMeeting(og, true)) {
                 out.add(WHO + "he goes for it.");
                 return;
             }

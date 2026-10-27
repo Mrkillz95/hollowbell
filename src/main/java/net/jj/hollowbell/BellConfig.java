@@ -53,6 +53,9 @@ public final class BellConfig {
         public int meetRange = 160;
         /** A giant fight ends when one drops under this share of its health: it backs down. 0 = to the death. */
         public float yieldAt = 0.25f;
+        /** Backs down when he's losing a wild giants' fight, one he started on his own (/giants flee). A fight a
+         *  player started (the book, /giants meet, riding him) he never backs down from. */
+        public boolean fleeInWildFights = true;
         /** Minutes before the same two giants can meet again. */
         public int meetCooldown = 10;
         /** (This computer.) His fight music plays when a fight with him is on near you. */
@@ -164,7 +167,7 @@ public final class BellConfig {
     public static Values V = new Values();
 
     /** which version of the settings this build writes; save() and load() both stamp it */
-    private static final int VERSION = 11;
+    private static final int VERSION = 12;
     /**
      * the file on disk couldn't be read: it's kept as it is, and nothing is written over it until /hollowbell reload
      * reads it cleanly

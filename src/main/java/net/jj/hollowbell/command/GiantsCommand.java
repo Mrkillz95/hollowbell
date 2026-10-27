@@ -58,8 +58,8 @@ public final class GiantsCommand {
         "net.jj.gloamwick.GiantsBridge"
     };
 
-    /** which /giants this copy builds: a copy with a higher number has commands an older one lacks */
-    public static final int TREE = 2;
+    /** which /giants this copy builds: a copy with a higher number has commands an older one lacks (3: flee) */
+    public static final int TREE = 3;
 
     private static final String MINE = GiantsBridge.class.getName();
 
@@ -453,6 +453,22 @@ public final class GiantsCommand {
                                         c, "summon", from(c, StringArgumentType.getString(c, "mood and size"))))));
     }
 
+    /**
+     * /giants flee [on|off [giant]]: whether the giants back down from a wild fight (one they started on their own)
+     * when they're losing it. Bare, it says each one's setting. A fight a player started they never back down from.
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> flee() {
+        LiteralArgumentBuilder<CommandSourceStack> f = Commands.literal("flee")
+                .requires(s -> s.hasPermission(2))
+                .executes(c -> say(c, ask(c.getSource().getServer(), "flee", ""), false));
+        for (String v : new String[] {"on", "off"}) {
+            f.then(Commands.literal(v)
+                    .executes(c -> run(c, "flee", v))
+                    .then(which().executes(c -> one(c, "flee", v))));
+        }
+        return f;
+    }
+
     private static LiteralArgumentBuilder<CommandSourceStack> toggle(String name) {
         return Commands.literal(name)
                 .requires(s -> s.hasPermission(2))
@@ -504,6 +520,7 @@ public final class GiantsCommand {
                                         String.valueOf(IntegerArgumentType.getInteger(c, "seconds"))))))
                 .then(toggle("meetings"))
                 .then(Commands.literal("meet").requires(s -> s.hasPermission(2)).executes(GiantsCommand::meet))
+                .then(flee())
                 .then(Commands.literal("where").requires(s -> s.hasPermission(2)).executes(c -> run(c, "where", "")))
                 .then(Commands.literal("goto")
                         .requires(s -> s.hasPermission(2))

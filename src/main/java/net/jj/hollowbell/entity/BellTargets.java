@@ -249,7 +249,7 @@ final class BellTargets {
         // another giant: a giants' fight, by their rules (who backs down, who won, the wait before the next)
         if (Giants.isGiant(e) && hb.meetFoe == null) {
             LivingEntity g = giantOf(e);
-            if (g != null && g != hb) startMeeting(g);
+            if (g != null && g != hb) startMeeting(g, true);
         }
     }
 
@@ -338,6 +338,7 @@ final class BellTargets {
                 && !hb.bound()
                 && !hb.isDeadOrDying()
                 && hb.meetFoe == null
+                && !hb.flee.resting()
                 && hb.level().getGameTime() >= hb.fleeUntil;
     }
 
@@ -368,6 +369,7 @@ final class BellTargets {
 
     void meetTick(long now) {
         if (!(hb.level() instanceof ServerLevel sl)) return;
+        if (hb.tickCount % 20 == 0) hb.flee.fleeTick(sl);
         if (hb.yieldUntil > 0 && now >= hb.yieldUntil) {
             hb.removeTag(Meeting.YIELD);
             hb.yieldUntil = 0;
@@ -395,7 +397,8 @@ final class BellTargets {
                 victory();
             } else if (!hb.yielding()
                     && BellConfig.V.yieldAt > 0f
-                    && hb.healthNow() < hb.healthMax() * BellConfig.V.yieldAt) {
+                    && hb.healthNow() < hb.healthMax() * BellConfig.V.yieldAt
+                    && hb.flee.mayBackDown(foe)) {
                 backDown(foe);
             } else if (hb.getTarget() != foe && fairGame(foe)) {
                 hb.setTarget(foe);
@@ -439,12 +442,18 @@ final class BellTargets {
         }
     }
 
-    /** a meeting fight with this giant starts now (the table said so, or an operator's /giants meet) */
+    /** a meeting fight with this giant starts now (the table said so) */
     public boolean startMeeting(LivingEntity other) {
+        return startMeeting(other, false);
+    }
+
+    /** the same; byPlayer: an operator's /giants meet or the book's order, a fight he never backs down from */
+    public boolean startMeeting(LivingEntity other, boolean byPlayer) {
         if (!(hb.level() instanceof ServerLevel sl) || other == hb || hb.isDeadOrDying()) return false;
         long now = hb.level().getGameTime();
         hb.wakeUp();
         hb.meetFoe = other.getUUID();
+        hb.flee.ordered = byPlayer;
         hb.meetAvoid = null;
         hb.avoidAt = null;
         hb.metLately.put(other.getUUID(), now + BellConfig.V.meetCooldown * 1200L);
@@ -475,6 +484,7 @@ final class BellTargets {
         hb.fleeFrom = from.position();
         hb.fleeUntil = now + 1200;
         hb.meetFoe = null;
+        hb.flee.startRun(sl, now); // up out of reach, then off to his ground or to whoever holds his book
         clearHitList();
         grudges.drop(from.getUUID());
         hb.stopFetch();

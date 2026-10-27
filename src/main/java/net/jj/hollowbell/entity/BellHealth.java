@@ -278,7 +278,8 @@ final class BellHealth {
                 && BellConfig.V.meetings
                 && BellConfig.V.yieldAt > 0f
                 && hb.hp > 0f
-                && hb.hp < hb.healthMax() * BellConfig.V.yieldAt) {
+                && hb.hp < hb.healthMax() * BellConfig.V.yieldAt
+                && hb.flee.mayBackDown(Giants.ownerOf(by) != null ? Giants.ownerOf(by) : by)) {
             LivingEntity o = Giants.ownerOf(by);
             hb.backDown(o != null ? o : by);
         }

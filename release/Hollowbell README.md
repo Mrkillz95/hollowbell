@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.21
+# Hollowbell (Java mod), version 1.12.23
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,15 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- When he's losing a wild fight with another giant (one no player started), he backs down, climbs up out of reach and
+  flies home to the middle of the Bell Hollows (or to whoever holds his book, if they're in the same world), up to
+  about 1,500 blocks away. There he rests for a few minutes and heals a little, up to half his health, and starts no
+  fights. He never backs down from a fight a player started: one his book sent him into, one started with
+  `/giants meet`, or while somebody rides him. New for operators: `/giants flee on|off [giant]` (off: giants fight
+  their wild fights to the end; on its own it shows each giant's setting).
+
+### 1.12.22
 
 - Fights between giants re-balanced after a full duel test: other giants' blows hurt him a bit more.
   Players see no change.

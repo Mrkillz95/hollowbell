@@ -374,6 +374,10 @@ final class BellFlight {
             } else if (hb.huntOrdered && hb.huntSeen != null) {
                 // sent after something gone from sight: where it was last seen
                 if (hb.horiz(hb.huntSeen) > 8 * s + 3) want = hb.huntSeen;
+            } else if (hb.flee.towardSpot(60 * s + 30) != null) {
+                // backed down: off to his ground, or to whoever holds his book
+                want = hb.flee.towardSpot(60 * s + 30);
+                hb.wanderTo = null;
             } else if (hb.targets.keepAwayFrom() != null) {
                 // backing down, or keeping out of another giant's way: straight away from it
                 Vec3 o = hb.targets.keepAwayFrom();
