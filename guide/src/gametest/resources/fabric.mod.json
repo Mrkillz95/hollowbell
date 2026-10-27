@@ -6,7 +6,8 @@
   "environment": "*",
   "entrypoints": {
     "fabric-gametest": [
-      "net.jj.giants.test.GuideGameTests"
+      "net.jj.giants.test.GuideGameTests",
+      "net.jj.giants.test.PerfGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"
