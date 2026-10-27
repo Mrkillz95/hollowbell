@@ -467,6 +467,9 @@ final class BellHeavyMoves {
             if (i == 4) h.setAim(h.toModel(ground));
             if (mv.t == from) mv.fx(BigFx.SPARKS, ground, mv.px(3, 1.5), Vec3.ZERO, 0);
             if (mv.t % 10 == i * 2) mv.fx(BigFx.EMBERS, ground, beamR * 1.6 + 1, Vec3.ZERO, 14);
+            // the ground hisses and crackles where each beam burns
+            if (mv.t % 10 == i * 2) h.sound(ground, SoundEvents.FIRE_EXTINGUISH, 1.6f, 0.6f);
+            if (mv.t % 14 == i * 3) h.sound(ground, SoundEvents.FIRE_AMBIENT, 2.5f, 0.7f);
             for (LivingEntity e : mv.near(new AABB(
                     ground.x - beamR, ground.y - 2, ground.z - beamR, ground.x + beamR, top.y, ground.z + beamR))) {
                 if (Math.hypot(mv.at(e).x - ground.x, mv.at(e).z - ground.z) > beamR || !mv.every(e, 10)) continue;

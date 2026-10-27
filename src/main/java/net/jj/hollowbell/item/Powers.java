@@ -47,6 +47,8 @@ public final class Powers {
     public static final float TOLL_MOST = 14f, TOLL_LEAST = 8f;
     public static final int STUN = 60, SECOND_RING = 20;
     private static final Vector3f GLASS = new Vector3f(0.72f, 0.95f, 0.72f);
+    /** his glow, for the flashes */
+    private static final int GLOW = 0xBFFFD8;
 
     public enum Kind {
         TOLL,
@@ -79,9 +81,12 @@ public final class Powers {
         Adv.grant(p, "bell_toll");
         p.getCooldowns().addCooldown(ModItems.BELL_CHESTPLATE, k == Kind.TOLL ? TOLL_COOLDOWN : GLIDE_COOLDOWN);
         ServerLevel l = p.serverLevel();
-        if (k == Kind.TOLL)
+        if (k == Kind.TOLL) {
+            // the push off the ground: a squeeze like his, a rush of air and a puff of dust under you
             l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.PULSE, SoundSource.PLAYERS, 1.2f, 1.4f);
-        else l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.DRIFT, SoundSource.PLAYERS, 1f, 1.5f);
+            l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.SWOOP, SoundSource.PLAYERS, 0.8f, 1.6f);
+            BigFx.send(l, BigFx.DUST_RING, p.position(), 3f);
+        } else l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.DRIFT, SoundSource.PLAYERS, 1f, 1.5f);
         return k;
     }
 
@@ -128,9 +133,22 @@ public final class Powers {
             // hanging: a soft bob and a hum, the wind-up before the slam
             p.setDeltaMovement(0, 0.02 * Math.sin(d.t), 0);
             p.hurtMarked = true;
-            if (d.t == RISE + 1)
+            if (d.t == RISE + 1) {
                 l.playSound(null, p.getX(), p.getY(), p.getZ(), ModSounds.TOLL, SoundSource.PLAYERS, 0.9f, 1.6f);
+                l.playSound(
+                        null,
+                        p.getX(),
+                        p.getY(),
+                        p.getZ(),
+                        SoundEvents.BEACON_POWER_SELECT,
+                        SoundSource.PLAYERS,
+                        1f,
+                        1.6f);
+                // the glass of the set lights up, as his bell does before a blow
+                BigFx.send(l, BigFx.FLASH, p.position().add(0, 1, 0), 2.5f, Vec3.ZERO, GLOW);
+            }
             l.sendParticles(ParticleTypes.END_ROD, p.getX(), p.getY() + 1, p.getZ(), 2, 0.4, 0.4, 0.4, 0.01);
+            l.sendParticles(ParticleTypes.GLOW, p.getX(), p.getY() + 1, p.getZ(), 3, 0.6, 0.6, 0.6, 0.02);
         } else if (!d.rung) {
             boolean landed = d.t > RISE + HANG + 2 && (p.onGround() || p.isInWater());
             if (!landed && d.t < RISE + HANG + SLAM_MAX) {
@@ -215,6 +233,14 @@ public final class Powers {
         float k = second ? 0.6f : 1f, high = second ? 0.5f : 0f;
         l.playSound(null, p.blockPosition(), ModSounds.TOLL_BIG, SoundSource.PLAYERS, 1.8f * k, 1.1f + high);
         l.playSound(null, p.blockPosition(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 2.0f * k, 0.5f + high);
+        if (!second) {
+            // the slam itself under the toll: a thud into the ground and the shock going out
+            l.playSound(null, p.blockPosition(), ModSounds.SLAM, SoundSource.PLAYERS, 1.2f, 1.3f);
+            l.playSound(null, p.blockPosition(), ModSounds.SHOCK, SoundSource.PLAYERS, 0.8f, 1.5f);
+            BigFx.send(l, BigFx.FLASH, p.position().add(0, 0.5, 0), 4f, Vec3.ZERO, GLOW);
+            BigFx.send(l, BigFx.STOMP, p.position(), 3f);
+            BigFx.send(l, BigFx.SPARKS, p.position().add(0, 0.5, 0), 3f, new Vec3(0, 1, 0), GLOW);
+        }
         for (int i = 0; i < 64; i++) {
             double a = i * Math.PI * 2 / 64;
             for (double rr = 1.5; rr <= r; rr += 1.6)

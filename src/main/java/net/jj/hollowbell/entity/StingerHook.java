@@ -2,6 +2,7 @@ package net.jj.hollowbell.entity;
 
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.ModEntities;
+import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.item.PowerTargets;
 import net.jj.hollowbell.rig.BellRig;
@@ -193,7 +194,9 @@ public class StingerHook extends Projectile {
     /** not reeling: the barb bites and the strand pulls the end back */
     private void barb() {
         level().playSound(null, getX(), getY(), getZ(), SoundEvents.TRIDENT_HIT, SoundSource.PLAYERS, 1f, 1.5f);
-        BigFx.send(level(), BigFx.SPARKS, position(), 1f, Vec3.ZERO, POISON);
+        level().playSound(null, getX(), getY(), getZ(), ModSounds.STING, SoundSource.PLAYERS, 1f, 1.1f);
+        BigFx.send(level(), BigFx.SPARKS, position(), 1.6f, Vec3.ZERO, POISON);
+        BigFx.send(level(), BigFx.CLOUD, position(), 1.5f, Vec3.ZERO, POISON);
         discard();
     }
 
@@ -211,7 +214,8 @@ public class StingerHook extends Projectile {
                         SoundSource.PLAYERS,
                         1f,
                         0.7f);
-        BigFx.send(level(), BigFx.SPARKS, position(), 1.2f, Vec3.ZERO, POISON);
+        BigFx.send(level(), BigFx.SPARKS, position(), 2f, Vec3.ZERO, POISON);
+        BigFx.send(level(), BigFx.CLOUD, position(), 1.8f, Vec3.ZERO, POISON);
     }
 
     /** where the strand is tied, right now */

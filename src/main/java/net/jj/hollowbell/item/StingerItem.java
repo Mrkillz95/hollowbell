@@ -2,7 +2,9 @@ package net.jj.hollowbell.item;
 
 import java.util.List;
 import net.jj.hollowbell.Adv;
+import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.entity.StingerHook;
+import net.jj.hollowbell.fx.BigFx;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,6 +23,7 @@ import net.minecraft.world.item.Tier;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The Stinger: a strand end off the Hollowbell. A hit poisons (Poison II) and slows. Hold right-click and let go to
@@ -48,6 +51,11 @@ public class StingerItem extends SwordItem {
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity by) {
         target.addEffect(new MobEffectInstance(MobEffects.POISON, 100, 1), by);
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 1), by);
+        // the barb goes in: a sting and a spurt of his green poison
+        Level l = target.level();
+        Vec3 at = target.position().add(0, target.getBbHeight() * 0.6, 0);
+        l.playSound(null, at.x, at.y, at.z, ModSounds.STING, SoundSource.PLAYERS, 0.8f, 1.2f);
+        BigFx.send(l, BigFx.SPARKS, at, 1.2f, Vec3.ZERO, 0x9CFF6A);
         return super.hurtEnemy(stack, target, by);
     }
 

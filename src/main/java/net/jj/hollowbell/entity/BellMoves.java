@@ -900,6 +900,10 @@ public final class BellMoves {
                 }
             }
             if (t % 15 == 0) h.sound(c, ModSounds.GRAB, 2f, 0.6f);
+            if (t == Moves.CURTAIN_CLOSE) {
+                h.sound(c, ModSounds.WHIP, 3f, 0.5f);
+                h.sound(c, ModSounds.STRAND, 3f, 0.4f);
+            }
         }
         Vec3 mid = h.toWorld(h.aim());
         if (t >= 6 && t <= 34 && t % 4 == 2) {
@@ -930,7 +934,12 @@ public final class BellMoves {
                 fx(BigFx.TRAIL, new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z), px(4, 1.5), dir, 0);
             }
         }
+        Vec3 low = h.position().add(0, 10 * s, 0);
+        // held back, the strands creak; then the rush of the swing, and the ground torn up as they drag through it
+        if (t == 17) h.sound(low, ModSounds.STRAND, 3f, 0.35f);
+        if (t == 22) h.sound(low, ModSounds.SWOOP, 3.5f, 0.7f);
         if (t == 30) h.sound(h.position().add(0, 30 * s, 0), ModSounds.WHIP, 3f, 0.4f);
+        if (t == 26 || t == 34) h.sound(under(), SoundEvents.ROOTED_DIRT_BREAK, 3.5f, 0.5f);
         // what any strand passes through between one tick and the next, while they swing across, is hit
         if (t < 20 || t > 44) {
             sweepWas = null;
@@ -980,7 +989,10 @@ public final class BellMoves {
 
     private void runPulse(float s, double bell) {
         // (the bell shuts a moment before the shock goes out)
-        if (t == Moves.PULSE_AT - 5) h.pulse(1.6f);
+        if (t == Moves.PULSE_AT - 5) {
+            h.pulse(1.6f);
+            h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.PULSE, 3.5f, 0.6f);
+        }
         if (t == Moves.PULSE_AT) {
             h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.SHOCK, 3f, 0.8f);
             thump(h.position(), 0.6f);
@@ -1005,6 +1017,7 @@ public final class BellMoves {
 
     private void runDrop(float s, double bell) {
         int hit = Moves.DROP_WIND + Moves.DROP_FALL;
+        if (t == Moves.DROP_WIND) h.sound(h.position().add(0, 20 * s, 0), ModSounds.SWOOP, 4f, 0.45f);
         if (t == hit) {
             Vec3 c = h.position();
             double r = bell * 1.2 + 6;

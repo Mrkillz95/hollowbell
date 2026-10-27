@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.17
+# Hollowbell (Java mod), version 1.12.18
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,11 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+1.12.18: More of his moves can be heard: the sweep creaks, rushes and tears up the ground, the curtain snaps shut,
+the pulse squeezes, the drop roars down, and the sun lances hiss and crackle where they burn. The Great Toll lights
+up the bell glass as you hang, and lands with a flash, a thud and flying dust; the Glass Bell flashes down round you
+and shatters into glinting shards; the Stinger's barb spurts green poison.
 
 1.12.17: The strand sweep only hits what its strands drag through: he sinks low and drags them across the ground.
 The arm wrap reaches down for you, hoists you out from under him, squeezes green venom out of you while you

@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.entity.Giants;
+import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.net.GlassBellPayload;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -57,6 +58,9 @@ public final class GlassBell {
         l.playSound(null, p.blockPosition(), ModSounds.TOLL, SoundSource.PLAYERS, 1.2f, 1.5f);
         l.playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.5f, 0.8f);
         l.playSound(null, p.blockPosition(), SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 1.0f, 1.2f);
+        // the glass comes down round you: a flash of his glow and a ring of air pushed out along the ground
+        BigFx.send(l, BigFx.FLASH, p.position().add(0, RADIUS * 0.5, 0), (float) RADIUS, Vec3.ZERO, 0xBFFFD8);
+        BigFx.send(l, BigFx.DUST_RING, p.position(), (float) RADIUS + 2);
         shimmer(l, b, 80);
         return true;
     }
@@ -84,8 +88,7 @@ public final class GlassBell {
         GlassBellPayload msg = new GlassBellPayload(b.at().x, b.at().y, b.at().z, (float) RADIUS, ticks);
         for (ServerPlayer o : l.players())
             if (o.position().distanceToSqr(b.at()) < 160 * 160
-                    && ServerPlayNetworking.canSend(o, GlassBellPayload.TYPE))
-                ServerPlayNetworking.send(o, msg);
+                    && ServerPlayNetworking.canSend(o, GlassBellPayload.TYPE)) ServerPlayNetworking.send(o, msg);
     }
 
     public static void tick(MinecraftServer server) {
@@ -98,6 +101,9 @@ public final class GlassBell {
                 it.remove();
                 Vec3 c = b.at();
                 l.playSound(null, c.x, c.y, c.z, SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.PLAYERS, 1.4f, 1.2f);
+                l.playSound(null, c.x, c.y, c.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.2f, 0.8f);
+                // the glass gives way: it falls apart in glinting shards
+                BigFx.send(l, BigFx.SPARKS, c.add(0, RADIUS * 0.6, 0), (float) RADIUS, Vec3.ZERO, 0xA8E6B0);
                 shimmer(l, b, 60);
                 continue;
             }
