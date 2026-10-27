@@ -8,7 +8,12 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
-- When he backs down from a fight with another giant, he now really gets away: he climbs high up out of its reach
+- Fights between giants re-balanced after a full duel test: other giants' blows hurt him a bit more.
+  Players see no change.
+
+### 1.12.21
+
+1.12.21: When he backs down from a fight with another giant, he now really gets away: he climbs high up out of its reach
   first, then flies off fast. Nothing of his (spores, stingers, eggs, bellings) keeps hurting a giant that has
   backed down. Other giants' blows hurt him a bit more (players see no change). When another
   giant's helper hurts him, he blames that giant. He no longer locks up a server when another mod puts a giant
