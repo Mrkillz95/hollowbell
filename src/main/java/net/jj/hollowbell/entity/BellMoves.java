@@ -687,6 +687,7 @@ public final class BellMoves {
             }
             return;
         }
+        if (!finite(tg.position())) return; // (its place isn't a number: nothing can be aimed at it)
         StringBuilder why = WHY_MOVE ? new StringBuilder() : null;
         int[] w = weights(tg, why);
         int total = 0;
@@ -787,7 +788,9 @@ public final class BellMoves {
     }
 
     /** a clear line from his strand ends on its side to it (a hill or a wall between them stops his stingers) */
-    boolean clearShot(LivingEntity tg) {
+    public boolean clearShot(LivingEntity tg) {
+        // (something whose place isn't a number, from a fault in another mod: a line to it would wait for land forever)
+        if (!finite(tg.position())) return false;
         Vec3 to = tg.position().add(0, tg.getBbHeight() * 0.5, 0);
         List<Integer> ends = nearestStrands(to, 3);
         for (int k : ends) {
@@ -796,6 +799,17 @@ public final class BellMoves {
             if (hit.getType() == HitResult.Type.MISS) return true;
         }
         return ends.isEmpty();
+    }
+
+    /** a place that is all numbers (not NaN, not infinite) */
+    public static boolean finite(@Nullable Vec3 v) {
+        return v != null && Double.isFinite(v.x) && Double.isFinite(v.y) && Double.isFinite(v.z);
+    }
+
+    /** his spore clouds go at once (a giant fight just ended by one backing down) */
+    void dropClouds() {
+        for (AreaEffectCloud c : clouds) c.discard();
+        clouds.clear();
     }
 
     private int bellingsNear() {
@@ -1262,6 +1276,7 @@ public final class BellMoves {
     }
 
     private void shoot(Vec3 from, Vec3 to, int kind, float dmg, float radius, float speed, float spread) {
+        if (!finite(from) || !finite(to)) return; // (aimed at something whose place isn't a number)
         Shot sh = new Shot(level(), h, kind, dmg, radius);
         sh.setSize(s());
         sh.setPos(from.x, from.y, from.z);

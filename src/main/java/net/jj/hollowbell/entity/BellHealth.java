@@ -220,7 +220,17 @@ final class BellHealth {
         hb.hp = Math.max(0f, hb.healthNow() - dealt);
         hb.getEntityData().set(HollowbellEntity.DATA_HP, hb.hp);
         hb.level().broadcastDamageEvent(hb, src);
-        if (att instanceof LivingEntity le && !(att instanceof Player p && p.isCreative()) && !hb.spares(le))
+        // struck by another giant's helper (its jj_giant_of tag): held against that giant, not the helper
+        LivingEntity boss = hb.level() instanceof ServerLevel sl ? Giants.helperOwner(src, sl) : null;
+        if (boss == hb) boss = null;
+        if (boss != null) {
+            if (!hb.spares(boss)) hb.targets.remember(boss);
+            // and in a giants' meeting fight, the giant is what he goes for
+            if (hb.meetFoe != null && !hb.yielding() && hb.targets.fairGame(boss)) {
+                hb.setTarget(boss);
+                hb.angerTicks = Math.max(hb.angerTicks, 600);
+            }
+        } else if (att instanceof LivingEntity le && !(att instanceof Player p && p.isCreative()) && !hb.spares(le))
             hb.targets.remember(le);
         if (att instanceof Player p && !p.isCreative()) {
             boolean had = hb.fighters.containsKey(p.getUUID());
@@ -249,7 +259,12 @@ final class BellHealth {
         } else if (att instanceof LivingEntity le && !hb.spares(le)) {
             hb.setLastHurtByMob(le);
             boolean giant = Giants.isGiant(le);
-            if (hb.getTarget() == null && !(giant && (hb.yielding() || Meeting.yielding(le)))) {
+            // (a giant's helper is the giant's: in a meeting fight he goes for the giant (above), and backing down he
+            // stops for none of them)
+            boolean helper = boss != null || le.getTags().contains(Giants.KIN);
+            if (hb.getTarget() == null
+                    && !(giant && (hb.yielding() || Meeting.yielding(le)))
+                    && !(helper && (hb.yielding() || (boss != null && hb.meetFoe != null)))) {
                 hb.setTarget(le);
                 hb.angerTicks = Math.max(hb.angerTicks, 600);
             }

@@ -1,12 +1,15 @@
 package net.jj.hollowbell.entity;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -64,6 +67,52 @@ public final class Giants {
             e = owner;
         }
         return e;
+    }
+
+    /**
+     * The tag each giant's helpers carry, followed by their giant's id (jj_giant_of:&lt;uuid&gt;): the same in all eight
+     * mods, so a giant hurt by another's helper holds it against that giant.
+     */
+    public static final String OF = "jj_giant_of:";
+
+    /** marks a helper as this giant's (any older mark goes) */
+    public static void markHelper(Entity helper, Entity giant) {
+        for (String t : List.copyOf(helper.getTags())) if (t.startsWith(OF)) helper.removeTag(t);
+        helper.addTag(OF + giant.getUUID());
+    }
+
+    /** the giant this helper belongs to, by its jj_giant_of tag, if it's a creature in this world; else null */
+    public static @Nullable LivingEntity helperOwner(@Nullable Entity e, ServerLevel sl) {
+        if (e == null) return null;
+        for (String t : e.getTags()) {
+            if (!t.startsWith(OF)) continue;
+            try {
+                if (sl.getEntity(UUID.fromString(t.substring(OF.length()))) instanceof LivingEntity le
+                        && le != e) return le;
+            } catch (IllegalArgumentException x) {
+                // (a bad id: the tag is ignored)
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The giant behind a blow struck by one of its helpers: the attacker's, the thing that struck's, or (for what was
+     * thrown or shot) its owner's jj_giant_of tag. Null when no helper of a giant that can be found had a hand in it.
+     */
+    public static @Nullable LivingEntity helperOwner(DamageSource src, ServerLevel sl) {
+        Entity[] who = {src.getEntity(), src.getDirectEntity(), behind(src)};
+        for (Entity e : who) {
+            for (int i = 0; i < 3 && e != null; i++) {
+                LivingEntity o = helperOwner(e, sl);
+                if (o != null) return o;
+                Entity owner =
+                        e instanceof Projectile p ? p.getOwner() : e instanceof TraceableEntity t ? t.getOwner() : null;
+                if (owner == null || owner == e) break;
+                e = owner;
+            }
+        }
+        return null;
     }
 
     /** the blow came from another giant (not from this one) */

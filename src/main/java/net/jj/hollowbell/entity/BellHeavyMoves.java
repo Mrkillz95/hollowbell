@@ -60,6 +60,7 @@ final class BellHeavyMoves {
             c.setRadiusPerTick(0f);
             c.setPotionContents(new PotionContents(Potions.POISON));
             c.setOwner(h);
+            Giants.markHelper(c, h);
             mv.level().addFreshEntity(c);
             mv.clouds.add(c);
             mv.fx(BigFx.CLOUD, new Vec3(p.x, gy, p.z), mv.px(6, 4), Vec3.ZERO, 0x7FBF3F);
@@ -81,7 +82,7 @@ final class BellHeavyMoves {
                 it.remove();
                 continue;
             }
-            if (tg != null && tg.isAlive()) {
+            if (tg != null && tg.isAlive() && BellMoves.finite(tg.position())) {
                 Vec3 d = tg.position().subtract(c.position()).multiply(1, 0, 1);
                 if (d.length() > 1) {
                     Vec3 step = d.normalize().scale(0.05 + 0.06 * s);
@@ -160,6 +161,7 @@ final class BellHeavyMoves {
         Vec3 to = mv.target != null && mv.target.isAlive()
                 ? mv.target.position()
                 : mv.forcedSpot != null ? mv.forcedSpot : mv.eggSpot != null ? mv.eggSpot : h.position();
+        if (!BellMoves.finite(to)) to = h.position(); // (its place isn't a number: straight down under him)
         double spread = 6 * s + 2;
         to = to.add(
                 (h.getRandom().nextDouble() - 0.5) * 2 * spread,
@@ -411,6 +413,7 @@ final class BellHeavyMoves {
                 double x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
                 to = new Vec3(x, h.groundAt(x, z), z);
             }
+            if (!BellMoves.finite(to)) continue; // (at something whose place isn't a number)
             // up first and over: a lob
             Vec3 d = to.subtract(from);
             double horiz = Math.hypot(d.x, d.z);

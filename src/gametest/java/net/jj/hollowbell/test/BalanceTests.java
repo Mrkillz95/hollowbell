@@ -22,13 +22,24 @@ import net.minecraft.world.phys.Vec3;
 public class BalanceTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "balance_armour")
     public void giantsBlowsLandHarderAndOldSettingsMove(GameTestHelper h) {
-        h.assertTrue(Math.abs(new BellConfig.Values().giantArmor - 0.78f) < 1e-6f, "the new default isn't 0.78");
-        // an old file still holding the old default is brought up to the new one
+        h.assertTrue(Math.abs(new BellConfig.Values().giantArmor - 1.13f) < 1e-6f, "the new default isn't 1.13");
+        // an old file still holding an old default is brought up to the new one (0.7 by way of 0.78)
         var old = new BellConfig.Values();
         old.configVersion = 8;
         old.giantArmor = 0.7f;
         BellConfig.migrate(old);
-        h.assertTrue(Math.abs(old.giantArmor - 0.78f) < 1e-6f, "an old default stayed: " + old.giantArmor);
+        h.assertTrue(Math.abs(old.giantArmor - 1.13f) < 1e-6f, "an old default stayed: " + old.giantArmor);
+        var nine = new BellConfig.Values();
+        nine.configVersion = 9;
+        nine.giantArmor = 0.78f;
+        BellConfig.migrate(nine);
+        h.assertTrue(Math.abs(nine.giantArmor - 1.13f) < 1e-6f, "the 0.78 default stayed: " + nine.giantArmor);
+        // a file already this new keeps 0.78 if that's what it says
+        var ten = new BellConfig.Values();
+        ten.configVersion = 10;
+        ten.giantArmor = 0.78f;
+        BellConfig.migrate(ten);
+        h.assertTrue(Math.abs(ten.giantArmor - 0.78f) < 1e-6f, "a new file's 0.78 was changed: " + ten.giantArmor);
         // a number somebody chose is kept
         var mine = new BellConfig.Values();
         mine.configVersion = 8;

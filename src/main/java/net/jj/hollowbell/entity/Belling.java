@@ -53,6 +53,7 @@ public class Belling extends Monster {
 
     public void setOwner(HollowbellEntity h) {
         owner = h.getUUID();
+        Giants.markHelper(this, h); // (another giant it stings holds it against him)
     }
 
     /** just out of its egg: drawn growing to full size over its first half second (see BellingRenderer) */
@@ -95,6 +96,9 @@ public class Belling extends Monster {
                 && (!t.isAlive()
                         || t.distanceToSqr(this) > 48 * 48
                         || (h != null && h.spares(t))
+                        || !Double.isFinite(t.getX() + t.getY() + t.getZ())
+                        // (a giant that has backed down, or him backing down: the giants' fight is over)
+                        || (Giants.isGiant(t) && (Meeting.yielding(t) || (h != null && h.yielding())))
                         || (t instanceof Player p && (p.isCreative() || p.isSpectator())))) {
             setTarget(null);
             t = null;
@@ -104,6 +108,7 @@ public class Belling extends Monster {
                 && h != null
                 && h.getTarget() != null
                 && h.getTarget().isAlive()
+                && !(Giants.isGiant(h.getTarget()) && (Meeting.yielding(h.getTarget()) || h.yielding()))
                 && h.getTarget().distanceToSqr(this) < 48 * 48) {
             setTarget(h.getTarget());
             t = h.getTarget();
@@ -131,7 +136,10 @@ public class Belling extends Monster {
         if (getY() - level().getHeight(Heightmap.Types.MOTION_BLOCKING, getBlockX(), getBlockZ()) < 1.2)
             v = v.add(0, 0.02, 0);
         setDeltaMovement(v);
-        if (t != null && --stingIn <= 0 && getBoundingBox().inflate(0.4).intersects(t.getBoundingBox())) {
+        if (t != null
+                && --stingIn <= 0
+                && !(Giants.isGiant(t) && Meeting.yielding(t))
+                && getBoundingBox().inflate(0.4).intersects(t.getBoundingBox())) {
             stingIn = 20;
             t.hurt(damageSources().mobAttack(this), t instanceof Player ? 3f : 5f);
             t.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0));
@@ -198,5 +206,7 @@ public class Belling extends Monster {
         super.readAdditionalSaveData(tag);
         if (tag.contains("Life")) life = tag.getInt("Life");
         owner = tag.hasUUID("Bell") ? tag.getUUID("Bell") : null;
+        // (one saved before helpers were marked with their giant)
+        if (owner != null && getTags().stream().noneMatch(t -> t.startsWith(Giants.OF))) addTag(Giants.OF + owner);
     }
 }

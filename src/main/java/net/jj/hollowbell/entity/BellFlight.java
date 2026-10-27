@@ -131,7 +131,73 @@ final class BellFlight {
         if (hb.rider != null) v *= 1.5;
         if (hb.angry()) v *= 1.15;
         if (hb.tired()) v *= 0.4;
+        // backed down from a giant and up out of its reach: he gets away fast (tired or not)
+        if (escaping() && escapeUp) v = (0.10 + 0.16 * Math.sqrt(s)) * hb.speedMul * ESCAPE_FAST;
         return v;
+    }
+
+    // getting away from a giant he backed down to
+
+    /** how high over the ground he climbs when he backs down from a giant, at full size (plus 20) */
+    public static final double ESCAPE_UP = 220;
+    /** how much faster than his own top speed he gets away once he's up there */
+    public static final double ESCAPE_FAST = 4;
+    /** how much harder he climbs to get up there */
+    static final double ESCAPE_CLIMB = 3;
+
+    /** up at the height he gets away at (once there, he keeps going fast until it's over) */
+    boolean escapeUp;
+    /** the top of the giants near him, and when it was last looked at */
+    private double escapeTop = Double.NEGATIVE_INFINITY;
+
+    private long escapeLooked = Long.MIN_VALUE;
+
+    /**
+     * Backed down from another giant and getting away from it: he climbs up out of every giant's reach first, then
+     * flies off fast. Not while somebody rides him (they steer) or he's down on the ground.
+     */
+    public boolean escaping() {
+        boolean on = hb.yielding()
+                && hb.fleeFrom != null
+                && hb.level().getGameTime() < hb.fleeUntil
+                && hb.rider == null
+                // (gone after a player meanwhile: that fight is as ever)
+                && hb.getTarget() == null
+                && !hb.isDeadOrDying();
+        if (!on) escapeUp = false;
+        return on;
+    }
+
+    /**
+     * The height he gets away at: well up over the ground ({@link #ESCAPE_UP} at full size), and all of him (his
+     * strand ends too) well over the top of every giant near him, past what they can reach up to.
+     */
+    public double escapeHeight(double gAvg) {
+        float s = hb.bellScale();
+        long now = hb.level().getGameTime();
+        if (now - escapeLooked >= 10 || now < escapeLooked) {
+            escapeLooked = now;
+            escapeTop = Double.NEGATIVE_INFINITY;
+            if (hb.level() instanceof ServerLevel sl) {
+                double r = Meeting.range(s) * 1.5;
+                for (Entity x : sl.getEntities(hb, hb.getBoundingBox().inflate(r, 400, r), Giants::isGiant)) {
+                    LivingEntity o = Giants.ownerOf(x);
+                    if (o == null || o == hb || o instanceof HollowbellEntity || !o.isAlive()) continue;
+                    double[] them = GiantHull.of(o, Giants.TAG);
+                    double top = them.length > 0 ? GiantHull.box(them).maxY : o.getBoundingBox().maxY;
+                    if (Double.isFinite(top)) escapeTop = Math.max(escapeTop, top);
+                }
+            }
+        }
+        double y = gAvg + ESCAPE_UP * s + 20;
+        if (escapeTop > Double.NEGATIVE_INFINITY) {
+            double[] me = hb.jjHull();
+            double under = me.length > 0 ? GiantHull.box(me).minY - hb.getY() : 0;
+            if (!Double.isFinite(under)) under = 0;
+            // (what a giant reaches up with over its own top: strands, breath, a jump)
+            y = Math.max(y, escapeTop + 60 * s + 20 - under);
+        }
+        return y;
     }
 
     /**
@@ -199,7 +265,7 @@ final class BellFlight {
                 hb.nextPulse = now + period;
             }
             // the push comes with the squeeze, then the water slows him till the next one
-            double climbRate = vAvg * (0.45 + 0.55 * u);
+            double climbRate = vAvg * (0.45 + 0.55 * u) * (escaping() ? ESCAPE_CLIMB : 1);
             vy += push * climbRate * period / 22.0 * 0.11;
             vy *= 0.955;
         } else if (e < -climbAt || down) {
@@ -362,6 +428,10 @@ final class BellFlight {
             if (Double.isNaN(hb.wantY)) hb.wantY = hb.getY();
             if (hb.driveUp != 0) hb.wantY = hb.getY() + hb.driveUp * (14 * s + 4);
             wy = hb.wantY;
+        } else if (escaping()) {
+            // backed down from a giant: up out of its reach first, then off fast
+            wy = escapeHeight(gAvg);
+            if (hb.getY() >= wy - (10 * s + 4)) escapeUp = true;
         } else if (hb.moves.carryingUp()) {
             // carrying somebody up: he keeps his height, so the way up stays put
             if (Double.isNaN(hb.wantY)) hb.wantY = hb.getY();

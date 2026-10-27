@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.20
+# Hollowbell (Java mod), version 1.12.21
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -8,15 +8,20 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
-- New `/giants` commands for operators: `home <giant>` takes you to the middle of a giant's ground,
-  `health <x>` and `damage <x>` multiply the giants' health and damage (1.2 is a fifth more), `preset
-  easy/normal/hard` sets both, and `heal`, `calm`, `sleep`, `wake`, `freeze`, `unfreeze`, `summon` and `info`
-  work for all the giants or just the one you name. `/hollowbell detail` is gone: the Giants Guide's
-  Performance screen does that now.
-- When he comes back after dying, his new ground keeps clear of the other giants' grounds.
-- With the Belling count turned right down on the Performance screen he still sheds at least one belling.
+- When he backs down from a fight with another giant, he now really gets away: he climbs high up out of its reach
+  first, then flies off fast. Nothing of his (spores, stingers, eggs, bellings) keeps hurting a giant that has
+  backed down. Other giants' blows hurt him a bit more (players see no change). When another
+  giant's helper hurts him, he blames that giant. He no longer locks up a server when another mod puts a giant
+  somewhere impossible.
 
-### 1.12.19
+### 1.12.20
+
+1.12.20: New `/giants` commands for operators: `home <giant>` takes you to the middle of a giant's ground,
+`health <x>` and `damage <x>` multiply the giants' health and damage (1.2 is a fifth more), `preset
+easy/normal/hard` sets both, and `heal`, `calm`, `sleep`, `wake`, `freeze`, `unfreeze`, `summon` and `info`
+work for all the giants or just the one you name. `/hollowbell detail` is gone: the Giants Guide's Performance
+screen does that now. When he comes back after dying, his new ground keeps clear of the other giants' grounds. With
+the Belling count turned right down on the Performance screen he still sheds at least one belling.
 
 1.12.19: He's a bit weaker against the other giants: their blows hurt him more, at most 3 of his arms land on one
 giant in an Arm Storm, and stray stingers and eggs no longer hit giants he isn't fighting. When he comes back on land

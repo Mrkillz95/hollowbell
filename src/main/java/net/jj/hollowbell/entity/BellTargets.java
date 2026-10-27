@@ -79,6 +79,8 @@ final class BellTargets {
                 && e.isAlive()
                 && !e.isRemoved()
                 && e.level() == hb.level()
+                // (its place isn't a number, from a fault in another mod: nothing can go after it or aim at it)
+                && BellMoves.finite(e.position())
                 && !spares(e)
                 && !(e instanceof ArmorStand)
                 && e != hb.rider
@@ -175,6 +177,8 @@ final class BellTargets {
         }
         // no player: hostile creatures (a guardian clears them off his ground; a hunter goes for them too)
         if (hb.tickCount % 40 != 0) return;
+        // (getting away from a giant he backed down to, he doesn't stop for creatures on the way)
+        if (hb.flight.escaping()) return;
         double mr = hb.isGuardian() ? hb.guardRange() : r * 0.8;
         Vec3 c = hb.isGuardian() && hb.home != null ? hb.home : hb.position();
         LivingEntity mob = null;
@@ -353,6 +357,8 @@ final class BellTargets {
         if (hb.rider != null) return true;
         LivingEntity g = giantOf(e);
         if (g == null) return true;
+        // a giant that has backed down (or him, backing down): nothing of his touches it, not even what's still flying
+        if (Meeting.yielding(g) || hb.yielding()) return false;
         for (LivingEntity t : new LivingEntity[] {hb.getTarget(), hb.moves.moveTarget()}) {
             if (t != null && (t == g || giantOf(t) == g))
                 return true; // the one he's going for, or his move is aimed at
@@ -383,6 +389,8 @@ final class BellTargets {
             } else if (Meeting.yielding(foe)) {
                 hb.meetFoe = null; // it backed down: he won
                 if (hb.getTarget() == foe) hb.setTarget(null);
+                if (hb.moves.moveTarget() == foe) hb.moves.stopNow();
+                hb.moves.dropClouds(); // (his spores don't hang about on it)
                 hb.angerTicks = 0;
                 victory();
             } else if (!hb.yielding()
@@ -471,6 +479,7 @@ final class BellTargets {
         grudges.drop(from.getUUID());
         hb.stopFetch();
         hb.moves.stopNow();
+        hb.moves.dropClouds();
         hb.metLately.put(from.getUUID(), now + BellConfig.V.meetCooldown * 1200L);
         String them = Meeting.kindOf(from);
         for (ServerPlayer p : sl.players())
