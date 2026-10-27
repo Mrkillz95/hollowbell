@@ -310,7 +310,7 @@ public class PerfGameTests implements FabricGameTest {
             said = PerfServer.request(s, p, ask);
             h.assertTrue(said.startsWith("World features saved"), said);
             h.assertTrue(w.values().get("fakeperf.hush") == 0.0, "the Hush off");
-            h.assertTrue(w.values().get("feature.keepAwake") == 1.0 || !w.values().containsKey("feature.keepAwake"),
+            h.assertTrue(!w.values().containsKey("feature.keepAwake"),
                     "keep-awake pulled back to 100% (its default, so not even kept)");
             h.assertFalse(w.values().containsKey("fx.particles"), "a player's own setting is no world setting");
             h.assertFalse(w.values().containsKey("no.such.thing"), "an unknown id is left out");
