@@ -76,10 +76,13 @@ EVENTS = {
     'churn': ("Water churns", v('block/bubble_column/whirlpool_ambient', 0.5, 1.0, n=5, attenuation=96)),
     'swoop': ("Hollowbell dives", v('mob/phantom/swoop', 0.45, 1.0, n=4, attenuation=128)),
     'click': ("Stingers rattle", v('mob/warden/tendril_clicks_', 0.7, 1.0, n=6, attenuation=32)),
-    # his music and his ground's sounds (made by tools/sounds/make_music.py)
-    # (each music event picks the new track or the first one, music/*_classic.ogg, at random each time it starts)
-    'music.fight': ("Hollowbell's fight music plays",
-                    own('music/fight', 1.0, 1.0, stream=True) + own('music/fight_classic', 1.0, 1.0, stream=True)),
+    # his music and his ground's sounds. The fight music is four synced takes (whole, under half, under a quarter,
+    # sunk); only the first carries the subtitle, as they all start together. The ground music picks the new track
+    # or the first one (music/ground_classic.ogg) at random each time it starts
+    'music.fight': ("Hollowbell's fight music plays", own('music/fight', 1.0, 1.0, stream=True)),
+    'music.fight_dark': (None, own('music/fight_dark', 1.0, 1.0, stream=True)),
+    'music.fight_last': (None, own('music/fight_last', 1.0, 1.0, stream=True)),
+    'music.fight_sunk': (None, own('music/fight_sunk', 1.0, 1.0, stream=True)),
     'music.ground': ("Music plays",
                      own('music/ground', 1.0, 1.0, stream=True) + own('music/ground_classic', 1.0, 1.0, stream=True)),
     'ambient.ground': ("Air moves through glass", own('ambient/ground', 1.0, 1.0, stream=True)),
@@ -110,7 +113,7 @@ def main():
             ns, path = s['name'].split(':')
             if ns == 'minecraft' and game is not None and path not in game: bad.append(f'{ev}: {path}')
             if ns == 'hollowbell' and not os.path.exists(os.path.join(OWN, path + '.ogg')): bad.append(f'{ev}: own sound {path}.ogg not made yet')
-        out[ev] = {'subtitle': f'subtitles.hollowbell.{ev}', 'sounds': sounds}
+        out[ev] = {'subtitle': f'subtitles.hollowbell.{ev}', 'sounds': sounds} if sub else {'sounds': sounds}
     if bad:
         print('missing sounds:\n  ' + '\n  '.join(bad)); sys.exit(1)
     if game is None: print('(no game sound index found: the game sounds were not checked)')
@@ -118,7 +121,8 @@ def main():
     # the subtitles go in the language file
     lang = os.path.join(ROOT, 'src/main/resources/assets/hollowbell/lang/en_us.json')
     L = json.load(open(lang))
-    for ev, (sub, _) in EVENTS.items(): L[f'subtitles.hollowbell.{ev}'] = sub
+    for ev, (sub, _) in EVENTS.items():
+        if sub: L[f'subtitles.hollowbell.{ev}'] = sub
     json.dump(L, open(lang, 'w'), indent=2, ensure_ascii=False)
     print(f'wrote sounds.json: {len(out)} sounds')
 

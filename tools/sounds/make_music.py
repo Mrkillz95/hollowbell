@@ -2,9 +2,6 @@
 """Makes the Hollowbell's music and the sounds of his ground, from scratch (no recordings from anywhere), as .ogg
 files in src/main/resources/assets/hollowbell/sounds/:
 
-  music/fight.ogg         his fight theme: stereo, about 2 min 15 s, loops. A tolling intro, a driving main part,
-                          a quiet tense break, a huge climax, and back round. Bells, an airy choir, brass, strings,
-                          glass and big drums, in D minor at 100 beats a minute.
   music/ground.ogg        the Bell Hollows' own music: calm, slow choir and strings with soft bells, 105 s, loops.
   ambient/ground.ogg      the ground's background loop (soft air through glass, a low hum), 64 s, loops.
   ambient/mood1-5.ogg     a bell a long way off, five ways (the ground's "mood" sound).
@@ -20,7 +17,11 @@ too, so there is no seam. The music is levelled by its loudness (LUFS, as check_
     pip install numpy scipy soundfile pillow
     python3 tools/sounds/make_music.py [names...] && python3 tools/sounds/check_sounds.py && python3 tools/sounds.py
 
-With names (fight, ground, ambient, mood, chimes, eggs) it makes only those.
+With names (ground, ambient, mood, chimes, eggs) it makes only those.
+
+music/fight.ogg, fight_dark.ogg, fight_last.ogg and fight_sunk.ogg, his fight theme in four synced takes, are not made
+here and this script never writes them: they come from giants/music-v3/hollowbell. fight() below is kept only for
+reference.
 """
 import os
 import sys
@@ -966,8 +967,6 @@ def egg_hatch():
 
 
 def main(which):
-    if 'fight' in which:
-        write('music/fight', fight(), quality=0.25)
     if 'ground' in which:
         write('music/ground', ground(), quality=0.15)
     if 'ambient' in which:
@@ -985,4 +984,4 @@ def main(which):
 
 
 if __name__ == '__main__':
-    main(set(sys.argv[1:]) or {'fight', 'ground', 'ambient', 'mood', 'chimes', 'eggs'})
+    main(set(sys.argv[1:]) or {'ground', 'ambient', 'mood', 'chimes', 'eggs'})

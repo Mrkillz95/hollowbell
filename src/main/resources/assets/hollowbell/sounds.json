@@ -884,9 +884,33 @@
         "pitch": 1.0,
         "volume": 1.0,
         "stream": true
-      },
+      }
+    ]
+  },
+  "music.fight_dark": {
+    "sounds": [
       {
-        "name": "hollowbell:music/fight_classic",
+        "name": "hollowbell:music/fight_dark",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "stream": true
+      }
+    ]
+  },
+  "music.fight_last": {
+    "sounds": [
+      {
+        "name": "hollowbell:music/fight_last",
+        "pitch": 1.0,
+        "volume": 1.0,
+        "stream": true
+      }
+    ]
+  },
+  "music.fight_sunk": {
+    "sounds": [
+      {
+        "name": "hollowbell:music/fight_sunk",
         "pitch": 1.0,
         "volume": 1.0,
         "stream": true

@@ -54,8 +54,11 @@ public final class ModSounds {
             CHURN = reg("churn"),
             SWOOP = reg("swoop"),
             CLICK = reg("click");
-    // his fight music, and his ground's music and sounds
+    // his fight music (four synced takes: by his health, and sunk to the ground), and his ground's music and sounds
     public static final SoundEvent MUSIC_FIGHT = reg("music.fight"),
+            MUSIC_FIGHT_DARK = reg("music.fight_dark"),
+            MUSIC_FIGHT_LAST = reg("music.fight_last"),
+            MUSIC_FIGHT_SUNK = reg("music.fight_sunk"),
             MUSIC_GROUND = reg("music.ground"),
             AMBIENT_GROUND = reg("ambient.ground"),
             AMBIENT_MOOD = reg("ambient.mood"),

@@ -6,10 +6,10 @@ pictures/sounds/ to look at.
   dc        no offset
   seam      for the loops: the last sample runs into the first like any two samples in the middle (level and slope)
   bands     there is something in the lows, the mids and the highs (share of the energy in each)
-  loudness  the fight theme about -14 LUFS (as loud as the game's own music); the ground's music calmer
+  loudness  the fight takes about -12 to -11 LUFS (a fight that never sounds calm); the ground's music calmer
   ground    the ground's sounds: the loop at least 60 s and quiet, no hiss over 8 kHz, no sudden loud moments,
             five or more of each now-and-then sound
-  size      all of the mod's .ogg files together under 6 MB (the first fight and ground tracks are kept too)
+  size      all of the mod's .ogg files together under 6 MB (the first ground track is kept too)
 
     python3 tools/sounds/check_sounds.py
 """
@@ -23,7 +23,8 @@ from scipy import signal
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 SND = os.path.join(ROOT, 'src/main/resources/assets/hollowbell/sounds')
 PIC = os.path.join(ROOT, 'pictures/sounds')
-LOOPS = {'music/fight', 'music/ground', 'ambient/ground'}
+FIGHT = {'music/fight', 'music/fight_dark', 'music/fight_last', 'music/fight_sunk'}
+LOOPS = FIGHT | {'music/ground', 'ambient/ground'}
 
 
 def lufs(x, sr):
@@ -135,9 +136,10 @@ def main(pictures=True):
                 bad.append(f'{name}: the loop seam jumps')
             if mids < 0.1 or lows < 0.05:
                 bad.append(f'{name}: the lows or mids are empty')
-        if name == 'music/fight':
-            if not -15.0 <= L <= -13.0:
-                bad.append(f'{name}: {L:.1f} LUFS, should be about -14')
+        if name in FIGHT:
+            # the fight takes sit near -12 and -11 LUFS on purpose, so the fight never sounds calm
+            if not -13.0 <= L <= -10.5:
+                bad.append(f'{name}: {L:.1f} LUFS, should be about -12 to -11')
             if not 120 <= len(x) / sr <= 180:
                 bad.append(f'{name}: should be 2 to 3 minutes')
         if name == 'music/ground' and not -21.0 <= L <= -16.0:
