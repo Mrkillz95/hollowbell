@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "jj_giants-duels",
+  "version": "${version}",
+  "name": "Giants Duel Harness",
+  "description": "Giant-vs-giant duels for balance runs. Only in the -Pduels run, never in a jar.",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "net.jj.giants.duels.GiantDuelTests"
+    ]
+  },
+  "mixins": [
+    "jj_giants-duels.mixins.json"
+  ],
+  "depends": {
+    "jj_giants": "*"
+  }
+}
