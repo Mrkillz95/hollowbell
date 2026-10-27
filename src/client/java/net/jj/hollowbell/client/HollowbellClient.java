@@ -31,7 +31,6 @@ import net.jj.hollowbell.fx.client.BigFxClient;
 import net.jj.hollowbell.fx.client.MoveFx;
 import net.jj.hollowbell.item.CodexItem;
 import net.jj.hollowbell.net.BeingHimPayload;
-import net.jj.hollowbell.net.DetailPayload;
 import net.jj.hollowbell.net.FarSightPayload;
 import net.jj.hollowbell.net.GlassBellPayload;
 import net.jj.hollowbell.net.LookMarkPayload;
@@ -45,7 +44,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.NoopRenderer;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -160,44 +158,6 @@ public class HollowbellClient implements ClientModInitializer {
                         BellMeshes.INSTANCE.invalidate();
                     }
                 });
-        // /hollowbell detail [on|off]: the server passes it on, and the setting is kept on this computer only (a
-        // client command of the same name would take every /hollowbell command and never send the rest on)
-        ClientPlayNetworking.registerGlobalReceiver(
-                DetailPayload.TYPE,
-                (p, ctx) -> ctx.client().execute(() -> {
-                    if (p.what() == DetailPayload.FAR) {
-                        // how far off he can be seen: kept in this game's own settings too (on a server the server's
-                        // decides who is sent)
-                        BellConfig.V.farSightBlocks = Math.max(0, Math.min(4096, p.arg()));
-                        BellConfig.save();
-                        return;
-                    }
-                    if (p.what() == DetailPayload.AT) {
-                        BellConfig.V.simpleFarAwayAt = Math.max(20, Math.min(4000, p.arg()));
-                        BellConfig.save();
-                        if (ctx.client().player != null)
-                            ctx.client()
-                                    .player
-                                    .displayClientMessage(
-                                            Component.translatable(
-                                                    "command.hollowbell.detail_at", BellConfig.V.simpleFarAwayAt),
-                                            false);
-                        return;
-                    }
-                    if (p.what() == DetailPayload.ON) Detail.set(true);
-                    else if (p.what() == DetailPayload.OFF) Detail.set(false);
-                    String key = p.what() == DetailPayload.ON
-                            ? "command.hollowbell.detail_on"
-                            : p.what() == DetailPayload.OFF
-                                    ? "command.hollowbell.detail_off"
-                                    : Detail.on()
-                                            ? "command.hollowbell.detail_is_on"
-                                            : "command.hollowbell.detail_is_off";
-                    if (ctx.client().player != null)
-                        ctx.client()
-                                .player
-                                .displayClientMessage(Component.translatable(key, BellConfig.V.simpleFarAwayAt), false);
-                }));
     }
 
     private static final Map<HollowbellEntity, Long> LAST_BEAT = new WeakHashMap<>();

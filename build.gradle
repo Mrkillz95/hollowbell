@@ -112,7 +112,8 @@ def allTests = [
     'net.jj.hollowbell.test.MoveChoiceTests',
     'net.jj.hollowbell.test.RespawnTests',
     'net.jj.hollowbell.test.BalanceTests',
-    'net.jj.hollowbell.test.PerfTests'
+    'net.jj.hollowbell.test.PerfTests',
+    'net.jj.hollowbell.test.GiantsCommandTests'
 ]
 def onlyTests = project.findProperty('only')
 def tests = !onlyTests ? allTests :

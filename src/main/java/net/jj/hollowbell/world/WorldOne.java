@@ -611,13 +611,28 @@ public class WorldOne extends SavedData {
         z = Mth.floor(fromZ + Math.sin(a) * d);
         findSpot(level);
         keepOffOldGround();
+        keepOffOthers(level);
         // (looking for good land can wander off: pulled back inside the circle)
         double ox = x - fromX, oz = z - fromZ, out = Math.hypot(ox, oz);
         if (out > most) {
             x = Mth.floor(fromX + ox / out * most * 0.97);
             z = Mth.floor(fromZ + oz / out * most * 0.97);
             keepOffOldGround();
+            keepOffOthers(level);
         }
+    }
+
+    /** never on another giant's ground: pushed out past its edge (those whose mods say where theirs is) */
+    private void keepOffOthers(ServerLevel level) {
+        int[] off = OtherGrounds.keepOff(OtherGrounds.of(level.getServer(), "hollowbell"), x, z, configRadius());
+        x = off[0];
+        z = off[1];
+    }
+
+    /** where his ground is, for the other giants choosing theirs: "groundspot hollowbell x z radius", or nothing */
+    public @Nullable String groundSpot() {
+        if (!homeClaimed) return null;
+        return "groundspot hollowbell " + homeX + " " + homeZ + " " + homeRadius;
     }
 
     /** the spot the last one died at, or null if none is known */

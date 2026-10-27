@@ -86,6 +86,7 @@ public class Shot extends ThrowableItemProjectile {
         setItem(new ItemStack(kind == EGG ? Items.BONE_BLOCK : ModItems.STINGER));
         this.damage = damage;
         this.radius = radius;
+        Giants.markHelper(this, owner);
     }
 
     @Override
@@ -271,6 +272,8 @@ public class Shot extends ThrowableItemProjectile {
     protected boolean canHitEntity(Entity e) {
         if (e instanceof HollowbellEntity || e instanceof Belling || e instanceof Seat || e instanceof Shot)
             return false;
+        // (something whose place isn't a number, from a fault in another mod: never aimed at or struck)
+        if (!BellMoves.finite(e.position())) return false;
         HollowbellEntity h = bell();
         if (h != null && (h.spares(e) || h.moves().caught(e))) return false;
         // (a stray stinger or egg never starts a fight: of the giants, only the one he's fighting can be hit)

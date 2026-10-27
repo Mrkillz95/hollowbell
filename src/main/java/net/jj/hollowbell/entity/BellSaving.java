@@ -35,6 +35,7 @@ final class BellSaving {
         tag.putFloat("BellHp", hb.healthNow());
         tag.putFloat("BellHpMax", hb.healthMax());
         tag.putFloat("BellBaseMax", hb.baseMax);
+        tag.putFloat("BellHealthMult", hb.healthMult);
         int mask = 0;
         for (int i = 0; i < hb.rig.pods.length && i < 31; i++) if (hb.state.podPopped[i]) mask |= 1 << i;
         tag.putInt("Pods", mask);
@@ -207,12 +208,16 @@ final class BellSaving {
             hb.boundR = tag.getInt("BoundR");
         } else hb.boundR = -1;
         hb.mood.load(tag);
+        hb.healthMult = tag.contains("BellHealthMult") ? tag.getFloat("BellHealthMult") : 1f;
         // one saved with no base health (from an egg): his most health for his size, keeping how hurt he was
         if (hb.hp >= 0f && hb.baseMax <= 0f) {
             float ratio = hb.healthMax() > 0 ? hb.hp / hb.healthMax() : 1f;
-            hb.baseMax = Math.max(40f, BellConfig.V.health * hb.bellScale());
+            hb.baseMax = Math.max(40f, BellConfig.V.health * BellConfig.V.healthMultiplier * hb.bellScale());
+            hb.healthMult = BellConfig.V.healthMultiplier;
             hb.setMax(hb.baseMax, Mth.clamp(ratio, 0f, 1f));
         }
+        // (one saved before /giants health last changed it)
+        hb.healthMultChanged();
         hb.partsDirty = true;
         hb.refreshDimensions();
     }

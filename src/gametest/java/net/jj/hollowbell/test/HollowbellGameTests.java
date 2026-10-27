@@ -236,7 +236,7 @@ public class HollowbellGameTests implements FabricGameTest {
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "command_rights")
-    public void detailIsForEveryoneTheRestNeedsCheats(GameTestHelper h) {
+    public void bookWhoIsForEveryoneTheRestNeedsCheats(GameTestHelper h) {
         var d = h.getLevel().getServer().getCommands().getDispatcher();
         var base = h.getLevel()
                 .getServer()
@@ -246,11 +246,12 @@ public class HollowbellGameTests implements FabricGameTest {
         var player = base.withPermission(0);
         var op = base.withPermission(2);
         h.assertTrue(
-                !d.parse("hollowbell detail on", player).getReader().canRead()
-                        && d.parse("hollowbell detail on", player)
+                !d.parse("hollowbell book who", player).getReader().canRead()
+                        && d.parse("hollowbell book who", player)
                                 .getExceptions()
                                 .isEmpty(),
-                "a player without cheats can't use /hollowbell detail");
+                "a player without cheats can't use /hollowbell book who");
+        h.assertTrue(d.parse("hollowbell detail on", op).getReader().canRead(), "/hollowbell detail is still there");
         h.assertTrue(
                 d.parse("hollowbell summon", player).getReader().canRead(),
                 "a player without cheats can use /hollowbell summon");
@@ -262,7 +263,6 @@ public class HollowbellGameTests implements FabricGameTest {
             "hollowbell goto 10 10",
             "hollowbell stay true",
             "hollowbell ride",
-            "hollowbell detail",
             "hollowbell reload"
         }) {
             var p = d.parse(c, op);

@@ -6,14 +6,19 @@ import java.util.UUID;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.GiantsBridge;
+import net.jj.hollowbell.ModEntities;
+import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.Giants;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Meeting;
 import net.jj.hollowbell.entity.Moves;
+import net.jj.hollowbell.entity.Shot;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.Giant;
 import net.minecraft.world.entity.monster.Husk;
@@ -443,6 +448,149 @@ public class GiantsTests implements FabricGameTest {
                     z.getUUID().equals(e.meetFoe()) && e.getTarget() == z,
                     "meet didn't start a fight (whatever the table says)");
             z.discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    /**
+     * Brought low by a giant, he backs down: first up out of its reach (well over the ground: 86 blocks at this size,
+     * against 23 or so before), then off fast (at least twice his own top speed), and nothing on the way stops him.
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1400, batch = "meet_escape")
+    public void backingDownHeClimbsOutOfReachThenFliesOffFast(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.HUNTER, 910);
+        int cx = e.getBlockX() >> 4, cz = e.getBlockZ() >> 4;
+        // (the way he will go, +x, kept running for the test: a strip 200 blocks long)
+        for (int x = cx; x <= cx + 13; x++)
+            for (int z = cz - 2; z <= cz + 2; z++) {
+                h.getLevel().setChunkForced(x, z, true);
+                h.getLevel().getChunk(x, z);
+            }
+        for (int x = cx + 2; x <= cx + 11; x++) runsEntities(h, x << 4, cz << 4, 2);
+        Zombie[] g = new Zombie[1];
+        double[] gotUp = {-1}, from = {0};
+        double base = 0.10 + 0.16 * Math.sqrt(0.3);
+        h.runAfterDelay(20, () -> {
+            g[0] = giantOfKind(h, under(e).add(-12, 0, 0), "fire_ice_cerberus");
+            e.startMeeting(g[0]);
+            e.setHealthTo(e.healthMax() * 0.2f);
+            e.hurt(e.damageSources().mobAttack(g[0]), 5f);
+            h.assertTrue(e.yielding(), "he didn't back down");
+            from[0] = e.horiz(g[0].position());
+        });
+        h.onEachTick(() -> {
+            if (g[0] == null || gotUp[0] == -2) return;
+            double over = e.getY() - e.groundAt(e.getX(), e.getZ());
+            Vec3 v = e.velocity();
+            double across = Math.hypot(v.x, v.z);
+            if (gotUp[0] < 0 && over > 0.3 * 220 + 20 - 6) {
+                gotUp[0] = 1;
+                // (up there before he went far: he climbs first)
+                h.assertTrue(e.horiz(g[0].position()) < 120, "he went off far before he was up");
+            }
+            if (gotUp[0] >= 1 && gotUp[0] < 2 && across > base * 2) {
+                // up and going fast: from here, 40 ticks on
+                gotUp[0] = 2;
+                from[0] = e.horiz(g[0].position());
+            } else if (gotUp[0] >= 2 && ++gotUp[0] >= 42) {
+                double gone = e.horiz(g[0].position()) - from[0];
+                h.assertTrue(gone > 40 * base * 2, "he got only " + gone + " further away in 40 ticks");
+                h.assertTrue(across > base * 2.5, "he slowed down to " + across + " a tick");
+                h.assertTrue(over > 0.3 * 220 + 20 - 10, "he came down to " + over);
+                h.assertTrue(e.getTarget() == null, "he went for something: " + e.getTarget());
+                gotUp[0] = -2;
+                g[0].discard();
+                for (int x = cx; x <= cx + 13; x++)
+                    for (int z = cz - 2; z <= cz + 2; z++) h.getLevel().setChunkForced(x, z, false);
+                release(h, e);
+                h.succeed();
+            }
+        });
+    }
+
+    /**
+     * Once a giant has backed down nothing of his touches it: not a blow, a sting or a stray stinger or egg still in the
+     * air, not his spore clouds (they go at once), not his Bellings.
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "meet_spared")
+    public void nothingOfHisTouchesAGiantThatBackedDown(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.HUNTER, 913);
+        Husk[] g = new Husk[1];
+        Belling[] b = new Belling[1];
+        float[] was = {0};
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            g[0] = EntityType.HUSK.create(h.getLevel());
+            Vec3 at = under(e).add(4, 0, 0);
+            g[0].moveTo(at.x, at.y, at.z, 0f, 0f);
+            g[0].setNoAi(true);
+            g[0].setPersistenceRequired();
+            g[0].addTag(Giants.TAG);
+            g[0].addTag(Meeting.KIND + "lanternwillow");
+            g[0].getAttribute(Attributes.MAX_HEALTH).setBaseValue(1024);
+            g[0].setHealth(1024f);
+            h.getLevel().addFreshEntity(g[0]);
+            h.assertTrue(e.startMeeting(g[0]), "the meeting didn't start");
+            h.assertTrue(e.forceMove(Moves.SPORES, g[0]), "no spores");
+        });
+        h.runAfterDelay(20 + Moves.SPORES_AT + 5, () -> {
+            h.assertTrue(e.fightingGiant(g[0]), "the giant he's fighting doesn't count");
+            Shot st = new Shot(h.getLevel(), e, Shot.STINGER, 7f, 1f);
+            h.assertTrue(st.mayHit(g[0]), "a stinger can't hit the giant he's fighting");
+            b[0] = new Belling(ModEntities.BELLING, h.getLevel());
+            b[0].moveTo(g[0].getX(), g[0].getY() + 0.5, g[0].getZ(), 0f, 0f);
+            b[0].setOwner(e);
+            b[0].setTarget(g[0]);
+            h.getLevel().addFreshEntity(b[0]);
+            // it backs down
+            g[0].addTag(Meeting.YIELD);
+            h.assertFalse(e.fightingGiant(g[0]), "a giant that backed down still counts as fought");
+            h.assertFalse(st.mayHit(g[0]), "a stinger still in the air can hit a giant that backed down");
+            h.assertFalse(new Shot(h.getLevel(), e, Shot.EGG, 7f, 3f).mayHit(g[0]), "an egg can hit it");
+            was[0] = g[0].getHealth();
+            g[0].invulnerableTime = 0;
+            e.moves().sting(g[0]);
+            h.assertTrue(g[0].getHealth() == was[0], "his sting hurt a giant that backed down");
+        });
+        h.runAfterDelay(20 + Moves.SPORES_AT + 80, () -> {
+            h.assertTrue(
+                    g[0].getHealth() == was[0],
+                    "a giant that backed down took " + (was[0] - g[0].getHealth()) + " more");
+            h.assertTrue(b[0].getTarget() != g[0], "his Belling still goes for it");
+            h.assertTrue(
+                    h.getLevel()
+                            .getEntitiesOfClass(AreaEffectCloud.class, g[0].getBoundingBox().inflate(40))
+                            .isEmpty(),
+                    "his spore clouds hang about");
+            b[0].discard();
+            g[0].discard();
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    /** something whose place isn't a number (a fault in another mod) is never lined up, aimed at or gone after */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "nan_target")
+    public void somethingWhosePlaceIsNotANumberIsSkipped(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.HUNTER, 915);
+        h.runAfterDelay(20, () -> {
+            // (never put in the world: only what he does with it is looked at)
+            Zombie z = EntityType.ZOMBIE.create(h.getLevel());
+            z.addTag(Giants.TAG);
+            z.setPos(Double.NaN, Double.NaN, Double.NaN);
+            long t0 = System.nanoTime();
+            h.assertFalse(e.moves().clearShot(z), "a clear shot at nowhere");
+            h.assertFalse(e.fairGame(z), "he would go after it");
+            Shot st = new Shot(h.getLevel(), e, Shot.STINGER, 7f, 1f);
+            e.setTarget(z);
+            h.assertFalse(st.mayHit(z), "a stinger may hit it");
+            e.setTarget(null);
+            Zombie inf = EntityType.ZOMBIE.create(h.getLevel());
+            inf.setPos(Double.POSITIVE_INFINITY, 70, 0);
+            h.assertFalse(e.moves().clearShot(inf), "a clear shot at infinity");
+            h.assertFalse(st.mayHit(inf), "a stinger may hit something at infinity");
+            h.assertTrue(System.nanoTime() - t0 < 5_000_000_000L, "it took seconds");
             release(h, e);
             h.succeed();
         });

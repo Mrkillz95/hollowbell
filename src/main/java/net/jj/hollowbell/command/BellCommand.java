@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.ModEntities;
@@ -29,7 +28,6 @@ import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.item.FinderItem;
 import net.jj.hollowbell.net.CodexOrders;
 import net.jj.hollowbell.net.CodexPayload;
-import net.jj.hollowbell.net.DetailPayload;
 import net.jj.hollowbell.net.LookTrace;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.BellWorld;
@@ -61,55 +59,14 @@ import org.jetbrains.annotations.Nullable;
 public final class BellCommand {
     private BellCommand() {}
 
-    /** everything but detail needs cheats on */
+    /** everything but help and book who needs cheats on */
     private static final Predicate<CommandSourceStack> OP = s -> s.hasPermission(2);
-
-    private static int detail(CommandContext<CommandSourceStack> c, int what) throws CommandSyntaxException {
-        ServerPlayer p = c.getSource().getPlayerOrException();
-        ServerPlayNetworking.send(p, new DetailPayload(what));
-        return 1;
-    }
-
-    /** /hollowbell detail <distance>: how far off (at full size) he starts to be drawn simpler, in their own game */
-    private static int detailAt(CommandContext<CommandSourceStack> c, int blocks) throws CommandSyntaxException {
-        ServerPlayer p = c.getSource().getPlayerOrException();
-        ServerPlayNetworking.send(p, new DetailPayload(DetailPayload.AT, blocks));
-        return 1;
-    }
-
-    /** /hollowbell detail far: how far off he can be seen coming */
-    private static int farSay(CommandContext<CommandSourceStack> c) {
-        int b = BellConfig.V.farSightBlocks;
-        c.getSource()
-                .sendSuccess(
-                        () -> b > 0
-                                ? Component.translatable("command.hollowbell.far_is", b)
-                                : Component.translatable("command.hollowbell.far_off"),
-                        false);
-        return 1;
-    }
-
-    /** /hollowbell detail far <blocks>: set here, and passed on to the player's own game too */
-    private static int farSet(CommandContext<CommandSourceStack> c, int blocks) {
-        BellConfig.V.farSightBlocks = blocks;
-        BellConfig.save();
-        if (c.getSource().getPlayer() instanceof ServerPlayer p)
-            ServerPlayNetworking.send(p, new DetailPayload(DetailPayload.FAR, blocks));
-        c.getSource()
-                .sendSuccess(
-                        () -> blocks > 0
-                                ? Component.translatable("command.hollowbell.far_set", blocks)
-                                : Component.translatable("command.hollowbell.far_off"),
-                        true);
-        return 1;
-    }
 
     private static final String[] MOODS = {"calm", "hunting", "guardian"};
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
         d.register(OpsCommand.addTo(Commands.literal("hollowbell")).then(windCommand()));
         d.register(Commands.literal("hollowbell")
-                .then(detailCommand())
                 .then(summonCommand())
                 .then(bookCommand())
                 .then(doCommand("do"))
@@ -153,21 +110,6 @@ public final class BellCommand {
                 .then(heavydelayCommand())
                 .then(toggle("shake", "screenShake", () -> BellConfig.V.screenShake, v -> BellConfig.V.screenShake = v))
                 .then(reloadCommand()));
-    }
-
-    /** no cheats needed: it only changes how their own game draws him */
-    private static LiteralArgumentBuilder<CommandSourceStack> detailCommand() {
-        return Commands.literal("detail")
-                .executes(c -> detail(c, DetailPayload.ASK))
-                .then(Commands.literal("on").executes(c -> detail(c, DetailPayload.ON)))
-                .then(Commands.literal("off").executes(c -> detail(c, DetailPayload.OFF)))
-                .then(Commands.argument("distance", IntegerArgumentType.integer(20, 4000))
-                        .executes(c -> detailAt(c, IntegerArgumentType.getInteger(c, "distance"))))
-                .then(Commands.literal("far")
-                        .executes(BellCommand::farSay)
-                        .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 4096))
-                                .requires(OP)
-                                .executes(c -> farSet(c, IntegerArgumentType.getInteger(c, "blocks")))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> summonCommand() {

@@ -1,18 +1,25 @@
 package net.jj.hollowbell.test;
 
 import static net.jj.hollowbell.test.HollowbellGameTests.S;
+import static net.jj.hollowbell.test.HollowbellGameTests.giantOfKind;
 import static net.jj.hollowbell.test.HollowbellGameTests.release;
 import static net.jj.hollowbell.test.HollowbellGameTests.reload;
 import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 
 import java.util.UUID;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
+import net.jj.hollowbell.ModEntities;
+import net.jj.hollowbell.entity.Belling;
+import net.jj.hollowbell.entity.Giants;
 import net.jj.hollowbell.entity.Grudges;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.entity.Shot;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.projectile.Snowball;
 
 /** He keeps his grudges: only death, keeping well away for long, being told to forget or backing down end one. */
 public class GrudgeTests implements FabricGameTest {
@@ -102,6 +109,89 @@ public class GrudgeTests implements FabricGameTest {
                 release(h, e);
                 h.succeed();
             });
+        });
+    }
+
+    /** what he sends out (his Bellings, his stingers and eggs, his spore clouds) carries jj_giant_of:his id */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "grudge_helper_tag")
+    public void hisHelpersCarryHisMark(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.HUNTER, 917);
+        h.runAfterDelay(20, () -> {
+            String mark = "jj_giant_of:" + e.getUUID();
+            Belling b = new Belling(ModEntities.BELLING, h.getLevel());
+            b.setOwner(e);
+            h.assertTrue(b.getTags().contains(mark), "a Belling of his isn't marked: " + b.getTags());
+            h.assertTrue(
+                    new Shot(h.getLevel(), e, Shot.STINGER, 7f, 1f).getTags().contains(mark), "a stinger isn't marked");
+            h.assertTrue(new Shot(h.getLevel(), e, Shot.EGG, 7f, 3f).getTags().contains(mark), "an egg isn't marked");
+            // (an old Belling, saved before the mark: it gets it back when loaded)
+            CompoundTag tag = new CompoundTag();
+            b.saveWithoutId(tag);
+            tag.remove("Tags");
+            Belling old = new Belling(ModEntities.BELLING, h.getLevel());
+            old.load(tag);
+            h.assertTrue(old.getTags().contains(mark), "an old Belling isn't marked when loaded");
+            release(h, e);
+            h.succeed();
+        });
+    }
+
+    /**
+     * Hurt by another giant's helper (anything marked jj_giant_of:that giant), he holds it against the giant; in a
+     * giants' meeting fight the giant is what he goes for, not the helper. A mark that finds nobody is ignored.
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "grudge_helper")
+    public void aHelpersBlowIsHeldAgainstItsGiant(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.HUNTER, 919);
+        h.runAfterDelay(20, () -> {
+            e.setStay(true);
+            var g = giantOfKind(h, e.position().add(60, 0, 0), "swarmforge");
+            // a robot of its, struck straight
+            Zombie robot = zombie(h, e, 6);
+            robot.addTag(Giants.KIN);
+            robot.addTag(Giants.OF + g.getUUID());
+            e.hurt(e.damageSources().mobAttack(robot), 2f);
+            h.assertTrue(e.holdsGrudge(g), "the robot's blow isn't held against its giant");
+            h.assertFalse(e.holdsGrudge(robot), "the robot itself is held");
+            // a shot the robot fired (the mark is on the shooter)
+            e.forgiveAll();
+            Zombie shooter = zombie(h, e, 7);
+            shooter.addTag(Giants.KIN);
+            shooter.addTag(Giants.OF + g.getUUID());
+            Snowball ball = new Snowball(h.getLevel(), shooter);
+            e.hurt(e.damageSources().thrown(ball, shooter), 2f);
+            h.assertTrue(e.holdsGrudge(g), "the robot's shot isn't held against its giant");
+            // (or on the shot itself)
+            e.forgiveAll();
+            Snowball marked = new Snowball(EntityType.SNOWBALL, h.getLevel());
+            marked.addTag(Giants.OF + g.getUUID());
+            e.hurt(e.damageSources().thrown(marked, null), 2f);
+            h.assertTrue(e.holdsGrudge(g), "a marked shot isn't held against its giant");
+            // in a meeting fight with the giant, the robot's blow turns him on the giant
+            e.forgiveAll();
+            h.assertTrue(e.startMeeting(g), "no meeting");
+            Zombie other = zombie(h, e, 9);
+            other.addTag(Giants.KIN);
+            other.addTag(Giants.OF + g.getUUID());
+            e.setTarget(other);
+            e.hurt(e.damageSources().mobAttack(other), 2f);
+            h.assertTrue(e.getTarget() == g, "in the meeting fight he goes for " + e.getTarget() + ", not the giant");
+            // a mark that finds nobody (or isn't an id) is ignored: the one that struck is held
+            e.forgiveAll();
+            Zombie lost = zombie(h, e, 8), bad = zombie(h, e, 10);
+            lost.addTag(Giants.OF + UUID.randomUUID());
+            bad.addTag(Giants.OF + "not-an-id");
+            e.hurt(e.damageSources().mobAttack(lost), 2f);
+            e.hurt(e.damageSources().mobAttack(bad), 2f);
+            h.assertTrue(e.holdsGrudge(lost) && e.holdsGrudge(bad), "a mark that finds nobody wasn't ignored");
+            robot.discard();
+            shooter.discard();
+            other.discard();
+            lost.discard();
+            bad.discard();
+            g.discard();
+            release(h, e);
+            h.succeed();
         });
     }
 

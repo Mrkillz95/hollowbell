@@ -23,6 +23,8 @@ public final class BellConfig {
         public float smallEggScale = 0.2f;
         /** His health at full size. Smaller ones get less. */
         public float health = 6000f;
+        /** his health times this (/giants health): set for all the giants at once, 0.1 to 10 */
+        public float healthMultiplier = 1.0f;
         /** A very slow heal of his own: on or off. */
         public boolean passiveHeal = true;
         /**
@@ -35,7 +37,7 @@ public final class BellConfig {
         /** His hits on anything that isn't a player are multiplied by this. */
         public float mobDamage = 2.5f;
         /** How much of a blow from another giant boss he takes. */
-        public float giantArmor = 0.78f;
+        public float giantArmor = 1.38f;
         /** How much of a blast (TNT, a creeper, anything that isn't another giant) he takes. */
         public float explosionArmor = 0.35f;
         /** He picks fights with the other giant bosses ("/hollowbell giants on"). Off = he leaves them alone. */
@@ -162,7 +164,7 @@ public final class BellConfig {
     public static Values V = new Values();
 
     /** which version of the settings this build writes; save() and load() both stamp it */
-    private static final int VERSION = 9;
+    private static final int VERSION = 11;
     /**
      * the file on disk couldn't be read: it's kept as it is, and nothing is written over it until /hollowbell reload
      * reads it cleanly
@@ -257,6 +259,10 @@ public final class BellConfig {
         if (v.configVersion < 8 && v.respawnBlocks == 7000) v.respawnBlocks = 10000;
         // (9: he flies, so the giants' blows that do reach him land a bit harder)
         if (v.configVersion < 9 && Math.abs(v.giantArmor - 0.7f) < 1e-4f) v.giantArmor = 0.78f;
+        // (10: he can fly off from any giant's fight, so he takes more from the giants' blows; players see no change)
+        if (v.configVersion < 10 && Math.abs(v.giantArmor - 0.78f) < 1e-4f) v.giantArmor = 1.13f;
+        // (11: re-balanced after a full duel test between the giants; players see no change)
+        if (v.configVersion < 11 && Math.abs(v.giantArmor - 1.13f) < 1e-4f) v.giantArmor = 1.38f;
         v.worldRespawnDays = Math.max(0, v.worldRespawnDays);
         v.ownedRespawnDays = Math.max(0, v.ownedRespawnDays);
         v.respawnBlocks = Math.max(0, v.respawnBlocks);
@@ -270,9 +276,10 @@ public final class BellConfig {
         v.meetCooldown = Math.max(0, Math.min(1440, v.meetCooldown));
         v.heavyDelaySeconds = Math.max(0, Math.min(600, v.heavyDelaySeconds));
         v.health = clamp(v.health, 10f, 1_000_000f, 6000f);
+        v.healthMultiplier = clamp(v.healthMultiplier, 0.1f, 10f, 1f);
         v.damageMultiplier = clamp(v.damageMultiplier, 0f, 100f, 1f);
         v.mobDamage = clamp(v.mobDamage, 0f, 100f, 2.5f);
-        v.giantArmor = clamp(v.giantArmor, 0f, 10f, 0.78f);
+        v.giantArmor = clamp(v.giantArmor, 0f, 10f, 1.38f);
         v.explosionArmor = clamp(v.explosionArmor, 0f, 10f, 0.35f);
         v.spawnEggScale = clamp(v.spawnEggScale, 0.03f, 2f, 1f);
         v.smallEggScale = clamp(v.smallEggScale, 0.03f, 2f, 0.2f);
