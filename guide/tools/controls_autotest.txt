@@ -1,0 +1,34 @@
+# Pictures of the Giants Performance screen's Controls tab, with the eight giants loaded:
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+# (they land in build/autotest/screenshots; "mouse" after each screen, as opening one puts the pointer in the middle). It moves one key and puts it back, in the test game's own options.
+guiscale 2
+gesturedemo hollowbell
+wait 40
+controls
+mouse 2 2
+wait 30
+shot controls_top
+controls 492
+mouse 2 2
+wait 20
+shot controls_swarmforge
+controls 0 armour
+mouse 2 2
+wait 20
+shot controls_search_armour
+# Hollowbell's armour power moved onto Space: a clash with Jump, red here and in Minecraft's Controls
+bind key.hollowbell.armour_power key.keyboard.space
+controls 170
+mouse 2 2
+wait 20
+shot controls_clash
+vanillacontrols
+mouse 2 2
+wait 20
+shot vanilla_controls_clash
+bind key.hollowbell.armour_power key.keyboard.r
+perf
+mouse 2 2
+wait 20
+shot perf_tabs
+quit

@@ -1,0 +1,17 @@
+{
+  "controls": 1,
+  "categories": ["key.categories.fakeperf_extra"],
+  "keys": {
+    "key.fakeperf.sit_on_giant": "Standing on him: sit down."
+  },
+  "gestures": [
+    {
+      "id": "triple_crouch_sit",
+      "name": "Triple crouch to sit",
+      "description": "Crouch three times within a second while standing on him to sit down.",
+      "config": "tripleCrouchSit",
+      "key": "key.fakeperf.sit_on_giant",
+      "default": true
+    }
+  ]
+}

@@ -65,6 +65,9 @@ A book about every giant you have. Right-click it to open it.
   in the Guide): presets from Highest (every giant exactly as made, nothing changed) down to Very Low, your own
   saved presets, and every effect, detail and world feature each giant has, each saying what it does and what
   turning it down loses. World features are for operators, or the owner of a single-player world.
+- **Controls** (the second tab on Giants Performance): every giant's keys in one place, grouped by giant, each with
+  what it does. Click a key and press the one you want; it's the same key as in Minecraft's Controls. Keys that
+  clash show red, and each has a Reset, with Reset all at the top.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
 - New in the Guide 1.4.11: every giant's moves match his own book again, with the Cerberus's triple breath, rift
   and leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and his ward, the
@@ -75,6 +78,7 @@ A book about every giant you have. Right-click it to open it.
   (`home`, `health`, `damage`, `preset`, `heal`, `calm`, `sleep`, `wake`, `summon`, `freeze`, `unfreeze`, `info`),
   `where` for operators only (players use the Finders), the old `detail` commands gone (the screen has them), and
   every giant's respawn, grudge and round 3 text brought up to date.
+- New in the Guide 1.4.14: the Controls tab on Giants Performance, to change every giant's keys there.
 
 ## New in 1.6.2
 

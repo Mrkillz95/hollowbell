@@ -17,6 +17,8 @@ public final class GiantsBridge {
     /** the last "values" object sent for each side, or null */
     public static JsonObject client, server;
     public static int sets;
+    /** its one gesture's client setting */
+    public static boolean tripleCrouchSit = true;
 
     public static List<String> giants(MinecraftServer s, String action, String arg) {
         List<String> out = new ArrayList<>();
@@ -49,6 +51,18 @@ public final class GiantsBridge {
                 if (o.get("side").getAsString().equals("server")) server = v;
                 else client = v;
                 sets++;
+                out.add("ok");
+            }
+            // the Controls tab's gestures (CONTROLS_BRIDGE.md)
+            case "controlget" -> {
+                if (!arg.equals("tripleCrouchSit")) return null;
+                out.add(String.valueOf(tripleCrouchSit));
+            }
+            case "controlset" -> {
+                JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
+                if (o.get("controls").getAsInt() != 1 || !o.get("config").getAsString().equals("tripleCrouchSit"))
+                    return null;
+                tripleCrouchSit = o.get("value").getAsBoolean();
                 out.add("ok");
             }
             default -> {

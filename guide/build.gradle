@@ -62,9 +62,42 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     // -Pgiants: the giants loaded too (copies of their released jars in run-mods/, made by tools/giant_mods.py
     // without their own game tests), for the tests and pictures that need them
-    if (project.hasProperty('giants')) fileTree(dir: 'run-mods', include: '*.jar').each { modLocalRuntime files(it) }
+    if (project.hasProperty('giants') || project.hasProperty('duels')) fileTree(dir: 'run-mods', include: '*.jar').each { modLocalRuntime files(it) }
 }
-tasks.matching { it.name in ['processResources', 'processGametestResources'] }.configureEach {
+// -Pduels: the giant-vs-giant duel harness (src/duels, handoff DUELS.md), its own source set and run, so it is
+// never part of the normal game tests or the jar. Runs with the eight giants from run-mods/:
+//   gradlew runDuels -Pduels -Pduel_runs=2 -Pduel_seconds=240   (every -Pduel_x=v is passed on as -Djj.duel.x=v)
+// One server holds about 20 full-size duels before its memory runs out: run big sweeps a few pairs at a time
+// (tools/duel_sweep.ps1, which can also run shards side by side), each run adds its rows to the same CSV.
+// -PduelHeap=4G sets the server's memory (6G by default).
+if (project.hasProperty('duels')) {
+    sourceSets {
+        duels {
+            compileClasspath += main.compileClasspath + main.output
+            runtimeClasspath += main.runtimeClasspath + main.output
+        }
+    }
+    loom {
+        mods { "jj_giants-duels" { sourceSet sourceSets.duels } }
+        runs {
+            duels {
+                server()
+                name "Giant Duels"
+                source sourceSets.duels
+                vmArg "-Dfabric-api.gametest"
+                vmArg "-Xmx${project.findProperty('duelHeap') ?: '6G'}"
+                vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/duels-report.xml"
+                project.properties.findAll { it.key.startsWith('duel_') }.each { k, v -> vmArg "-Djj.duel.${k.substring(5)}=${v}" }
+                runDir "build/duels"
+            }
+        }
+    }
+    // a fresh world and fresh giant configs every run (tuned values must never stick)
+    tasks.matching { it.name == 'runDuels' }.configureEach {
+        doFirst { delete "build/duels/gametestworld", "build/duels/config", "build/duels/world" }
+    }
+}
+tasks.matching { it.name in ['processResources', 'processGametestResources', 'processDuelsResources'] }.configureEach {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": project.version }
 }
