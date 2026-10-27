@@ -23,6 +23,8 @@ public final class BellConfig {
         public float smallEggScale = 0.2f;
         /** His health at full size. Smaller ones get less. */
         public float health = 6000f;
+        /** his health times this (/giants health): set for all the giants at once, 0.1 to 10 */
+        public float healthMultiplier = 1.0f;
         /** A very slow heal of his own: on or off. */
         public boolean passiveHeal = true;
         /**
@@ -270,6 +272,7 @@ public final class BellConfig {
         v.meetCooldown = Math.max(0, Math.min(1440, v.meetCooldown));
         v.heavyDelaySeconds = Math.max(0, Math.min(600, v.heavyDelaySeconds));
         v.health = clamp(v.health, 10f, 1_000_000f, 6000f);
+        v.healthMultiplier = clamp(v.healthMultiplier, 0.1f, 10f, 1f);
         v.damageMultiplier = clamp(v.damageMultiplier, 0f, 100f, 1f);
         v.mobDamage = clamp(v.mobDamage, 0f, 100f, 2.5f);
         v.giantArmor = clamp(v.giantArmor, 0f, 10f, 0.78f);

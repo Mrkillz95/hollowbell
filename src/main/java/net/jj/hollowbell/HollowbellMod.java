@@ -27,7 +27,6 @@ import net.jj.hollowbell.net.ArmourPowerPayload;
 import net.jj.hollowbell.net.BeingHimPayload;
 import net.jj.hollowbell.net.CodexOrders;
 import net.jj.hollowbell.net.CodexPayload;
-import net.jj.hollowbell.net.DetailPayload;
 import net.jj.hollowbell.net.DrivePayload;
 import net.jj.hollowbell.net.FarSightPayload;
 import net.jj.hollowbell.net.GlassBellPayload;
@@ -83,7 +82,6 @@ public class HollowbellMod implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(SafeListPayload.TYPE, SafeListPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(MoodPayload.TYPE, MoodPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(LookMarkPayload.TYPE, LookMarkPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(DetailPayload.TYPE, DetailPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BeingHimPayload.TYPE, BeingHimPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ThumpPayload.TYPE, ThumpPayload.CODEC);
         BigFx.register();

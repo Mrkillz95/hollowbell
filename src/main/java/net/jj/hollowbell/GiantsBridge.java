@@ -1,5 +1,6 @@
 package net.jj.hollowbell;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -7,12 +8,16 @@ import java.util.UUID;
 import net.jj.hollowbell.command.OpsCommand;
 import net.jj.hollowbell.entity.Giants;
 import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.FarOrders;
 import net.jj.hollowbell.world.Painter;
 import net.jj.hollowbell.world.TakeMe;
 import net.jj.hollowbell.world.WorldOne;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -21,7 +26,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * What /giants asks of this mod. The same shape in every giant mod, so whichever one runs the command can call
@@ -36,8 +43,12 @@ public final class GiantsBridge {
     /**
      * action: natural|limit|fight|meetings|meet (the other giant's
      * UUID)|away|volume|shake|bossbar|griefing|heavydelay|where|list|kill|remove|status|goto ("x z")|tp (player
-     * UUID)|paint ("radius full|biome playerUUID")|paintstop. arg: the value as text, or "". Returns lines to show the
-     * caller (prefixed with the boss's name, plain words); empty list = nothing; null = unknown action.
+     * UUID)|paint ("radius full|biome playerUUID")|paintstop|groundspot ("groundspot hollowbell x z radius", for
+     * the other giants choosing their grounds)|healthmult|damagemult ("" to say it, or 0.1 to 10)|heal|calm|sleep|
+     * wake|freeze (on or off)|summon ("dimension x y z entityUUID|- [mood] [size]", his own summon run
+     * there)|home (player UUID, taken to the middle of his ground)|info. arg: the value as text, or "". Returns
+     * lines to show the caller (prefixed with the boss's name, plain words); empty list = nothing; null = unknown
+     * action.
      */
     public static List<String> giants(MinecraftServer server, String action, String arg) {
         List<String> out = new ArrayList<>();
@@ -66,6 +77,65 @@ public final class GiantsBridge {
             case "paintstop" -> paintStop(out);
             case "tp" -> tp(server, arg, out);
             case "status" -> status(server, out);
+            case "groundspot" -> {
+                String spot = WorldOne.get(server).groundSpot();
+                if (spot != null) out.add(spot);
+            }
+            case "healthmult" -> healthMult(server, a, out);
+            case "damagemult" -> damageMult(a, out);
+            case "heal" -> {
+                int n = 0;
+                for (HollowbellEntity h : standing(server)) {
+                    h.heal();
+                    h.mendPods();
+                    n++;
+                }
+                out.add(WHO + (n == 0 ? "none to heal." : "healed " + n + "."));
+            }
+            case "calm" -> {
+                int n = 0;
+                for (HollowbellEntity h : standing(server)) {
+                    h.setVariant(HollowbellEntity.CALM);
+                    h.clearHitList();
+                    h.forgiveAll();
+                    n++;
+                }
+                out.add(WHO + (n == 0 ? "none to calm." : "calmed " + n + ", grudges forgotten."));
+            }
+            case "sleep" -> {
+                int n = 0, all = 0;
+                for (HollowbellEntity h : standing(server)) {
+                    all++;
+                    h.goToSleep();
+                    if (h.asleep()) n++;
+                }
+                out.add(WHO + slept(all, n));
+            }
+            case "wake" -> {
+                int n = 0;
+                for (HollowbellEntity h : standing(server)) {
+                    h.wakeUp();
+                    n++;
+                }
+                out.add(WHO + (n == 0 ? "none to wake." : n + " awake."));
+            }
+            case "freeze" -> {
+                boolean on = !a.equals("off");
+                int n = 0;
+                for (HollowbellEntity h : standing(server)) {
+                    h.setFrozen(on);
+                    n++;
+                }
+                out.add(WHO + froze(on, n));
+            }
+            case "summon" -> summon(server, "hollowbell", arg, out);
+            case "home" -> {
+                ServerPlayer p = player(server, arg);
+                Component said = p == null ? null : TakeMe.home(p);
+                out.add(WHO + (p == null ? "nobody to take there." : said == null ? "he has no ground yet."
+                        : said.getString()));
+            }
+            case "info" -> info(server, out);
             default -> {
                 return null;
             }
@@ -383,6 +453,165 @@ public final class GiantsBridge {
                 + ", " + (V.oneInTheWorld ? "rises on his own" : "only when summoned")
                 + ", " + (V.fightGiants ? "fights the others" : "leaves the others alone")
                 + ", volume " + V.soundVolume + ".");
+    }
+
+    private static List<HollowbellEntity> standing(MinecraftServer server) {
+        List<HollowbellEntity> all = new ArrayList<>();
+        for (ServerLevel l : server.getAllLevels())
+            all.addAll(l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()));
+        return all;
+    }
+
+    /** /giants health: his health times m, every one keeping the share of his health he has now */
+    private static void healthMult(MinecraftServer server, String a, List<String> out) {
+        if (!a.isEmpty()) {
+            Float m = mult(a);
+            if (m == null) {
+                out.add(WHO + "the multiplier has to be a number from 0.1 to 10.");
+                return;
+            }
+            float k = m / BellConfig.V.healthMultiplier;
+            BellConfig.V.healthMultiplier = m;
+            BellConfig.save();
+            for (HollowbellEntity h : standing(server)) h.healthMultChanged();
+            Away away = Away.get(server);
+            for (Away.Rec r : away.all()) {
+                r.hp *= k;
+                r.hpMax *= k;
+            }
+            away.setDirty();
+        }
+        out.add(WHO + "health x" + times(BellConfig.V.healthMultiplier) + ".");
+    }
+
+    private static void damageMult(String a, List<String> out) {
+        if (!a.isEmpty()) {
+            Float m = mult(a);
+            if (m == null) {
+                out.add(WHO + "the multiplier has to be a number from 0.1 to 10.");
+                return;
+            }
+            BellConfig.V.damageMultiplier = m;
+            BellConfig.save();
+        }
+        out.add(WHO + "damage x" + times(BellConfig.V.damageMultiplier) + ".");
+    }
+
+    /** /giants info: alive or coming back, who owns him, his health and the multipliers */
+    private static void info(MinecraftServer server, List<String> out) {
+        List<String> hp = new ArrayList<>();
+        for (HollowbellEntity h : standing(server)) hp.add((int) h.healthNow() + "/" + (int) h.healthMax());
+        WorldOne w = WorldOne.get(server);
+        int days = w.daysLeft(server.overworld());
+        String state;
+        if (!hp.isEmpty()) state = alive(hp);
+        else if (Away.get(server).count() > 0) state = "alive, out of the world";
+        else if (w.aliveNow()) state = "alive, not loaded";
+        else if (BellConfig.V.oneInTheWorld && days >= 0) state = comingBack(days);
+        else state = "none alive";
+        BookRule book = BookRule.get(server);
+        String owner = book.holder() == null ? "" : ", owned by " + book.holderName();
+        out.add(WHO + state + owner + ", health x" + times(BellConfig.V.healthMultiplier) + ", damage x"
+                + times(BellConfig.V.damageMultiplier) + ".");
+    }
+    /** a multiplier as /giants sends it (0.1 to 10), or null if it isn't one */
+    private static @Nullable Float mult(String a) {
+        try {
+            float v = Float.parseFloat(a);
+            return Float.isFinite(v) && v >= 0.1f && v <= 10.0f ? v : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** a multiplier the way people write it: 1, 1.2, 1.35 */
+    private static String times(float v) {
+        return BigDecimal.valueOf(Math.round(v * 100.0f) / 100.0).stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * /giants summon: his own summon command, given where /giants was ("dimension x y z entityUUID|-", then the
+     * mood and size as typed) as an operator there; what it says comes back as lines.
+     */
+    private static void summon(MinecraftServer server, String root, String arg, List<String> out) {
+        String[] w = arg.trim().split("\s+", 6);
+        CommandSourceStack src;
+        try {
+            ServerLevel l = server.getLevel(
+                    ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(w[0])));
+            if (l == null) {
+                out.add(WHO + "there's no world called " + w[0] + ".");
+                return;
+            }
+            Vec3 at = new Vec3(Double.parseDouble(w[1]), Double.parseDouble(w[2]), Double.parseDouble(w[3]));
+            Entity by = w[4].equals("-") ? null : l.getEntity(UUID.fromString(w[4]));
+            src = new CommandSourceStack(
+                    new Said(out),
+                    at,
+                    by == null ? Vec2.ZERO : by.getRotationVector(),
+                    l,
+                    2,
+                    "giants",
+                    Component.literal("giants"),
+                    server,
+                    by);
+        } catch (RuntimeException e) {
+            out.add(WHO + "summon needs a world, a spot and who gave it.");
+            return;
+        }
+        server.getCommands().performPrefixedCommand(src, root + " summon" + (w.length > 5 ? " " + w[5] : ""));
+    }
+
+    /** takes down what a command says, each line with his name in front */
+    private record Said(List<String> out) implements CommandSource {
+        @Override
+        public void sendSystemMessage(Component m) {
+            out.add(WHO + m.getString());
+        }
+
+        @Override
+        public boolean acceptsSuccess() {
+            return true;
+        }
+
+        @Override
+        public boolean acceptsFailure() {
+            return true;
+        }
+
+        @Override
+        public boolean shouldInformAdmins() {
+            return false;
+        }
+    }
+
+    private static @Nullable ServerPlayer player(MinecraftServer server, String arg) {
+        try {
+            return server.getPlayerList().getPlayer(UUID.fromString(arg.trim()));
+        } catch (IllegalArgumentException e) {
+            return server.getPlayerList().getPlayerByName(arg.trim());
+        }
+    }
+
+    /** what /giants sleep says: of all standing, n asleep now */
+    private static String slept(int all, int n) {
+        if (all == 0) return "none to put to sleep.";
+        return n == 0 ? "he can't lie down right now." : n + " asleep.";
+    }
+
+    private static String froze(boolean on, int n) {
+        if (n == 0) return on ? "none to freeze." : "none to unfreeze.";
+        return (on ? "froze " : "unfroze ") + n + ".";
+    }
+
+    /** /giants info for the ones standing, from each one's "health/most" */
+    private static String alive(List<String> hp) {
+        return (hp.size() == 1 ? "alive" : hp.size() + " alive") + ", health " + String.join(", ", hp);
+    }
+
+    /** /giants info when the next one is on its way */
+    private static String comingBack(int days) {
+        return days <= 1 ? "coming back within a day" : "coming back in about " + days + " days";
     }
 
     private static Boolean onOff(String a) {

@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.19
+# Hollowbell (Java mod), version 1.12.20
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,16 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- New `/giants` commands for operators: `home <giant>` takes you to the middle of a giant's ground,
+  `health <x>` and `damage <x>` multiply the giants' health and damage (1.2 is a fifth more), `preset
+  easy/normal/hard` sets both, and `heal`, `calm`, `sleep`, `wake`, `freeze`, `unfreeze`, `summon` and `info`
+  work for all the giants or just the one you name. `/hollowbell detail` is gone: the Giants Guide's
+  Performance screen does that now.
+- When he comes back after dying, his new ground keeps clear of the other giants' grounds.
+- With the Belling count turned right down on the Performance screen he still sheds at least one belling.
+
+### 1.12.19
 
 1.12.19: He's a bit weaker against the other giants: their blows hurt him more, at most 3 of his arms land on one
 giant in an Arm Storm, and stray stingers and eggs no longer hit giants he isn't fighting. When he comes back on land
@@ -103,7 +113,6 @@ If your Hollowbell is killed, your book burns.
 | `/hollowbell ride` | puts you on top of him, or takes you off |
 | `/hollowbell kill` / `remove` | kills them (with loot) or removes them (no loot) |
 | `/hollowbell config [setting] [value]` | lists, shows or changes a setting |
-| `/hollowbell detail on/off` | draws him simpler far away so the game runs faster (no cheats needed) |
-| `/giants ...` | the same kind of commands for all my giants at once |
+| `/giants ...` | the same kind of commands for all my giants at once (`home`, `health`, `damage`, `preset`, `heal`, `calm`, `info` and more) |
 
 The settings are in `config/hollowbell.json`. `/hollowbell config` lists them all.

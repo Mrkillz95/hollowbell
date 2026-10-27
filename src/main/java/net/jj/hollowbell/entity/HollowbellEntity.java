@@ -170,6 +170,8 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     // ---- his own health
     float hp = -1f, baseMax = -1f;
+    /** the /giants health multiplier his base health was worked out with */
+    float healthMult = 1f;
     final Map<UUID, Long> fighters = new HashMap<>();
 
     // ---- going places
@@ -419,9 +421,20 @@ public class HollowbellEntity extends Monster implements SolidBody {
         s = Mth.clamp(s, MIN_SCALE, MAX_SCALE);
         float ratio = hp > 0 && healthMax() > 0 ? hp / healthMax() : 1f;
         entityData.set(DATA_SCALE, s);
-        baseMax = Math.max(40f, BellConfig.V.health * s);
+        baseMax = Math.max(40f, BellConfig.V.health * BellConfig.V.healthMultiplier * s);
+        healthMult = BellConfig.V.healthMultiplier;
         setMax(baseMax * playerBoost(), ratio);
         refreshDimensions();
+    }
+
+    /** /giants health changed the multiplier: his most health follows it, and he keeps his share of it */
+    public void healthMultChanged() {
+        float now = BellConfig.V.healthMultiplier;
+        if (baseMax <= 0f || Math.abs(now - healthMult) < 1.0E-4f) return;
+        float ratio = healthMax() > 0 ? hp / healthMax() : 1f;
+        baseMax = baseMax * now / healthMult;
+        healthMult = now;
+        setMax(baseMax * playerBoost(), Mth.clamp(ratio, 0f, 1f));
     }
 
     float playerBoost() {

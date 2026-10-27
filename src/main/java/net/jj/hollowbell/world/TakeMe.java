@@ -23,6 +23,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * /hollowbell tp [which] (cheats on, never in the book): takes you to him. You land on safe open ground a little
@@ -139,6 +140,24 @@ public final class TakeMe {
             return go.apply(p);
         }
         return Component.translatable("command.hollowbell.tp_none");
+    }
+
+    /** /giants home hollowbell: onto safe ground at the middle of his ground; null if he has none yet */
+    public static @Nullable Component home(ServerPlayer p) {
+        WorldOne w = WorldOne.get(p.server);
+        if (!w.homeClaimed()) return null;
+        ServerLevel over = p.server.overworld();
+        int x = w.homeX(), z = w.homeZ();
+        Function<ServerPlayer, Component> go = q -> {
+            BlockPos safe = safeNear(over, x, z, 48);
+            q.teleportTo(over, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, q.getYRot(), 0f);
+            return Component.translatable("command.hollowbell.home_done");
+        };
+        if (!NoWait.loadedAround(over, x, z)) {
+            NoWait.go(p, over, x, z, go);
+            return Component.translatable("command.hollowbell.tp_soon");
+        }
+        return go.apply(p);
     }
 
     /** onto safe ground just outside his bell on your side of him (the far side of a new arrival), facing him */

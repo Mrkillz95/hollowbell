@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.lang.reflect.InvocationTargetException;
@@ -17,7 +18,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import net.jj.hollowbell.GiantsBridge;
-import net.jj.hollowbell.HollowbellMod;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -27,21 +27,26 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * /giants: one command for all the bosses at once. Every one of the giant mods carries this class, but only
- * one registers it: the first of the bridges (in this fixed order) that is actually loaded. This
- * mod's bridge sorts first, so with the Cerberus installed it is this class that answers.
+ * /giants: one command for all the giants at once. Every one of the giant mods carries this class, but only one
+ * registers it: the first of the bridges (in this fixed order) that is actually loaded.
  *
  * The command asks every loaded bridge in turn, by name. Each one is asked on its own, and whatever goes wrong
  * inside one (a missing method, an old version, a crash, a strange answer) only costs that one line: the rest
- * still answer.
+ * still answer. Every part of it needs cheats (op level 2).
  */
 public final class GiantsCommand {
     private GiantsCommand() {}
 
-    /** the bridges, in the order every copy elects them; the same list in every mod. New giants go on the end, not
-     *  in their sorted place, so the election doesn't change. */
+    private static final Logger LOG = LoggerFactory.getLogger("giants");
+
+    /**
+     * the bridges, in the order every copy elects them; the same list in every mod. New giants go on the end, not
+     * in their sorted place, so the election doesn't change.
+     */
     public static final String[] BRIDGES = {
         "net.jj.cerberus.GiantsBridge",
         "net.jj.furrowmaw.GiantsBridge",
@@ -53,10 +58,17 @@ public final class GiantsCommand {
         "net.jj.gloamwick.GiantsBridge"
     };
 
+    /** which /giants this copy builds: a copy with a higher number has commands an older one lacks */
+    public static final int TREE = 2;
+
     private static final String MINE = GiantsBridge.class.getName();
 
     /** most lines one bridge may add, so a broken one can't flood the chat */
     private static final int MOST_LINES = 40;
+
+    private static final String NO_ANSWER = ": this version doesn't answer /giants.";
+    private static final String DOESNT_KNOW = ": doesn't know \"";
+    private static final String DIDNT_ANSWER = ": didn't answer (";
 
     /** true if this mod is the one that registers /giants */
     public static boolean elected() {
@@ -70,22 +82,30 @@ public final class GiantsCommand {
     }
 
     /**
-     * The mod that registered /giants is an older one that doesn't list this one yet (a mixed install): then this one
-     * registers it again, after it, so /giants reaches him too.
+     * True when another mod's copy registers /giants but that copy is older: its BRIDGES list doesn't have this
+     * giant, or it builds an older tree. Then this copy registers /giants as well, after it, so every /giants
+     * command is answered by this newer copy, which asks all of them. Where both have the same command, the one
+     * registered last runs.
      */
     public static boolean electedIsOld() {
         for (String b : BRIDGES) {
             if (find(b) == null) continue;
             if (b.equals(MINE)) return false;
-            String pkg = b.substring(0, b.lastIndexOf('.'));
-            Class<?> theirs = find(pkg + ".command.GiantsCommand");
+            Class<?> theirs = find(b.substring(0, b.lastIndexOf('.')) + ".command.GiantsCommand");
             if (theirs == null) return false;
             try {
                 String[] list = (String[]) theirs.getField("BRIDGES").get(null);
-                return !Arrays.asList(list).contains(MINE);
+                if (!Arrays.asList(list).contains(MINE)) return true;
             } catch (ReflectiveOperationException | ClassCastException e) {
                 // another mod's copy without a list of its own
+                LOG.debug("No /giants list in {}: {}", theirs.getName(), e.toString());
                 return false;
+            }
+            try {
+                return theirs.getField("TREE").getInt(null) < TREE;
+            } catch (ReflectiveOperationException | IllegalArgumentException e) {
+                // a copy from before the trees were numbered
+                return true;
             }
         }
         return false;
@@ -95,7 +115,7 @@ public final class GiantsCommand {
         try {
             return Class.forName(name, false, GiantsCommand.class.getClassLoader());
         } catch (Throwable t) {
-            // that giant's mod isn't installed
+            // that giant's mod isn't installed (or is an older one that can't load)
             return null;
         }
     }
@@ -124,7 +144,7 @@ public final class GiantsCommand {
         return Modifier.isStatic(m.getModifiers()) ? m : null;
     }
 
-    /** the name /giants tp takes for each bridge, in the same order as BRIDGES */
+    /** the name /giants takes for each bridge, in the same order as BRIDGES */
     public static final String[] TP_NAMES = {
         "cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback", "swarmforge", "gloamwick"
     };
@@ -149,13 +169,13 @@ public final class GiantsCommand {
             try {
                 Method m = method(c);
                 if (m == null) {
-                    out.add(nameOf(b) + ": this version doesn't answer /giants.");
+                    out.add(nameOf(b) + NO_ANSWER);
                     continue;
                 }
 
                 Object r = m.invoke(null, server, action, arg);
                 if (r == null) {
-                    out.add(nameOf(b) + ": doesn't know \"" + action + "\".");
+                    out.add(nameOf(b) + DOESNT_KNOW + action + "\".");
                 } else if (r instanceof Iterable<?> lines) {
                     int n = 0;
                     for (Object o : lines) {
@@ -167,31 +187,45 @@ public final class GiantsCommand {
             } catch (Throwable t) {
                 Throwable why =
                         t instanceof InvocationTargetException ite && ite.getCause() != null ? ite.getCause() : t;
-                HollowbellMod.LOG.warn("/giants: {} failed on {}", b, action, why);
-                out.add(nameOf(b) + ": didn't answer (" + why.getClass().getSimpleName() + ").");
+                LOG.warn("/giants: {} failed on {}", b, action, why);
+                out.add(nameOf(b) + DIDNT_ANSWER + why.getClass().getSimpleName() + ").");
             }
         }
 
         return out;
     }
 
-    private static int run(CommandContext<CommandSourceStack> c, String action, String arg) {
-        List<String> lines = ask(c.getSource().getServer(), action, arg);
+    /** true for a line ask() wrote itself because a bridge couldn't answer */
+    private static boolean trouble(String line) {
+        return line.endsWith(NO_ANSWER) || line.contains(DOESNT_KNOW) || line.contains(DIDNT_ANSWER);
+    }
+
+    private static int say(CommandContext<CommandSourceStack> c, List<String> lines, boolean tellOps) {
         if (lines.isEmpty()) {
-            lines = List.of("No bosses answered.");
+            lines = List.of("No giants answered.");
         }
-
-        boolean changes = !arg.isEmpty() || action.equals("kill") || action.equals("remove");
         for (String s : lines) {
-            c.getSource().sendSuccess(() -> Component.literal(s), changes);
+            c.getSource().sendSuccess(() -> Component.literal(s), tellOps);
         }
-
         return lines.size();
+    }
+
+    /** the actions that change something even with nothing after them (other ops are told of those) */
+    private static final List<String> CHANGES = List.of("kill", "remove", "heal", "calm", "sleep", "wake");
+
+    private static int run(CommandContext<CommandSourceStack> c, String action, String arg) {
+        boolean changes = !arg.isEmpty() || CHANGES.contains(action);
+        return say(c, ask(c.getSource().getServer(), action, arg), changes);
     }
 
     /** /giants tp <name>: takes you to that one giant, asking only its own mod */
     private static int tp(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         return one(c, "tp", c.getSource().getPlayerOrException().getUUID().toString());
+    }
+
+    /** /giants home <name>: takes you to the middle of that giant's ground, onto safe land */
+    private static int home(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        return one(c, "home", c.getSource().getPlayerOrException().getUUID().toString());
     }
 
     /** how deep /giants paint lays a giant's ground when no depth is given, and the most and least it takes */
@@ -212,14 +246,14 @@ public final class GiantsCommand {
     }
 
     /**
-     * /giants paint stop: every giant's mod drops the paint jobs it has running. Each answers a line only if it was
-     * painting (an older one that doesn't know the word says so, and that's left out).
+     * /giants paint stop: every giant's paint jobs stop. Each bridge stops its own and says so; old ones that don't
+     * know the action are left out of the answer.
      */
     private static int paintStop(CommandContext<CommandSourceStack> c) {
         boolean any =
                 ask(c.getSource().getServer(), "paintstop", "").stream().anyMatch(s -> s.endsWith("stopped painting."));
-        String said = any ? "Stopped painting." : "Nothing is painting.";
-        c.getSource().sendSuccess(() -> Component.literal(said), true);
+        String line = any ? "Stopped painting." : "Nothing is painting.";
+        c.getSource().sendSuccess(() -> Component.literal(line), true);
         return any ? 1 : 0;
     }
 
@@ -231,30 +265,41 @@ public final class GiantsCommand {
     /** the depths offered when typing one */
     private static final String[] PAINT_DEPTHS = {"1", "3", "5", "8", "10", "16", "32", "64"};
 
-    /** one action, asked of just the named giant's mod */
-    private static int one(CommandContext<CommandSourceStack> c, String action, String arg) {
-        String which = StringArgumentType.getString(c, "which").toLowerCase(Locale.ROOT);
-        // (the names of the mods' own commands, and their old ones, work too)
-        which = switch (which) {
-            case "lanternwillow" -> "willow";
+    /** a giant's own command name, or its mod's, for the name /giants knows it by */
+    private static String alias(String name) {
+        return switch (name) {
+            case "lanternwillow", "lantern_willow" -> "willow";
             case "mountain", "mountain_breathes" -> "pitchgut";
             case "fire_ice_cerberus" -> "cerberus";
-            default -> which;
+            default -> name;
         };
+    }
+
+    /** the bridge of the giant named in the command, or null (having said why) */
+    private static String picked(CommandContext<CommandSourceStack> c) {
+        String which = alias(StringArgumentType.getString(c, "which").toLowerCase(Locale.ROOT));
         int i = Arrays.asList(TP_NAMES).indexOf(which);
         if (i < 0) {
             c.getSource()
                     .sendFailure(Component.literal(
                             "No giant called " + which + ". Try one of: " + String.join(", ", TP_NAMES) + "."));
-            return 0;
+            return null;
         }
         if (find(BRIDGES[i]) == null) {
             c.getSource().sendFailure(Component.literal(nameOf(BRIDGES[i]) + " isn't installed."));
-            return 0;
+            return null;
         }
-        List<String> lines = ask(c.getSource().getServer(), action, arg, BRIDGES[i]);
+        return BRIDGES[i];
+    }
+
+    /** one action, asked of just the named giant's mod */
+    private static int one(CommandContext<CommandSourceStack> c, String action, String arg) {
+        String b = picked(c);
+        if (b == null) return 0;
+        boolean changes = !action.equals("tp") && !action.equals("home") && !action.equals("info");
+        List<String> lines = ask(c.getSource().getServer(), action, arg, b);
         for (String s : lines) {
-            c.getSource().sendSuccess(() -> Component.literal(s), false);
+            c.getSource().sendSuccess(() -> Component.literal(s), changes);
         }
         return lines.size();
     }
@@ -314,12 +359,98 @@ public final class GiantsCommand {
     private static int runKeep(CommandContext<CommandSourceStack> c, String action, String arg) {
         List<String> lines = ask(c.getSource().getServer(), action, arg);
         if (lines.isEmpty()) {
-            lines = List.of("No boss has a setting called " + arg + ".");
+            lines = List.of("No giant has a setting called " + arg + ".");
         }
+        return say(c, lines, false);
+    }
+
+    /** the multipliers /giants health and damage take */
+    public static final float MULT_MIN = 0.1f, MULT_MAX = 10.0f;
+
+    /** easy, normal, hard: the health and the damage multiplier each sets */
+    public static final String[] PRESETS = {"easy", "normal", "hard"};
+
+    public static final float[][] PRESET_MULTS = {{0.75f, 0.75f}, {1.0f, 1.0f}, {1.5f, 1.35f}};
+
+    /** /giants preset easy|normal|hard [name]: health and damage multipliers together */
+    private static int preset(CommandContext<CommandSourceStack> c, int which, String only) {
+        float health = PRESET_MULTS[which][0], damage = PRESET_MULTS[which][1];
+        MinecraftServer server = c.getSource().getServer();
+        List<String> lines = new ArrayList<>(ask(server, "healthmult", String.valueOf(health), only));
+        lines.addAll(ask(server, "damagemult", String.valueOf(damage), only));
+        if (lines.isEmpty()) {
+            return say(c, lines, false);
+        }
+        List<String> out = new ArrayList<>();
+        out.add("Preset " + PRESETS[which] + (only == null ? "" : " for " + nameOf(only)) + ": health x" + health
+                + ", damage x" + damage + ".");
         for (String s : lines) {
-            c.getSource().sendSuccess(() -> Component.literal(s), false);
+            if (trouble(s) && !out.contains(s)) out.add(s);
         }
-        return lines.size();
+        return say(c, out, true);
+    }
+
+    /**
+     * where a /giants summon is given from, for the bridges: "dimension x y z entityUUID" (a dash for no entity),
+     * then whatever was typed after the name (the mood and size, as that giant's own summon takes them)
+     */
+    private static String from(CommandContext<CommandSourceStack> c, String how) {
+        CommandSourceStack src = c.getSource();
+        Vec3 p = src.getPosition();
+        String who = src.getEntity() == null ? "-" : src.getEntity().getUUID().toString();
+        String at = src.getLevel().dimension().location() + " " + p.x + " " + p.y + " " + p.z + " " + who;
+        return how.isEmpty() ? at : at + " " + how;
+    }
+
+    private static RequiredArgumentBuilder<CommandSourceStack, String> which() {
+        return Commands.argument("which", StringArgumentType.word())
+                .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b));
+    }
+
+    /** /giants <name> [giant]: the action for every giant, or only the named one */
+    private static LiteralArgumentBuilder<CommandSourceStack> forAll(String name, String action, String arg) {
+        return Commands.literal(name)
+                .requires(s -> s.hasPermission(2))
+                .executes(c -> run(c, action, arg))
+                .then(which().executes(c -> one(c, action, arg)));
+    }
+
+    /** /giants health|damage [multiplier [giant]]: bare, it says each one's multiplier */
+    private static LiteralArgumentBuilder<CommandSourceStack> mult(String name, String action) {
+        return Commands.literal(name)
+                .requires(s -> s.hasPermission(2))
+                .executes(c -> say(c, ask(c.getSource().getServer(), action, ""), false))
+                .then(Commands.argument("multiplier", FloatArgumentType.floatArg(MULT_MIN, MULT_MAX))
+                        .executes(c -> run(c, action, String.valueOf(FloatArgumentType.getFloat(c, "multiplier"))))
+                        .then(which()
+                                .executes(c -> one(
+                                        c, action, String.valueOf(FloatArgumentType.getFloat(c, "multiplier"))))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> presets() {
+        LiteralArgumentBuilder<CommandSourceStack> p =
+                Commands.literal("preset").requires(s -> s.hasPermission(2));
+        for (int i = 0; i < PRESETS.length; i++) {
+            int k = i;
+            p.then(Commands.literal(PRESETS[i])
+                    .executes(c -> preset(c, k, null))
+                    .then(which().executes(c -> {
+                        String b = picked(c);
+                        return b == null ? 0 : preset(c, k, b);
+                    })));
+        }
+        return p;
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> summon() {
+        return Commands.literal("summon")
+                .requires(s -> s.hasPermission(2))
+                .executes(c -> run(c, "summon", from(c, "")))
+                .then(which()
+                        .executes(c -> one(c, "summon", from(c, "")))
+                        .then(Commands.argument("mood and size", StringArgumentType.greedyString())
+                                .executes(c -> one(
+                                        c, "summon", from(c, StringArgumentType.getString(c, "mood and size"))))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> toggle(String name) {
@@ -354,7 +485,7 @@ public final class GiantsCommand {
                 .then(Commands.literal("volume")
                         .requires(s -> s.hasPermission(2))
                         .executes(c -> run(c, "volume", ""))
-                        .then(Commands.argument("x", FloatArgumentType.floatArg(0.0F, 2.0F))
+                        .then(Commands.argument("x", FloatArgumentType.floatArg(0.0f, 2.0f))
                                 .executes(c -> run(c, "volume", String.valueOf(FloatArgumentType.getFloat(c, "x"))))))
                 .then(toggle("shake"))
                 .then(Commands.literal("bossbar")
@@ -373,9 +504,7 @@ public final class GiantsCommand {
                                         String.valueOf(IntegerArgumentType.getInteger(c, "seconds"))))))
                 .then(toggle("meetings"))
                 .then(Commands.literal("meet").requires(s -> s.hasPermission(2)).executes(GiantsCommand::meet))
-                .then(Commands.literal("where")
-                        .requires(s -> s.hasPermission(2))
-                        .executes(c -> run(c, "where", "")))
+                .then(Commands.literal("where").requires(s -> s.hasPermission(2)).executes(c -> run(c, "where", "")))
                 .then(Commands.literal("goto")
                         .requires(s -> s.hasPermission(2))
                         .then(Commands.argument("x", DoubleArgumentType.doubleArg())
@@ -399,8 +528,7 @@ public final class GiantsCommand {
                 .then(Commands.literal("paint")
                         .requires(s -> s.hasPermission(2))
                         .then(Commands.literal("stop").executes(GiantsCommand::paintStop))
-                        .then(Commands.argument("which", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
+                        .then(which()
                                 .executes(c -> paint(c, 64, "full", PAINT_DEPTH))
                                 .then(Commands.argument("radius", IntegerArgumentType.integer(16, 512))
                                         .executes(c -> paint(
@@ -430,9 +558,21 @@ public final class GiantsCommand {
                                                         PAINT_DEPTH))))))
                 .then(Commands.literal("tp")
                         .requires(s -> s.hasPermission(2))
-                        .then(Commands.argument("which", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b))
-                                .executes(GiantsCommand::tp)))
+                        .then(which().executes(GiantsCommand::tp)))
+                .then(Commands.literal("home")
+                        .requires(s -> s.hasPermission(2))
+                        .then(which().executes(GiantsCommand::home)))
+                .then(mult("health", "healthmult"))
+                .then(mult("damage", "damagemult"))
+                .then(presets())
+                .then(forAll("heal", "heal", ""))
+                .then(forAll("calm", "calm", ""))
+                .then(forAll("sleep", "sleep", ""))
+                .then(forAll("wake", "wake", ""))
+                .then(forAll("freeze", "freeze", "on"))
+                .then(forAll("unfreeze", "freeze", "off"))
+                .then(forAll("info", "info", ""))
+                .then(summon())
                 .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(c -> run(c, "list", "")))
                 .then(Commands.literal("kill").requires(s -> s.hasPermission(2)).executes(c -> run(c, "kill", "")))
                 .then(Commands.literal("remove")

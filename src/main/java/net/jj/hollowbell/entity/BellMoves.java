@@ -1556,8 +1556,9 @@ public final class BellMoves {
     }
 
     private void shed() {
-        // (fewer when an operator turns the Belling count down on the Giants Guide's screen: at least one)
-        int want = GiantsPerf.count(Math.max(0, BellConfig.V.shedCount), GiantsPerf.world("hollowbell.bellings"));
+        // (fewer when an operator turns the Belling count down on the Giants Guide's screen: at least one, even at 0%)
+        int all = Math.max(0, BellConfig.V.shedCount);
+        int want = all == 0 ? 0 : Math.max(1, GiantsPerf.count(all, GiantsPerf.world("hollowbell.bellings")));
         List<Integer> left = new ArrayList<>();
         for (int i = 0; i < rig.eggs.length; i++) if (!h.state.eggGone[i]) left.add(i);
         Collections.shuffle(left, new Random(h.getRandom().nextLong()));
