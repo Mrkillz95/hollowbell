@@ -5,6 +5,7 @@ import java.util.List;
 import net.jj.giants.Giant;
 import net.jj.giants.Giants;
 import net.jj.giants.GiantsGuideMod;
+import net.jj.giants.client.perf.PerfClient;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -141,6 +142,14 @@ public class GuideScreen extends Screen {
                 .build();
         close.setTooltip(Tooltip.create(Component.translatable("guide.jj_giants.close")));
         addRenderableWidget(close);
+        // the Giants Performance screen (it comes back here when closed)
+        Component perf = Component.translatable("perf.jj_giants.open");
+        int perfW = font.width(perf) + 10;
+        Button perfButton = Button.builder(perf, b -> PerfClient.open(this))
+                .bounds(px0 + pw - 19 - 3 - perfW, py0 + 2, perfW, 14)
+                .build();
+        perfButton.setTooltip(Tooltip.create(Component.translatable("perf.jj_giants.open.tip")));
+        addRenderableWidget(perfButton);
 
         layout();
         scroll = Mth.clamp(keptScroll, 0, Math.max(0, contentH - ch));

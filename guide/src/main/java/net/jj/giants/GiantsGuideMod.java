@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.jj.giants.net.LiveNews;
+import net.jj.giants.perf.PerfServer;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -39,6 +40,7 @@ public class GiantsGuideMod implements ModInitializer {
                     return 1;
                 })));
         LiveNews.register();
+        PerfServer.register();
         LOG.info(
                 "Giants Guide loaded: {} of {} giants installed",
                 Giants.installed().size(),

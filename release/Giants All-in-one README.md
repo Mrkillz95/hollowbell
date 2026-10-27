@@ -60,13 +60,21 @@ A book about every giant you have. Right-click it to open it.
 - Scroll with the mouse wheel, the arrow keys or the bar on the right. Hold the mouse over an item to see its name.
 - It only shows the giants you have, so it works with any of them on their own too.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
-  tells you to use `/giants where`.
+  tells you to use his Finder. `/giants where` and every `/<giant> where` need cheats.
+- **Giants Performance** (`/giants performance` or `/giants effects`, a key in Controls, or the Performance button
+  in the Guide): presets from Highest (every giant exactly as made, nothing changed) down to Very Low, your own
+  saved presets, and every effect, detail and world feature each giant has, each saying what it does and what
+  turning it down loses. World features are for operators, or the owner of a single-player world.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
 - New in the Guide 1.4.11: every giant's moves match his own book again, with the Cerberus's triple breath, rift
   and leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and his ward, the
   Gloam Lantern.
 - New in the Guide 1.4.12: the Gloamwick's Eclipse has the Hush, his shadow got up, that hunts by sound while the
   sky is black. Keep still or sneak; it can't be killed, only driven off for a moment.
+- New in the Guide 1.4.13: the Giants Performance screen, the new operator commands on the `/giants` page
+  (`home`, `health`, `damage`, `preset`, `heal`, `calm`, `sleep`, `wake`, `summon`, `freeze`, `unfreeze`, `info`),
+  `where` for operators only (players use the Finders), the old `detail` commands gone (the screen has them), and
+  every giant's respawn, grudge and round 3 text brought up to date.
 
 ## New in 1.6.2
 
