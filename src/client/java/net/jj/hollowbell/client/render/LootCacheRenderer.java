@@ -1,6 +1,7 @@
 package net.jj.hollowbell.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.block.LootCacheBlock;
 import net.jj.hollowbell.block.LootCacheBlockEntity;
 import net.jj.hollowbell.client.LootBeamsClient;
@@ -20,7 +21,8 @@ public class LootCacheRenderer implements BlockEntityRenderer<LootCacheBlockEnti
             LootCacheBlockEntity be, float partial, PoseStack ps, MultiBufferSource buf, int light, int overlay) {
         if (be.getLevel() == null
                 || !be.getBlockState().hasProperty(LootCacheBlock.LIT)
-                || !be.getBlockState().getValue(LootCacheBlock.LIT)) return;
+                || !be.getBlockState().getValue(LootCacheBlock.LIT)
+                || GiantsPerf.choice("detail.lootBeams") >= 2) return;
         // the same beam as the far-off one (LootBeamsClient), which stands aside while this one draws
         LootBeamsClient.cacheDrew(be.getBlockPos());
         LootBeamsClient.draw(

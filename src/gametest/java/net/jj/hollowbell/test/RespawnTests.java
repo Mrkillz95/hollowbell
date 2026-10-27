@@ -2,6 +2,8 @@ package net.jj.hollowbell.test;
 
 import static net.jj.hollowbell.test.HollowbellGameTests.S;
 import static net.jj.hollowbell.test.HollowbellGameTests.drop;
+import static net.jj.hollowbell.test.HollowbellGameTests.force;
+import static net.jj.hollowbell.test.HollowbellGameTests.hollowsAt;
 import static net.jj.hollowbell.test.HollowbellGameTests.player;
 import static net.jj.hollowbell.test.HollowbellGameTests.release;
 import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
@@ -13,6 +15,8 @@ import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.item.BookRule;
+import net.jj.hollowbell.world.BellGen;
+import net.jj.hollowbell.world.RespawnPaint;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -21,6 +25,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.ChunkPos;
 
 /**
  * The next one comes down within respawnBlocks of where the last one died: after a few days, or after longer if the
@@ -142,5 +147,52 @@ public class RespawnTests implements FabricGameTest {
             release(h, e);
             h.succeed();
         });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "respawn_paint")
+    public void madeLandInHisNewGroundIsPaintedHis(GameTestHelper h) {
+        var l = h.getLevel();
+        var server = l.getServer();
+        WorldOne w = WorldOne.get(server);
+        w.clearForTests();
+        // (well off the row the other tests use, so only the land made here lies in the new ground)
+        BlockPos o = h.absolutePos(BlockPos.ZERO);
+        int cx = ((o.getX() + 20000) >> 4 << 4) + 8, cz = ((o.getZ() - 30000) >> 4 << 4) + 8;
+        force(h, cx, cz, 1, true);
+        // (his biome is laid from y 0 up; the test world's own land lies lower)
+        boolean grief = BellConfig.V.griefing;
+        try {
+            BellConfig.V.griefing = true;
+            h.assertFalse(hollowsAt(h, cx, 64, cz), "the land was his before any claim");
+            w.claimHome(l, cx, cz, 0x5EED0700L);
+            h.assertFalse(hollowsAt(h, cx, 64, cz), "claiming alone painted made land");
+            int n = RespawnPaint.start(l);
+            var r = RespawnPaint.get(server);
+            h.assertTrue(n >= 9, "only " + n + " made chunks found in his new ground");
+            h.assertTrue(r.waiting(new ChunkPos(cx >> 4, cz >> 4)), "the made chunk in the middle isn't waiting");
+            // a little a tick, then all of it
+            RespawnPaint.tick(server);
+            h.assertTrue(r.done() > 0, "a tick painted nothing");
+            RespawnPaint.finishAll(server);
+            h.assertTrue(r.left() == 0, r.left() + " chunks still waiting");
+            h.assertTrue(hollowsAt(h, cx, 64, cz), "the made land didn't become the Bell Hollows");
+            h.assertTrue(r.landDone() > 0, "his ground wasn't laid on any made chunk");
+            h.assertTrue(BellGen.made(l.getChunk(cx >> 4, cz >> 4)), "the middle chunk isn't marked as his");
+            // the world's spawn is never painted
+            h.assertTrue(
+                    RespawnPaint.nearSpawn(l, new ChunkPos(l.getSharedSpawnPos())), "the spawn isn't kept clear");
+            // a ground let go drops whatever is still waiting
+            force(h, cx + 64, cz, 0, true);
+            RespawnPaint.start(l);
+            w.clearForTests();
+            RespawnPaint.tick(server);
+            h.assertTrue(r.left() == 0, "a let-go ground is still being painted");
+        } finally {
+            BellConfig.V.griefing = grief;
+            w.clearForTests();
+            force(h, cx, cz, 1, false);
+            force(h, cx + 64, cz, 0, false);
+        }
+        h.succeed();
     }
 }

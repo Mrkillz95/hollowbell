@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
-import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.Detail;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.rig.BellModel;
@@ -205,10 +205,10 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             rt.clearRenderState();
             return;
         }
-        float wantFog = Math.min(BellConfig.V.renderDistance * 1.2f, 420f * Math.max(0.2f, s) + 220f);
+        float wantFog = Math.min((float) Detail.renderDistance() * 1.2f, 420f * Math.max(0.2f, s) + 220f);
         float fogStart0 = RenderSystem.getShaderFogStart(), fogEnd0 = RenderSystem.getShaderFogEnd();
         // far sight: he stays in the fog as a pale shape out to farSightBlocks and a bit past it, never gone before
-        float farSight = Math.max(0, Math.min(4096, BellConfig.V.farSightBlocks));
+        float farSight = Detail.farSightBlocks();
         float fe = Math.max(fogEnd0, Math.max(wantFog, farSight * 1.25f));
         float fs = Math.max(fogStart0, Math.min(wantFog * 0.85f, fe * 0.45f));
         // drawn shrunk, the fog is measured the same shrunk way; a stand-in coming or going fades into the fog
@@ -277,7 +277,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                         shader.LIGHT1_DIRECTION.set(l1);
                         shader.LIGHT1_DIRECTION.upload();
                     }
-                    float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying);
+                    float[] c = tint(e, b, kind == BellMeshes.GLOW ? glow(e, b, lit, partial) : lit, hurt, dying);
                     if (shader.COLOR_MODULATOR != null) {
                         shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f);
                         shader.COLOR_MODULATOR.upload();
@@ -316,6 +316,12 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
      * The lights for a glowing block: one shining on it from each side, so every face of it is at full brightness
      * (lit like the rest of him, from above, the faces under a light were drawn dim, nearly black from below)
      */
+    /** how bright a glowing part is: his glow, toned back toward the plain light by the Giants Guide's flashes level */
+    private float glow(HollowbellEntity e, int b, float lit, float partial) {
+        float g = glowLevel(e, b, lit, partial), k = GiantsPerf.f("fx.flashes");
+        return k >= 1f ? g : lit + (g - lit) * k;
+    }
+
     static void glowLight(Vector3f l0, Vector3f l1) {
         l0.set(5f, 5f, 5f);
         l1.set(-5f, -5f, -5f);

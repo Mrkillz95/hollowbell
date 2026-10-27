@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import java.util.ArrayList;
 import java.util.List;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.entity.Shot;
 import net.jj.hollowbell.rig.BellRig;
 import net.minecraft.client.Minecraft;
@@ -224,10 +225,13 @@ public class ShotRenderer extends EntityRenderer<Shot> {
     public static void fx(Shot e) {
         var level = e.level();
         var rnd = e.getRandom();
+        // (the sparkle as this game's particle level asks; the ring marking where it lands always shows)
+        float pk = GiantsPerf.f("fx.particles");
         if (e.stage() == Shot.FALLING) {
             double w = 0.6 + e.size() * 2;
             for (int i = 0; i < 2; i++)
-                level.addAlwaysVisibleParticle(
+                if (GiantsPerf.keep(pk))
+                    level.addAlwaysVisibleParticle(
                         ParticleTypes.GLOW,
                         true,
                         e.getX() + (rnd.nextDouble() - 0.5) * w,
@@ -236,7 +240,7 @@ public class ShotRenderer extends EntityRenderer<Shot> {
                         0,
                         0.05,
                         0);
-            if (e.tickCount % 3 == 0)
+            if (e.tickCount % 3 == 0 && GiantsPerf.keep(pk))
                 level.addAlwaysVisibleParticle(
                         ParticleTypes.ITEM_SLIME, true, e.getX(), e.getY() - w * 0.4, e.getZ(), 0, -0.1, 0);
             if (e.tickCount % 2 == 0) {
@@ -253,7 +257,7 @@ public class ShotRenderer extends EntityRenderer<Shot> {
                     level.addAlwaysVisibleParticle(dust, true, x, groundY(level, x, z, l.y) + 0.3, z, 0, 0.02, 0);
                 }
             }
-        } else if (e.stage() == Shot.HATCHING && e.tickCount % 3 == 0) {
+        } else if (e.stage() == Shot.HATCHING && e.tickCount % 3 == 0 && GiantsPerf.keep(pk)) {
             level.addAlwaysVisibleParticle(
                     ParticleTypes.GLOW,
                     true,

@@ -35,7 +35,7 @@ public final class BellConfig {
         /** His hits on anything that isn't a player are multiplied by this. */
         public float mobDamage = 2.5f;
         /** How much of a blow from another giant boss he takes. */
-        public float giantArmor = 0.7f;
+        public float giantArmor = 0.78f;
         /** How much of a blast (TNT, a creeper, anything that isn't another giant) he takes. */
         public float explosionArmor = 0.35f;
         /** He picks fights with the other giant bosses ("/hollowbell giants on"). Off = he leaves them alone. */
@@ -162,7 +162,7 @@ public final class BellConfig {
     public static Values V = new Values();
 
     /** which version of the settings this build writes; save() and load() both stamp it */
-    private static final int VERSION = 8;
+    private static final int VERSION = 9;
     /**
      * the file on disk couldn't be read: it's kept as it is, and nothing is written over it until /hollowbell reload
      * reads it cleanly
@@ -255,6 +255,8 @@ public final class BellConfig {
         // (8: the next one rises sooner and nearer: 3 days, within 10000 blocks of where the last one died)
         if (v.configVersion < 8 && v.worldRespawnDays == 10) v.worldRespawnDays = 3;
         if (v.configVersion < 8 && v.respawnBlocks == 7000) v.respawnBlocks = 10000;
+        // (9: he flies, so the giants' blows that do reach him land a bit harder)
+        if (v.configVersion < 9 && Math.abs(v.giantArmor - 0.7f) < 1e-4f) v.giantArmor = 0.78f;
         v.worldRespawnDays = Math.max(0, v.worldRespawnDays);
         v.ownedRespawnDays = Math.max(0, v.ownedRespawnDays);
         v.respawnBlocks = Math.max(0, v.respawnBlocks);
@@ -270,7 +272,7 @@ public final class BellConfig {
         v.health = clamp(v.health, 10f, 1_000_000f, 6000f);
         v.damageMultiplier = clamp(v.damageMultiplier, 0f, 100f, 1f);
         v.mobDamage = clamp(v.mobDamage, 0f, 100f, 2.5f);
-        v.giantArmor = clamp(v.giantArmor, 0f, 10f, 0.7f);
+        v.giantArmor = clamp(v.giantArmor, 0f, 10f, 0.78f);
         v.explosionArmor = clamp(v.explosionArmor, 0f, 10f, 0.35f);
         v.spawnEggScale = clamp(v.spawnEggScale, 0.03f, 2f, 1f);
         v.smallEggScale = clamp(v.smallEggScale, 0.03f, 2f, 0.2f);

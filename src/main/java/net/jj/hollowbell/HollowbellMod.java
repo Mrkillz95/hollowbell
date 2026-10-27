@@ -50,6 +50,7 @@ import net.jj.hollowbell.world.KeepAwake;
 import net.jj.hollowbell.world.LootBeams;
 import net.jj.hollowbell.world.NoWait;
 import net.jj.hollowbell.world.Painter;
+import net.jj.hollowbell.world.RespawnPaint;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -182,6 +183,7 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(FarOrders::tick);
         ServerTickEvents.END_SERVER_TICK.register(NoWait::tick);
         ServerTickEvents.END_SERVER_TICK.register(Painter::tick);
+        ServerTickEvents.END_SERVER_TICK.register(RespawnPaint::tick);
         ServerTickEvents.END_SERVER_TICK.register(GroundCheck::tick);
         ServerTickEvents.END_WORLD_TICK.register(KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {

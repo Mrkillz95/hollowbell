@@ -42,6 +42,9 @@ public final class GiantsBridge {
     public static List<String> giants(MinecraftServer server, String action, String arg) {
         List<String> out = new ArrayList<>();
         String a = arg == null ? "" : arg.trim().toLowerCase(Locale.ROOT);
+        // the Giants Guide's performance screen: his settings out, the levels in (GiantsPerf)
+        if (action.equals("perf")) return GiantsPerf.describe();
+        if (action.equals("perfset")) return GiantsPerf.receive(arg);
         switch (action) {
             case "natural" -> natural(a, out);
             case "limit" -> limit(server, a, out);

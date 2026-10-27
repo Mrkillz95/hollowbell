@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.fx.BigFx;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -135,7 +136,7 @@ public final class BigFxClient {
     /** {sideways, up, forward} for the camera this frame (the mod's camera mixin adds it), or null when still */
     public static float[] cameraShake(float partial) {
         if (shake <= 0f || !shakeOn.getAsBoolean()) return null;
-        float a = Mth.lerp(partial, lastShake, shake);
+        float a = Mth.lerp(partial, lastShake, shake) * GiantsPerf.f("fx.screenShake");
         if (a <= 0.002f) return null;
         Minecraft mc = Minecraft.getInstance();
         // (kept small: the game's sine table stops turning once its angle passes about 200000)
@@ -202,8 +203,9 @@ public final class BigFxClient {
     private static float screenFlash;
 
     private static void hud(GuiGraphics g) {
-        if (screenFlash <= 0.01f) return;
-        int a = Mth.clamp((int) (screenFlash * 255), 0, 220);
+        float k = screenFlash * GiantsPerf.f("fx.screenEffects");
+        if (k <= 0.01f) return;
+        int a = Mth.clamp((int) (k * 255), 0, 220);
         g.fill(0, 0, g.guiWidth(), g.guiHeight(), a << 24 | 0xFFF8E8);
     }
 
@@ -372,10 +374,13 @@ public final class BigFxClient {
             }
             case BigFx.EXPLOSION -> explosion(lv, at, p.x(), p.y(), p.z(), s, d, r, show, near, p.seed());
             case BigFx.SMOKE -> {
-                if (show) smoke(p.x(), p.y(), p.z(), s, hx, hz, at.light, r, 1f);
+                // (smoke and trails: as many as this game's level asks)
+                quality *= GiantsPerf.f("fx.smokeTrails");
+                if (show && quality > 0f) smoke(p.x(), p.y(), p.z(), s, hx, hz, at.light, r, 1f);
             }
             case BigFx.TRAIL -> {
-                if (show) trail(lv, at, s, hx, hz, r, near);
+                quality *= GiantsPerf.f("fx.smokeTrails");
+                if (show && quality > 0f) trail(lv, at, s, hx, hz, r, near);
             }
             case BigFx.SHAKE -> {
                 shake(d, 0.2f + s * 0.02f, 90 + s * 8);
@@ -383,7 +388,9 @@ public final class BigFxClient {
             }
             case BigFx.WHIRL -> whirl(at, s, p.extra() > 0 ? p.extra() : 80, r, show, p.seed());
             case BigFx.CLOUD -> {
-                if (show) cloud(at, s, p.extra() != 0 ? p.extra() : 0x7FBF3F, r);
+                // (his venom clouds: as thick as his own setting on the Giants Guide's screen asks)
+                quality *= GiantsPerf.f("hollowbell.venomClouds");
+                if (show && quality > 0f) cloud(at, s, p.extra() != 0 ? p.extra() : 0x7FBF3F, r);
             }
             default -> {}
         }
@@ -852,7 +859,8 @@ public final class BigFxClient {
                 float look = len < 1e-3
                         ? 1f
                         : (float) Mth.clamp((mc.player.getViewVector(1f).dot(to.scale(1 / len)) + 0.2) / 1.2, 0, 1);
-                screenFlash = Math.max(screenFlash, (float) (1 - len / reach) * look * 0.75f);
+                screenFlash = Math.max(
+                        screenFlash, (float) (1 - len / reach) * look * 0.75f * GiantsPerf.f("fx.flashes"));
             }
         }
     }

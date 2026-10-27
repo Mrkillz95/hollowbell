@@ -9,6 +9,8 @@ import java.util.UUID;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.Detail;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
@@ -613,8 +615,9 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     @Override
     public boolean shouldRenderAtSqrDistance(double d) {
-        double r = Math.min(BellConfig.V.renderDistance, 400 * Math.max(0.1f, bellScale()) + 160);
-        r = Math.max(r, Math.min(4096, BellConfig.V.farSightBlocks)); // never lost before far sight reaches
+        // (on this game, times the Giants Guide's levels: at 100% just the settings)
+        double r = Math.min(Detail.renderDistance(), 400 * Math.max(0.1f, bellScale()) + 160);
+        r = Math.max(r, Detail.farSightBlocks()); // never lost before far sight reaches
         return d < r * r;
     }
 
@@ -864,13 +867,18 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 entityData.get(DATA_LIFT),
                 carry.x,
                 carry.y);
+        // (the shiver round his rim after a toll, as much as this player's game asks: all of it unless the Giants
+        // Guide turns it down; never on the server)
+        if (level().isClientSide) in.rippleAdd *= GiantsPerf.f("hollowbell.rimShiver");
         anim.step(in);
         poseTick = Long.MIN_VALUE;
         solidVer++;
         solidCache.touch();
         // what lies on the ground lies on its top, by where its blocks really are
-        // (every fourth tick: it settles over a few seconds, and costs little)
-        if (!ghost && (tickCount + getId()) % 4 == 0 && anim.anyResting()) {
+        // (every fourth tick: it settles over a few seconds, and costs little; less often on a game that asks for
+        // simpler animation)
+        int every = level().isClientSide ? Detail.settleEvery(position(), s) : 4;
+        if (!ghost && (tickCount + getId()) % every == 0 && anim.anyResting()) {
             ensurePose();
             anim.fitSoles(slicesNow(), BellPieces.get(), BellModel.get());
         }

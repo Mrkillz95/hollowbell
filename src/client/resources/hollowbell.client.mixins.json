@@ -13,7 +13,8 @@
     "MusicMixin",
     "BiomeMusicMixin",
     "LookGlowMixin",
-    "SolidFrameMixin"
+    "SolidFrameMixin",
+    "AmbientMixin"
   ],
   "injectors": {
     "defaultRequire": 1

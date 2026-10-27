@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.18
+# Hollowbell (Java mod), version 1.12.19
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,11 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+1.12.19: He's a bit weaker against the other giants: their blows hurt him more, at most 3 of his arms land on one
+giant in an Arm Storm, and stray stingers and eggs no longer hit giants he isn't fighting. When he comes back on land
+that was already explored, that land turns into his ground over a minute or so (never near spawn or on another
+giant's ground; land people have lived in only gets his biome). Works with the Giants Guide's Performance screen.
 
 1.12.18: More of his moves can be heard: the sweep creaks, rushes and tears up the ground, the curtain snaps shut,
 the pulse squeezes, the drop roars down, and the sun lances hiss and crackle where they burn. The Great Toll lights
@@ -52,7 +57,7 @@ lands on that part, at any size, still or drifting.
 
 ## Install
 
-You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.16.jar` in your `mods` folder
+You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.19.jar` in your `mods` folder
 and take any older Hollowbell jar out. For a server, put the same jar in the server's `mods` folder too. Everyone who
 joins needs it as well.
 

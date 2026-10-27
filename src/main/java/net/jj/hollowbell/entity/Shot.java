@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
@@ -272,7 +273,14 @@ public class Shot extends ThrowableItemProjectile {
             return false;
         HollowbellEntity h = bell();
         if (h != null && (h.spares(e) || h.moves().caught(e))) return false;
+        // (a stray stinger or egg never starts a fight: of the giants, only the one he's fighting can be hit)
+        if (Giants.isGiant(e) && (h == null || !h.fightingGiant(e))) return false;
         return super.canHitEntity(e);
+    }
+
+    /** whether this stinger or egg may touch e (the tests) */
+    public boolean mayHit(Entity e) {
+        return canHitEntity(e);
     }
 
     @Override
@@ -405,7 +413,7 @@ public class Shot extends ThrowableItemProjectile {
                 && random.nextFloat() < hatchChance
                 && sl.getEntitiesOfClass(Belling.class, new AABB(c, c).inflate(48))
                                 .size()
-                        < 10;
+                        < GiantsPerf.count(10, GiantsPerf.world("hollowbell.bellings"));
         entityData.set(DATA_STAGE, hatches ? HATCHING : SPLAT);
         entityData.set(DATA_STAGE_AT, tickCount);
         setNoGravity(true);

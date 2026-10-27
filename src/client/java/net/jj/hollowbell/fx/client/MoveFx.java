@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.entity.Shot;
@@ -187,8 +188,10 @@ public final class MoveFx {
                 }
             }
             case Moves.DEEP_TOLL -> {
+                // (his own setting on the Giants Guide's screen: off leaves only the one big ring along the ground)
+                boolean all = GiantsPerf.on("hollowbell.deepTollFx");
                 for (int k = 0; k < 3; k++) {
-                    if (!at(from, t, 1 + 36 * k)) continue;
+                    if (!all || !at(from, t, 1 + 36 * k)) continue;
                     toll(
                             rim,
                             (float) bell,
@@ -206,9 +209,11 @@ public final class MoveFx {
                     Ring w = ring(WALL, h.getX(), gy, h.getZ(), 0f, R, 25, 1f, s);
                     w.even = true;
                     w.h = RIG.rimY * s * 0.55f + 4;
-                    toll(rim, (float) bell, R, 25, true, 1.2f, s);
-                    toll(rim.add(0, -RIG.rimY * s * 0.3, 0), (float) bell * 0.8f, R, 25, true, 0.6f, s);
-                    rimGlints(h, rnd, 30);
+                    if (all) {
+                        toll(rim, (float) bell, R, 25, true, 1.2f, s);
+                        toll(rim.add(0, -RIG.rimY * s * 0.3, 0), (float) bell * 0.8f, R, 25, true, 0.6f, s);
+                        rimGlints(h, rnd, 30);
+                    }
                 }
             }
             case Moves.DROP -> {
@@ -234,7 +239,7 @@ public final class MoveFx {
                     // the light bursts out as far as it blinds: 50s + 30 round the middle of him
                     Vec3 c = h.position().add(0, (RIG.rimY + 30) * s, 0);
                     float reach = Math.max((float) bell * 1.1f, 50 * s + 30);
-                    Ring a = ring(AIR, c.x, c.y, c.z, (float) bell * 0.9f, reach, 10, 1.2f, s);
+                    Ring a = ring(GiantsPerf.f("fx.flashes"), AIR, c.x, c.y, c.z, (float) bell * 0.9f, reach, 10, 1.2f, s);
                     a.c = new float[] {1f, 1f, 0.9f};
                     for (int i = 0; i < RIG.spots.length; i++) {
                         Vec3 p = h.spotWorld(i);
@@ -267,6 +272,8 @@ public final class MoveFx {
                 }
             }
             case Moves.SUN_LANCES -> {
+                // (his own setting on the Giants Guide's screen: off leaves only the beams themselves)
+                if (!GiantsPerf.on("hollowbell.sunLancesFx")) break;
                 if (t < Moves.LANCE_FROM) {
                     // the light gathering into his glowing spots
                     for (int i = 0; i < RIG.spots.length; i++) {
@@ -340,7 +347,7 @@ public final class MoveFx {
         for (int k = 0; k < Moves.WRAP_HOLD; k += 20) {
             if (!at(from, t, Moves.WRAP_REACH + k)) continue;
             // a ring of venom wrung in tight round what it holds, and flung out
-            Ring r = ring(AIR, tip.x, tip.y, tip.z, 16 * s + 4, 2 * s + 0.5f, 8, 1f, s);
+            Ring r = ring(1f, AIR, tip.x, tip.y, tip.z, 16 * s + 4, 2 * s + 0.5f, 8, 1f, s);
             r.c = GOO;
             for (int i = 0; i < 24; i++) {
                 Vec3 d = new Vec3(rnd.nextGaussian(), rnd.nextGaussian() * 0.5 + 0.3, rnd.nextGaussian()).normalize();
@@ -377,7 +384,14 @@ public final class MoveFx {
         }
     }
 
+    /** a ring of sound, as strong as this game's Sound rings level asks (none at 0) */
     private static Ring ring(int kind, double x, double y, double z, float r0, float r1, int max, float a, float s) {
+        return ring(GiantsPerf.f("hollowbell.soundRings"), kind, x, y, z, r0, r1, max, a, s);
+    }
+
+    /** a ring at this share of its strength: at 0 it is made but never drawn */
+    private static Ring ring(
+            float share, int kind, double x, double y, double z, float r0, float r1, int max, float a, float s) {
         Ring r = new Ring();
         r.kind = kind;
         r.x = x;
@@ -388,7 +402,8 @@ public final class MoveFx {
         r.max = max;
         r.a = a;
         r.w = 4f * s + 1f;
-        rings.add(r);
+        r.a *= share;
+        if (share > 0f) rings.add(r);
         return r;
     }
 
@@ -405,7 +420,8 @@ public final class MoveFx {
         g.c = c;
         g.cross = cross;
         g.rot = (float) (Math.random() * Math.PI);
-        glints.add(g);
+        // (as many as this game's particle level asks: a glint left out is made but never drawn)
+        if (GiantsPerf.keep(GiantsPerf.f("fx.particles"))) glints.add(g);
         return g;
     }
 
@@ -771,7 +787,9 @@ public final class MoveFx {
         float half = t.arm ? 8f * s + 1f : 4.5f * s + 0.8f;
         float speed = (float) Math.sqrt(sq(t.p[0] - t.p[3]) + sq(t.p[1] - t.p[4]) + sq(t.p[2] - t.p[5]));
         // (only a swing that's really moving leaves a trail)
-        float show = Mth.clamp((speed / (0.6f * s + 0.1f)) - 0.5f, 0f, 1f) * Math.max(0f, 1f - t.quiet / 3f);
+        float show = Mth.clamp((speed / (0.6f * s + 0.1f)) - 0.5f, 0f, 1f)
+                * Math.max(0f, 1f - t.quiet / 3f)
+                * GiantsPerf.f("fx.smokeTrails");
         if (show <= 0.01f) return;
         for (int i = 0; i < n; i++) {
             // drawn between the last two ticks, as the end itself is
@@ -1003,6 +1021,10 @@ public final class MoveFx {
         float build = Mth.clamp(t / (Moves.FLASH_AT - 4f), 0f, 1f);
         float burst = t >= Moves.FLASH_AT - 1 ? (float) Math.exp(-(t - Moves.FLASH_AT + 1) / 6f) : 0f;
         if (t > Moves.FLASH_AT - 4 && t < Moves.FLASH_AT - 1) build = 0.1f;
+        // (as bright as this game's flashes level asks)
+        float fl = GiantsPerf.f("fx.flashes");
+        if (fl <= 0f) return;
+        burst *= fl;
         Vec3 c = h.position().add(0, (RIG.rimY + 30) * s, 0);
         // (the spots are under his dome: their light is drawn out at his skin, toward you, so it shows)
         Vec3 toCam = new Vec3(Draw.cx - c.x, Draw.cy - c.y, Draw.cz - c.z).normalize();
@@ -1022,7 +1044,7 @@ public final class MoveFx {
                     0.9f,
                     1f,
                     0.8f,
-                    Math.min(1f, 0.6f * build + burst));
+                    Math.min(1f, 0.6f * build + burst) * fl);
         }
         if (burst < 0.02f) return;
         Vec3 front = c.add(toCam.scale(skin));
@@ -1096,10 +1118,19 @@ public final class MoveFx {
             a[i] = 1f - u;
             haze[i] = 0.45f * (1f - u) * (1f - u);
         }
-        // a soft green haze round a bright venom streak, and a glowing head
-        Draw.ribbon(Draw.lay(Draw.WISP), p, n, wide, 0.4f, 0.85f, 0.25f, haze, 0f, 0.3f);
-        Draw.ribbon(Draw.lay(Draw.BAND), p, n, w, 0.3f, 0.75f, 0.15f, a, 0f, 0f);
-        Draw.ribbon(Draw.glow(Draw.BAND), p, n, w, GOO[0] * 0.35f, GOO[1] * 0.55f, GOO[2] * 0.25f, a, 0f, 0f);
+        // a soft green haze round a bright venom streak, and a glowing head (the streak as this game's Stinger
+        // streaks and trails levels ask: with it off only the head)
+        float st = GiantsPerf.on("hollowbell.stingerStreaks") ? GiantsPerf.f("fx.smokeTrails") : 0f;
+        if (st > 0f) {
+            if (st < 1f)
+                for (int i = 0; i < n; i++) {
+                    a[i] *= st;
+                    haze[i] *= st;
+                }
+            Draw.ribbon(Draw.lay(Draw.WISP), p, n, wide, 0.4f, 0.85f, 0.25f, haze, 0f, 0.3f);
+            Draw.ribbon(Draw.lay(Draw.BAND), p, n, w, 0.3f, 0.75f, 0.15f, a, 0f, 0f);
+            Draw.ribbon(Draw.glow(Draw.BAND), p, n, w, GOO[0] * 0.35f, GOO[1] * 0.55f, GOO[2] * 0.25f, a, 0f, 0f);
+        }
         Draw.sprite(
                 Draw.glow(Draw.GLINTS),
                 p[0],

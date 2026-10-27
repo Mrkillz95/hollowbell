@@ -1,6 +1,7 @@
 package net.jj.hollowbell.client;
 
 import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.MusicBoard;
@@ -50,6 +51,12 @@ public final class FightMusic {
             }
         }
 
+        @Override
+        public float getVolume() {
+            // (the Giants Guide's music level: 1 changes nothing)
+            return super.getVolume() * GiantsPerf.f("detail.music");
+        }
+
         void end() {
             stop();
         }
@@ -69,9 +76,10 @@ public final class FightMusic {
     }
 
     public static void tick(Minecraft mc) {
-        double d = BellConfig.V.fightMusic ? nearest(mc) : -1;
+        boolean on = BellConfig.V.fightMusic && GiantsPerf.f("detail.music") > 0f;
+        double d = on ? nearest(mc) : -1;
         if (d >= 0) lastNear = d;
-        boolean want = BellConfig.V.fightMusic && HOLD.tick(d >= 0);
+        boolean want = on && HOLD.tick(d >= 0);
         if (want) MusicBoard.want(HollowbellMod.MOD_ID, lastNear);
         else MusicBoard.drop(HollowbellMod.MOD_ID);
         long now = System.currentTimeMillis();

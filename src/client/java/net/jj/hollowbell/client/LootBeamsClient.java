@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.block.LootCacheBlock;
 import net.jj.hollowbell.client.render.BellRenderer;
@@ -82,6 +83,8 @@ public final class LootBeamsClient {
     public static void render(WorldRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || beams.isEmpty() || beamsFor != mc.level) return;
+        // (the Giants Guide's loot beams: "near only" and "off" draw none from far off)
+        if (GiantsPerf.choice("detail.lootBeams") >= 1) return;
         Vec3 cam = ctx.camera().getPosition();
         float partial = ctx.tickCounter().getGameTimeDeltaPartialTick(false);
         long t = mc.level.getGameTime();

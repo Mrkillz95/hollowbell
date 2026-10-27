@@ -587,7 +587,11 @@ public class WorldOne extends SavedData {
         deathKnown = true;
         nextSpot(level, deathX, deathZ);
         // his new ground is claimed now, in land not made yet, so it is ready when he comes down
-        if (!IN_TESTS) claimFresh(level);
+        if (!IN_TESTS) {
+            claimFresh(level);
+            // (any of it the world had made already is painted as his, a little at a time)
+            RespawnPaint.start(level);
+        }
         placed = true;
         BookRule book = BookRule.get(level.getServer());
         boolean owned = book.holder() != null;

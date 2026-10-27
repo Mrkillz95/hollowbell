@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntConsumer;
 import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.fx.BigFx;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -797,7 +798,8 @@ public final class FxWorld {
 
     private static void drawFlash(VertexConsumer vc, Flash f, float partial) {
         float t = (f.life + partial) / f.max;
-        float a = (1f - t) * (1f - t);
+        // (as bright as this game's flashes level asks: all of it unless the Giants Guide turns it down)
+        float a = (1f - t) * (1f - t) * GiantsPerf.f("fx.flashes");
         if (a < 0.01f) return;
         double rx = f.x - cx, ry = f.y - cy, rz = f.z - cz;
         float k = k(rx, ry, rz);
@@ -911,7 +913,7 @@ public final class FxWorld {
     private static void drawGlowRing(VertexConsumer vc, Ring r, float partial) {
         float t = Mth.clamp((r.life + partial) / r.max, 0f, 1f);
         float rad = r.radius(t);
-        float alpha = r.a * (1f - t);
+        float alpha = r.a * (1f - t) * GiantsPerf.f("fx.flashes");
         if (alpha < 0.01f) return;
         double rx0 = r.x - cx, ry0 = r.y - cy, rz0 = r.z - cz;
         float k = k(rx0, ry0, rz0);

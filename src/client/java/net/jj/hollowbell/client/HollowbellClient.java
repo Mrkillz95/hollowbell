@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.Detail;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModBlocks;
@@ -83,11 +84,16 @@ public class HollowbellClient implements ClientModInitializer {
                     if (pl != null) Shake.crash(Math.sqrt(pl.distanceToSqr(p.x(), p.y(), p.z())), p.power());
                 }));
         // the big moments: dust and chunks of ground, splashes and waves, flashes, clouds, shake and late sound
+        // (each on top of his own config, times the Giants Guide's performance levels: 1 changes nothing)
         BigFxClient.init(
-                () -> BellConfig.V.screenShake,
-                () -> BellConfig.V.soundVolume,
-                () -> BellConfig.V.simpleFarAway,
-                () -> BellConfig.V.bigEffects);
+                () -> BellConfig.V.screenShake && GiantsPerf.f("fx.screenShake") > 0f,
+                () -> BellConfig.V.soundVolume * GiantsPerf.f("detail.sounds"),
+                () -> BellConfig.V.simpleFarAway || GiantsPerf.f("detail.model") < 1f,
+                () -> BellConfig.V.bigEffects * GiantsPerf.f("fx.bigImpacts"));
+        Detail.viewer = () -> {
+            var mc = Minecraft.getInstance();
+            return mc.level == null ? null : mc.gameRenderer.getMainCamera().getPosition();
+        };
         ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> {
             CodexScreen.forgetEverything();
             BeingHim.set(-1, false);

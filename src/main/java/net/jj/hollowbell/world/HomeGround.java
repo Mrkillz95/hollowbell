@@ -184,6 +184,11 @@ public final class HomeGround {
                 (x, z) -> (x + 0.5 - cx) * (x + 0.5 - cx) + (z + 0.5 - cz) * (z + 0.5 - cz) <= r2);
     }
 
+    /** his own ground's plan laid over a chunk the world made before (his respawn), only on the columns clip lets in */
+    public static void paintClipped(WorldGenLevel level, ChunkAccess chunk, BellPlan p, Clip clip) {
+        make(level, chunk, p, true, null, clip);
+    }
+
     private static void make(
             WorldGenLevel level,
             ChunkAccess chunk,

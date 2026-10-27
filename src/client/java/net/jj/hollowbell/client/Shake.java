@@ -1,6 +1,7 @@
 package net.jj.hollowbell.client;
 
 import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.GiantsPerf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 
@@ -47,7 +48,7 @@ public final class Shake {
     /** sideways, up-down and forward-back wobble for the camera this frame */
     public static float[] offset(float partial) {
         if (amount <= 0f || !BellConfig.V.screenShake) return null;
-        float a = Mth.lerp(partial, last, amount);
+        float a = Mth.lerp(partial, last, amount) * GiantsPerf.f("fx.screenShake");
         if (a <= 0.002f) return null;
         Minecraft mc = Minecraft.getInstance();
         // (kept small: the game's sine table stops turning once its angle passes about 200000)

@@ -1,5 +1,6 @@
 package net.jj.hollowbell.entity;
 
+import net.jj.hollowbell.GiantsPerf;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
@@ -17,14 +18,17 @@ public final class BellFx {
         var rig = h.rig;
         float s = h.bellScale();
         boolean night = h.level().getSkyDarken() > 6 || h.level().isThundering();
+        // (as many as this game's particle level asks: all of them unless the Giants Guide turns it down)
+        float k = GiantsPerf.f("fx.particles");
         int n = night ? 3 : 1;
         for (int i = 0; i < n; i++) {
+            if (!GiantsPerf.keep(k)) continue;
             var S = rig.spots[r.nextInt(rig.spots.length)];
             Vec3 c = h.toWorld(new Vector3f(S.centre())
                     .add((r.nextFloat() - 0.5f) * 30f, (r.nextFloat() - 0.2f) * 20f, (r.nextFloat() - 0.5f) * 30f));
             h.level().addParticle(night ? ParticleTypes.GLOW : ParticleTypes.END_ROD, c.x, c.y, c.z, 0, 0.01 * s, 0);
         }
-        if (r.nextInt(3) == 0) {
+        if (r.nextInt(3) == 0 && GiantsPerf.keep(k)) {
             var St = rig.strands[r.nextInt(rig.strands.length)];
             Vec3 c = h.toWorld(new Vector3f(St.bottom()).add(0, 3 + r.nextFloat() * 40f, 0));
             h.level().addParticle(ParticleTypes.DRIPPING_WATER, c.x, c.y, c.z, 0, 0, 0);

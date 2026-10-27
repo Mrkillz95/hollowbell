@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.ModSounds;
@@ -433,6 +434,7 @@ public final class BellMoves {
         struckThisMove.clear();
         hitAt.clear();
         slapped.clear();
+        stormGiants.clear();
         Vector3f aim =
                 at != null ? h.toModel(aimAt(at)) : forcedSpot != null ? h.toModel(forcedSpot) : new Vector3f(0, 0, 40);
         int a = -1;
@@ -982,7 +984,7 @@ public final class BellMoves {
         if (!landed && t >= hit - 2 && (down || t >= hit + 14)) {
             landed = true;
             landedAt[arg] = t;
-            armBlow(tipNow, 32f, 12 * s + 4);
+            armBlow(tipNow, -1, 32f, 12 * s + 4);
         }
         if (landed) armSlap(arg, 32f, landedAt[arg]);
     }
@@ -1144,20 +1146,20 @@ public final class BellMoves {
             if (tip.y - h.groundAt(tip.x, tip.z) < 6 * s + 2 || t >= hit + 14) {
                 stormLanded |= 1 << k;
                 landedAt[k] = t;
-                armBlow(tip, 45f, 16 * s + 5);
+                armBlow(tip, k, 45f, 16 * s + 5);
             }
         }
     }
 
     /** an arm comes down: everything under its end and round it is hit and thrown */
-    private void armBlow(Vec3 tip, float dmg, double r) {
+    private void armBlow(Vec3 tip, int arm, float dmg, double r) {
         float s = s();
         double gy = h.groundAt(tip.x, tip.z);
         Vec3 c = new Vec3(tip.x, gy, tip.z);
         double topY = Math.max(tip.y, c.y) + 3 + 4 * s;
         for (LivingEntity e : near(new AABB(c.x - r, c.y - 2, c.z - r, c.x + r, topY, c.z + r))) {
             double d = Math.hypot(at(e).x - c.x, at(e).z - c.z);
-            if (d > r) continue;
+            if (d > r || !stormMay(e, arm)) continue;
             blow(e, dmg * (float) (1.0 - 0.45 * d / r), c, 1.4, 0.9);
             for (int k = 0; k < 8; k++)
                 if (rig.arms.length > k && h.armTipWorld(k).distanceToSqr(tip) < 1) slapped.add(e.getUUID() + "/" + k);
@@ -1206,7 +1208,8 @@ public final class BellMoves {
             for (LivingEntity e :
                     near(new AABB(p.x - r, p.y - 10 * s - 4, p.z - r, p.x + r, p.y + 6 * s + 3, p.z + r))) {
                 String key = e.getUUID() + "/" + arm;
-                if (slapped.contains(key) || Math.hypot(at(e).x - p.x, at(e).z - p.z) > r) continue;
+                if (slapped.contains(key) || Math.hypot(at(e).x - p.x, at(e).z - p.z) > r || !stormMay(e, arm))
+                    continue;
                 slapped.add(key);
                 blow(e, dmg, p, 1.4, 0.9);
             }
@@ -1214,6 +1217,32 @@ public final class BellMoves {
     }
 
     final Set<String> slapped = new HashSet<>();
+
+    /** the most of the storm's arms that land on one giant in a cast (players and creatures take them all) */
+    public static final int STORM_ARMS_PER_GIANT = 3;
+    /** per giant, which of this storm's arms have landed on it */
+    final Map<UUID, Integer> stormGiants = new HashMap<>();
+
+    /** in the arm storm, a giant is only hit by the first few arms that come down on it */
+    boolean stormMay(LivingEntity e, int arm) {
+        if (move != Moves.ARM_STORM || arm < 0 || !Giants.isGiant(e) || !h.fightingGiant(e)) return true;
+        LivingEntity g = Giants.ownerOf(e);
+        return stormCap(stormGiants, (g != null ? g : e).getUUID(), arm);
+    }
+
+    /** may this arm land on that giant, given which have (an arm already counted always may), and count it */
+    public static boolean stormCap(Map<UUID, Integer> had, UUID giant, int arm) {
+        int was = had.getOrDefault(giant, 0);
+        if ((was & (1 << arm)) != 0) return true;
+        if (Integer.bitCount(was) >= STORM_ARMS_PER_GIANT) return false;
+        had.put(giant, was | (1 << arm));
+        return true;
+    }
+
+    /** how many of this storm's arms have landed on the giant e */
+    public int stormArmsOn(Entity e) {
+        return Integer.bitCount(stormGiants.getOrDefault(e.getUUID(), 0));
+    }
 
     /** the sting volley: the strand ends nearest you flick stingers at you */
     private void volley() {
@@ -1527,7 +1556,8 @@ public final class BellMoves {
     }
 
     private void shed() {
-        int want = Math.max(0, BellConfig.V.shedCount);
+        // (fewer when an operator turns the Belling count down on the Giants Guide's screen: at least one)
+        int want = GiantsPerf.count(Math.max(0, BellConfig.V.shedCount), GiantsPerf.world("hollowbell.bellings"));
         List<Integer> left = new ArrayList<>();
         for (int i = 0; i < rig.eggs.length; i++) if (!h.state.eggGone[i]) left.add(i);
         Collections.shuffle(left, new Random(h.getRandom().nextLong()));

@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.Detail;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.client.render.BellRenderer;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -99,7 +99,7 @@ public final class FarSightClient {
                 continue;
             }
             boolean handedOver = real.contains(en.getKey());
-            boolean show = g.listed && !handedOver && BellConfig.V.farSightBlocks > 0;
+            boolean show = g.listed && !handedOver && Detail.farSightBlocks() > 0;
             g.fade = handedOver ? 0f : Mth.clamp(g.fade + (show ? 0.05f : -0.05f), 0f, 1f);
             if (!g.listed && g.fade <= 0f) {
                 it.remove();
@@ -126,7 +126,7 @@ public final class FarSightClient {
         if (mc.level == null) return;
         Vec3 cam = ctx.camera().getPosition();
         float partial = ctx.tickCounter().getGameTimeDeltaPartialTick(false);
-        int limit = Math.min(4096, BellConfig.V.farSightBlocks);
+        int limit = Detail.farSightBlocks();
         for (Map.Entry<UUID, Ghost> en : ghosts.entrySet()) {
             Ghost g = en.getValue();
             if (g.fade <= 0f || real.contains(en.getKey())) continue;
