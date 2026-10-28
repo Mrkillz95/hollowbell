@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.14 |
-| Pitchgut | 1.35.25 |
-| Furrowmaw | 1.17.22 |
-| Fire & Ice Cerberus | 2.18.23 |
-| Hollowbell | 1.12.25 |
-| Lantern Willow | 1.10.26 |
-| Wreckback | 1.2.31 |
-| The Swarmforge | 1.4.29 |
-| The Gloamwick | 1.2.9 |
+| Giants Guide | 1.4.15 |
+| Pitchgut | 1.35.28 |
+| Furrowmaw | 1.17.25 |
+| Fire & Ice Cerberus | 2.18.25 |
+| Hollowbell | 1.12.27 |
+| Lantern Willow | 1.10.28 |
+| Wreckback | 1.2.33 |
+| The Swarmforge | 1.4.31 |
+| The Gloamwick | 1.2.12 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.3), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.4), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.3.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.4.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -81,6 +81,29 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.14: the Controls tab on Giants Performance, to change every giant's keys there, how giants
   back down from a wild fight they're losing (and `/giants flee`), and sitting anywhere on a giant with a triple
   crouch.
+
+## New in 1.6.4
+
+- **Wreckback** is weaker against other giants on land, and keeps his strength at sea. The server freeze when one
+  of his cannonballs ran away is fixed.
+- **Boss music** plays only while a giant is fighting you, and it lasts the whole fight.
+- **Model detail at 100%** on the Performance screen now always draws every giant in full, however far off he is.
+- **Sitting on a giant:** the three crouches now only have to come within two seconds.
+- **Riding the Gloamwick** starts you in third person.
+- **Hunting:** giants now go after players they can see, and they go for players before mobs. They see further.
+  Furrowmaw also hunts by sight when he's on the surface, and the Gloamwick closes in on you. On Peaceful they
+  leave players alone.
+- **The Hush** moves smoothly and never teleports. It can't see you while you crouch. It walks upright and drops to a
+  crawl when it chases you.
+- **The Gloamwick's trees** no longer come out cut in half at the edge of his ground or over water (in newly made
+  land).
+- **Furrowmaw's legs** no longer flip or snap, and he stays solid while he dives and comes back up.
+- **Pitchgut's arms** no longer stretch. His Field of Tentacles has a new arm slam that leaves goo, his suck-in pulls
+  30% harder, and you never end up stuck in blocks after he coughs you up.
+- **Giants Guide 1.4.15:** says two seconds for the triple crouch and explains the new 100% model detail.
+
+Inside: Pitchgut 1.35.28, Furrowmaw 1.17.25, Cerberus 2.18.25, Hollowbell 1.12.27, Lantern Willow 1.10.28,
+Wreckback 1.2.33, Swarmforge 1.4.31, Gloamwick 1.2.12.
 
 ## New in 1.6.3
 
