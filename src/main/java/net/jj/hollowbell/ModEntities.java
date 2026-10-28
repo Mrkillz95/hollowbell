@@ -1,5 +1,6 @@
 package net.jj.hollowbell;
 
+import net.jj.hollowbell.solid.SitSeat;
 import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Seat;
@@ -49,6 +50,16 @@ public final class ModEntities {
                     .fireImmune()
                     .clientTrackingRange(10)
                     .updateInterval(2));
+
+    /** where a player sits on him (sit anywhere) */
+    public static final EntityType<SitSeat> SIT_SEAT = register(
+            "sit_seat",
+            EntityType.Builder.<SitSeat>of(SitSeat::new, MobCategory.MISC)
+                    .sized(0.1f, 0.1f)
+                    .clientTrackingRange(16)
+                    .updateInterval(1)
+                    .noSummon()
+                    .fireImmune());
 
     private static <T extends Entity> EntityType<T> register(String name, EntityType.Builder<T> b) {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, name);

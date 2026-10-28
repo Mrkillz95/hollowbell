@@ -278,6 +278,17 @@ final class BellRiding {
         return st;
     }
 
+    /** someone sitting on him who can't stand where they sat: set down on the ground beside him, gently */
+    public void setDownBeside(LivingEntity who) {
+        double a = hb.getRandom().nextDouble() * Math.PI * 2, r = hb.bellRadius() + 3;
+        double x = hb.getX() + Math.cos(a) * r, z = hb.getZ() + Math.sin(a) * r;
+        double y = hb.groundAt(x, z);
+        who.teleportTo(x, y + 0.5, z);
+        who.fallDistance = 0;
+        who.setDeltaMovement(Vec3.ZERO);
+        who.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 80, 0, false, false));
+    }
+
     public void dropRider() {
         if (hb.rider instanceof ServerPlayer sp) ServerPlayNetworking.send(sp, new BeingHimPayload(hb.getId(), false));
         LivingEntity who = hb.rider;

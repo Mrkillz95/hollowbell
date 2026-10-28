@@ -52,6 +52,7 @@ public class HollowbellClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         EntityRendererRegistry.register(ModEntities.HOLLOWBELL, BellRenderer::new);
+        net.jj.hollowbell.solid.client.SitClient.init(ModEntities.SIT_SEAT);
         EntityRendererRegistry.register(ModEntities.BELLING, BellingRenderer::new);
         BellArmorRenderer.register(); // bell glass armor drawn see-through
         EntityRendererRegistry.register(ModEntities.SEAT, NoopRenderer::new);

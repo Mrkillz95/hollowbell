@@ -355,7 +355,7 @@
   "codex.hollowbell.order_tip.call_off": "He stops what he's after and calms down.",
   "codex.hollowbell.order_tip.stay": "He holds still where he is. Press again to let him drift.",
   "codex.hollowbell.order_tip.drop_all": "He lets go of everything he's holding or has in his dome.",
-  "codex.hollowbell.order_tip.ride": "He comes over, lifts you up with a strand and sets you on his crown. Stand still while he does. Press again to be put down.",
+  "codex.hollowbell.order_tip.ride": "He comes over, lifts you up with a strand and sets you on his crown. Stand still while he does. Press again to be put down. To sit anywhere on him instead, his bell or a ledge of it: stand there and crouch three times quickly (you, or anyone on your safe list). Jump to get up.",
   "codex.hollowbell.order_tip.where": "Tells you where he is.",
   "codex.hollowbell.order_tip.send": "He drifts to the X and Z you typed.",
   "codex.hollowbell.order_tip.here": "Fills in the X and Z of where you're standing.",
@@ -524,5 +524,12 @@
   "message.hollowbell.look_going_far": "The Hollowbell is going after %s. It's about %s blocks from him; he's on his way.",
   "message.hollowbell.look_going_away": "The Hollowbell is out of the world. He's on his way to %s (about %s blocks, %s min) and goes for it when he's back.",
   "command.hollowbell.where_lying": "Lying still at about %s %s (%s), not loaded because nobody is near him.",
-  "command.hollowbell.tp_not_ready": "The land there still isn't ready, so you stayed where you are. Try again in a moment."
+  "command.hollowbell.tp_not_ready": "The land there still isn't ready, so you stayed where you are. Try again in a moment.",
+  "entity.hollowbell.sit_seat": "Sitting",
+  "key.hollowbell.sit_on_giant": "Sit on giant",
+  "message.hollowbell.sit.down": "You sit down on him. Jump to get up.",
+  "message.hollowbell.sit.off_list": "You're not on his safe list any more, so you got up.",
+  "controls.hollowbell.sit_on_giant": "Standing on him (on his safe list): sit down where you stand. Press again, or jump, to get up.",
+  "controls.hollowbell.triple_crouch_sit": "Triple crouch to sit",
+  "controls.hollowbell.triple_crouch_sit.desc": "Crouch three times within a second while standing on him (on his safe list) to sit down there. Jump to get up."
 }

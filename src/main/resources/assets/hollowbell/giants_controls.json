@@ -1,0 +1,18 @@
+{
+  "controls": 1,
+  "keys": {
+    "key.hollowbell.armour_power": "With his full armour on: Great Toll (R), or Glass Bell (Sneak + R).",
+    "key.hollowbell.attack_look": "With his book: send him after what you look at.",
+    "key.hollowbell.sit_on_giant": "Standing on him (on his safe list): sit down where you stand. Press again, or jump, to get up."
+  },
+  "gestures": [
+    {
+      "id": "triple_crouch_sit",
+      "name": "Triple crouch to sit",
+      "description": "Crouch three times within a second while standing on him (on his safe list) to sit down there. Jump to get up.",
+      "config": "tripleCrouchSit",
+      "key": "key.hollowbell.sit_on_giant",
+      "default": true
+    }
+  ]
+}

@@ -56,6 +56,9 @@ public final class GiantsBridge {
         // the Giants Guide's performance screen: his settings out, the levels in (GiantsPerf)
         if (action.equals("perf")) return GiantsPerf.describe();
         if (action.equals("perfset")) return GiantsPerf.receive(arg);
+        // the Giants Guide's Controls tab: the triple crouch to sit, on or off (on your own game, server null)
+        if ("controlget".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlGet(arg);
+        if ("controlset".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlSet(arg);
         switch (action) {
             case "natural" -> natural(a, out);
             case "limit" -> limit(server, a, out);

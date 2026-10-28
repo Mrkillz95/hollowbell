@@ -1,5 +1,7 @@
 package net.jj.hollowbell.solid.client;
 
+import net.jj.hollowbell.solid.SitHost;
+import net.jj.hollowbell.solid.SitSeat;
 import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.solid.SolidBody;
 import net.jj.hollowbell.solid.SolidCarry;
@@ -78,6 +80,10 @@ public final class SolidClient {
         restore();
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
+        if (p != null && p.getVehicle() instanceof SitSeat seat) {
+            sitFrame(p, seat, partial);
+            return;
+        }
         SolidBody b = CARRY.on;
         if (p == null || b == null || CARRY.rest == null || !b.solidReady() || p.isPassenger()) {
             frameYaw = Float.NaN;
@@ -120,6 +126,64 @@ public final class SolidClient {
                 lz = Mth.lerp(partial, p.zo, p.getZ());
         double off = Math.sqrt((dx - lx) * (dx - lx) + (dy - ly) * (dy - ly) + (dz - lz) * (dz - lz));
         if (off > 1.5) return;
+        frameFix = Math.max(frameFix, off);
+        rx = p.getX();
+        ry = p.getY();
+        rz = p.getZ();
+        rxo = p.xo;
+        ryo = p.yo;
+        rzo = p.zo;
+        p.setPos(dx, dy, dz);
+        p.xo = dx;
+        p.yo = dy;
+        p.zo = dz;
+        moved = true;
+    }
+
+    /**
+     * sitting on him: you where your seat's spot is in the pose he's drawn in this frame (so you never lag a tick
+     * behind the part you sit on), and your view turned with that part
+     */
+    private static void sitFrame(LocalPlayer p, SitSeat seat, float partial) {
+        SitHost h = seat.host();
+        int fr = seat.frame();
+        if (h == null || !h.solidReady() || fr < 0 || fr >= h.solidShape().frames()) {
+            frameYaw = Float.NaN;
+            return;
+        }
+        Entity s = h.solidSelf();
+        int bone = h.solidShape().bone[fr];
+        Matrix4f[] tickPose = h.solidPose();
+        if (scratch == null || scratch.length != tickPose.length) {
+            scratch = new Matrix4f[tickPose.length];
+            for (int i = 0; i < scratch.length; i++) scratch[i] = new Matrix4f();
+        }
+        h.solidPoseAt(partial, scratch);
+        Matrix4f f = h.solidRoot(partial, new Matrix4f()).mul(scratch[bone]);
+        float yaw = Solid.yawOf(f);
+        int key = s.getId() * 4096 + fr + 2048;
+        if (!Float.isNaN(frameYaw) && key == frameKey) {
+            float dy = Mth.wrapDegrees(yaw - frameYaw);
+            if (Math.abs(dy) < 20f) {
+                p.setYRot(p.getYRot() + dy);
+                p.yRotO += dy;
+                p.setYBodyRot(p.yBodyRot + dy);
+                p.yBodyRotO += dy;
+                p.setYHeadRot(p.getYHeadRot() + dy);
+                p.yHeadRotO += dy;
+            }
+        }
+        frameYaw = yaw;
+        frameKey = key;
+        Vector3f w = f.transformPosition(seat.rest());
+        double dx = w.x + Mth.lerp(partial, s.xo, s.getX()),
+                dy = w.y + Mth.lerp(partial, s.yo, s.getY()) + SitSeat.SIT_OVER - p.getVehicleAttachmentPoint(seat).y,
+                dz = w.z + Mth.lerp(partial, s.zo, s.getZ());
+        double lx = Mth.lerp(partial, p.xo, p.getX()),
+                ly = Mth.lerp(partial, p.yo, p.getY()),
+                lz = Mth.lerp(partial, p.zo, p.getZ());
+        double off = Math.sqrt((dx - lx) * (dx - lx) + (dy - ly) * (dy - ly) + (dz - lz) * (dz - lz));
+        if (off > 4.0) return;
         frameFix = Math.max(frameFix, off);
         rx = p.getX();
         ry = p.getY();

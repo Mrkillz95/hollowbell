@@ -72,6 +72,7 @@ public class HollowbellMod implements ModInitializer {
         ModEntities.init();
         ModItems.init();
         FabricDefaultAttributeRegistry.register(ModEntities.HOLLOWBELL, HollowbellEntity.createAttributes());
+        net.jj.hollowbell.solid.Sitting.init(ModEntities.SIT_SEAT);
         FabricDefaultAttributeRegistry.register(ModEntities.BELLING, Belling.createAttributes());
 
         PayloadTypeRegistry.playC2S().register(CodexPayload.TYPE, CodexPayload.CODEC);

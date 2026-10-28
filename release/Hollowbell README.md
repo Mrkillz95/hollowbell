@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.24
+# Hollowbell (Java mod), version 1.12.25
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,16 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Sit anywhere on him. If you hold his book, or you're on the safe list of whoever holds it, stand on any part of him
+  you can stand on (the top of his bell, its rim, an arm) and crouch three times quickly, within a second: you sit
+  down right there. You go wherever that part of him goes, through his walking, turning and every move, you don't fall
+  off, and nothing of his hurts you while you sit. Jump to get up: you stand on the same spot, or you're set down on
+  the ground beside him if there's no room there now. Crouching doesn't get you up. Wild giants can't be sat on.
+- New key in Controls: "Sit on giant" (not set to start with) sits you down or gets you up, like the crouches. The
+  Giants Guide's Controls tab can turn the triple crouch off.
+
+### 1.12.24
 
 - New boss fight music that changes as he gets hurt: a darker take below half his health and a last-stand take below a
   quarter. He also has his own special track, heavier, that plays while he's sunk to the ground.

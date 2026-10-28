@@ -4,6 +4,10 @@
   "package": "net.jj.hollowbell.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "SitEffectMixin",
+    "SitJumpAccess",
+    "SitLeaveMixin",
+    "SitStayMixin",
     "ChunkMapAccess",
     "BookPickupMixin",
     "BookSlotMixin",

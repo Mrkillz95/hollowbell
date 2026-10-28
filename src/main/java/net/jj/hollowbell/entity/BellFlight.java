@@ -499,6 +499,7 @@ final class BellFlight {
     /** steps him out of the world (see Away) */
     public boolean stepAside() {
         if (!(hb.level() instanceof ServerLevel sl) || hb.isRemoved() || hb.isDeadOrDying()) return false;
+        net.jj.hollowbell.solid.Sitting.setDownAll(hb);
         hb.riding.stopFetch();
         hb.riding.dropRider();
         hb.moves.letGoOfEverything(true);

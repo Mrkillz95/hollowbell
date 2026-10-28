@@ -291,6 +291,15 @@ public final class AutoTest implements ClientModInitializer {
                 ClientPlayNetworking.send(new ArmourPowerPayload(s.equals("bell")));
                 continue;
             }
+            // sit anywhere: sitodd [frame], sitcam dist up [turn]
+            if (s.equals("sitodd") || s.startsWith("sitodd ")) {
+                onSitodd(mc, s);
+                continue;
+            }
+            if (s.startsWith("sitcam ")) {
+                onSitcam(mc, s);
+                continue;
+            }
             if (s.equals("quit")) {
                 HollowbellMod.LOG.info("autotest done");
                 mc.stop();
@@ -906,5 +915,101 @@ public final class AutoTest implements ClientModInitializer {
             HollowbellMod.LOG.info("autotest cmd: {}", c);
             srv.getCommands().performPrefixedCommand(src, c);
         });
+    }
+
+    // sitodd: the player sits on an odd spot of the nearest one (a small part well up off him: a claw's top, a
+    // horn, a ledge), the camera behind them looking across him
+    private static boolean onSitodd(Minecraft mc, String s) {
+        net.minecraft.server.MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv != null)
+            srv.execute(() -> {
+                if (srv.getPlayerList().getPlayers().isEmpty()) return;
+                var pl = srv.getPlayerList().getPlayers().get(0);
+                net.jj.hollowbell.solid.SitHost best = null;
+                for (var b : net.jj.hollowbell.solid.Solid.bodies(false))
+                    if (b instanceof net.jj.hollowbell.solid.SitHost sh
+                            && b.solidSelf().level() == pl.level()
+                            && (best == null
+                                    || b.solidSelf().distanceToSqr(pl) < best.solidSelf().distanceToSqr(pl)))
+                        best = sh;
+                if (best == null) {
+                    HollowbellMod.LOG.warn("autotest sitodd: none near");
+                    return;
+                }
+                // (sitodd F: on frame F; the frames with a spot open to the sky are logged, to pick one)
+                StringBuilder fl = new StringBuilder();
+                var shape = best.solidShape();
+                for (int f = 0; f < shape.frames(); f++) {
+                    net.minecraft.world.phys.Vec3 fv = net.jj.hollowbell.solid.Sitting.topOfFrame(best, f);
+                    if (fv == null) continue;
+                    float[] bb = shape.bounds[f];
+                    boolean open = net.jj.hollowbell.solid.Solid.column(best, fv.x, fv.z, fv.y + 0.2, fv.y + 48, false, new net.jj.hollowbell.solid.Solid.Runs()).n == 0;
+                    fl.append(String.format(
+                            " %d:%.0f:%.1f%s",
+                            f,
+                            (bb[3] - bb[0]) * (bb[5] - bb[2]) * best.solidScale() * best.solidScale(),
+                            fv.y - best.solidSelf().getY(),
+                            open ? "o" : ""));
+                }
+                HollowbellMod.LOG.info("autotest sitodd: frames (frame:area:up, o = open over it){}", fl);
+                String arg = s.length() > 6 ? s.substring(6).trim() : "";
+                net.minecraft.world.phys.Vec3 v = arg.isEmpty()
+                        ? net.jj.hollowbell.solid.Sitting.oddSpot(best)
+                        : net.jj.hollowbell.solid.Sitting.topOfFrame(best, Integer.parseInt(arg));
+                if (v == null) {
+                    HollowbellMod.LOG.warn("autotest sitodd: nowhere on him to sit");
+                    return;
+                }
+                pl.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+                pl.getAbilities().flying = false;
+                pl.onUpdateAbilities();
+                var g = best.solidSelf();
+                float yaw = (float) Math.toDegrees(Math.atan2(-(g.getX() - v.x), g.getZ() - v.z));
+                pl.teleportTo(pl.serverLevel(), v.x, v.y + 0.01, v.z, yaw, 28f);
+                var a = net.jj.hollowbell.solid.Sitting.spotUnder(best, pl);
+                // (the real way in: his owner, standing there)
+                var r = net.jj.hollowbell.solid.Sitting.trySit(pl, best);
+                HollowbellMod.LOG.info(
+                        "autotest sitodd: {} at {} (frame {}, he is at {})",
+                        r,
+                        v,
+                        a == null ? -1 : a.frame(),
+                        g.position());
+            });
+        mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+        return true;
+    }
+
+    // sitcam dist up [turn]: the view from behind the sitter (third person), set looking at them from dist blocks out
+    // from him past them (turned by turn degrees) and up blocks up. (The game never draws you from another entity's
+    // camera, so it's your own, turned.)
+    private static boolean onSitcam(Minecraft mc, String s) {
+        String[] a = s.substring(6).trim().split(" +");
+        double dist = Double.parseDouble(a[0]), up = Double.parseDouble(a[1]);
+        double turn = a.length > 2 ? Math.toRadians(Double.parseDouble(a[2])) : 0;
+        var p = mc.player;
+        if (p == null || !(p.getVehicle() instanceof net.jj.hollowbell.solid.SitSeat seat) || seat.host() == null) {
+            HollowbellMod.LOG.warn("autotest sitcam: not sitting");
+            return true;
+        }
+        var g = seat.host().solidSelf();
+        net.minecraft.world.phys.Vec3 t = p.position().add(0, 0.9, 0);
+        net.minecraft.world.phys.Vec3 out = new net.minecraft.world.phys.Vec3(t.x - g.getX(), 0, t.z - g.getZ());
+        out = out.lengthSqr() < 1e-4 ? new net.minecraft.world.phys.Vec3(1, 0, 0) : out.normalize();
+        out = new net.minecraft.world.phys.Vec3(
+                out.x * Math.cos(turn) - out.z * Math.sin(turn), 0, out.x * Math.sin(turn) + out.z * Math.cos(turn));
+        net.minecraft.world.phys.Vec3 c = t.add(out.scale(dist)).add(0, up, 0);
+        net.minecraft.world.phys.Vec3 d = t.subtract(c).normalize();
+        float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) -Math.toDegrees(Math.asin(d.y));
+        p.setYRot(yaw);
+        p.yRotO = yaw;
+        p.setXRot(pitch);
+        p.xRotO = pitch;
+        p.setYHeadRot(yaw);
+        p.yHeadRotO = yaw;
+        mc.setCameraEntity(p);
+        mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+        HollowbellMod.LOG.info("autotest sitcam: looking at {} from {}", t, c);
+        return true;
     }
 }

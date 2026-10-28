@@ -21,6 +21,8 @@ import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.BellState;
 import net.jj.hollowbell.solid.GiantHull;
+import net.jj.hollowbell.solid.SitHost;
+import net.jj.hollowbell.solid.Sitting;
 import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.solid.SolidBody;
 import net.jj.hollowbell.solid.SolidCache;
@@ -77,7 +79,7 @@ import org.joml.Vector3f;
  * the client draws, so a hit lands on exactly the block you swung at: see {@link #hitBy}. His own health is kept
  * here rather than in the game's (which can't go past 1024).
  */
-public class HollowbellEntity extends Monster implements SolidBody {
+public class HollowbellEntity extends Monster implements SitHost {
     public static final int CALM = 0, HUNTER = 1, GUARDIAN = 2;
     public static final float MIN_SCALE = 0.03f, MAX_SCALE = 2f;
 
@@ -1284,6 +1286,26 @@ public class HollowbellEntity extends Monster implements SolidBody {
         return targets.spares(e);
     }
 
+    /**
+     * Sit anywhere: whoever holds his book (near enough to count) or is on their safe list, unless he has turned on
+     * them. A wild one (nobody holding his book): nobody.
+     */
+    @Override
+    public boolean sitAllowed(Player p) {
+        if (p.isSpectator() || !(level() instanceof ServerLevel sl)) return false;
+        if (mood.turnedOn(p.getUUID()) || mood.hunting(p.getUUID())) return false;
+        Player holder = targets.bookHolder();
+        if (holder == null) return false;
+        return holder == p
+                || net.jj.hollowbell.world.BellWorld.get(sl.getServer()).onList(holder.getUUID(), p.getUUID());
+    }
+
+    /** his own set-down: onto the ground beside him, gently, no fall damage */
+    @Override
+    public void sitSetDown(LivingEntity who) {
+        riding.setDownBeside(who);
+    }
+
     static final boolean DEBUG =
             Boolean.getBoolean("hollowbell.debug") || System.getProperty("hollowbell.autotest") != null;
 
@@ -1488,6 +1510,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
                 && why != RemovalReason.UNLOADED_WITH_PLAYER)
             HollowbellMod.LOG.info("Removed at {} ({})", blockPosition().toShortString(), why);
         clearBars();
+        if (!level().isClientSide) Sitting.setDownAll(this);
         if (!level().isClientSide && (why == RemovalReason.KILLED || why == RemovalReason.DISCARDED))
             riding.lowerWhoeverStandsOnHim();
         Solid.untrack(this);
@@ -1500,6 +1523,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
 
     /** taken to another world (a /tp): whoever he held is let go here first, as when he's removed */
     public void leftThisWorld() {
+        Sitting.setDownAll(this);
         riding.dropRider();
         riding.stopFetch();
         moves.letGoOfEverything(true);
@@ -1658,6 +1682,7 @@ public class HollowbellEntity extends Monster implements SolidBody {
             // his chunk keeps going until his death is over, even if everybody walks off: never left half dead
             if (level() instanceof ServerLevel sl)
                 sl.getChunkSource().addRegionTicket(DYING_TICKET, new ChunkPos(blockPosition()), 2, getId());
+            Sitting.setDownAll(this);
             riding.dropRider();
             riding.stopFetch();
             moves.letGoOfEverything(true);
