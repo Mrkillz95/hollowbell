@@ -96,7 +96,7 @@ All of these are `client` unless marked as the world's. A share of 1 changes not
 | `detail.farSight` | switch | far-sight skyline stand-ins | on, on, on, on, off |
 | `detail.farSightDistance` | share .25..1 | times `farSightBlocks` | 1 / 1 / .75 / .5 / .25 |
 | `detail.lootBeams` | choice | 0 All, 1 Near only (none from far-sight), 2 Off | 0 / 0 / 0 / 1 / 2 |
-| `detail.drawing` | choice | 0 Classic: drawn exactly as before (the default, so it changes nothing); 1 Fast: the same picture with less work for the graphics card. No preset turns it on: each player picks it | 0 in every preset |
+| `detail.drawing` | choice | 0 Classic: drawn exactly as before (the default, so it changes nothing); 1 Fast: the same picture with less work for the graphics card. Presets never change it (built-in or a player's own, and not "reset to preset"): each player picks it | 0 in every preset (not applied) |
 | `detail.sounds` | share | times `soundVolume` for sounds played on the client | 1 in every preset |
 | `detail.music` | share | fight music volume; 0 = none | 1 in every preset |
 | `detail.renderDistance` | share .25..1 | times `renderDistance` (one slider per giant on the screen) | 1 / 1 / .85 / .65 / .45 |

@@ -109,7 +109,8 @@ public final class PerfJson {
             }
         }
         PerfSetting bare = new PerfSetting(
-                id, section, kind, min, max, step, 0, null, Cost.LOW, server, "", "", "", options, "", giant, false);
+                id, section, kind, min, max, step, 0, null, Cost.LOW, server, "", "", "", options, "", giant, false,
+                false);
         double def = bare.clamp(num(o, "default", kind == Kind.SLIDER ? max : kind == Kind.TOGGLE ? 1 : 0));
         double[] lv = new double[5];
         JsonArray given = o.get("levels") instanceof JsonArray a ? a : new JsonArray();
@@ -141,6 +142,7 @@ public final class PerfJson {
                 List.copyOf(options),
                 cut(str(o, "unit", 16), 12),
                 giant,
+                false,
                 false);
     }
 

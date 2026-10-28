@@ -63,10 +63,10 @@ public final class PerfProfile {
         return values;
     }
 
-    /** a setting moved by hand: the label goes to Custom */
+    /** a setting moved by hand: the label goes to Custom (not for one no preset changes) */
     public void set(PerfSetting s, double v) {
         values.put(s.id(), s.clamp(v));
-        preset = PerfPresets.CUSTOM;
+        if (!s.presetFree()) preset = PerfPresets.CUSTOM;
     }
 
     /** something else was moved by hand (one of the world's settings): the label goes to Custom */
@@ -86,13 +86,13 @@ public final class PerfProfile {
     }
 
     /**
-     * Picks a preset: the per-player settings take its values. Returns all its values (the world's ones too, for an
-     * operator to send on), or null for an unknown name.
+     * Picks a preset: the per-player settings take its values (all but the preset-free ones). Returns all its
+     * values (the world's ones too, for an operator to send on), or null for an unknown name.
      */
     public @Nullable Map<String, Double> apply(String name, List<PerfSetting> settings) {
         Map<String, Double> v = presetValues(name, settings);
         if (v == null) return null;
-        for (PerfSetting s : settings) if (!s.server()) values.put(s.id(), v.get(s.id()));
+        for (PerfSetting s : settings) if (!s.server() && !s.presetFree()) values.put(s.id(), v.get(s.id()));
         preset = base = PerfPresets.builtIn(name) >= 0 ? PerfPresets.BUILT_IN.get(PerfPresets.builtIn(name)) : name;
         return v;
     }
@@ -110,13 +110,13 @@ public final class PerfProfile {
         }
         Map<String, Double> out = new LinkedHashMap<>();
         for (PerfSetting s : settings)
-            if (which.test(s)) {
+            if (which.test(s) && !s.presetFree()) {
                 out.put(s.id(), v.get(s.id()));
                 if (!s.server()) values.put(s.id(), v.get(s.id()));
             }
         boolean same = true;
         for (PerfSetting s : settings)
-            if (!s.server() && Math.abs(get(s) - v.get(s.id())) > 1e-9) same = false;
+            if (!s.server() && !s.presetFree() && Math.abs(get(s) - v.get(s.id())) > 1e-9) same = false;
         if (same) preset = base;
         return out;
     }
