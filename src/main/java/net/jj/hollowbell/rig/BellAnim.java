@@ -88,6 +88,9 @@ public final class BellAnim {
         }
     }
 
+    /** how many ticks it has stepped: the pose only changes when this does (and when his parts do) */
+    public long steps() { return steps; }
+
     /** the state as of the last tick, for the moves to read and fill in */
     public BellState now() { return now; }
 

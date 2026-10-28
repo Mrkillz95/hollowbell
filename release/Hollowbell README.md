@@ -4,6 +4,17 @@ Your KillzAI Hollowbell build turned into a real boss for Minecraft Java 1.21.1 
 
 He's made from your build block for block. Every block wears its real texture, and the glass is see-through in its own colours, so you can look into the hollow dome and see what he's caught.
 
+## What's new in 1.3.6
+
+- **He's solid now, like Wreckback.** You can stand on his dome, his rim, his crown and his arms, and walk about on them. The glass is solid too. Standing on him, you go with him as he drifts, pulses and sways.
+- **You never end up inside him.** If his dome, rim or an arm moves into you, you're pushed out at once, onto him if you can be.
+- **The strands, pods and egg clumps aren't solid.** You walk in among them like before (to hit the pods), and they still sting.
+- **Whoever he holds stays held.** Inside the dome, on a strand, round an arm, or riding his crown, you're not pushed out.
+- **Sit anywhere on him.** If you hold his book (or you're on its safe list), stand on him and crouch three times quickly, or press "Sit on giant" (set the key in Controls). You sit right there and go with him. Nothing of his hurts you while you sit. Jump to get up. You can turn the triple crouch off with `tripleCrouchSit` in `config/hollowbell-client.json`.
+- **Standing on his dome, he won't keep climbing after you.** Right over his dome he comes up under you and stops.
+- **He and the other big bosses don't go through each other.** They read each other's bodies and keep apart.
+- He's a little cheaper to run and to draw. Nothing about how he looks or plays changes because of it.
+
 ## What's new in 1.3.5
 
 - Fights between two of the bosses now take about as long at any size. Before, big ones fought for much longer than small ones (about twice as long at full size as at a third of it).

@@ -5,7 +5,7 @@ He's made from **JJ's KillzAI Hollowbell build** the same way the Mountain was: 
 build is turned into a voxel model, block for block, so every voxel wears the real
 Minecraft block texture from the build.
 
-Status: **built, version 1.1.1** (see `release/`). 1.1 changes are in "Guesses made for 1.1" at the bottom.
+Status: **built, version 1.3.6** (see `release/`). 1.1 changes are in "Guesses made for 1.1" at the bottom.
 
 ---
 
@@ -228,8 +228,8 @@ Things the design didn't say, and what was picked. Change any of them if they're
   his health from inside makes him let every player go. Too small (under 0.07 size) and there's no inside.
 - **Trees** he harvests hang in the dome as block displays for 3 minutes, then drop as logs.
 - **The crown when he's down.** Even flat on the ground the crown is still high up (about 80 blocks at full
-  size), so the dome and rim are what's in reach; the crown and spots can be shot with arrows. There's no
-  walking on the dome.
+  size), so the dome and rim are what's in reach; the crown and spots can be shot with arrows. (Since 1.3.6 he's solid, see below:
+  you can walk on the dome.)
 - **Riding:** "Sit on his crown" in the book makes him come over; a strand lifts you onto the crown and you
   drive him, like the Mountain's "being him" (keys 1-9 for his 9 moves, G to get off).
 - **The book:** the nearest Hollowbell within 600 blocks listens to whoever carries it (anywhere in the
@@ -343,3 +343,23 @@ JJ asked for 1.1 in `TASKS-1.1.md` and said to decide the details. These are the
   above it and the up/down keys under it. If the window is too short it's drawn smaller, clear of the chat.
 - **Wording:** the book's "Sit on his crown" is now "Ride him" (you sit on top of his dome), and the riding
   screen says "Riding him".
+
+## Solid (1.3.6, JJ: "solid like can walk", as solid as Wreckback)
+
+- He uses the same solid kit as the other giants (`net.jj.hollowbell.solid`, copied from Wreckback's, with the
+  later fixes from the Cerberus and Furrowmaw ports). His solid shape is worked out from his own blocks and follows his
+  real pose every tick (pulse, arm swing, drifting, leaning, the drop, the sky dive). While he dies he isn't solid.
+- **Solid:** the bell (copper and glass both: glass is a solid block, so you walk on the dome), the rim, the crown, the
+  four glowing balls and the vase inside the dome, and the eight arms. They're filled in inside (the model only keeps
+  the blocks that show); each arm is filled on its own, so nothing between an arm and the rim counts as solid.
+- **Not solid:** the strands, pods and egg clumps. They hang to the ground where you walk in to hit the pods, they
+  swing about, and they already sting. Solid, they'd cage you in the bundle; even soft (pushing you aside) you couldn't
+  get at the pods.
+- The inside of the dome stays hollow (it's open underneath). Whoever he holds (inside the dome, on a strand, round an
+  arm, being carried up, riding the crown) rides one of his seats and is never pushed by the kit.
+- Players standing on him are carried by their own game, every frame. Mobs and dropped things are carried by the
+  server. Anything he moves into is pushed out at once (a player by their own game, the server after half a second).
+- Sit anywhere: whoever holds his book, or is on its safe list, crouches three times or presses "Sit on giant".
+- A target standing on his dome, or right over it, doesn't make him climb on and on: he comes up under it and holds.
+- His hull (bell, rim and crown as body, arms as limbs) is shown to the other giants (`jjHull`), and he moves out of
+  any giant he drifts into, by weight, like the others.

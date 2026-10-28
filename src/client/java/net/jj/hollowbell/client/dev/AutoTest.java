@@ -135,6 +135,12 @@ public final class AutoTest {
                 });
                 continue;
             }
+            // standon mx mz: you on the top of his dome over that spot of him (model x z), standing, gravity on
+            if (s.startsWith("standon ")) { String[] a = s.substring(8).trim().split("\\s+"); standOn(mc, Float.parseFloat(a[0]), Float.parseFloat(a[1]), 0f); follow = null; continue; }
+            // inhim mx mz down: you put that far down into the top of his dome there (to see you pushed out)
+            if (s.startsWith("inhim ")) { String[] a = s.substring(6).trim().split("\\s+"); standOn(mc, Float.parseFloat(a[0]), Float.parseFloat(a[1]), Float.parseFloat(a[2])); follow = null; continue; }
+            // solidlog: where you are on him, as your own game sees it
+            if (s.startsWith("solidlog")) { solidLog(mc, s.length() > 8 ? s.substring(8).trim() : ""); continue; }
             if (s.equals("book")) { mc.setScreen(new net.jj.hollowbell.client.CodexScreen()); continue; }
             if (s.equals("close")) { mc.setScreen(null); continue; }
             if (s.equals("quit")) { HollowbellMod.LOG.info("autotest done"); mc.stop(); return; }
@@ -164,6 +170,37 @@ public final class AutoTest {
             player.setNoGravity(true);
             player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         });
+    }
+
+    private static void standOn(Minecraft mc, float mx, float mz, float down) {
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv == null) return;
+        srv.execute(() -> {
+            if (srv.getPlayerList().getPlayers().isEmpty()) return;
+            var player = srv.getPlayerList().getPlayers().get(0);
+            var l = player.serverLevel().getEntitiesOfClass(HollowbellEntity.class, player.getBoundingBox().inflate(3000));
+            if (l.isEmpty()) { HollowbellMod.LOG.info("autotest standon: none near"); return; }
+            var m = l.get(0);
+            m.ensurePose();
+            var w = m.toWorld(new Vector3f(mx, 0, mz));
+            var r = net.jj.hollowbell.solid.Solid.column(m, w.x, w.z, m.getY(), m.getY() + 260 * m.bellScale() + 4, false, new net.jj.hollowbell.solid.Solid.Runs());
+            double top = Double.NaN;
+            for (int j = 0; j < r.n; j++) if (Double.isNaN(top) || r.top[j] > top) top = r.top[j];
+            if (Double.isNaN(top)) { HollowbellMod.LOG.info("autotest standon: nothing of him there"); return; }
+            player.setNoGravity(false);
+            player.teleportTo(player.serverLevel(), w.x, top + 0.01 - down, w.z, player.getYRot(), 20f);
+            HollowbellMod.LOG.info("autotest standon: put at {} (his top {}, {} down)", player.position(), top, down);
+        });
+    }
+
+    private static void solidLog(Minecraft mc, String tag) {
+        var p = mc.player;
+        for (var en : mc.level.entitiesForRendering()) if (en instanceof HollowbellEntity hh) {
+            var rel = hh.toModel(p.position());
+            HollowbellMod.LOG.info("autotest solid {}: you at {} (model {}) on him {} onGround {} inside {} unstuck {} he at {} drifting {}", tag, p.position(), rel,
+                    net.jj.hollowbell.solid.client.SolidClient.CARRY.riding(), p.onGround(), net.jj.hollowbell.solid.Solid.inside(hh, p, 0.08),
+                    net.jj.hollowbell.solid.client.SolidClient.unstuck, hh.position(), hh.velocity());
+        }
     }
 
     private static float carryTheta = 0f;

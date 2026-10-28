@@ -1,0 +1,47 @@
+# 1.3.6: solid like Wreckback. Stand on his dome, get carried as he drifts, get pushed out of him
+world flat
+gui on
+render 12
+sim 12
+cmd time set 6000
+cmd gamemode survival @p
+cmd effect give @p resistance 100000 4 true
+cmd tp @p 0 -60 0 0 0
+wait 20
+chat /hollowbell summon calm 0.3
+waitmodel
+wait 300
+chat /hollowbell stay true
+wait 20
+standon 30 10
+wait 60
+solidlog standing
+shot solid_standing
+view 120 230 120 30 200 10
+wait 5
+shot solid_standing_far
+fixed
+standon 30 10
+wait 40
+cmd hollowbell goto 60 30
+chat /hollowbell stay false
+wait 200
+solidlog drifting
+view 140 240 0 30 200 10
+wait 5
+shot solid_drifting
+fixed
+wait 5
+solidlog drifting_later
+chat /hollowbell stay true
+wait 40
+inhim 30 10 3
+wait 1
+solidlog pushed_1
+wait 10
+solidlog pushed_11
+standon 0 0
+wait 40
+solidlog crown
+shot solid_crown
+quit

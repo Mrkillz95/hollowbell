@@ -825,16 +825,20 @@ public class HollowbellGameTests implements FabricGameTest {
         Watch w = new Watch();
         h.runAfterDelay(20, () -> {
             y0[0] = e.getY();
-            // a pig high up in the air, off to one side (he's solid now: right over his crown he'd come up under it
-            // and stop there, not up past it, see fly)
-            p[0] = pig(h, e.position().add(30, 45, 0));
+            // a pig high up in the air, right over him
+            p[0] = pig(h, e.position().add(0, 45, 0));
             p[0].setNoGravity(true);
             p[0].setInvulnerable(true);
             e.sendAfter(p[0]);
         });
         watch(h, e, w, 21, 1000);
         h.runAfterDelay(460, () -> {
-            h.assertTrue(e.getY() > y0[0] + 30, "he didn't fly up to the pig: from " + y0[0] + " to " + e.getY() + " (pig at " + p[0].getY() + ")");
+            // (he's solid: right over his dome it can't be got among his strands, so he comes up under it and holds
+            // there, not on up through it, or pushing it on up ahead of him)
+            double crownTop = e.getY() + (e.rig.crownY + 1) * e.bellScale();
+            h.assertTrue(e.getY() > y0[0] + 15 && p[0].getY() - crownTop < 6, "he didn't fly up to the pig: from " + y0[0] + " to " + e.getY()
+                    + ", his crown at " + crownTop + " (pig at " + p[0].getY() + ")");
+            h.assertTrue(Math.abs(p[0].getY() - (y0[0] + 45)) < 1, "he pushed the pig up: it's at " + p[0].getY());
             // down it comes, to the ground
             p[0].teleportTo(p[0].getX(), e.groundAt(p[0].getX(), p[0].getZ()), p[0].getZ());
         });

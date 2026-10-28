@@ -38,6 +38,7 @@ final class BellKit {
 
     private static final Map<GameTestHelper, List<Object[]>> LATER = new IdentityHashMap<>();
     private static final Map<GameTestHelper, int[]> NOW = new IdentityHashMap<>();
+    private static final Map<GameTestHelper, List<ServerPlayer>> PLAYERS = new IdentityHashMap<>();
 
     /** runs r this many ticks from now */
     static void after(GameTestHelper h, int ticks, Runnable r) {
@@ -52,7 +53,15 @@ final class BellKit {
                 for (Object[] o : new ArrayList<>(nq))
                     if ((int) o[0] <= now[0]) {
                         nq.remove(o);
-                        ((Runnable) o[1]).run();
+                        try {
+                            ((Runnable) o[1]).run();
+                        } catch (RuntimeException ex) {
+                            // a test that fails takes its stand-in players with it: left in the world, they'd make
+                            // the later tests' creatures despawn (a player more than 128 blocks off)
+                            for (ServerPlayer p : PLAYERS.getOrDefault(h, List.of())) if (!p.isRemoved()) leave(p);
+                            PLAYERS.remove(h);
+                            throw ex;
+                        }
                     }
             });
             q = nq;
@@ -101,6 +110,19 @@ final class BellKit {
         return a;
     }
 
+    /**
+     * r at a quiet moment: well after his last pulse and well before the next (idle, they come 100 ticks or more
+     * apart). As the bell squeezes his rim comes in by blocks a tick, too fast for a test player who never steps away.
+     */
+    static void whenQuiet(GameTestHelper h, HollowbellEntity e, Runnable r) {
+        after(h, 1, () -> {
+            long age = e.pulseAge();
+            // (sinking, he doesn't pulse at all)
+            if (age >= 35 && (age <= 45 || age >= 150)) r.run();
+            else whenQuiet(h, e, r);
+        });
+    }
+
     @SuppressWarnings("deprecation")
     static ServerPlayer player(GameTestHelper h, Vec3 at) {
         CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), "hb-solid"), false);
@@ -120,6 +142,7 @@ final class BellKit {
             // (spawn protection left on: only matters to tests that hurt them)
         }
         p.setGameMode(GameType.SURVIVAL);
+        PLAYERS.computeIfAbsent(h, k -> new ArrayList<>()).add(p);
         p.getAttribute(Attributes.MAX_HEALTH).setBaseValue(1000);
         p.setHealth(1000);
         return p;
@@ -136,6 +159,7 @@ final class BellKit {
         force(h, at.getX(), at.getZ(), chunks, false);
         LATER.remove(h);
         NOW.remove(h);
+        PLAYERS.remove(h);
         h.succeed();
     }
 
@@ -166,7 +190,8 @@ final class BellKit {
 
     /**
      * A spot (the world) deep in one of his solid parts of this kind: solid for `up` blocks over it and for a player's
-     * width round it, the one nearest the part's middle; or null.
+     * width round it, with no other kind of part of him near (an arm swinging through where the rim meets it would
+     * come and go round a test player who never moves); the one nearest the part's middle, or null.
      */
     static @Nullable Vec3 deepIn(HollowbellEntity e, BellRig.Kind kind, double up) {
         SolidShape sh = BellSolid.shape();
@@ -177,27 +202,43 @@ final class BellKit {
             final int ff = f;
             float[] bb = sh.bounds[f];
             float mx = (bb[0] + bb[3]) / 2, my = (bb[1] + bb[4]) / 2, mz = (bb[2] + bb[5]) / 2;
-            double[] best = {Double.MAX_VALUE};
-            int[] at = new int[3];
+            List<int[]> found = new ArrayList<>();
             sh.cells(f, (x, y, z) -> {
                 for (int k = -2; k <= need; k++) if (!sh.has(ff, x, y + k, z)) return;
                 for (int k = -2; k <= need; k += 2)
                     if (!sh.has(ff, x + side, y + k, z) || !sh.has(ff, x - side, y + k, z)
                             || !sh.has(ff, x, y + k, z + side) || !sh.has(ff, x, y + k, z - side)) return;
-                double d = (x - mx) * (x - mx) + (y - my) * (y - my) + (z - mz) * (z - mz);
-                if (d < best[0]) { best[0] = d; at[0] = x; at[1] = y; at[2] = z; }
+                found.add(new int[] {x, y, z, (int) ((x - mx) * (x - mx) + (y - my) * (y - my) + (z - mz) * (z - mz))});
             });
-            if (best[0] < Double.MAX_VALUE) return e.boneWorld(sh.bone[f], new Vector3f(at[0] + 0.5f, at[1] + 0.5f, at[2] + 0.5f));
+            found.sort((p, q) -> Integer.compare(p[3], q[3]));
+            for (int i = 0; i < found.size() && i < 400; i += 3) {
+                int[] c = found.get(i);
+                Vec3 w = e.boneWorld(sh.bone[f], new Vector3f(c[0] + 0.5f, c[1] + 0.5f, c[2] + 0.5f));
+                if (onlyKind(e, kind, w, 3 + 4 * s)) return w;
+            }
         }
         return null;
     }
 
+    /** nothing but parts of this kind of him round a spot, out to r blocks */
+    static boolean onlyKind(HollowbellEntity e, BellRig.Kind kind, Vec3 w, double r) {
+        Solid.Runs runs = new Solid.Runs();
+        for (int a = -2; a <= 2; a++)
+            for (int c = -2; c <= 2; c++) {
+                Solid.column(e, w.x + a * r / 2, w.z + c * r / 2, w.y - r, w.y + r + 2, false, runs);
+                for (int j = 0; j < runs.n; j++) if (e.rig.kind[e.solidShape().bone[runs.frame[j]]] != kind) return false;
+            }
+        return true;
+    }
+
     /**
-     * Where to put a player well inside him: deep in his rim, an arm or his bell; small, where none of him is that
-     * thick, with a part of him through their middle (not just under their feet, where they'd only be lifted onto it)
+     * Where to put a player well inside him: deep in one of the glowing balls inside his dome (the thickest of him, and
+     * steady: his rim squeezes in by many blocks with each pulse, too fast for a test player who never steps away),
+     * else his rim, an arm or his bell; small, where none of him is that thick, with a part of him through their
+     * middle (not just under their feet, where they'd only be lifted onto it)
      */
     static @Nullable Vec3 inHim(HollowbellEntity e) {
-        for (BellRig.Kind k : new BellRig.Kind[] {BellRig.Kind.RIM, BellRig.Kind.ARM, BellRig.Kind.BELL}) {
+        for (BellRig.Kind k : new BellRig.Kind[] {BellRig.Kind.SPOT, BellRig.Kind.RIM, BellRig.Kind.ARM, BellRig.Kind.BELL}) {
             Vec3 v = deepIn(e, k, 2.2);
             if (v != null) return v;
         }

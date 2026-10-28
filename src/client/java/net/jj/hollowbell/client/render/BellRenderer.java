@@ -65,7 +65,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     public void render(HollowbellEntity e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int packedLight) {
         BellMeshes meshes = BellMeshes.INSTANCE;
         if (!meshes.ensureReady()) return;
-        Matrix4f[] draw = rig.newPose();
+        // (his own arrays, kept from frame to frame: the glass pass later this frame reads them)
+        Matrix4f[] draw = e.drawPose();
         e.fillState(partial);
         rig.computePose(e.state, draw);
         float s = e.bellScale();
@@ -130,6 +131,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         Matrix4f mv = new Matrix4f(), boneWorld = new Matrix4f();
         Matrix3f rot = new Matrix3f();
         Vector3f l0 = new Vector3f(), l1 = new Vector3f();
+        float[] rgb = new float[3];
         for (int pass = 0; pass < 2; pass++) {
             int kind = pass == 0 ? BellMeshes.SOLID : BellMeshes.GLOW;
             for (int b = 0; b < rig.boneCount(); b++) {
@@ -144,7 +146,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 rot.transform(l1.set(l1w)).normalize();
                 if (shader.LIGHT0_DIRECTION != null) { shader.LIGHT0_DIRECTION.set(l0); shader.LIGHT0_DIRECTION.upload(); }
                 if (shader.LIGHT1_DIRECTION != null) { shader.LIGHT1_DIRECTION.set(l1); shader.LIGHT1_DIRECTION.upload(); }
-                float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying);
+                float[] c = tint(e, b, kind == BellMeshes.GLOW ? glowLevel(e, b, lit, partial) : lit, hurt, dying, rgb);
                 if (shader.COLOR_MODULATOR != null) { shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f); shader.COLOR_MODULATOR.upload(); }
                 m.vb.bind();
                 m.vb.draw();
@@ -174,11 +176,12 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     }
 
     /** a popped pod goes dark and stays dark; everything flashes red when he is hurt */
-    private float[] tint(HollowbellEntity e, int b, float k, float hurt, float dying) {
+    private float[] tint(HollowbellEntity e, int b, float k, float hurt, float dying, float[] out) {
         float r = 1f, g = 1f - hurt, bb = 1f - hurt;
         if (rig.kind[b] == BellRig.Kind.POD && e.isPodPopped(rig.part[b])) { r = 0.22f; g = 0.2f; bb = 0.26f; }
         if (dying > 0f && (rig.kind[b] == BellRig.Kind.SPOT || rig.kind[b] == BellRig.Kind.CROWN)) { r *= 1f - 0.6f * dying; g *= 1f - 0.6f * dying; bb *= 1f - 0.5f * dying; }
-        return new float[]{r * k, g * k, bb * k};
+        out[0] = r * k; out[1] = g * k; out[2] = bb * k;
+        return out;
     }
 
     /**

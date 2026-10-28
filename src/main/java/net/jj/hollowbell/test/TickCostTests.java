@@ -71,6 +71,9 @@ public class TickCostTests implements FabricGameTest {
                     e.forceMove(mv, front);
                 });
             }
+            // (the kept pose is checked against one worked out afresh every few ticks: only cheaper, never different)
+            int[] stale = {0, 0};
+            for (int t = 3; t < TICKS; t += 7) after(h, t, () -> { stale[1]++; if (!e.keptPoseIsFresh()) stale[0]++; });
             after(h, TICKS, () -> {
                 HollowbellEntity.timing = false;
                 int ticks = Math.max(1, HollowbellEntity.ticksTimed);
@@ -86,18 +89,25 @@ public class TickCostTests implements FabricGameTest {
                 long t0 = System.nanoTime();
                 for (int i = 0; i < 1000; i++) e.rig.computePose(e.state, pose);
                 double poseUs = (System.nanoTime() - t0) / 1e3 / 1000;
+                // (what the solid kit works out each frame you stand on him: only his solid parts)
+                Matrix4f[] part = e.rig.newPose();
+                for (int i = 0; i < 300; i++) e.solidPoseAt(0.5f, part);
+                t0 = System.nanoTime();
+                for (int i = 0; i < 1000; i++) e.solidPoseAt(0.5f, part);
+                double solidPoseUs = (System.nanoTime() - t0) / 1e3 / 1000;
                 t0 = System.nanoTime();
                 for (int i = 0; i < 1000; i++) e.fillState(0.5f);
                 double fillUs = (System.nanoTime() - t0) / 1e3 / 1000;
                 HollowbellMod.LOG.info(String.format(Locale.ROOT,
                         "TICK COST: him %.3f ms a tick (CPU %.3f) over %d ticks, solid kit %.3f ms a tick (%d columns looked up),"
                                 + " his pose worked out %.2f times a tick, the whole test server %.1f ms a tick by the clock; %d players."
-                                + " One pose: %.1f us, filling it in %.1f us",
-                        him, himCpu, ticks, solid, Solid.queries, poses, wall, ps.size(), poseUs, fillUs));
+                                + " One pose: %.1f us, filling it in %.1f us, his solid parts only %.1f us",
+                        him, himCpu, ticks, solid, Solid.queries, poses, wall, ps.size(), poseUs, fillUs, solidPoseUs));
                 HollowbellConfig.V.griefing = grief;
                 try {
                     h.assertTrue(!e.isRemoved(), "he's still there");
                     h.assertTrue(him < 25, "he takes well under a tick: " + him + " ms");
+                    h.assertTrue(stale[0] == 0, "his kept pose differed from a fresh one " + stale[0] + " of " + stale[1]);
                 } finally {
                     done(h, e, at, BellKit.chunksFor(1f), ps.toArray(new ServerPlayer[0]));
                 }

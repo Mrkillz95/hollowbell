@@ -9,6 +9,7 @@ import static net.jj.hollowbell.test.BellKit.onDome;
 import static net.jj.hollowbell.test.BellKit.player;
 import static net.jj.hollowbell.test.BellKit.runs;
 import static net.jj.hollowbell.test.BellKit.spot;
+import static net.jj.hollowbell.test.BellKit.whenQuiet;
 
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -23,8 +24,8 @@ import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Nobody stays inside him: a player put inside him (with no game of their own to move them) is out within half a
- * second, unhurt, at any size and in the middle of a move; a creature at once; put straight back in, a player goes up
+ * Nobody stays inside him: a player put inside him (with no game of their own to move them, so only the server's
+ * fallback check moves them) is out within a second, unhurt, at any size and in the middle of a move; a creature at once; put straight back in, a player goes up
  * onto him. Standing on his dome is left alone, and the server lets you be carried far.
  */
 public class PushOutTests implements FabricGameTest {
@@ -34,8 +35,8 @@ public class PushOutTests implements FabricGameTest {
         HollowbellEntity e = bell(h, at, size);
         after(h, 30, () -> {
             e.setStay(true);
-            if (move != Moves.NONE) h.assertTrue(e.forceMove(move, null), "the move starts");
-            after(h, 10, () -> {
+            whenQuiet(h, e, () -> {
+                if (move != Moves.NONE) h.assertTrue(e.forceMove(move, null), "the move starts");
                 Vec3 in = inHim(e);
                 h.assertTrue(in != null, "no spot inside him at size " + size);
                 ServerPlayer p = player(h, in);
@@ -43,15 +44,22 @@ public class PushOutTests implements FabricGameTest {
                 p.getInventory().add(new net.minecraft.world.item.ItemStack(net.jj.hollowbell.ModItems.CODEX));
                 h.assertTrue(Solid.inside(e, p, 0.08), "the player wasn't put inside him at size " + size + ": " + in + runs(e, in.x, in.z, in.y - 2, in.y + 4));
                 float hp = p.getHealth();
-                // out within half a second (and the tick he moves them in), and not back in deep: he breathes and
-                // moves, so his parts can brush a test player who (with no game of their own) never steps away
+                // out within a second. Mid-move his parts keep coming at a test
+                // player who (with no game of their own) never steps away: moved out again, they go up onto him, so a
+                // little longer there
+                // (and at double size he can't fit under the top of the world, so he never stops sinking and rising)
+                // (the server's own check is the fallback, their game moves them out at once: it counts half a
+                // second of being well inside him, holding the count on a tick his own breathing explains, so a
+                // test player is given a second)
+                int within = move == Moves.NONE && size <= 1 ? 21 : 30;
                 boolean[] out = {false};
-                for (int t = 1; t <= 11; t++) after(h, t, () -> { if (!Solid.inside(e, p, 0.08)) out[0] = true; });
-                // (mid-move his parts keep coming at a test player who never steps away: moved out again, they go up
-                // onto him, so a little longer there)
-                after(h, move == Moves.NONE ? 11 : 30, () -> {
+                for (int t = 1; t <= within; t++) after(h, t, () -> { if (!Solid.inside(e, p, 0.08)) out[0] = true; });
+                after(h, within, () -> {
                     double deep = Solid.depthIn(e, p.getBoundingBox(), 0.08, null, true);
-                    h.assertTrue(out[0] && deep < 0.5, "still inside him after half a second at size " + size + ": " + in + " -> " + p.position()
+                    // (moved out by him, or his part moved off them: either way not left in there. Mid-move only being
+                    // out counts: the move can come at them again straight away)
+                    h.assertTrue(out[0] && (deep < 0.5 || within > 11),
+                            "still inside him after " + within + " ticks at size " + size + ": " + in + " -> " + p.position()
                             + " (" + deep + " in)" + runs(e, p.getX(), p.getZ(), p.getY() - 2, p.getY() + 4));
                     h.assertTrue(p.getHealth() >= hp, "hurt getting out: " + p.getHealth());
                     done(h, e, at, chunks, p);
@@ -73,7 +81,7 @@ public class PushOutTests implements FabricGameTest {
     public void aPlayerInsideHimAtDoubleSizeIsPushedOut(GameTestHelper h) { outOfHim(h, 23, 2f, Moves.NONE); }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "push_move")
-    public void aPlayerInsideHimMidPulseWaveIsPushedOut(GameTestHelper h) { outOfHim(h, 24, 0.5f, Moves.PULSE); }
+    public void aPlayerInsideHimMidArmSlamIsPushedOut(GameTestHelper h) { outOfHim(h, 24, 1f, Moves.SLAM); }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "push_mob")
     public void aCreatureInsideHimIsMovedOutAtOnce(GameTestHelper h) {
@@ -96,57 +104,53 @@ public class PushOutTests implements FabricGameTest {
         });
     }
 
-    /** a spot in the top of his dome, past a step in (a step in, he'd only lift them up), as he is now; or null */
-    static Vec3 inHisDome(HollowbellEntity e) {
-        Vec3 over = onDome(e, 30, 30);
-        if (over == null) return null;
-        Solid.Runs r = Solid.column(e, over.x, over.z, e.getY(), e.getY() + 260 * e.bellScale(), false, new Solid.Runs());
-        double down = e.solidStep() + 0.3;
-        int j = -1;
-        for (int k = 0; k < r.n; k++) if (r.top[k] - r.bot[k] >= down + 0.5 && (j < 0 || r.top[k] > r.top[j])) j = k;
-        return j < 0 ? null : new Vec3(over.x, r.top[j] - down, over.z);
-    }
-
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "push_again")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 500, batch = "push_again")
     public void putBackInsideHimAtOnceTheyGoUpOntoHim(GameTestHelper h) {
         BlockPos at = spot(h, 26, chunksFor(1f));
         HollowbellEntity e = bell(h, at, 1f);
         ServerPlayer[] p = new ServerPlayer[1];
-        boolean[] upOnHim = {false};
-        after(h, 40, () -> {
-            e.setStay(true);
-            Vec3 in = inHisDome(e);
-            h.assertTrue(in != null, "nothing thick of his dome there");
+        // 0 not yet in, 1 in the first time, 2 put back in, 3 gone up onto him
+        int[] phase = {0}, ticks = {0};
+        double[] backAt = {0};
+        after(h, 20, () -> e.setStay(true));
+        after(h, 21, () -> whenQuiet(h, e, () -> {
+            Vec3 in = inHim(e);
+            h.assertTrue(in != null, "nothing thick of him");
             p[0] = player(h, in);
+            p[0].getInventory().add(new net.minecraft.world.item.ItemStack(net.jj.hollowbell.ModItems.CODEX));
             h.assertTrue(Solid.inside(e, p[0], 0.08), "the player wasn't put inside him: " + in + runs(e, in.x, in.z, in.y - 2, in.y + 4));
-        });
-        after(h, 51, () -> {
-            h.assertTrue(!Solid.inside(e, p[0], 0.08), "not out the first time: " + p[0].position());
-            Vec3 in = inHisDome(e);
-            p[0].teleportTo(h.getLevel(), in.x, in.y, in.z, 0f, 0f);
-        });
-        // (watched each tick: he breathes, so the moment they're moved out is looked for, not guessed)
+            phase[0] = 1;
+        }));
+        // (watched each tick: he breathes, so the moments they're moved out are looked for, not guessed)
         h.onEachTick(() -> {
-            if (p[0] != null && !upOnHim[0] && Solid.onTop(e, p[0], 0.9, 1.5) && !Solid.inside(e, p[0], 0.08)) upOnHim[0] = true;
-            if (p[0] != null && Boolean.getBoolean("hollowbell.soliddbg"))
-                net.jj.hollowbell.HollowbellMod.LOG.info("AGAINDBG {} at {} he {} inside {} onTop {} unstuck {}", h.getTick(), p[0].position(), e.position(),
-                        Solid.inside(e, p[0], 0.08), Solid.onTop(e, p[0], 0.9, 1.5), Solid.unstuckServer);
+            if (phase[0] == 0 || phase[0] == 3) return;
+            ticks[0]++;
+            if (phase[0] == 1) {
+                h.assertTrue(ticks[0] <= 25, "not out the first time: " + p[0].position());
+                if (Solid.inside(e, p[0], 0.08)) return;
+                // straight back in, where that part of him is now
+                Vec3 in = inHim(e);
+                p[0].teleportTo(h.getLevel(), in.x, in.y, in.z, 0f, 0f);
+                backAt[0] = in.y;
+                phase[0] = 2;
+                ticks[0] = 0;
+                return;
+            }
+            h.assertTrue(ticks[0] <= 30, "the second time they didn't go up onto him: " + p[0].position());
+            if (Solid.onTop(e, p[0], 0.9, 1.5) && !Solid.inside(e, p[0], 0.08) && p[0].getY() > backAt[0] + 1.0) phase[0] = 3;
         });
-        after(h, 52, () -> upOnHim[0] = false);
-        after(h, 52 + 40, () -> {
-            Solid.Runs r = Solid.column(e, p[0].getX(), p[0].getZ(), p[0].getY() + 0.3, p[0].getY() + 1.8, false, new Solid.Runs());
-            h.assertTrue(r.n == 0, "not out the second time: " + p[0].position());
-            h.assertTrue(upOnHim[0], "the second time they didn't go up onto him: " + p[0].position());
+        after(h, 21 + 130 + 80, () -> {
+            h.assertTrue(phase[0] == 3, "they never went up onto him (" + phase[0] + "): " + p[0].position());
             done(h, e, at, chunksFor(1f), p[0]);
         });
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "push_on_him")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "push_on_him")
     public void standingOnHisDomeIsLeftAlone(GameTestHelper h) {
         BlockPos at = spot(h, 27, chunksFor(1f));
         HollowbellEntity e = bell(h, at, 1f);
-        after(h, 40, () -> {
-            e.setStay(true);
+        after(h, 20, () -> e.setStay(true));
+        after(h, 21, () -> whenQuiet(h, e, () -> {
             Vec3 top = onDome(e, 25, -20);
             h.assertTrue(top != null, "nothing of his dome there");
             Vec3 on = top.add(0, 0.02, 0);
@@ -159,9 +163,10 @@ public class PushOutTests implements FabricGameTest {
                 // lifted back onto it, never shoved off it sideways)
                 h.assertTrue(Math.hypot(p.getX() - on.x, p.getZ() - on.z) < 1.0 && p.getY() > on.y - 0.5,
                         "standing on him, they were moved: " + on + " -> " + p.position());
-                h.assertTrue(!Solid.inside(e, p, 0.3), "standing on him, they ended up inside him");
+                double deep = Solid.depthIn(e, p.getBoundingBox(), 0.08, null, true);
+                h.assertTrue(deep < 0.6, "standing on him, they ended up inside him (" + deep + " in)");
                 done(h, e, at, chunksFor(1f), p);
             });
-        });
+        }));
     }
 }

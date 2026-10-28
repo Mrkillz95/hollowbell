@@ -59,6 +59,18 @@ public final class BellSolid {
         b.fillInsides(body);
         for (boolean[] a : arm) b.fillInsides(a);
         SolidShape s = b.build();
+        if (HollowbellMod.IN_TESTS) {
+            // (how much the filling in added, part by part: the model keeps only the blocks that show)
+            java.util.Map<BellRig.Kind, int[]> n = new java.util.EnumMap<>(BellRig.Kind.class);
+            for (int f = 0; f < s.frames(); f++) {
+                int[] c = n.computeIfAbsent(rig.kind[s.bone[f]], k -> new int[2]);
+                int[] cc = {0};
+                s.cells(f, (x, y, z) -> cc[0]++);
+                c[0] += cc[0];
+                c[1] += m.count(s.bone[f]);
+            }
+            for (var en : n.entrySet()) HollowbellMod.LOG.info("Hollowbell solid {}: {} cells from {} blocks", en.getKey(), en.getValue()[0], en.getValue()[1]);
+        }
         HollowbellMod.LOG.info("Hollowbell: solid shape ready ({} frames, {} cells, {} ms)", s.frames(), s.cells,
                 System.currentTimeMillis() - t0);
         return s;

@@ -471,9 +471,48 @@ public class HollowbellEntity extends Monster implements SitHost {
         if (poseTick == now) return;
         poseTick = now;
         fillState(1f);
+        // (worked out again only if anything it's made from has changed since: often it hasn't, as when something
+        // asks for it before his body has moved on this tick. The very same numbers either way)
+        if (poseSame()) return;
         rig.computePose(state, pose);
         posesWorked++;
         solidCache.touch();
+    }
+
+    private boolean redWas;
+    private long stepsWas;
+    private boolean[] poppedWas, eggsWas;
+    private float[] growthWas;
+
+    /**
+     * Is everything the pose is made from as it was when it was last worked out: how far his body has moved on, his
+     * pods and egg clumps, and whether he's red. If not, it's noted down as it is now.
+     */
+    private boolean poseSame() {
+        boolean same = stepsWas == anim.steps() && redWas == state.red && poppedWas != null
+                && java.util.Arrays.equals(poppedWas, state.podPopped) && java.util.Arrays.equals(growthWas, state.podGrowth)
+                && java.util.Arrays.equals(eggsWas, state.eggGone);
+        if (same) return true;
+        stepsWas = anim.steps();
+        redWas = state.red;
+        poppedWas = state.podPopped.clone();
+        growthWas = state.podGrowth.clone();
+        eggsWas = state.eggGone.clone();
+        return false;
+    }
+
+    private Matrix4f @Nullable [] drawPose;
+
+    /** the client's pose for drawing him, kept from frame to frame (a frame makes no new one) */
+    public Matrix4f[] drawPose() { if (drawPose == null) drawPose = rig.newPose(); return drawPose; }
+
+    /** for TickCostTests: is the kept pose the same as one worked out afresh now (bit for bit) */
+    public boolean keptPoseIsFresh() {
+        ensurePose();
+        Matrix4f[] fresh = rig.newPose();
+        rig.computePose(state, fresh);
+        for (int b = 0; b < fresh.length; b++) if (!fresh[b].equals(pose[b])) return false;
+        return true;
     }
 
     /** the pose state at this moment (partial: how far into the tick, for drawing) */
@@ -919,6 +958,9 @@ public class HollowbellEntity extends Monster implements SitHost {
         if (tickCount % 50 == 0 && hv.length() > max * 0.3 && random.nextInt(2) == 0)
             sound(strandTipWorld(random.nextInt(rig.strands.length)), ModSounds.STRAND, 0.8f, 0.9f + random.nextFloat() * 0.2f);
     }
+
+    /** ticks since his bell last began a pulse (for the tests) */
+    public long pulseAge() { return level().getGameTime() - entityData.get(DATA_PULSE_START); }
 
     /** how hard the bell is pushing, age ticks into a pulse: rises with the squeeze and fades, 0 to 1 */
     static float pushCurve(float age) {

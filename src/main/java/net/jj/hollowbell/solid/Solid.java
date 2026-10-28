@@ -715,7 +715,6 @@ public final class Solid {
         }
         c.riding.clear();
         AABB all = b.solidBox();
-        if (Boolean.getBoolean("hollowbell.soliddbg")) for (Entity e : level.getEntities(s, all, x -> x instanceof Player)) net.jj.hollowbell.HollowbellMod.LOG.info("SOLIDDBG near {} ignoresAll {} ignores {} noPhys {} pass {}", e, ignoresAll(e), b.solidIgnores(e), e.noPhysics, e.isPassenger());
         for (Entity e :
                 level.getEntities(s, all, x -> !ignoresAll(x) && !b.solidIgnores(x) && !(x instanceof SolidBody))) {
             if (e instanceof Player p) {
@@ -741,7 +740,6 @@ public final class Solid {
                 // (8 ticks either way, so nobody is in him for more than half a second at any size: small, a player is
                 // taller than his rim and stands on it while in it. A tick that doesn't count, as when the move of
                 // the part explains it or a part only brushes one standing on him, doesn't start the count again)
-                if (Boolean.getBoolean("hollowbell.soliddbg")) net.jj.hollowbell.HollowbellMod.LOG.info("SOLIDDBG player {} raw {} dp {} onHim {} stuck {}", e.getId(), raw, dp, onHim, c.stuck.get(e.getId()));
                 if (dp > (onHim ? brush : 0.02)) {
                     int n = c.stuck.merge(e.getId(), 1, Integer::sum);
                     if (n >= 8) {

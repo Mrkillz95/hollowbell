@@ -21,7 +21,8 @@ loom {
             name "Game Test"
             vmArg "-Dfabric-api.gametest"
             vmArg "-Dhollowbell.debug=true"
-            if (project.findProperty("soliddbg")) vmArg "-Dhollowbell.soliddbg=true"
+            // (a CPU profile of the run, for making him cheaper: -Pjfr=/some/file.jfr)
+            if (project.findProperty("jfr")) vmArg "-XX:StartFlightRecording=filename=" + project.findProperty("jfr") + ",settings=" + (project.findProperty("jfc") ?: "profile")
             vmArg "-Xmx3G"
             vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest-report.xml"
             runDir "build/gametest"
