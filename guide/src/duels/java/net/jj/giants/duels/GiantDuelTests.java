@@ -217,7 +217,7 @@ public class GiantDuelTests implements FabricGameTest {
         int dropTick = -1, yieldTick = -1, chase, afterSamples;
         Side yielder;
         Vec3 yieldPos;
-        double distAtYield = -1, dist30 = -1, dist60 = -1, moved = 0, rise = 0, lostAtYield;
+        double distAtYield = -1, dist30 = -1, dist60 = -1, moved = 0, rise = 0, lostAtYield, healAtYield;
         double dist, farthest;
         boolean started, done, written;
         String winner = "", how = "";
@@ -259,6 +259,9 @@ public class GiantDuelTests implements FabricGameTest {
                 Side other = s == a ? b : a;
                 List<String> said = bridge(server, s.k, "meet", other.e.getUUID() + " " + s.e.getUUID());
                 if (first && said != null) notes.append(s.k.code).append(": ").append(String.join(" ", said)).append(' ');
+                // (/giants meet makes it a player's fight, which nobody backs down from: mark it wild, as a meeting
+                // out in the world is, so backing down and fleeing are what get measured)
+                if (!wild(s) && first) notes.append(s.k.code).append(" not marked wild ");
             }
         }
 
@@ -292,6 +295,7 @@ public class GiantDuelTests implements FabricGameTest {
                 yieldPos = yielder.e.position();
                 distAtYield = horiz(a.e, b.e);
                 lostAtYield = yielder.lost;
+                healAtYield = yielder.healed;
             }
             if (yieldTick >= 0 && yielder.e.isAlive()) afterYield();
             if (!a.e.isAlive() || !b.e.isAlive()) end(!a.e.isAlive() ? b.k : a.k, "death");
@@ -382,17 +386,19 @@ public class GiantDuelTests implements FabricGameTest {
         }
 
         void write() {
+            if (!RUNAWAY.isEmpty()) notes.append("runaway shots ").append(RUNAWAY).append(' ');
+            RUNAWAY.clear();
             float sec = Math.max(1, ticks) / 20f;
             double wall = (System.nanoTime() - wall0) / 1e9;
             String head = "tag,run,a,b,west,size,sea,seconds,wall_s,how,winner,dmg_a_to_b,dmg_b_to_a,dps_a_to_b,dps_b_to_a,"
                     + "hp_a_left,hp_b_left,max_a,max_b,heal_a,heal_b,first_hit_on_a_s,first_hit_on_b_s,restarts,"
                     + "target_a_pct,target_b_pct,mean_dist,height_a,height_b,stuck_a_s,stuck_b_s,wakes_a,wakes_b,"
                     + "summons_a,summons_b,wb_deep_pct,farthest,low,yielder,drop_to_yield_s,dist_at_yield,dist_30s,dist_60s,"
-                    + "loser_moved,loser_rise,dmg_after_yield,winner_chase_pct,notes,timeline\n";
+                    + "loser_moved,loser_rise,dmg_after_yield,winner_chase_pct,heal_after_yield,notes,timeline\n";
             String row = String.format(Locale.ROOT,
                     "%s,%d,%s,%s,%s,%.2f,%b,%.1f,%.0f,%s,%s,%.0f,%.0f,%.2f,%.2f,%.3f,%.3f,%.0f,%.0f,%.0f,%.0f,%.1f,%.1f,%d,"
                             + "%.0f,%.0f,%.0f,%.0f,%.0f,%d,%d,%d,%d,%d,%d,%.0f,%.0f,%s,%s,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,"
-                            + "\"%s\",%s%n",
+                            + "%.0f,\"%s\",%s%n",
                     TAG, run, a.k.code, b.k.code, west.code, SIZE, SEA, sec, wall, how, winner, b.lost, a.lost,
                     b.lost / sec, a.lost / sec, a.last / Math.max(1f, a.max), b.last / Math.max(1f, b.max), a.max,
                     b.max, a.healed, b.healed, a.firstHitOnMe / 20f, b.firstHitOnMe / 20f, restarts,
@@ -402,7 +408,8 @@ public class GiantDuelTests implements FabricGameTest {
                     a.k.code.equals("WB") ? pct(a.deep, a.samples) : b.k.code.equals("WB") ? pct(b.deep, b.samples) : -1.0,
                     farthest, low == null ? "-" : low.k.code, yielder == null ? "-" : yielder.k.code,
                     yieldTick < 0 || dropTick < 0 ? -1.0 : (yieldTick - dropTick) / 20.0, distAtYield, dist30, dist60, moved,
-                    rise, yielder == null ? -1.0 : yielder.lost - lostAtYield, pct(chase, afterSamples), notes.toString().replace('"', '\'').replace('\n', ' '), timeline);
+                    rise, yielder == null ? -1.0 : yielder.lost - lostAtYield, pct(chase, afterSamples),
+                    yielder == null ? -1.0 : yielder.healed - healAtYield, notes.toString().replace('"', '\'').replace('\n', ' '), timeline);
             StringBuilder mv = new StringBuilder();
             for (Side s : new Side[] {a, b}) {
                 Side o = s == a ? b : a;
@@ -424,6 +431,30 @@ public class GiantDuelTests implements FabricGameTest {
                 throw new IllegalStateException("can't write " + CSV.toAbsolutePath(), x);
             }
         }
+    }
+
+    /**
+     * The meeting fight made a wild one: each mod keeps "a player started this" as a private boolean `ordered` on its
+     * meeting (the Hollowbell on its flee state); set back to false. True if found.
+     */
+    static boolean wild(Side s) {
+        for (String holder : new String[] {"meeting", "flee"}) {
+            Object m = call(s.e, holder);
+            if (m == null) continue;
+            for (Class<?> c = m.getClass(); c != null; c = c.getSuperclass()) {
+                try {
+                    Field f = c.getDeclaredField("ordered");
+                    f.setAccessible(true);
+                    f.setBoolean(m, false);
+                    return true;
+                } catch (NoSuchFieldException x) {
+                    // up the hierarchy
+                } catch (ReflectiveOperationException | RuntimeException x) {
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
     static double horiz(Entity a, Entity b) {
@@ -528,11 +559,20 @@ public class GiantDuelTests implements FabricGameTest {
      * Shots and helpers that leave the arena are taken away: a giant's shot flying on past the loaded ground loads
      * (and makes) a new chunk every tick, which slowed the server to a crawl and ran it out of memory.
      */
+    static final Map<String, Integer> RUNAWAY = new ConcurrentHashMap<>();
+
     static void cull(ServerLevel l, Entity a, Entity b) {
         int edge = ARENA_R - 48;
         List<Entity> gone = new ArrayList<>();
         for (Entity e : l.getAllEntities()) {
             if (e == a || e == b || e instanceof Player) continue;
+            // (a runaway shot: over 40 blocks a tick. A Wreckback shot did this twice; its next move-check ray then
+            // crossed thousands of chunks in one tick and hung the server. Counted as a finding.)
+            if (e.getDeltaMovement().lengthSqr() > 40 * 40 && !(e instanceof LivingEntity)) {
+                RUNAWAY.merge(BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString(), 1, Integer::sum);
+                gone.add(e);
+                continue;
+            }
             double dx = Math.abs(e.getX() - CX), dz = Math.abs(e.getZ() - CZ);
             if (dx < edge && dz < edge && e.getY() < 700) continue;
             // (only what flew off the arena, and anything whose position went NaN)

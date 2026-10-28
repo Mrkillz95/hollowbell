@@ -85,6 +85,8 @@ for ($k = 0; $k -lt $all.Count; $k += $PerServer) {
         # (this project copy's own server only: its launch config sits under its folder)
         $server = Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
             Where-Object { $_.CommandLine -like "*$Guide\.gradle\loom-cache*" -and $_.CommandLine -match 'KnotServer' }
+        # (no server yet: still waiting for a Gradle slot or starting up, not hung)
+        if (-not $server) { $since = Get-Date; continue }
         $mc = Join-Path $Guide 'build\duels\logs\latest.log'
         $batch = (Select-String -Path $mc -Pattern "Running test batch '([^']+)'" | Select-Object -Last 1).Matches.Groups[1].Value
         Add-Content (Join-Path $Guide "build\duels\$Out-hung.txt") "$(Get-Date -Format o) $batch"

@@ -164,8 +164,8 @@ def escapes(rows):
     # the backing-down check (-Pduel_escape=true): per giant put low, what the minute after backing down looked like
     print('### Backing down: the minute after the loser yields\n')
     print('| Giant put low | Duels | Backed down | Mean s to back down | Moved off (blocks) | Rose (blocks) | '
-          'Gap at yield -> +60 s | Still took after yield | Winner still after it | Stayed put (<40 blocks) |')
-    print('|---|---|---|---|---|---|---|---|---|---|')
+          'Gap at yield -> +60 s | Still took after yield | Healed after yield | Winner still after it | Stayed put (<40 blocks) |')
+    print('|---|---|---|---|---|---|---|---|---|---|---|')
     by = defaultdict(list)
     for r in rows:
         if r.get('low', '-') != '-':
@@ -176,12 +176,13 @@ def escapes(rows):
             continue
         y = [r for r in rs if r['yielder'] == g]
         def m(k, src=y):
-            v = [float(r[k]) for r in src if float(r[k]) >= 0]
+            v = [float(r[k]) for r in src if k in r and float(r[k]) >= 0]
             return sum(v) / len(v) if v else float('nan')
         stuck = sum(float(r['loser_moved']) < 40 for r in y)
         others = sorted(set((r['b'] if r['a'] == g else r['a']) for r in y if float(r['loser_moved']) < 40))
         print(f"| {NAME[g]} | {len(rs)} | {len(y)} | {m('drop_to_yield_s'):.0f} | {m('loser_moved'):.0f} | "
               f"{m('loser_rise'):.0f} | {m('dist_at_yield'):.0f} -> {m('dist_60s'):.0f} | {m('dmg_after_yield'):.0f} | "
+              f"{m('heal_after_yield'):.0f} | "
               f"{m('winner_chase_pct'):.0f}% | {stuck}" + (f" (vs {', '.join(others)})" if others else '') + ' |')
     print()
 
