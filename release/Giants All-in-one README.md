@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.12 |
-| Pitchgut | 1.35.14 |
-| Furrowmaw | 1.17.13 |
-| Fire & Ice Cerberus | 2.18.12 |
-| Hollowbell | 1.12.16 |
-| Lantern Willow | 1.10.16 |
-| Wreckback | 1.2.19 |
-| The Swarmforge | 1.4.18 |
-| The Gloamwick | 1.2.0 |
+| Giants Guide | 1.4.14 |
+| Pitchgut | 1.35.25 |
+| Furrowmaw | 1.17.22 |
+| Fire & Ice Cerberus | 2.18.23 |
+| Hollowbell | 1.12.25 |
+| Lantern Willow | 1.10.26 |
+| Wreckback | 1.2.31 |
+| The Swarmforge | 1.4.29 |
+| The Gloamwick | 1.2.9 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.2), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.3), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.2.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.3.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -78,7 +78,40 @@ A book about every giant you have. Right-click it to open it.
   (`home`, `health`, `damage`, `preset`, `heal`, `calm`, `sleep`, `wake`, `summon`, `freeze`, `unfreeze`, `info`),
   `where` for operators only (players use the Finders), the old `detail` commands gone (the screen has them), and
   every giant's respawn, grudge and round 3 text brought up to date.
-- New in the Guide 1.4.14: the Controls tab on Giants Performance, to change every giant's keys there.
+- New in the Guide 1.4.14: the Controls tab on Giants Performance, to change every giant's keys there, how giants
+  back down from a wild fight they're losing (and `/giants flee`), and sitting anywhere on a giant with a triple
+  crouch.
+
+## New in 1.6.3
+
+- **New fight music for all eight giants.** Each has his own boss track, and it changes as he gets hurt: a darker
+  take below half his health and a last-stand take below a quarter.
+- **The giants are balanced against each other.** After a full duel test between them, their blows on each other
+  were evened out so no one giant wins every fight. Players see no change.
+- **Beaten giants run away and heal.** When a giant is losing a wild fight with another giant (one no player
+  started), he backs down, gets out of reach and goes home to the middle of his ground, or to whoever holds his book
+  if they're in the same world. There he rests for a few minutes, heals up to half his health and starts no fights.
+  A giant never runs from a fight a player started: one his book sent him into, one started with `/giants meet`, or
+  while somebody rides him.
+- **Grudges:** when another giant's helper hurts a giant, he blames that giant. A giant hunts whatever hurt him until
+  it dies, stays well away for ten minutes, or you tell him to forget.
+- **Sit anywhere on him.** If you hold a giant's book, or you're on the safe list of whoever holds it, stand on any
+  part of him and crouch three times quickly: you sit right there and go wherever that part goes, and nothing of his
+  hurts you while you sit. Jump to get up. There's also a "Sit on giant" key in Controls, and the Guide's Controls
+  tab can turn the triple crouch off. Wild giants can't be sat on.
+- **New `/giants` commands for operators:** `flee on|off [giant]` (off: giants fight their wild fights to the end),
+  `home <giant>` takes you to the middle of a giant's ground, `health <x>` and `damage <x>` multiply every giant's
+  health and damage, `preset easy/normal/hard` sets both, and `heal`, `calm`, `sleep`, `wake`, `freeze`,
+  `unfreeze`, `summon` and `info` work for all the giants or just the one you name. `where` is for operators only
+  now: players use the Finders. The old `detail` commands are gone; the Performance screen does that.
+- **When a giant comes back after dying** on land that was already explored, that land turns into his ground over a
+  minute or so (never near spawn or on another giant's ground; land people have lived in only gets his biome).
+- **Giants Guide 1.4.14:** the **Giants Performance** screen (`/giants performance`), with presets and every
+  giant's effects in one place, and its **Controls** tab with every giant's keys. The `/giants` page has all the new
+  commands, and the Guide tells you about backing down, `/giants flee` and sitting anywhere.
+
+Inside: Pitchgut 1.35.25, Furrowmaw 1.17.22, Cerberus 2.18.23, Hollowbell 1.12.25, Lantern Willow 1.10.26,
+Wreckback 1.2.31, Swarmforge 1.4.29, Gloamwick 1.2.9.
 
 ## New in 1.6.2
 
