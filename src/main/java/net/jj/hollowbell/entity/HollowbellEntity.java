@@ -42,6 +42,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.jj.hollowbell.solid.GiantHull;
+import net.jj.hollowbell.solid.SitHost;
+import net.jj.hollowbell.solid.Sitting;
+import net.jj.hollowbell.solid.Solid;
+import net.jj.hollowbell.solid.SolidCache;
+import net.jj.hollowbell.solid.SolidShape;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -58,7 +64,7 @@ import java.util.UUID;
  * the client draws, so a hit lands on exactly the block you swung at: see {@link #hitBy}. His own health is kept
  * here rather than in the game's (which can't go past 1024).
  */
-public class HollowbellEntity extends Monster {
+public class HollowbellEntity extends Monster implements SitHost {
     public static final int CALM = 0, HUNTER = 1, GUARDIAN = 2;
     public static final float MIN_SCALE = 0.03f, MAX_SCALE = 2f;
 
@@ -466,6 +472,8 @@ public class HollowbellEntity extends Monster {
         poseTick = now;
         fillState(1f);
         rig.computePose(state, pose);
+        posesWorked++;
+        solidCache.touch();
     }
 
     /** the pose state at this moment (partial: how far into the tick, for drawing) */
@@ -559,8 +567,26 @@ public class HollowbellEntity extends Monster {
 
     @Override
     public void tick() {
+        if (!timing || level().isClientSide) { tickNow(); return; }
+        long t0 = System.nanoTime(), c0 = CPU.getCurrentThreadCpuTime();
+        tickNow();
+        tickNanos += System.nanoTime() - t0;
+        tickCpuNanos += CPU.getCurrentThreadCpuTime() - c0;
+        ticksTimed++;
+    }
+
+    /** for TickCostTests: his server ticks timed (wall and CPU), only while timing is on */
+    public static boolean timing;
+    public static long tickNanos, tickCpuNanos;
+    public static int ticksTimed;
+    /** for TickCostTests: how many times his whole pose has been worked out (both sides) */
+    public static long posesWorked;
+    private static final java.lang.management.ThreadMXBean CPU = java.lang.management.ManagementFactory.getThreadMXBean();
+
+    private void tickNow() {
         if (hp < 0 && !level().isClientSide) setBellScale(bellScale());
         super.tick();
+        if (!isRemoved()) Solid.track(this);
         if (level().isClientSide) { clientTick(); return; }
         if (isDeadOrDying()) return;
         serverTick();
@@ -622,6 +648,7 @@ public class HollowbellEntity extends Monster {
         pickTarget();
         moves.tick();
         fly(now);
+        giantsApart();
         animTick();
         ensurePose();
         moves.afterPose();
@@ -630,6 +657,8 @@ public class HollowbellEntity extends Monster {
         barsTick();
         if (partsDirty && tickCount - partsSentAt >= 4) { partsDirty = false; partsSentAt = tickCount; syncParts(); }
         if (tickCount % 20 == 0) fighters.entrySet().removeIf(e -> now - e.getValue() > 6000);
+        // the solid kit: what stands on him is carried, what's got inside him is moved out
+        Solid.serverTick(this);
     }
 
     // ------------------------------------------------------------------ pods and eggs over time
@@ -800,7 +829,13 @@ public class HollowbellEntity extends Monster {
             double tg = groundAt(t.getX(), t.getZ());
             boolean airborne = t.getY() - tg > 6 + 12 * s;
             double d = horiz(t.position());
-            if (airborne) wy = t.getY() - 55 * s;             // up to it: it hangs among his strands, under the bell
+            if (airborne && Solid.onTop(this, t, 3.0, 1.5)) wy = getY();    // standing on his dome: climbing would only lift it
+            else if (airborne) {
+                wy = t.getY() - 55 * s;                         // up to it: it hangs among his strands, under the bell
+                // (straight over his dome he can't come up round it, he's solid: he comes up under it and no further,
+                // or he'd push it on up ahead of him for ever)
+                if (d < bellRadius() && t.getY() > getY() + rig.rimY * s) wy = Math.min(wy, t.getY() - (rig.crownY + 3) * s - 1.5);
+            }
             else if (d > bellRadius() * 2.2) wy = Math.max(t.getY(), gAvg) + 18 * s + 2;   // coming: a little higher
             else wy = t.getY() - 1.5 * s;                      // over it, the strand ends at its feet
         } else if (stay) { if (Double.isNaN(wantY)) wantY = getY(); wy = Math.max(wantY, gAvg); }
@@ -1306,8 +1341,19 @@ public class HollowbellEntity extends Monster {
         if (!level().isClientSide && !steppedOut && why != RemovalReason.UNLOADED_TO_CHUNK && why != RemovalReason.UNLOADED_WITH_PLAYER)
             HollowbellMod.LOG.info("Hollowbell removed at {} ({})", position(), why);
         clearBars();
-        if (!level().isClientSide) { dropRider(); moves.letGoOfEverything(why == RemovalReason.KILLED || why == RemovalReason.DISCARDED); }
+        if (!level().isClientSide) {
+            Sitting.setDownAll(this);
+            dropRider();
+            moves.letGoOfEverything(why == RemovalReason.KILLED || why == RemovalReason.DISCARDED);
+        }
+        Solid.untrack(this);
         super.remove(why);
+    }
+
+    @Override
+    public void onClientRemoval() {
+        super.onClientRemoval();
+        Solid.untrack(this);
     }
 
     /** how far off his boss bars still show */
@@ -1359,6 +1405,7 @@ public class HollowbellEntity extends Monster {
     public boolean stepAside() {
         if (!(level() instanceof ServerLevel sl) || isRemoved() || isDeadOrDying()) return false;
         stopFetch();
+        Sitting.setDownAll(this);
         dropRider();
         moves.letGoOfEverything(false);
         Vec3 dest = stay ? null : goal != null ? goal : wanderTo;
@@ -1577,6 +1624,7 @@ public class HollowbellEntity extends Monster {
     public void die(DamageSource src) {
         if (!level().isClientSide) {
             HollowbellMod.LOG.info("Hollowbell died at {} ({})", position(), src.getMsgId());
+            Sitting.setDownAll(this);
             dropRider();
             stopFetch();
             moves.letGoOfEverything(true);
@@ -1692,6 +1740,153 @@ public class HollowbellEntity extends Monster {
     }
 
     public long bornAt() { return bornAt; }
+
+    // ------------------------------------------------------------------ solid (the solid kit's adapter)
+
+    /** his frames for the tick, for the solid kit (one on each side) */
+    final SolidCache solidCache = new SolidCache();
+    private @Nullable BellState solidState;
+    private static boolean[] solidBones;
+
+    /** the bones the solid kit uses (the rest of his pose isn't needed for it) */
+    private boolean[] solidBones() {
+        boolean[] b = solidBones;
+        if (b == null) {
+            b = new boolean[rig.boneCount()];
+            for (int i = 0; i < b.length; i++) b[i] = BellSolid.kindOf(rig.kind[i]) != SolidShape.NONE;
+            solidBones = b;
+        }
+        return b;
+    }
+
+    @Override public Entity solidSelf() { return this; }
+    @Override public SolidShape solidShape() { return BellSolid.shape(); }
+    @Override public SolidCache solidCache() { return solidCache; }
+
+    @Override
+    public boolean solidReady() {
+        return !isRemoved() && !isDeadOrDying() && BellSolid.ready() && (!level().isClientSide || clientPoseReady());
+    }
+
+    @Override public AABB solidBox() { return bodyBox(); }
+
+    @Override
+    public Matrix4f[] solidPose() {
+        ensurePose();
+        return pose;
+    }
+
+    @Override
+    public void solidPoseAt(float partial, Matrix4f[] out) {
+        if (solidState == null) solidState = new BellState(rig);
+        anim.fill(solidState, partial);
+        solidState.red = angry();
+        rig.computePose(solidState, out, solidBones());
+    }
+
+    @Override
+    public Matrix4f solidRoot(float partial, Matrix4f out) {
+        float yaw = partial >= 1f ? getYRot() : Mth.rotLerp(partial, yRotO, getYRot());
+        return out.identity().rotateY(-yaw * Mth.DEG_TO_RAD).scale(bellScale());
+    }
+
+    /** every solid part of him is always there (none breaks off) */
+    @Override public boolean solidBoneOn(int bone) { return true; }
+    @Override public float solidScale() { return bellScale(); }
+
+    /**
+     * What never bumps into him: whatever he holds (it rides one of his seats: on a strand, round an arm, in his dome,
+     * on his crown, on the way up), his own seats and shots, his bellings, the trees he's pulled up, and the other
+     * giants (giants keep apart by their hulls, see giantsApart).
+     */
+    @Override
+    public boolean solidIgnores(Entity e) {
+        return e instanceof Seat || e instanceof Shot || e instanceof Belling || e == rider || moves.caught(e)
+                || e.getVehicle() instanceof Seat || e instanceof net.minecraft.world.entity.Display || Giants.isGiant(e);
+    }
+
+    /**
+     * Sit anywhere on him: whoever holds his book (near enough to count) or is on their safe list, unless he has
+     * turned on them. A wild one (nobody holding his book): nobody.
+     */
+    @Override
+    public boolean sitAllowed(Player p) {
+        if (p.isSpectator() || !(level() instanceof ServerLevel sl)) return false;
+        if (mood.turnedOn(p.getUUID()) || mood.hunting(p.getUUID())) return false;
+        Player holder = bookHolder();
+        if (holder == null) return false;
+        return holder == p || BellWorld.get(sl.getServer()).onList(holder.getUUID(), p.getUUID());
+    }
+
+    /** his own set-down: onto clear ground beside him, out past his arms and strands, no fall damage */
+    @Override
+    public void sitSetDown(LivingEntity who) {
+        Vec3 at = safeSpotBeside(who);
+        if (who instanceof ServerPlayer sp) sp.teleportTo(sp.serverLevel(), at.x, at.y, at.z, sp.getYRot(), sp.getXRot());
+        else who.teleportTo(at.x, at.y, at.z);
+        who.fallDistance = 0f;
+        who.setDeltaMovement(Vec3.ZERO);
+        who.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOW_FALLING, 100, 0, false, false));
+    }
+
+    // ------------------------------------------------------------------ giant against giant (see GiantHull)
+
+    private double @Nullable [] hullNow;
+    private long hullTick = Long.MIN_VALUE;
+    private final List<LivingEntity> giantsNear = new ArrayList<>();
+    /** in blocks, all told (for the tests) */
+    public double giantPushed;
+
+    /**
+     * Read by name by the other giants: for each column x, z, radius, bottom, top and kind (0 body, 1 limb), in the
+     * world. His bell, rim and crown are his body, his arms limbs. Worked out once a tick at most.
+     */
+    public double[] jjHull() {
+        long now = level().getGameTime();
+        if (hullNow != null && hullTick == now) return hullNow;
+        if (!BellSolid.ready() || isRemoved()) return new double[0];
+        SolidShape sh = BellSolid.shape();
+        hullNow = GiantHull.fromBody(this, GiantHull.balls(sh, BellSolid.hullUse(sh)), BellSolid.hullKinds(sh));
+        hullTick = now;
+        return hullNow;
+    }
+
+    /**
+     * Each tick: out of any other giant he's got into, the shortest way, his share by weight (all of it if the other
+     * doesn't move itself out). Never through each other, whoever drifted into whom.
+     */
+    private void giantsApart() {
+        if (!(level() instanceof ServerLevel sl) || isDeadOrDying() || !BellSolid.ready()) return;
+        if (tickCount % 5 == 0) {
+            giantsNear.clear();
+            for (Entity x : sl.getEntities(this, bodyBox().inflate(160), Giants::isGiant)) {
+                LivingEntity o = Giants.ownerOf(x);
+                if (o != null && o != this && o.isAlive() && !giantsNear.contains(o)) giantsNear.add(o);
+            }
+        }
+        if (giantsNear.isEmpty()) return;
+        double[] me = jjHull();
+        if (me.length == 0) return;
+        double cap = 1 + 4 * bellScale();
+        for (LivingEntity o : giantsNear) {
+            if (o.isRemoved() || o.level() != level()) continue;
+            double[] them = GiantHull.of(o, Giants.TAG);
+            if (them.length == 0) continue;
+            double[] p = GiantHull.pushOut(me, them);
+            if (p[2] <= 1e-3) continue;
+            GiantHull.awayFromMiddle(p, me, them);
+            double share = 1;
+            if (GiantHull.shows(o)) {
+                double a = GiantHull.mass(me), b = GiantHull.mass(them);
+                share = a + b > 0 ? b / (a + b) : 0.5;
+            }
+            double step = Math.min(cap, p[2] * share + 0.02);
+            setPos(getX() + p[0] * step, getY(), getZ() + p[1] * step);
+            giantPushed += step;
+            hullNow = null;
+            me = jjHull(); // (moved: worked out again)
+        }
+    }
 
     // ------------------------------------------------------------------ saving
 

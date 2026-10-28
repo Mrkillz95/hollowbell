@@ -17,6 +17,10 @@ public final class ModEntities {
     public static final EntityType<Seat> SEAT = register("seat",
             EntityType.Builder.<Seat>of(Seat::new, MobCategory.MISC).sized(0.5f, 0.5f).fireImmune().noSave().noSummon()
                     .clientTrackingRange(24).updateInterval(1));
+    /** where a player sits on him (sit anywhere on him: the solid kit) */
+    public static final EntityType<net.jj.hollowbell.solid.SitSeat> SIT_SEAT = register("sit_seat",
+            EntityType.Builder.<net.jj.hollowbell.solid.SitSeat>of(net.jj.hollowbell.solid.SitSeat::new, MobCategory.MISC)
+                    .sized(0.1f, 0.1f).clientTrackingRange(16).updateInterval(1).noSummon().fireImmune());
     public static final EntityType<Shot> SHOT = register("shot",
             EntityType.Builder.<Shot>of(Shot::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(8).updateInterval(1));
     public static final EntityType<Belling> BELLING = register("belling",

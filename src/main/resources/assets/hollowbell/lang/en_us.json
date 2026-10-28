@@ -282,5 +282,10 @@
   "command.hollowbell.away_still": "Out of the world at about %s %s (%s), holding still. Size %s, health %s/%s",
   "command.hollowbell.away_is_on": "Away is on: with nobody within %s blocks he steps out of the world and keeps going. %s out there now.",
   "command.hollowbell.away_is_off": "Away is off: he stays in the world. (%s blocks when on, %s out there now.)",
-  "command.hollowbell.away_now": "%s stepped out of the world."
+  "command.hollowbell.away_now": "%s stepped out of the world.",
+  "entity.hollowbell.sit_seat": "Sitting",
+  "key.categories.hollowbell": "Hollowbell",
+  "key.hollowbell.sit_on_giant": "Sit on giant",
+  "message.hollowbell.sit.down": "You sit down on him. Jump to get up.",
+  "message.hollowbell.sit.off_list": "You're not on his safe list any more, so you got up."
 }

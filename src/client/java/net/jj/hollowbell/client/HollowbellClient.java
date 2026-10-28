@@ -34,6 +34,7 @@ public class HollowbellClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.HOLLOWBELL, BellRenderer::new);
         EntityRendererRegistry.register(ModEntities.BELLING, BellingRenderer::new);
         EntityRendererRegistry.register(ModEntities.SEAT, NoopRenderer::new);
+        net.jj.hollowbell.solid.client.SitClient.init(ModEntities.SIT_SEAT);
         EntityRendererRegistry.register(ModEntities.SHOT, ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<>(ctx, 2.2f, false));
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.CROWN, RenderType.cutout());
         CodexItem.openPages = () -> { var mc = Minecraft.getInstance(); if (mc.screen == null) mc.setScreen(new CodexScreen()); };
@@ -45,8 +46,9 @@ public class HollowbellClient implements ClientModInitializer {
             var pl = ctx.client().player;
             if (pl != null) Shake.crash(Math.sqrt(pl.distanceToSqr(p.x(), p.y(), p.z())), p.power());
         }));
-        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear(); });
-        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); });
+        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> { CodexScreen.forgetEverything(); BeingHim.set(-1, false); BellSounds.clear();
+            net.jj.hollowbell.solid.Solid.forgetAll(true); net.jj.hollowbell.solid.client.SolidClient.clear(); });
+        ClientTickEvents.END_CLIENT_TICK.register(c -> { Shake.tick(); BeingHim.tick(c); BellSounds.tick(c); net.jj.hollowbell.solid.client.SolidClient.tick(c); });
         // he's ticked even when the game would skip him for having his middle too far off (see tickIfSkipped)
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_WORLD_TICK.register(level -> {
             for (var e : level.entitiesForRendering()) if (e instanceof net.jj.hollowbell.entity.HollowbellEntity h) h.tickIfSkipped();

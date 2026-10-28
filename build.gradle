@@ -21,6 +21,7 @@ loom {
             name "Game Test"
             vmArg "-Dfabric-api.gametest"
             vmArg "-Dhollowbell.debug=true"
+            if (project.findProperty("soliddbg")) vmArg "-Dhollowbell.soliddbg=true"
             vmArg "-Xmx3G"
             vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest-report.xml"
             runDir "build/gametest"
@@ -41,9 +42,28 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
+// the game test classes; ./gradlew runGametest -Ponly=SolidTests,PushOutTests runs just those
+def allTests = [
+    'net.jj.hollowbell.test.HollowbellGameTests',
+    'net.jj.hollowbell.test.SolidTests',
+    'net.jj.hollowbell.test.PushOutTests',
+    'net.jj.hollowbell.test.SitTests',
+    'net.jj.hollowbell.test.GiantHullTests'
+]
+// timings only, run on their own: ./gradlew runGametest -Ponly=TickCostTests (a full-size fight in the middle of the
+// suite would shift every later test's world and dice)
+def labTests = [
+    'net.jj.hollowbell.test.TickCostTests'
+]
+def onlyTests = project.findProperty('only')
+def tests = !onlyTests ? allTests :
+        (allTests + labTests).findAll { t -> onlyTests.toString().split(',').any { t.endsWith('.' + it) } }
 processResources {
     inputs.property "version", project.version
-    filesMatching("fabric.mod.json") { expand "version": project.version }
+    inputs.property "gametests", tests.join(',')
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version, "gametests": groovy.json.JsonOutput.toJson(tests)
+    }
 }
 tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
 java {

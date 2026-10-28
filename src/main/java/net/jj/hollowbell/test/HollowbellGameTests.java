@@ -825,8 +825,9 @@ public class HollowbellGameTests implements FabricGameTest {
         Watch w = new Watch();
         h.runAfterDelay(20, () -> {
             y0[0] = e.getY();
-            // a pig high up in the air, right over him
-            p[0] = pig(h, e.position().add(0, 45, 0));
+            // a pig high up in the air, off to one side (he's solid now: right over his crown he'd come up under it
+            // and stop there, not up past it, see fly)
+            p[0] = pig(h, e.position().add(30, 45, 0));
             p[0].setNoGravity(true);
             p[0].setInvulnerable(true);
             e.sendAfter(p[0]);

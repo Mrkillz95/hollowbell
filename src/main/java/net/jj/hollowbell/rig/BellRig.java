@@ -305,12 +305,19 @@ public final class BellRig {
      * Fills pose[b] with each bone's transform from its rest position to where it is now, in model space.
      * The arms and strands are laid along the chain points in st.chain.
      */
-    public void computePose(BellState st, Matrix4f[] pose) {
+    public void computePose(BellState st, Matrix4f[] pose) { computePose(st, pose, null); }
+
+    /**
+     * The same for only some of the bones (only[b] true; null: all of them). The bell, rim, crown, spots, arms and
+     * strands are each worked out on their own; a pod or egg clump needs the strand it hangs from.
+     */
+    public void computePose(BellState st, Matrix4f[] pose, @Nullable boolean[] only) {
         Scratch s = scratch.get();
         Matrix4f body = body(st, s.body);
         Quaternionf brot = bodyRotation(st, s.brot);
         int nb = boneCount();
         for (int b = 0; b < nb; b++) {
+            if (only != null && !only[b]) continue;
             switch (kind[b]) {
                 case BELL -> band(st, bands[part[b]].mid(), body, pose[b]);
                 case RIM -> sector(st, part[b], body, pose[b]);

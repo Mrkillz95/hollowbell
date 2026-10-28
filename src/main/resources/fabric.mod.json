@@ -16,9 +16,7 @@
     "client": [
       "net.jj.hollowbell.client.HollowbellClient"
     ],
-    "fabric-gametest": [
-      "net.jj.hollowbell.test.HollowbellGameTests"
-    ]
+    "fabric-gametest": ${gametests}
   },
   "depends": {
     "fabricloader": ">=0.16.0",

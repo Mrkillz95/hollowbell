@@ -6,6 +6,13 @@
   "mixins": [
     "ChunkMapAccess",
     "LogOffMixin",
+    "SitEffectMixin",
+    "SitJumpAccess",
+    "SitLeaveMixin",
+    "SitStayMixin",
+    "SolidCollideMixin",
+    "SolidFloatingMixin",
+    "SolidMoveMixin",
     "TrackingMixin"
   ],
   "injectors": {

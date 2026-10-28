@@ -88,10 +88,13 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_WORLD_TICK.register(net.jj.hollowbell.world.KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> { if (entity instanceof HollowbellEntity h) h.clearBars(); });
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> { if (entity instanceof HollowbellEntity h) HollowbellCommand.keepToTheLimit(h, world); });
-        ServerLifecycleEvents.SERVER_STOPPED.register(s -> CodexOrders.forgetEverything());
+        ServerLifecycleEvents.SERVER_STOPPED.register(s -> { CodexOrders.forgetEverything(); net.jj.hollowbell.solid.Solid.forgetAll(false); });
+        // sit anywhere on him (the solid kit): the seat, the gesture's message, nothing of his hurting a sitter
+        net.jj.hollowbell.solid.Sitting.init(ModEntities.SIT_SEAT);
 
         BellRig rig = BellRig.get();
         BellModel.preload();
+        net.jj.hollowbell.entity.BellSolid.preload();
         LOG.info("Hollowbell is ready: {} bones, {} strands, {} pods, {} egg clumps", rig.boneCount(), rig.strands.length,
                 rig.pods.length, rig.eggs.length);
     }

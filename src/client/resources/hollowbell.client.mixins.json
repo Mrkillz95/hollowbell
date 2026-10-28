@@ -9,6 +9,7 @@
     "DriveZoomMixin",
     "FrozenBodyMixin",
     "PickMixin",
+    "SolidFrameMixin",
     "VisibleMixin"
   ],
   "injectors": {
