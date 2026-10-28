@@ -129,6 +129,17 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     @Override
     public void render(
             HollowbellEntity e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int packedLight) {
+        if (!RenderStats.on) {
+            drawHim(e, partial, ps);
+            return;
+        }
+        long t0 = System.nanoTime(), a0 = RenderStats.allocated();
+        drawHim(e, partial, ps);
+        RenderStats.renderNs += System.nanoTime() - t0;
+        RenderStats.allocBytes += RenderStats.allocated() - a0;
+    }
+
+    private void drawHim(HollowbellEntity e, float partial, PoseStack ps) {
         BellMeshes meshes = BellMeshes.INSTANCE;
         if (!meshes.ensureReady()) return;
         BellPieces pieces = BellPieces.get();
@@ -285,6 +296,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 }
                 m.vb.bind();
                 m.vb.draw();
+                if (RenderStats.on) RenderStats.draws++;
             }
         }
         shader.clear();
@@ -371,6 +383,18 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
      * bone by face, re-sorted off the render thread as you move). Called after the other creatures are drawn.
      */
     public static void drawGlass() {
+        if (!RenderStats.on) {
+            drawAllGlass();
+            return;
+        }
+        long t0 = System.nanoTime(), a0 = RenderStats.allocated();
+        drawAllGlass();
+        RenderStats.glassNs += System.nanoTime() - t0;
+        RenderStats.allocBytes += RenderStats.allocated() - a0;
+        RenderStats.frames++;
+    }
+
+    private static void drawAllGlass() {
         if (glass.isEmpty()) return;
         BellMeshes meshes = BellMeshes.INSTANCE;
         BellRig rig = BellRig.get();
@@ -443,6 +467,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 }
                 m.vb.bind();
                 m.vb.draw();
+                if (RenderStats.on) RenderStats.glassDraws++;
             }
         }
         shader.clear();

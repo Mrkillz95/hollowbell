@@ -106,6 +106,7 @@ public final class BellMeshes {
             building = null;
             return false;
         }
+        long t0 = System.nanoTime();
         meshes = new Mesh[3][4][];
         for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) meshes[l][k] = new Mesh[b.parts[l][k].length];
         int nb = b.parts[TINY][0].length;
@@ -127,6 +128,10 @@ public final class BellMeshes {
         quadCount = q;
         farQuadCount = fq;
         ready = true;
+        long dt = System.nanoTime() - t0;
+        RenderStats.uploadNs += dt;
+        RenderStats.uploadMaxFrameNs = Math.max(RenderStats.uploadMaxFrameNs, dt);
+        RenderStats.uploadFrames++;
         HollowbellMod.LOG.info("On the GPU: {} faces in {} bones ({} faces far away)", q, nb, fq);
         return true;
     }
@@ -161,11 +166,13 @@ public final class BellMeshes {
                 m.vb.bind();
                 m.vb.uploadIndexBuffer(j.result);
                 j.mem.close();
+                if (RenderStats.on) RenderStats.sortUploads++;
             }
             return;
         }
         if (!Float.isNaN(m.sortedFor.x) && m.sortedFor.distanceSquared(camRest) < moveBy * moveBy) return;
         m.sortedFor.set(camRest);
+        if (RenderStats.on) RenderStats.sortsStarted++;
         Vector3f at = new Vector3f(camRest);
         MeshData.SortState st = m.sort;
         int bytes = m.quads * 6 * 4 + 256;

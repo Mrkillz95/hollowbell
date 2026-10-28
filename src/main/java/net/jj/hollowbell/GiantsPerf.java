@@ -38,11 +38,12 @@ public final class GiantsPerf {
         "detail.lootBeams",
         "detail.sounds",
         "detail.music",
-        "detail.renderDistance"
+        "detail.renderDistance",
+        "detail.drawing"
     };
 
     /** the shared settings that are choices: 0 (the first, best) by default */
-    private static final String[] CHOICES = {"detail.animation", "detail.lootBeams"};
+    private static final String[] CHOICES = {"detail.animation", "detail.lootBeams", "detail.drawing"};
 
     /** his own settings, one JSON object each (see the guide's PERFORMANCE_BRIDGE.md for the fields) */
     private static final String[] OWN = {
@@ -173,6 +174,15 @@ public final class GiantsPerf {
     /** a choice for this player's own game (0, the first, when the guide hasn't said) */
     public static int choice(String id) {
         return (int) Math.max(0, Math.min(7, Math.round(raw(client, id))));
+    }
+
+    /**
+     * the guide's "Drawing" choice for this player's game: 0 Classic (the default, drawn just as always), 1 Fast (the
+     * same picture with less work: fewer allocations, the glass kept sorted for each of him, his model sent to the
+     * graphics card a bit at a time)
+     */
+    public static boolean fastDrawing() {
+        return choice("detail.drawing") == 1;
     }
 
     /** a share for the whole world (the server's), 0..1 */

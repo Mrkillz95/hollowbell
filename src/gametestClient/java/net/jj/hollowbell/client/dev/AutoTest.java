@@ -11,11 +11,13 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.jj.hollowbell.Detail;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.client.BellPick;
 import net.jj.hollowbell.client.CodexScreen;
 import net.jj.hollowbell.client.render.BellMeshes;
+import net.jj.hollowbell.client.render.RenderStats;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.fx.BigFx;
@@ -91,6 +93,74 @@ public final class AutoTest implements ClientModInitializer {
             return;
         }
         ClientTickEvents.END_CLIENT_TICK.register(AutoTest::tick);
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.END.register(ctx -> frameDone());
+    }
+
+    // measuring: frame times, and his renderer's own counters (see RenderStats)
+    private static long lastFrame, statFrom, statFrames, statFrameNs, worstFrameNs, hitchFrom;
+
+    private static void frameDone() {
+        long now = System.nanoTime();
+        if (lastFrame != 0) {
+            long dt = now - lastFrame;
+            worstFrameNs = Math.max(worstFrameNs, dt);
+            if (RenderStats.on) {
+                statFrames++;
+                statFrameNs += dt;
+            }
+        }
+        lastFrame = now;
+    }
+
+    private static void stats(Minecraft mc, String s) {
+        String[] a = s.trim().split(" +");
+        if (a[1].equals("start")) {
+            RenderStats.reset();
+            RenderStats.on = true;
+            statFrom = System.nanoTime();
+            statFrames = statFrameNs = 0;
+            return;
+        }
+        if (a[1].equals("hitch")) {
+            worstFrameNs = 0;
+            hitchFrom = System.nanoTime();
+            return;
+        }
+        if (a[1].equals("hitchlog")) {
+            HollowbellMod.LOG.info(
+                    "autotest stats hitch {}: worst frame {} ms since start ({} s), mesh upload {} ms in {} frames"
+                            + " (longest {} ms)",
+                    a.length > 2 ? a[2] : "",
+                    String.format("%.1f", worstFrameNs / 1e6),
+                    String.format("%.1f", (System.nanoTime() - hitchFrom) / 1e9),
+                    String.format("%.1f", RenderStats.uploadNs / 1e6),
+                    RenderStats.uploadFrames,
+                    String.format("%.1f", RenderStats.uploadMaxFrameNs / 1e6));
+            return;
+        }
+        RenderStats.on = false;
+        double secs = (System.nanoTime() - statFrom) / 1e9;
+        long f = Math.max(1, RenderStats.frames);
+        HollowbellMod.LOG.info(
+                "autotest stats {}: frames {} in {} s, fps {} (game says {}), frame {} ms; his renderer {} ms/frame"
+                        + " (solid+glow {} ms, glass {} ms); draws/frame {} + glass {}; glass sorts {} started, {}"
+                        + " uploaded ({}/s); allocated {} KB/frame, {} MB/s",
+                a.length > 2 ? a[2] : "",
+                RenderStats.frames,
+                String.format("%.1f", secs),
+                String.format("%.1f", statFrames / Math.max(1e-9, statFrameNs / 1e9)),
+                mc.getFps(),
+                String.format("%.2f", statFrameNs / 1e6 / Math.max(1, statFrames)),
+                String.format("%.3f", (RenderStats.renderNs + RenderStats.glassNs) / 1e6 / f),
+                String.format("%.3f", RenderStats.renderNs / 1e6 / f),
+                String.format("%.3f", RenderStats.glassNs / 1e6 / f),
+                RenderStats.draws / f,
+                RenderStats.glassDraws / f,
+                RenderStats.sortsStarted,
+                RenderStats.sortUploads,
+                String.format("%.1f", RenderStats.sortUploads / Math.max(1e-9, secs)),
+                String.format("%.1f", RenderStats.allocBytes / 1024.0 / f),
+                String.format("%.2f", RenderStats.allocBytes / 1048576.0 / Math.max(1e-9, secs)));
     }
 
     private static void tick(Minecraft mc) {
@@ -144,6 +214,26 @@ public final class AutoTest implements ClientModInitializer {
                 String c = s.substring(6).trim();
                 HollowbellMod.LOG.info("autotest chat: /{}", c);
                 mc.player.connection.sendCommand(c);
+                continue;
+            }
+            // stats start | stats log name | stats hitch | stats hitchlog name: measuring (see RenderStats)
+            if (s.startsWith("stats ")) {
+                stats(mc, s);
+                continue;
+            }
+            // drawing classic|fast: the guide's Drawing choice on this game (detail.drawing)
+            if (s.startsWith("drawing ")) {
+                GiantsPerf.receive("{\"perf\":1,\"side\":\"client\",\"values\":{\"detail.drawing\":"
+                        + (s.endsWith("fast") ? 1 : 0) + "}}");
+                HollowbellMod.LOG.info("autotest drawing fast {}", GiantsPerf.fastDrawing());
+                continue;
+            }
+            // fps unlimited: no vsync, no frame cap (for measuring)
+            if (s.equals("fps unlimited")) {
+                mc.options.enableVsync().set(false);
+                mc.getWindow().updateVsync(false);
+                mc.options.framerateLimit().set(260);
+                mc.getWindow().setFramerateLimit(260);
                 continue;
             }
             if (s.startsWith("guiscale ")) {
