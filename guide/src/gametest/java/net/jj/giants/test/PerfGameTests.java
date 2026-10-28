@@ -277,6 +277,59 @@ public class PerfGameTests implements FabricGameTest {
         h.succeed();
     }
 
+    /**
+     * Drawing: Classic (0) to start with and in every preset, so no preset turns Fast on; a player picks it. Like
+     * the sound volumes (the same in every preset), picking a preset puts it back to the preset's value, Classic;
+     * a preset of their own keeps Fast. Fast goes to a giant in "perfset" and comes back as 1.
+     */
+    @GameTest(template = EMPTY_STRUCTURE)
+    public void drawingIsClassicUntilAPlayerPicksFast(GameTestHelper h) {
+        List<PerfSetting> all = all();
+        PerfSetting d = all.stream().filter(s -> s.id().equals("detail.drawing")).findFirst().orElse(null);
+        h.assertTrue(d != null, "the catalog has detail.drawing");
+        h.assertTrue(d.kind() == PerfSetting.Kind.CHOICE && d.options().equals(List.of("Classic", "Fast")),
+                "a choice: Classic, Fast");
+        h.assertTrue(d.def() == 0 && !d.server() && d.section().equals(PerfSetting.DETAIL)
+                && d.cost() == PerfSetting.Cost.HIGH, "Classic to start with, the player's own, in Detail");
+        for (int p = 0; p < PerfPresets.BUILT_IN.size(); p++) {
+            h.assertTrue(d.level(p) == 0, PerfPresets.BUILT_IN.get(p) + " leaves it Classic");
+            h.assertTrue(PerfPresets.values(p, all).get(d.id()) == 0, PerfPresets.BUILT_IN.get(p) + " sends Classic");
+            h.assertFalse(PerfPresets.changes(p, all).stream().anyMatch(c -> c.setting() == d),
+                    PerfPresets.BUILT_IN.get(p) + " doesn't list it as a change");
+        }
+        PerfProfile p = new PerfProfile();
+        h.assertTrue(p.get(d) == 0, "a new player is on Classic");
+        p.set(d, 1);
+        h.assertTrue(p.get(d) == 1 && p.custom(), "Fast by hand");
+        Map<String, Double> snap = new HashMap<>();
+        for (PerfSetting s : all) snap.put(s.id(), p.get(s));
+        h.assertTrue(p.saveAs("Fast PC", snap) == null, "saved");
+        p.apply("Low", all);
+        h.assertTrue(p.get(d) == 0, "a built-in preset puts it back to Classic, as with the volumes");
+        p.apply("Fast PC", all);
+        h.assertTrue(p.get(d) == 1, "their own preset keeps Fast");
+
+        // the perfset round trip: Fast out to a giant, and read back the same
+        JsonObject o = JsonParser.parseString(PerfBridges.setArg("fakeperf", false, all, p.values())).getAsJsonObject();
+        h.assertTrue(o.get("side").getAsString().equals("client"), "sent with the player's side");
+        h.assertTrue(o.getAsJsonObject("values").get("detail.drawing").getAsDouble() == 1.0, "Fast goes out as 1");
+        JsonObject was = net.jj.fakeperf.GiantsBridge.client;
+        try {
+            List<String> ok = PerfBridges.call(h.getLevel().getServer(), NEW, PerfBridges.SET,
+                    PerfBridges.setArg("fakeperf", false, all, p.values()));
+            h.assertTrue(ok != null, "the giant took it");
+            h.assertTrue(net.jj.fakeperf.GiantsBridge.client.get("detail.drawing").getAsDouble() == 1.0,
+                    "and read Fast back");
+            JsonObject server = PerfBridges.valuesFor("fakeperf", true, all, p.values());
+            h.assertFalse(server.has("detail.drawing"), "not one of the world's");
+            JsonObject highest = PerfBridges.valuesFor("fakeperf", false, all, PerfPresets.values(0, all));
+            h.assertTrue(highest.get("detail.drawing").getAsDouble() == 0.0, "Highest sends Classic");
+        } finally {
+            net.jj.fakeperf.GiantsBridge.client = was;
+        }
+        h.succeed();
+    }
+
     @GameTest(template = EMPTY_STRUCTURE)
     public void worldFeaturesNeedAnOperator(GameTestHelper h) {
         MinecraftServer s = h.getLevel().getServer();
