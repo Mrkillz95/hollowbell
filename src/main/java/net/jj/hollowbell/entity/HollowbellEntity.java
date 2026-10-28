@@ -1214,7 +1214,7 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     /** how far he can see things to hunt */
     public double senseRange() {
-        return 110 * bellScale() + 40;
+        return 150 * bellScale() + 60;
     }
 
     public double guardRange() {

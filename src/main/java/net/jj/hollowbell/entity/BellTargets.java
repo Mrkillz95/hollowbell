@@ -1,6 +1,7 @@
 package net.jj.hollowbell.entity;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.UUID;
 import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
@@ -29,6 +30,8 @@ final class BellTargets {
     private final HollowbellEntity hb;
     /** everyone and everything that has hurt him and is still about */
     final Grudges grudges = new Grudges();
+    /** how long a player he's after has been out of his sight */
+    final HuntSight.Memory sight = new HuntSight.Memory();
 
     BellTargets(HollowbellEntity hb) {
         this.hb = hb;
@@ -100,9 +103,39 @@ final class BellTargets {
         return hb.bound() && Math.hypot(at.x - hb.boundX, at.z - hb.boundZ) > hb.boundR + 110 * hb.bellScale() + 40;
     }
 
+    /** where he looks out from: under his bell, round its rim toward them, low down, his middle and his crown */
+    List<Vec3> lookouts(LivingEntity who) {
+        float s = hb.bellScale();
+        double rimY = hb.getY() + hb.rig.rimY * s;
+        double dx = who.getX() - hb.getX(), dz = who.getZ() - hb.getZ(), d = Math.sqrt(dx * dx + dz * dz);
+        double rr = d > 1e-3 ? hb.bellRadius() * 0.95 / d : 0;
+        return List.of(
+                new Vec3(hb.getX(), rimY - 2, hb.getZ()),
+                new Vec3(hb.getX() + dx * rr, rimY, hb.getZ() + dz * rr),
+                new Vec3(hb.getX(), hb.getY() + 1, hb.getZ()),
+                new Vec3(hb.getX(), hb.getY() + (hb.rig.rimY + hb.rig.crownY) * 0.5 * s, hb.getZ()),
+                new Vec3(hb.getX(), hb.getY() + hb.rig.crownY * s + 2, hb.getZ()));
+    }
+
+    /** a player he goes after on sight alone (not one he holds something against: those he hunts seen or not) */
+    private boolean bySightOnly(Player p) {
+        return !grudges.has(p.getUUID())
+                && !hb.mood.turnedOn(p.getUUID())
+                && !hb.mood.hunting(p.getUUID())
+                && !p.getUUID().equals(hb.hunted);
+    }
+
     void pickTarget() {
         LivingEntity t = hb.getTarget();
         boolean foe = t != null && hb.meetFoe != null && hb.meetFoe.equals(t.getUUID());
+        // a player he picked on sight and hasn't seen for a while: let go
+        if (t instanceof Player tp
+                && !foe
+                && bySightOnly(tp)
+                && !sight.keep(hb.level(), lookouts(tp), tp, hb.level().getGameTime())) {
+            hb.setTarget(null);
+            t = null;
+        }
         if (t != null
                 && (!fairGame(t)
                         || hb.horiz(t.position())
@@ -156,7 +189,14 @@ final class BellTargets {
                 }
             }
         }
-        if (hb.tickCount % 20 != 0 || t != null) return;
+        if (hb.tickCount % 20 != 0) return;
+        // after a creature (not one that hurt him, nor a giant he's meeting): a player he sees comes first
+        boolean onMob = t != null
+                && !(t instanceof Player)
+                && !foe
+                && !grudges.has(t.getUUID())
+                && !t.getUUID().equals(hb.hunted);
+        if (t != null && !onMob) return;
         if (hb.variant() == HollowbellEntity.CALM && hb.angerTicks <= 0) return;
         double r = hb.senseRange();
         Player best = null;
@@ -166,15 +206,18 @@ final class BellTargets {
             double d = hb.horiz(p.position());
             if (d > r) continue;
             if (hb.isGuardian() && hb.home != null && p.position().distanceTo(hb.home) > hb.guardRange()) continue;
-            if (d < bd) {
+            // (picked on sight: one he can't see from anywhere on him is left be)
+            if (d < bd && (!bySightOnly(p) || HuntSight.sees(hb.level(), lookouts(p), p))) {
                 bd = d;
                 best = p;
             }
         }
         if (best != null) {
             hb.setTarget(best);
+            sight.saw(best, hb.level().getGameTime());
             return;
         }
+        if (t != null) return;
         // no player: hostile creatures (a guardian clears them off his ground; a hunter goes for them too)
         if (hb.tickCount % 40 != 0) return;
         // (getting away from a giant he backed down to, he doesn't stop for creatures on the way)

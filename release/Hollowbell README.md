@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.26
+# Hollowbell (Java mod), version 1.12.27
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,14 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Hunting, he now goes after any player nearby who isn't safe and who he can see, even while he's busy with a
+  monster. A wall or a hill between you hides you; a block or two right next to you doesn't. Once he loses sight of
+  you he keeps after you for about ten seconds. Someone who hurt him he still hunts, seen or not.
+- On Peaceful he leaves every player alone.
+- He notices players from further off now, well past the reach of his own blows.
+
+### 1.12.26
 
 - Model detail at 100% now always draws him in full, however far off.
 - His fight music now plays only while he's fighting you: he's after you, one of you hit the other, or you ride or sit
