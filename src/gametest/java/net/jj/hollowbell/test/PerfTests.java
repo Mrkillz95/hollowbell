@@ -160,4 +160,29 @@ public class PerfTests implements FabricGameTest {
         }
         h.succeed();
     }
+
+    @GameTest(template = "fabric-gametest-api-v1:empty", timeoutTicks = 20, batch = "perf_model")
+    public void fullModelDetailIsTheFullModelAtAnyDistance(GameTestHelper h) {
+        String none = "{\"perf\":1,\"side\":\"client\",\"values\":{}}";
+        boolean simple = net.jj.hollowbell.BellConfig.V.simpleFarAway;
+        GiantsBridge.giants(null, "perfset", none);
+        try {
+            h.assertTrue(GiantsPerf.f("detail.model") == 1f, "model detail isn't 100% at Highest");
+            for (boolean own : new boolean[] {true, false}) {
+                net.jj.hollowbell.BellConfig.V.simpleFarAway = own;
+                for (double d : new double[] {0, 100, 1000, 10_000, 1_000_000})
+                    for (float s : new float[] {0.05f, 0.3f, 1f, 3f})
+                        h.assertTrue(Detail.lod(d, s) == Detail.FULL, "not FULL at 100% from " + d + " at size " + s);
+            }
+            GiantsBridge.giants(null, "perfset", "{\"perf\":1,\"side\":\"client\",\"values\":{\"detail.model\":0.5}}");
+            h.assertTrue(Detail.lod(10, 1f) == Detail.FULL, "simpler close up at 50%");
+            h.assertTrue(Detail.lod(10_000, 1f) != Detail.FULL, "not simpler far off at 50%");
+            h.assertTrue(Detail.lod(net.jj.hollowbell.BellConfig.V.simpleFarAwayAt * 0.75, 1f) != Detail.FULL,
+                    "at 50% the simpler model didn't take over sooner");
+        } finally {
+            net.jj.hollowbell.BellConfig.V.simpleFarAway = simple;
+            GiantsBridge.giants(null, "perfset", none);
+        }
+        h.succeed();
+    }
 }

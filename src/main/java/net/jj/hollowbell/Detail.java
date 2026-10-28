@@ -1,10 +1,10 @@
 package net.jj.hollowbell;
 
 /**
- * How finely he's drawn at a distance. With detail on (the default) he's drawn with bigger, merged blocks when
- * he's far away, and simpler still when he's very far or very small, so he runs faster. With detail off he's
- * always drawn in full, at every distance. Set with /hollowbell detail on|off (a setting on your own computer,
- * kept in config/hollowbell.json as simpleFarAway).
+ * How finely he's drawn at a distance. The Giants Guide's model detail decides: at 100% (the default, Highest) he's
+ * always drawn in full, at every distance. Under 100% he's drawn with bigger, merged blocks once he's far away, and
+ * simpler still when he's very far or very small, so he runs faster: the lower it is, the sooner. His own detail
+ * switch (config/hollowbell.json, simpleFarAway) is kept for older configs.
  */
 public final class Detail {
     private Detail() {}
@@ -52,9 +52,10 @@ public final class Detail {
 
     /** which version of him to draw, dist blocks from the camera, at size scale */
     public static int lod(double dist, float scale) {
-        // (the guide's model detail: under 100% the simpler drawing starts sooner, even with detail off)
+        // (the Giants Guide's model detail: at 100%, the default, always the full model, however far off; under 100%
+        // the simpler drawing starts sooner the lower it is, even with detail off)
         float perf = GiantsPerf.f("detail.model");
-        if (!on() && perf >= 1f) return FULL;
+        if (perf >= 0.999f) return FULL;
         double at = BellConfig.V.simpleFarAwayAt * perf * Math.max(0.25f, scale);
         if ((scale < 0.06f && dist > 40) || dist > at * 4) return TINY;
         if (dist > at) return FAR;

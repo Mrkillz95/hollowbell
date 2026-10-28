@@ -1,5 +1,6 @@
 package net.jj.hollowbell.client;
 
+import net.jj.hollowbell.FightWith;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
@@ -15,11 +16,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 
 /**
- * His fight theme. It plays while you're near an awake one (see ThemeHold: within 96 blocks of his rim by the flat
- * distance, at least 128 blocks from his middle), in any game mode but spectator, fading in over half a second. It
- * keeps on eight seconds after you leave or he dies, then fades out over four. It goes through the music slider, and
- * the game's own music keeps quiet while it plays. Only one giant's theme plays at a time, the nearest (see
- * MusicBoard). Off with fightMusic in the settings.
+ * His fight theme. It plays while you're near an awake one that is in a fight with you (FightWith: he targets you, one
+ * of you hurt the other, or you ride or sit on a giant fighting him; it then lasts the whole fight, pauses and all)
+ * (see ThemeHold: within 96 blocks of his rim by the flat distance, at least 128 blocks from his middle), in any game
+ * mode but spectator, fading in over half a second. It keeps on eight seconds after you leave or he dies, then fades
+ * out over four. It goes through the music slider, and the game's own music keeps quiet while it plays. Only one
+ * giant's theme plays at a time, the nearest (see MusicBoard). Off with fightMusic in the settings.
  *
  * It follows him. The theme is four takes of the same music, exactly as long as each other, started together and
  * kept playing together; only one is heard at a time. By his health: whole, under half, under a quarter, each blended
@@ -93,7 +95,8 @@ public final class FightMusic {
         if (mc.level == null || mc.player == null || mc.player.isSpectator()) return -1;
         double best = -1;
         for (var e : mc.level.entitiesForRendering()) {
-            if (!(e instanceof HollowbellEntity h) || h.isGhost() || h.isDeadOrDying() || !h.awake()) continue;
+            if (!(e instanceof HollowbellEntity h) || h.isGhost() || h.isDeadOrDying() || !h.awake()
+                    || !FightWith.withMe(h.getId())) continue;
             double dx = h.getX() - mc.player.getX(), dz = h.getZ() - mc.player.getZ();
             double d = Math.sqrt(dx * dx + dz * dz);
             if (HOLD.near(d, ThemeHold.range(h.bellScale())) && (best < 0 || d * d < best)) {

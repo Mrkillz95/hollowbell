@@ -8,7 +8,7 @@
     {
       "id": "triple_crouch_sit",
       "name": "Triple crouch to sit",
-      "description": "Crouch three times within a second while standing on him to sit down.",
+      "description": "Crouch three times within two seconds while standing on him to sit down.",
       "config": "tripleCrouchSit",
       "key": "key.fakeperf.sit_on_giant",
       "default": true

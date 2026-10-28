@@ -113,6 +113,7 @@ def allTests = [
     'net.jj.hollowbell.test.RespawnTests',
     'net.jj.hollowbell.test.BalanceTests',
     'net.jj.hollowbell.test.PerfTests',
+    'net.jj.hollowbell.test.FightWithTests',
     'net.jj.hollowbell.test.GiantsCommandTests',
     'net.jj.hollowbell.test.FleeTests',
     'net.jj.hollowbell.test.SitTests'

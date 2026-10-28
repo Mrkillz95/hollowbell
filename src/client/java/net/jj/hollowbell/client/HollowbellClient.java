@@ -51,6 +51,11 @@ import net.minecraft.server.packs.resources.ResourceManager;
 public class HollowbellClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        // who he is in a fight with (for his fight music), as the server says; nobody once you leave the world
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+                net.jj.hollowbell.FightWith.Payload.TYPE, (pl, ctx) -> net.jj.hollowbell.FightWith.received(pl.ids()));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (h, mc) -> net.jj.hollowbell.FightWith.forget());
         EntityRendererRegistry.register(ModEntities.HOLLOWBELL, BellRenderer::new);
         net.jj.hollowbell.solid.client.SitClient.init(ModEntities.SIT_SEAT);
         EntityRendererRegistry.register(ModEntities.BELLING, BellingRenderer::new);

@@ -1,12 +1,12 @@
 package net.jj.hollowbell.solid;
 
 /**
- * The sit gesture's counter: three distinct crouch presses within a second. Each press is counted once (holding the
- * key is one press); a press more than a second after the first of the run starts the run again. The client feeds it
+ * The sit gesture's counter: three distinct crouch presses within two seconds. Each press is counted once (holding the
+ * key is one press); a press more than two seconds after the first of the run starts the run again. The client feeds it
  * only presses made standing on him, not riding anything.
  */
 public final class TripleCrouch {
-    public static final long WINDOW_MS = 1000;
+    public static final long WINDOW_MS = 2000;
     public static final int PRESSES = 3;
 
     private final long[] at = new long[PRESSES];

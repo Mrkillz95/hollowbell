@@ -24,9 +24,15 @@ public class FarSightTests implements FabricGameTest {
         boolean was = Detail.on();
         try {
             Detail.set(true);
+            // (the guide's model detail at 100%, the default: in full at every distance)
+            for (double d : new double[] {20, 400, 3000, 100_000})
+                h.assertTrue(Detail.lod(d, 1f) == Detail.FULL, "model detail 100%: simplified at " + d);
+            // turned down, he's drawn simpler far off
+            net.jj.hollowbell.GiantsPerf.receive("{\"perf\":1,\"side\":\"client\",\"values\":{\"detail.model\":0.9}}");
             h.assertTrue(Detail.lod(20, 1f) == Detail.FULL, "detail on: not full close up");
             h.assertTrue(Detail.lod(400, 1f) != Detail.FULL, "detail on: not simpler far away");
             h.assertTrue(Detail.lod(3000, 1f) == Detail.TINY, "detail on: not simplest very far away");
+            net.jj.hollowbell.GiantsPerf.reset();
             Detail.set(false);
             for (double d : new double[] {5, 200, 800, 5000})
                 for (float s : new float[] {0.03f, 0.2f, 1f, 2f})
@@ -35,6 +41,7 @@ public class FarSightTests implements FabricGameTest {
             BellConfig.load();
             h.assertTrue(!Detail.on(), "detail off wasn't saved");
         } finally {
+            net.jj.hollowbell.GiantsPerf.reset();
             Detail.set(was);
         }
         h.succeed();

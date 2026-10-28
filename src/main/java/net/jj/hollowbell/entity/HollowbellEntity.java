@@ -1406,6 +1406,7 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     @Override
     public boolean hurt(DamageSource src, float amount) {
+        net.jj.hollowbell.FightWith.hurt(this, src);
         if (level().isClientSide || isDeadOrDying()) return false;
         if (src.is(DamageTypes.GENERIC_KILL)) {
             // /kill, /hollowbell kill, /giants kill: really dead (the game's own health too, or his death never runs)

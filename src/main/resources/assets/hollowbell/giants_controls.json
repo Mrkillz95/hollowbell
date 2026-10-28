@@ -9,7 +9,7 @@
     {
       "id": "triple_crouch_sit",
       "name": "Triple crouch to sit",
-      "description": "Crouch three times within a second while standing on him (on his safe list) to sit down there. Jump to get up.",
+      "description": "Crouch three times within two seconds while standing on him (on his safe list) to sit down there. Jump to get up.",
       "config": "tripleCrouchSit",
       "key": "key.hollowbell.sit_on_giant",
       "default": true

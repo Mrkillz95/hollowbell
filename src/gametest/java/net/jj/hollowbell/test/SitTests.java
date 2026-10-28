@@ -405,17 +405,20 @@ static void after(GameTestHelper h, int t, Runnable r) {
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "sit_7")
-    public void theTripleCrouchCountsThreePressesInASecond(GameTestHelper h) {
+    public void theTripleCrouchCountsThreePressesInTwoSeconds(GameTestHelper h) {
         TripleCrouch c = new TripleCrouch();
-        h.assertTrue(!c.press(0) && !c.press(300) && c.press(600), "three presses within a second sit you down");
+        h.assertTrue(TripleCrouch.WINDOW_MS == 2000, "the window should be two seconds");
+        h.assertTrue(!c.press(0) && !c.press(300) && c.press(600), "three quick presses sit you down");
         c.reset();
-        h.assertTrue(!c.press(0) && !c.press(400), "two presses don't");
-        h.assertTrue(!c.press(1500), "and a third long after doesn't either");
+        h.assertTrue(!c.press(0) && !c.press(900) && c.press(1900), "three presses within two seconds sit you down");
         c.reset();
-        h.assertTrue(!c.press(0) && !c.press(600) && !c.press(1200), "slow presses don't");
-        h.assertTrue(c.press(1500), "the last three of a run do, once within a second");
+        h.assertTrue(!c.press(0) && !c.press(800), "two presses don't");
+        h.assertTrue(!c.press(3000), "and a third long after doesn't either");
+        c.reset();
+        h.assertTrue(!c.press(0) && !c.press(1200) && !c.press(2400), "slow presses over two seconds don't");
+        h.assertTrue(c.press(3000), "the last three of a run do, once within two seconds");
         h.assertTrue(c.count() == 0, "the run starts again after it sits you");
-        h.assertTrue(!c.press(2000) && !c.press(2100), "a fresh run");
+        h.assertTrue(!c.press(4000) && !c.press(4100), "a fresh run");
         h.succeed();
     }
 

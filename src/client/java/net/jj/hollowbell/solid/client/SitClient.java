@@ -21,7 +21,7 @@ import net.minecraft.world.entity.EntityType;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Sitting on him, your side: the triple crouch (three crouch presses within a second, standing on him) and the "Sit on
+ * Sitting on him, your side: the triple crouch (three crouch presses within two seconds, standing on him) and the "Sit on
  * giant" key (unbound to start with) ask the server to sit you down where you stand; the key again, or jumping, gets
  * you up. The server checks who may. Both read the keys off the keyboard, as the other giants use the same ones.
  */

@@ -66,6 +66,8 @@ public class HollowbellMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        // his fight music plays only while he is in a fight with you: the server says who
+        FightWith.init();
         BellConfig.load();
         ModBlocks.init();
         ModSounds.init();

@@ -31,7 +31,7 @@ import org.joml.Vector3f;
 
 /**
  * Sit anywhere on him (the solid kit). A player on his safe list (he has an owner, and they are it or on its list)
- * crouches three times within a second standing on him, or presses "Sit on giant": they sit down exactly where they
+ * crouches three times within two seconds standing on him, or presses "Sit on giant": they sit down exactly where they
  * stand, on whatever part of him that is, down to a claw's top. The seat is fixed to that part (SitSeat) and goes
  * where it goes; nothing of his hurts them while they sit. Jumping gets them up, standing on the same spot, or set
  * down on clear ground beside him when that spot can't be stood on now. It also ends, safely, when he dies or goes, when

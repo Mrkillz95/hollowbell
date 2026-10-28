@@ -91,7 +91,7 @@ All of these are `client` unless marked as the world's. A share of 1 changes not
 | `fx.screenEffects` | share | vignettes, darkening, sky and fog colour | 1 / 1 / 1 / .75 / .5 |
 | `fx.ambient` | share | biome ambient particles | 1 / .75 / .5 / .25 / 0 |
 | `fx.fog` | switch | biome fog and the fog round him | on, on, on, on, off |
-| `detail.model` | share .25..1 | times `simpleFarAwayAt`; under 1, use the simpler model even if `simpleFarAway` is off | 1 / .85 / .65 / .45 / .3 |
+| `detail.model` | share .25..1 | at 1 (≥ .999) always the full model, at every distance; under 1, times `simpleFarAwayAt`, and the simpler model even if `simpleFarAway` is off | 1 / .85 / .65 / .45 / .3 |
 | `detail.animation` | choice | 0 Full, 1 Simpler far off, 2 Simpler (fewer secondary-motion updates) | 0 / 0 / 1 / 1 / 2 |
 | `detail.farSight` | switch | far-sight skyline stand-ins | on, on, on, on, off |
 | `detail.farSightDistance` | share .25..1 | times `farSightBlocks` | 1 / 1 / .75 / .5 / .25 |

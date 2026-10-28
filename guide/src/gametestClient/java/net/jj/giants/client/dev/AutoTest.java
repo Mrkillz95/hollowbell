@@ -190,7 +190,7 @@ public final class AutoTest implements ClientModInitializer {
                 String who = s.substring(12).trim();
                 ControlsClient.addFile(new ControlsJson.Controls(who, Map.of(), List.of(), List.of(new ControlsJson.Gesture(
                         "triple_crouch_sit", "Triple crouch to sit",
-                        "Crouch three times within a second while standing on him (on his safe list) to sit down.",
+                        "Crouch three times within two seconds while standing on him (on his safe list) to sit down.",
                         "tripleCrouchSit", "key." + who + ".sit_on_giant", true))));
                 continue;
             }
