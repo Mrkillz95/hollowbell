@@ -9,6 +9,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.ModBlocks;
+import net.jj.hollowbell.world.Cracks;
+import net.jj.hollowbell.entity.HollowbellEntity;
+import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.mixin.StructureManagerAccess;
 import net.jj.hollowbell.world.BellGen;
 import net.jj.hollowbell.world.GroundCheck;
@@ -38,6 +42,8 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -954,5 +960,60 @@ public class GroundTests implements FabricGameTest {
         run(h, Vec3.atCenterOf(o), "hollowbell ground");
         w.clearForTests();
         h.succeed();
+    }
+
+    /**
+     * A landing's crack (a sky dive's, as big as they get): the spots are picked from his random just as they always
+     * were, and cracked over the next ticks, a little at a time; at the end exactly those spots are cracked
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "ground_crack")
+    public void aLandingCracksTheSameSpotsOverAFewTicks(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, 0, 1150);
+        var l = h.getLevel();
+        boolean grief = BellConfig.V.griefing;
+        BellConfig.V.griefing = true;
+        l.getGameRules().getRule(GameRules.RULE_MOBGRIEFING).set(true, l.getServer());
+        int r = 48, R = r + 2;
+        int cx = e.getBlockX() + 3, cz = e.getBlockZ() - 2;
+        int g = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, cx, cz) - 1;
+        BlockPos c = new BlockPos(cx, g + 1, cz);
+        for (int dx = -R; dx <= R; dx++)
+            for (int dz = -R; dz <= R; dz++) {
+                l.setBlock(c.offset(dx, -1, dz), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+                l.setBlock(c.offset(dx, 0, dz), Blocks.SHORT_GRASS.defaultBlockState(), 2);
+            }
+        // the spots his random picks, as the crack always picked them
+        var want = new java.util.HashSet<Long>();
+        e.getRandom().setSeed(0x5EED);
+        for (int dx = -r; dx <= r; dx++)
+            for (int dz = -r; dz <= r; dz++) {
+                if (dx * dx + dz * dz > r * r || e.getRandom().nextInt(3) == 0) continue;
+                want.add(BlockPos.asLong(dx, 0, dz));
+            }
+        int before = Cracks.left();
+        e.getRandom().setSeed(0x5EED);
+        e.moves().crack(c, r);
+        int picked = Cracks.left() - before;
+        h.assertTrue(picked == want.size(), "picked " + picked + " spots, not " + want.size());
+        int[] ticks = {0};
+        h.onEachTick(() -> {
+            if (ticks[0] < 0) return;
+            ticks[0]++;
+            if (Cracks.left() > 0) return;
+            int[] wrong = {0};
+            for (int dx = -R; dx <= R; dx++)
+                for (int dz = -R; dz <= R; dz++) {
+                    boolean w = want.contains(BlockPos.asLong(dx, 0, dz));
+                    boolean cracked = l.getBlockState(c.offset(dx, -1, dz)).is(Blocks.COARSE_DIRT);
+                    boolean gone = l.getBlockState(c.offset(dx, 0, dz)).isAir();
+                    if (cracked != w || gone != w) wrong[0]++;
+                }
+            BellConfig.V.griefing = grief;
+            e.discard();
+            HollowbellMod.LOG.info("crack test: {} spots cracked over {} ticks", want.size(), ticks[0]);
+            ticks[0] = -1;
+            h.assertTrue(wrong[0] == 0, wrong[0] + " spots not as his random picked them");
+            h.succeed();
+        });
     }
 }

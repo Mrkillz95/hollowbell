@@ -42,6 +42,7 @@ import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.BellGen;
+import net.jj.hollowbell.world.Cracks;
 import net.jj.hollowbell.world.FarOrders;
 import net.jj.hollowbell.world.FarSight;
 import net.jj.hollowbell.world.GroundCheck;
@@ -186,6 +187,7 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(Painter::tick);
         ServerTickEvents.END_SERVER_TICK.register(RespawnPaint::tick);
         ServerTickEvents.END_SERVER_TICK.register(GroundCheck::tick);
+        ServerTickEvents.END_SERVER_TICK.register(Cracks::tick);
         ServerTickEvents.END_WORLD_TICK.register(KeepAwake::tick);
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
             if (!(entity instanceof HollowbellEntity h)) return;
@@ -222,6 +224,7 @@ public class HollowbellMod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
             CodexOrders.forgetEverything();
             NoWait.forget();
+            Cracks.forget();
             Painter.forget();
             BellGen.forget();
             FarOrders.forget();
