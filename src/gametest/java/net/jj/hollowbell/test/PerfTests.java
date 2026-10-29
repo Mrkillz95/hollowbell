@@ -72,7 +72,8 @@ public class PerfTests implements FabricGameTest {
         JsonObject values = new JsonObject();
         for (var u : head.getAsJsonArray("uses")) {
             String id = u.getAsString();
-            if (id.equals("detail.animation") || id.equals("detail.lootBeams") || id.equals("detail.drawing"))
+            if (id.equals("detail.drawing")) values.addProperty(id, 1); // Fast in every preset (no preset changes it)
+            else if (id.equals("detail.animation") || id.equals("detail.lootBeams"))
                 values.addProperty(id, 0);
             else if (id.equals("detail.farSight") || id.equals("fx.fog")) values.addProperty(id, true);
             else values.addProperty(id, 1);
@@ -165,13 +166,13 @@ public class PerfTests implements FabricGameTest {
         h.succeed();
     }
 
-    /** the Drawing choice: Classic unless the guide says Fast, and back again */
+    /** the Drawing choice: Fast unless the guide says Classic, and back again */
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "perf_drawing")
-    public void drawingIsClassicUnlessFast(GameTestHelper h) {
+    public void drawingIsFastUnlessClassic(GameTestHelper h) {
         GiantsPerf.reset();
         try {
-            h.assertFalse(GiantsPerf.fastDrawing(), "Fast drawing without the guide asking");
-            for (int v : new int[] {1, 0, 1, 0}) {
+            h.assertTrue(GiantsPerf.fastDrawing(), "Classic drawing without the guide asking");
+            for (int v : new int[] {0, 1, 0}) {
                 GiantsBridge.giants(
                         null, "perfset", "{\"perf\":1,\"side\":\"client\",\"values\":{\"detail.drawing\":" + v + "}}");
                 h.assertTrue(GiantsPerf.fastDrawing() == (v == 1), "Drawing " + v + " not taken");
@@ -179,6 +180,8 @@ public class PerfTests implements FabricGameTest {
             GiantsBridge.giants(
                     null, "perfset", "{\"perf\":1,\"side\":\"server\",\"values\":{\"detail.drawing\":1}}");
             h.assertFalse(GiantsPerf.fastDrawing(), "the world's levels turned on this game's Fast drawing");
+            GiantsBridge.giants(null, "perfset", "{\"perf\":1,\"side\":\"client\",\"values\":{}}");
+            h.assertTrue(GiantsPerf.fastDrawing(), "not back to Fast when the guide says nothing");
         } finally {
             GiantsPerf.reset();
         }

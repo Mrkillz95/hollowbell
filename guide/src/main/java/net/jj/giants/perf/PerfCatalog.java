@@ -37,9 +37,10 @@ public final class PerfCatalog {
                     .25),
             choice("detail.lootBeams", PerfSetting.DETAIL, Cost.LOW, false, List.of("All", "Near only", "Off"), 0, 0,
                     0, 1, 2),
-            // the giants' newer, faster way of drawing: no preset changes it, each player picks it
-            presetFree(choice("detail.drawing", PerfSetting.DETAIL, Cost.HIGH, false, List.of("Classic", "Fast"), 0,
-                    0, 0, 0, 0)),
+            // the giants' newer, faster way of drawing: Fast to start with (JJ, 1.6.7), Classic (the old drawing) for
+            // anyone who sees a problem; no preset changes it, each player picks it
+            presetFree(choice("detail.drawing", PerfSetting.DETAIL, Cost.HIGH, false, List.of("Classic", "Fast"), 1,
+                    1, 1, 1, 1)),
             pct("detail.sounds", PerfSetting.DETAIL, Cost.LOW, 1, 1, 1, 1, 1),
             pct("detail.music", PerfSetting.DETAIL, Cost.LOW, 1, 1, 1, 1, 1),
             // Features: the whole world's, operators only

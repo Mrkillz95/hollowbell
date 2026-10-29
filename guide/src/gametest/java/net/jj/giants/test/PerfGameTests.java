@@ -278,69 +278,74 @@ public class PerfGameTests implements FabricGameTest {
     }
 
     /**
-     * Drawing: Classic (0) to start with and in every preset, and no preset changes it: a player picks Fast, and it
-     * stays Fast whatever preset they pick (built-in or their own) and through "reset to preset". Fast goes to a
-     * giant in "perfset" and comes back as 1.
+     * Drawing: Fast (1) to start with and in every preset, and no preset changes it: a player picks Classic, and it
+     * stays Classic whatever preset they pick (built-in or their own) and through "reset to preset". Classic goes to
+     * a giant in "perfset" and comes back as 0; Fast goes as 1.
      */
     @GameTest(template = EMPTY_STRUCTURE)
-    public void drawingIsClassicUntilAPlayerPicksFast(GameTestHelper h) {
+    public void drawingIsFastUntilAPlayerPicksClassic(GameTestHelper h) {
         List<PerfSetting> all = all();
         PerfSetting d = all.stream().filter(s -> s.id().equals("detail.drawing")).findFirst().orElse(null);
         h.assertTrue(d != null, "the catalog has detail.drawing");
         h.assertTrue(d.kind() == PerfSetting.Kind.CHOICE && d.options().equals(List.of("Classic", "Fast")),
                 "a choice: Classic, Fast");
-        h.assertTrue(d.def() == 0 && !d.server() && d.section().equals(PerfSetting.DETAIL)
-                && d.cost() == PerfSetting.Cost.HIGH, "Classic to start with, the player's own, in Detail");
+        h.assertTrue(d.def() == 1 && !d.server() && d.section().equals(PerfSetting.DETAIL)
+                && d.cost() == PerfSetting.Cost.HIGH, "Fast to start with, the player's own, in Detail");
         h.assertTrue(d.presetFree(), "no preset changes it");
         h.assertTrue(all.stream().filter(PerfSetting::presetFree).count() == 1, "and it's the only one");
         for (int p = 0; p < PerfPresets.BUILT_IN.size(); p++) {
-            h.assertTrue(d.level(p) == 0, PerfPresets.BUILT_IN.get(p) + " has it Classic");
+            h.assertTrue(d.level(p) == 1, PerfPresets.BUILT_IN.get(p) + " has it Fast");
             h.assertFalse(PerfPresets.changes(p, all).stream().anyMatch(c -> c.setting() == d),
                     PerfPresets.BUILT_IN.get(p) + " doesn't list it as a change");
         }
         PerfProfile p = new PerfProfile();
-        h.assertTrue(p.get(d) == 0, "a new player is on Classic");
-        p.set(d, 1);
-        h.assertTrue(p.get(d) == 1, "Fast by hand");
+        h.assertTrue(p.get(d) == 1, "a new player is on Fast");
+        p.set(d, 0);
+        h.assertTrue(p.get(d) == 0, "Classic by hand");
         h.assertTrue(!p.custom() && p.preset().equals("Highest"), "still Highest: it isn't the preset's");
-        Map<String, Double> fastAll = new HashMap<>();
-        for (PerfSetting s : all) fastAll.put(s.id(), p.get(s));
-        h.assertFalse(PerfPresets.changes(fastAll, all).stream().anyMatch(c -> c.setting() == d),
-                "Fast isn't listed as something turned down");
+        Map<String, Double> classicAll = new HashMap<>();
+        for (PerfSetting s : all) classicAll.put(s.id(), p.get(s));
+        h.assertFalse(PerfPresets.changes(classicAll, all).stream().anyMatch(c -> c.setting() == d),
+                "Classic isn't listed as something turned down");
         for (String name : PerfPresets.BUILT_IN) {
             p.apply(name, all);
-            h.assertTrue(p.get(d) == 1, name + " keeps Fast");
+            h.assertTrue(p.get(d) == 0, name + " keeps Classic");
         }
         p.apply("Low", all);
-        h.assertTrue(p.get(d) == 1 && p.preset().equals("Low"), "Low keeps Fast");
+        h.assertTrue(p.get(d) == 0 && p.preset().equals("Low"), "Low keeps Classic");
         PerfSetting particles = all.stream().filter(s -> s.id().equals("fx.particles")).findFirst().orElseThrow();
         p.set(particles, 0.9);
         Map<String, Double> back = p.reset(s -> s.section().equals(PerfSetting.DETAIL)
                 || s.section().equals(PerfSetting.EFFECTS), all);
-        h.assertTrue(p.get(d) == 1 && !back.containsKey(d.id()), "reset to preset keeps Fast");
+        h.assertTrue(p.get(d) == 0 && !back.containsKey(d.id()), "reset to preset keeps Classic");
         h.assertTrue(p.get(particles) == particles.level(3) && p.preset().equals("Low"), "the rest reset, label back");
-        Map<String, Double> classic = new HashMap<>();
-        for (PerfSetting s : all) classic.put(s.id(), s.def());
-        h.assertTrue(p.saveAs("Classic PC", classic) == null, "a preset of theirs saved with Classic");
-        p.apply("Classic PC", all);
-        h.assertTrue(p.get(d) == 1, "their own preset keeps Fast too");
-        h.assertTrue(new PerfProfile().get(d) == 0, "and a new player still starts on Classic");
+        Map<String, Double> fast = new HashMap<>();
+        for (PerfSetting s : all) fast.put(s.id(), s.def());
+        h.assertTrue(p.saveAs("Fast PC", fast) == null, "a preset of theirs saved with Fast");
+        p.apply("Fast PC", all);
+        h.assertTrue(p.get(d) == 0, "their own preset keeps Classic too");
+        h.assertTrue(new PerfProfile().get(d) == 1, "and a new player still starts on Fast");
 
-        // the perfset round trip: Fast out to a giant, and read back the same
+        // the perfset round trip: Classic out to a giant, and read back the same
         JsonObject o = JsonParser.parseString(PerfBridges.setArg("fakeperf", false, all, p.values())).getAsJsonObject();
         h.assertTrue(o.get("side").getAsString().equals("client"), "sent with the player's side");
-        h.assertTrue(o.getAsJsonObject("values").get("detail.drawing").getAsDouble() == 1.0, "Fast goes out as 1");
+        h.assertTrue(o.getAsJsonObject("values").get("detail.drawing").getAsDouble() == 0.0, "Classic goes out as 0");
         JsonObject was = net.jj.fakeperf.GiantsBridge.client;
         try {
             List<String> ok = PerfBridges.call(h.getLevel().getServer(), NEW, PerfBridges.SET,
                     PerfBridges.setArg("fakeperf", false, all, p.values()));
             h.assertTrue(ok != null, "the giant took it");
+            h.assertTrue(net.jj.fakeperf.GiantsBridge.client.get("detail.drawing").getAsDouble() == 0.0,
+                    "and read Classic back");
+            p.set(d, 1);
+            h.assertTrue(PerfBridges.call(h.getLevel().getServer(), NEW, PerfBridges.SET,
+                    PerfBridges.setArg("fakeperf", false, all, p.values())) != null, "the giant took Fast");
             h.assertTrue(net.jj.fakeperf.GiantsBridge.client.get("detail.drawing").getAsDouble() == 1.0,
                     "and read Fast back");
             JsonObject server = PerfBridges.valuesFor("fakeperf", true, all, p.values());
             h.assertFalse(server.has("detail.drawing"), "not one of the world's");
             JsonObject highest = PerfBridges.valuesFor("fakeperf", false, all, PerfPresets.values(0, all));
-            h.assertTrue(highest.get("detail.drawing").getAsDouble() == 0.0, "Highest sends Classic");
+            h.assertTrue(highest.get("detail.drawing").getAsDouble() == 1.0, "Highest sends Fast");
         } finally {
             net.jj.fakeperf.GiantsBridge.client = was;
         }

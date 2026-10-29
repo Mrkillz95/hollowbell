@@ -105,6 +105,7 @@ public final class GiantsPerf {
     static {
         for (String id : USES) DEFAULTS.put(id, 1.0);
         for (String id : CHOICES) DEFAULTS.put(id, 0.0);
+        DEFAULTS.put("detail.drawing", 1.0); // Fast to start with (JJ, 1.6.7): Classic is picked by hand
         for (String s : OWN) {
             JsonObject o = JsonParser.parseString(s).getAsJsonObject();
             var d = o.get("default").getAsJsonPrimitive();
@@ -177,7 +178,7 @@ public final class GiantsPerf {
     }
 
     /**
-     * the guide's "Drawing" choice for this player's game: 0 Classic (the default, drawn just as always), 1 Fast (the
+     * the guide's "Drawing" choice for this player's game: 0 Classic (the old drawing, just as always), 1 Fast (the
      * same picture with less work: fewer allocations, the glass kept sorted for each of him, his model sent to the
      * graphics card a bit at a time)
      */
