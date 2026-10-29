@@ -1,11 +1,13 @@
 package net.jj.hollowbell.world;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.Comparator;
 import java.util.List;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
@@ -16,6 +18,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
@@ -29,7 +32,8 @@ import net.minecraft.world.level.storage.LevelResource;
  * already (players have been there), that land would stay as it was. So the chunks of it that are made are painted as
  * his, a few a tick, with his own ground's plan: the biome always, and the land itself when griefing is allowed (his
  * setting and the mobGriefing gamerule) and nobody has lived in that chunk. Never inside another giant's ground, and
- * never near the world's spawn. Kept with the world, so a restart picks it up again.
+ * never near the world's spawn. Kept with the world, so a restart picks it up again. A chunk that isn't loaded is
+ * asked for a few ahead and painted once it's there, so the server never stops and waits for it.
  */
 public final class RespawnPaint extends SavedData {
     private static final String NAME = "hollowbell_respawn_paint";
@@ -45,6 +49,18 @@ public final class RespawnPaint extends SavedData {
     private final ArrayDeque<Long> todo = new ArrayDeque<>();
     /** how many chunks were done, and how many of those had their land made his too */
     private int done, landDone;
+
+    /** the land waiting to be painted, held until it is */
+    private static final TicketType<ChunkPos> PAINT =
+            TicketType.create("hollowbell_respawn_paint", Comparator.comparingLong(ChunkPos::toLong));
+    /** how many chunks ahead are asked for at once */
+    private static final int AHEAD = 16;
+    /** how long the next chunk is waited for (clock ms) before it's loaded the old way, waiting */
+    private static final long GIVE_UP = 60_000L;
+    /** the chunks asked for (not kept with the world: a restart asks again) */
+    private final LongOpenHashSet asked = new LongOpenHashSet();
+    /** since when (clock ms) the next chunk has been waited for */
+    private long waiting;
 
     private RespawnPaint() {}
 
@@ -99,6 +115,7 @@ public final class RespawnPaint extends SavedData {
      */
     public static int start(ServerLevel over) {
         RespawnPaint r = get(over.getServer());
+        r.letGo(over);
         r.todo.clear();
         r.done = r.landDone = 0;
         BellGen.Snap s = BellGen.SNAP;
@@ -167,24 +184,82 @@ public final class RespawnPaint extends SavedData {
         RespawnPaint r = get(server);
         if (r.todo.isEmpty()) return;
         long t0 = System.nanoTime();
-        while (!r.todo.isEmpty() && System.nanoTime() - t0 < 4_000_000L) r.step(server.overworld());
+        ServerLevel over = server.overworld();
+        if (!r.stillHis()) {
+            r.dropAll(over);
+            return;
+        }
+        while (!r.todo.isEmpty() && System.nanoTime() - t0 < 4_000_000L) {
+            Long c = r.nextLoaded(over);
+            if (c == null) {
+                // (land not loaded yet: waited for without the server stopping; after a minute, the old way)
+                long now = System.currentTimeMillis();
+                if (r.waiting == 0) r.waiting = now;
+                if (now - r.waiting < GIVE_UP) break;
+                c = r.todo.poll();
+            }
+            r.waiting = 0;
+            r.step(over, c);
+        }
+        if (r.todo.isEmpty()) r.letGo(over);
+    }
+
+    /**
+     * The first chunk near the front of the line that is loaded now, taken out of the line; the ones before it that
+     * aren't are asked for (loaded on the world's own threads). Null if none of them is loaded yet. (Each chunk is
+     * painted on its own, so the order they come in makes no difference.)
+     */
+    private Long nextLoaded(ServerLevel over) {
+        var src = over.getChunkSource();
+        int n = 0;
+        for (var it = todo.iterator(); it.hasNext() && n++ < AHEAD; ) {
+            long c = it.next();
+            ChunkPos cp = new ChunkPos(c);
+            if (src.getChunkNow(cp.x, cp.z) != null) {
+                it.remove();
+                return c;
+            }
+            if (asked.add(c)) src.addRegionTicket(PAINT, cp, 0, cp);
+        }
+        return null;
+    }
+
+    private void letGo(ServerLevel over) {
+        var src = over.getChunkSource();
+        for (long c : asked) {
+            ChunkPos cp = new ChunkPos(c);
+            src.removeRegionTicket(PAINT, cp, 0, cp);
+        }
+        asked.clear();
     }
 
     /** every chunk waiting is done now (the tests) */
     public static void finishAll(MinecraftServer server) {
         RespawnPaint r = get(server);
-        while (!r.todo.isEmpty()) r.step(server.overworld());
+        while (!r.todo.isEmpty()) r.step(server.overworld(), r.todo.poll());
+        r.letGo(server.overworld());
     }
 
-    private void step(ServerLevel over) {
+    /** is the claim being painted still his ground? (let go or claimed somewhere else since: the rest isn't) */
+    private boolean stillHis() {
         BellGen.Snap s = BellGen.SNAP;
-        // (his ground was let go or claimed somewhere else since: the rest isn't his any more)
-        if (s == null || !s.claimed || s.outline == null || s.seed != seed || s.cx != cx || s.cz != cz) {
-            todo.clear();
-            setDirty();
+        return s != null && s.claimed && s.outline != null && s.seed == seed && s.cx == cx && s.cz == cz;
+    }
+
+    private void dropAll(ServerLevel over) {
+        todo.clear();
+        letGo(over);
+        setDirty();
+    }
+
+    private void step(ServerLevel over, long next) {
+        BellGen.Snap s = BellGen.SNAP;
+        if (!stillHis()) {
+            dropAll(over);
             return;
         }
-        ChunkPos cp = new ChunkPos(todo.poll());
+        ChunkPos cp = new ChunkPos(next);
+        if (asked.remove(cp.toLong())) over.getChunkSource().removeRegionTicket(PAINT, cp, 0, cp);
         setDirty();
         try {
             if (paintChunk(over, s, cp)) landDone++;
