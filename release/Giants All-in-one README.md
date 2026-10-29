@@ -12,18 +12,18 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giant | Version |
 |---|---|
 | Giants Guide | 1.4.15 |
-| Pitchgut | 1.35.28 |
-| Furrowmaw | 1.17.25 |
-| Fire & Ice Cerberus | 2.18.25 |
-| Hollowbell | 1.12.27 |
-| Lantern Willow | 1.10.28 |
-| Wreckback | 1.2.33 |
-| The Swarmforge | 1.4.31 |
-| The Gloamwick | 1.2.12 |
+| Pitchgut | 1.35.29 |
+| Furrowmaw | 1.17.26 |
+| Fire & Ice Cerberus | 2.18.26 |
+| Hollowbell | 1.12.28 |
+| Lantern Willow | 1.10.29 |
+| Wreckback | 1.2.34 |
+| The Swarmforge | 1.4.32 |
+| The Gloamwick | 1.2.13 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.4), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.5), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.4.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.5.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -81,6 +81,21 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.14: the Controls tab on Giants Performance, to change every giant's keys there, how giants
   back down from a wild fight they're losing (and `/giants flee`), and sitting anywhere on a giant with a triple
   crouch.
+
+## New in 1.6.5
+
+- **Sitting on a giant** now works anywhere you can stand on him: right out to his edges, and on the parts of him
+  that move, like a stepping leg or a swinging head. Getting up from an edge puts you back on that spot. Your game
+  and the server both need 1.6.5 for sitting to work.
+- **The Hush** glides smoothly now, with no more hopping. It climbs walls up to 24 blocks high, over the top and down
+  the other side.
+- **The Gloamwick** only picks a move that can reach you, and walks in closer when none can. His aim follows you
+  while he winds up a blow, but settles just before it lands, so a last step aside still dodges it. His embers, wax
+  and candles come down where he aims them, his Charge runs at where you stood when he set off, and his Stampede
+  sends its biggest runner straight at you.
+
+Inside: Pitchgut 1.35.29, Furrowmaw 1.17.26, Cerberus 2.18.26, Hollowbell 1.12.28, Lantern Willow 1.10.29,
+Wreckback 1.2.34, Swarmforge 1.4.32, Gloamwick 1.2.13.
 
 ## New in 1.6.4
 
