@@ -12,18 +12,18 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giant | Version |
 |---|---|
 | Giants Guide | 1.4.15 |
-| Pitchgut | 1.35.29 |
-| Furrowmaw | 1.17.26 |
-| Fire & Ice Cerberus | 2.18.26 |
-| Hollowbell | 1.12.28 |
-| Lantern Willow | 1.10.29 |
-| Wreckback | 1.2.34 |
-| The Swarmforge | 1.4.32 |
-| The Gloamwick | 1.2.13 |
+| Pitchgut | 1.35.30 |
+| Furrowmaw | 1.17.27 |
+| Fire & Ice Cerberus | 2.18.27 |
+| Hollowbell | 1.12.29 |
+| Lantern Willow | 1.10.30 |
+| Wreckback | 1.2.35 |
+| The Swarmforge | 1.4.33 |
+| The Gloamwick | 1.2.14 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.5), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.6), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.5.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.6.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -81,6 +81,21 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.14: the Controls tab on Giants Performance, to change every giant's keys there, how giants
   back down from a wild fight they're losing (and `/giants flee`), and sitting anywhere on a giant with a triple
   crouch.
+
+## New in 1.6.6
+
+- **No more long freezes.** The giants' moves no longer make the game wait for land that isn't loaded yet. Over land
+  nobody has loaded, their footsteps and effects don't load it.
+- **Painting a giant's ground**, and painting it again when he comes back, now happen a bit at a time instead of
+  freezing the game. Being taken to the Lantern Willow doesn't freeze it either.
+- **The Gloamwick's** eclipse, Night Bellow and Snuff Wave no longer freeze the game.
+- **The Cerberus** no longer fills your game with graphics errors when he's far away. **Hollowbell's** deep toll is
+  easier on the game, and **the Swarmforge's** robots spread out their path finding.
+- The Swarmforge's robots and sniper can't see or shoot through land nobody has loaded.
+- The tips of **Furrowmaw's** mandibles are solid now when he holds them out wide, so you can stand and sit on them.
+
+Inside: Pitchgut 1.35.30, Furrowmaw 1.17.27, Cerberus 2.18.27, Hollowbell 1.12.29, Lantern Willow 1.10.30,
+Wreckback 1.2.35, Swarmforge 1.4.33, Gloamwick 1.2.14.
 
 ## New in 1.6.5
 
