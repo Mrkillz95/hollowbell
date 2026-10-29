@@ -14,7 +14,11 @@ import net.jj.hollowbell.ModEntities;
 import net.jj.hollowbell.entity.Belling;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
+import net.jj.hollowbell.BellConfig;
+import net.jj.hollowbell.net.LookTrace;
 import net.jj.hollowbell.world.Painter;
+import net.jj.hollowbell.world.RespawnPaint;
+import net.jj.hollowbell.world.WorldOne;
 import net.jj.hollowbell.world.TakeMe;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -79,6 +83,18 @@ public class StallProbe implements FabricGameTest {
                     "%-14s avg %7.2f ms  worst %8.2f ms  over50 %3d  of %4d%n",
                     name, n == 0 ? 0 : sum / n / 1e6, worst / 1e6, over, n);
         }
+    }
+
+    /** from now on, every wait of the server thread for a chunk that isn't loaded is counted */
+    private static void watch(String label) {
+        SyncLoads.clear();
+        SyncLoads.label = label;
+        SyncLoads.on = true;
+    }
+
+    private static String unwatch() {
+        SyncLoads.on = false;
+        return SyncLoads.report();
     }
 
     private static int[] spot(GameTestHelper h, int slot) {
@@ -162,9 +178,11 @@ public class StallProbe implements FabricGameTest {
         Stat idle = new Stat();
         List<String> notes = new ArrayList<>();
         StringBuilder log = new StringBuilder();
+        watch("idle");
         h.onEachTick(() -> {
             int t = ++st[2];
             if (t < 3 || st[0] < 0) return;
+            SyncLoads.label = st[0] == 0 ? "idle" : Moves.NAMES[st[0]];
             long ns = lastTick(srv);
             int m = st[0];
             log.append(t).append(' ').append(m).append(' ').append(ns / 1000).append(' ')
@@ -199,6 +217,7 @@ public class StallProbe implements FabricGameTest {
                     b.append(idle.line("idle"));
                     for (int k = 1; k < stats.length; k++) if (stats[k] != null) b.append(stats[k].line(Moves.NAMES[k]));
                     for (String s : notes) b.append("# ").append(s).append('\n');
+                    b.append(unwatch());
                     b.append(log);
                     write("moves", b);
                     st[0] = -1;
@@ -259,6 +278,7 @@ public class StallProbe implements FabricGameTest {
         StringBuilder log = new StringBuilder();
         String name = full ? "paint-full" : "paint-biome";
         int[] unloaded = {0};
+        watch(name);
         h.onEachTick(() -> {
             int t = ++st[0];
             if (st[1] < 0) return;
@@ -281,6 +301,7 @@ public class StallProbe implements FabricGameTest {
                         .append(Painter.busy() ? ", not finished" : ", finished")
                         .append(", square round him not loaded at the start: ").append(unloaded[0])
                         .append(String.format(", %.1f s by the clock%n", (System.nanoTime() - wall0) / 1e9));
+                b.append(unwatch());
                 b.append(log);
                 write(name, b);
                 st[1] = -1;
@@ -312,20 +333,31 @@ public class StallProbe implements FabricGameTest {
         Stat s = new Stat();
         StringBuilder log = new StringBuilder();
         String[] said = {""};
+        watch("tp setup");
         h.onEachTick(() -> {
             int t = ++st[0];
             if (st[1] == -2) return;
+            if (t == 30) {
+                // a look along land that isn't loaded, as far as a look goes (/hollowbell look orders)
+                SyncLoads.label = "look";
+                LookTrace.trace(l, p.getEyePosition(), new Vec3(-1, -0.05, 0), LookTrace.RANGE, p, null);
+                SyncLoads.label = "tp waiting";
+            }
             if (t == 40) said[0] = TakeMe.tp(p, 0).getString();
             if (t <= 41) return;
             long ns = lastTick(srv);
             s.add(ns);
             log.append(t).append(' ').append(ns / 1000).append('\n');
-            if (st[1] < 0 && p.distanceToSqr(e) < 400 * 400) st[1] = t;
+            if (st[1] < 0 && p.distanceToSqr(e) < 400 * 400) {
+                st[1] = t;
+                SyncLoads.label = "tp arrived";
+            }
             boolean clock = System.nanoTime() - wall0 > WALL;
             if ((st[1] > 0 && t > st[1] + 300) || clock || t > 2800) {
                 StringBuilder b = new StringBuilder();
                 b.append(s.line("take-me-to"));
                 b.append("# said: ").append(said[0]).append(", arrived at tick ").append(st[1]).append('\n');
+                b.append(unwatch());
                 b.append(log);
                 write("tp", b);
                 st[1] = -2;
@@ -333,6 +365,64 @@ public class StallProbe implements FabricGameTest {
                 e.discard();
                 letGo(l, px, pz, 0);
                 letGo(l, at[0], at[1], 2);
+                h.succeed();
+            }
+        });
+    }
+
+    /**
+     * His new ground claimed (he died) over land made before and saved, none of it loaded now: the respawn paint
+     * paints it his
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400000, batch = "stall_probe_respawn")
+    public void respawnPaintCostsOnlyAFewMillisecondsATick(GameTestHelper h) {
+        MinecraftServer srv = h.getLevel().getServer();
+        ServerLevel l = h.getLevel();
+        WorldOne w = WorldOne.get(srv);
+        int[] at = spot(h, 44);
+        // land made and saved, then let go
+        hold(l, at[0], at[1], 6);
+        letGo(l, at[0], at[1], 6);
+        boolean grief = BellConfig.V.griefing;
+        long wall0 = System.nanoTime();
+        int[] st = {0, 0};
+        Stat s = new Stat();
+        StringBuilder log = new StringBuilder();
+        h.onEachTick(() -> {
+            int t = ++st[0];
+            if (st[1] < 0) return;
+            if (t == 200) {
+                // (by now the land let go is unloaded and saved)
+                int loaded = 0;
+                for (int cx = (at[0] >> 4) - 6; cx <= (at[0] >> 4) + 6; cx++)
+                    for (int cz = (at[1] >> 4) - 6; cz <= (at[1] >> 4) + 6; cz++)
+                        if (l.getChunkSource().getChunkNow(cx, cz) != null) loaded++;
+                log.append("# chunks of the made land still loaded: ").append(loaded).append('\n');
+                BellConfig.V.griefing = true;
+                w.clearForTests();
+                w.claimHome(l, at[0], at[1], 0x5EED0701L);
+                watch("respawn paint");
+                st[1] = RespawnPaint.start(l);
+                log.append("# chunks to paint: ").append(st[1]).append('\n');
+            }
+            if (t <= 201) return;
+            long ns = lastTick(srv);
+            s.add(ns);
+            log.append(t).append(' ').append(ns / 1000).append('\n');
+            boolean clock = System.nanoTime() - wall0 > WALL;
+            if (RespawnPaint.get(srv).left() == 0 || clock || t > 390000) {
+                StringBuilder b = new StringBuilder();
+                b.append(s.line("respawn-paint"));
+                b.append(String.format("# left %d, done %d, land done %d, %.1f s by the clock%n",
+                        RespawnPaint.get(srv).left(), RespawnPaint.get(srv).done(), RespawnPaint.get(srv).landDone(),
+                        (System.nanoTime() - wall0) / 1e9));
+                b.append(unwatch());
+                b.append(log);
+                write("respawn", b);
+                st[1] = -1;
+                w.clearForTests();
+                RespawnPaint.tick(srv); // (drops whatever is left: the ground was let go)
+                BellConfig.V.griefing = grief;
                 h.succeed();
             }
         });
