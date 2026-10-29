@@ -34,6 +34,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+import org.joml.FrustumIntersection;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -511,6 +512,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     private static final class Kept {
         final Matrix4f[] draw, hang, units;
         final boolean[] shown;
+        /** each slice: on the screen (the solid and glowing blocks of one that isn't are not drawn) */
+        final boolean[] unitOn;
         final Matrix4f entity = new Matrix4f(), view = new Matrix4f(), proj = new Matrix4f();
         final Vector3f l0w = new Vector3f(), l1w = new Vector3f();
         int who, lod;
@@ -522,6 +525,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             hang = pieces.newHang();
             units = pieces.newPose();
             shown = new boolean[rig.boneCount()];
+            unitOn = new boolean[Math.max(rig.boneCount(), pieces.count)];
         }
     }
 
@@ -532,7 +536,9 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     // scratch for the render thread
     private final Matrix4f abs = new Matrix4f(), boneAbs = new Matrix4f(), mvS = new Matrix4f(), boneWorldS = new Matrix4f();
     private final Matrix3f rotS = new Matrix3f();
-    private final Vector3f ccS = new Vector3f(), l0S = new Vector3f(), l1S = new Vector3f();
+    private final Matrix4f clipM = new Matrix4f();
+    private final FrustumIntersection clipS = new FrustumIntersection();
+    private final Vector3f ccS = new Vector3f(), l0S = new Vector3f(), l1S = new Vector3f(), scaleS = new Vector3f();
     private final float[] tintS = new float[3];
     private final BlockPos.MutableBlockPos lightAt = new BlockPos.MutableBlockPos();
 
@@ -650,6 +656,26 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                     : fr.isVisible(new AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r));
             if (!vis) shown[b] = false;
         }
+        // and each slice on the screen: one wholly off it draws nothing, so it isn't sent. Tested against the very
+        // matrices it is drawn with (so the shake and bob of the view count), with a ball round its box and a block to
+        // spare; only the solid and glowing blocks (the glass keeps its order just as Classic keeps it)
+        boolean[] unitOn = kp.unitOn;
+        FrustumIntersection clip = clipS.set(clipM.set(proj).mul(view).mul(entity), true);
+        for (int u = 0; u < unitCount; u++) {
+            int b = sliced ? pieces.bone[u] : u;
+            unitOn[u] = shown[b];
+            float[] bb = sliced ? pieces.bounds[u] : model.bounds[b];
+            if (!shown[b] || bb == null) continue;
+            units[u].transformPosition(cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f));
+            units[u].getScale(scaleS);
+            float r = (0.5f
+                                    * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0])
+                                            + (bb[4] - bb[1]) * (bb[4] - bb[1])
+                                            + (bb[5] - bb[2]) * (bb[5] - bb[2]))
+                            + 1f)
+                    * Math.max(scaleS.x, Math.max(scaleS.y, scaleS.z));
+            if (!clip.testSphere(cc.x, cc.y, cc.z, r)) unitOn[u] = false;
+        }
         Matrix4f mv = mvS, boneWorld = boneWorldS;
         Matrix3f rot = rotS;
         Vector3f l0 = l0S, l1 = l1S;
@@ -661,9 +687,11 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 if (!shown[b]) continue;
                 BellMeshes.Mesh m = meshes.mesh(lod, kind, u);
                 if (m == null) continue;
+                // (a slice off the screen isn't drawn, but the light and colour of its bone are still worked out from
+                // the bone's first slice, as Classic does)
+                boolean on = unitOn[u];
+                if (!on && b == lastBone) continue;
                 boneWorld.set(entity).mul(units[u]);
-                mv.set(view).mul(boneWorld);
-                upload(shader.MODEL_VIEW_MATRIX, mv);
                 if (b != lastBone) {
                     lastBone = b;
                     if (kind == BellMeshes.GLOW) glowLight(l0, l1);
@@ -687,6 +715,9 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                         shader.COLOR_MODULATOR.upload();
                     }
                 }
+                if (!on) continue;
+                mv.set(view).mul(boneWorld);
+                upload(shader.MODEL_VIEW_MATRIX, mv);
                 m.vb.bind();
                 m.vb.draw();
                 if (RenderStats.on) RenderStats.draws++;

@@ -11,7 +11,8 @@
     ]
   },
   "mixins": [
-    "hollowbell-gametest.mixins.json"
+    "hollowbell-gametest.mixins.json",
+    {"config": "hollowbell-gametest.client.mixins.json", "environment": "client"}
   ],
   "depends": {
     "hollowbell": "*"

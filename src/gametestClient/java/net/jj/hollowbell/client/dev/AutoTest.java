@@ -93,7 +93,11 @@ public final class AutoTest implements ClientModInitializer {
             return;
         }
         ClientTickEvents.END_CLIENT_TICK.register(AutoTest::tick);
-        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.END.register(ctx -> frameDone());
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.END.register(ctx -> {
+            frameDone();
+            DrawTrace.frameEnd();
+        });
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(ctx -> DrawTrace.frameStart());
     }
 
     // measuring: frame times, and his renderer's own counters (see RenderStats)
@@ -164,6 +168,7 @@ public final class AutoTest implements ClientModInitializer {
     }
 
     private static void tick(Minecraft mc) {
+        DrawTrace.ticks++;
         mc.options.pauseOnLostFocus = false;
         if (mc.level == null) {
             if (mc.screen instanceof AccessibilityOnboardingScreen) {
@@ -226,6 +231,11 @@ public final class AutoTest implements ClientModInitializer {
                 GiantsPerf.receive("{\"perf\":1,\"side\":\"client\",\"values\":{\"detail.drawing\":"
                         + (s.endsWith("fast") ? 1 : 0) + "}}");
                 HollowbellMod.LOG.info("autotest drawing fast {}", GiantsPerf.fastDrawing());
+                continue;
+            }
+            // drawcheck name: his draw calls a frame drawn Classic and a frame drawn Fast, compared (see DrawTrace)
+            if (s.startsWith("drawcheck ")) {
+                DrawTrace.start(s.substring(10).trim());
                 continue;
             }
             // fps unlimited: no vsync, no frame cap (for measuring)
