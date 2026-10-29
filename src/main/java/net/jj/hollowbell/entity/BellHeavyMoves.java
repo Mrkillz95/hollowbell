@@ -1,5 +1,6 @@
 package net.jj.hollowbell.entity;
 
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -24,6 +25,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -358,31 +361,54 @@ final class BellHeavyMoves {
         }
     }
 
-    /** the big toll's ring breaks glass and leaves as it passes (a limited number of blocks each tick) */
+    /**
+     * the big toll's ring breaks glass and leaves as it passes (a limited number of blocks each tick). Read straight
+     * from the chunks, passing over parts of the world with nothing in them it breaks, and over a column already
+     * looked at this tick whose top hasn't changed since (there's nothing left to break in it): the same blocks go,
+     * in the same order, as reading every block
+     */
     void shatter(Vec3 c, double r0, double r1, double height) {
         ServerLevel l = mv.level();
         int broken = 0;
         double mid = (r0 + r1) * 0.5;
         int n = (int) Math.min(1200, Math.max(16, 2 * Math.PI * mid));
+        int minY = l.getMinBuildHeight(), maxY = l.getMaxBuildHeight();
+        // each column looked at, and its top then
+        Long2IntOpenHashMap looked = new Long2IntOpenHashMap();
+        looked.defaultReturnValue(Integer.MIN_VALUE);
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int i = 0; i < n && broken < 300; i++) {
             double a = i * 2 * Math.PI / n;
             for (double r = Math.max(0, r0); r <= r1 && broken < 300; r += 1) {
                 int x = Mth.floor(c.x + Math.cos(a) * r), z = Mth.floor(c.z + Math.sin(a) * r);
-                if (!NoWait.loaded(l, new BlockPos(x, 0, z))) continue;
-                int top = l.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-                int y0 = Math.max(l.getMinBuildHeight(), top - 12), y1 = Math.min(top + 2, (int) (c.y + height));
-                for (int y = y1; y >= y0 && broken < 300; y--) {
-                    BlockPos p = new BlockPos(x, y, z);
-                    BlockState st = l.getBlockState(p);
-                    if (st.is(BlockTags.LEAVES)
-                            || st.is(BlockTags.IMPERMEABLE)
-                            || st.getBlock() instanceof IronBarsBlock && st.getSoundType() == SoundType.GLASS) {
-                        l.destroyBlock(p, false);
+                LevelChunk ch = NoWait.chunk(l, x, z);
+                if (ch == null) continue;
+                int top = ch.getHeight(Heightmap.Types.MOTION_BLOCKING, x & 15, z & 15) + 1;
+                long col = BlockPos.asLong(x, 0, z);
+                if (looked.put(col, top) == top) continue;
+                int y0 = Math.max(minY, top - 12), y1 = Math.min(top + 2, (int) (c.y + height));
+                LevelChunkSection[] secs = ch.getSections();
+                for (int y = Math.min(y1, maxY - 1); y >= y0 && broken < 300; y--) {
+                    LevelChunkSection sec = secs[ch.getSectionIndex(y)];
+                    if (sec.hasOnlyAir() || !sec.maybeHas(BellHeavyMoves::shatters)) {
+                        y = Math.max(y0, (y >> 4) << 4); // (the loop takes it under this section)
+                        continue;
+                    }
+                    BlockState st = sec.getBlockState(x & 15, y & 15, z & 15);
+                    if (shatters(st)) {
+                        l.destroyBlock(m.set(x, y, z), false);
                         broken++;
                     }
                 }
             }
         }
+    }
+
+    /** what the big toll's ring breaks */
+    static boolean shatters(BlockState st) {
+        return st.is(BlockTags.LEAVES)
+                || st.is(BlockTags.IMPERMEABLE)
+                || st.getBlock() instanceof IronBarsBlock && st.getSoundType() == SoundType.GLASS;
     }
 
     /** the stinger storm: every strand flicks stingers up and out, and they rain down over a wide area */
