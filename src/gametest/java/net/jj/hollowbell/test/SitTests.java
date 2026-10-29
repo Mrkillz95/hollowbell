@@ -148,6 +148,14 @@ static void after(GameTestHelper h, int t, Runnable r) {
         after(h, 40, r);
     }
 
+    /** the name of a part of him (for what the sit-anywhere test says) */
+    static String partName(HollowbellEntity e, int frame) {
+        // (his frames are slices of his bones)
+        return net.jj.hollowbell.rig.BellRig.get().boneNames[net.jj.hollowbell.rig.BellPieces.get().bone[e.solidShape().bone[frame]]];
+    }
+
+    static final int GRID_PAD = 306;
+
     // the same in every giant
 
     /** a spot on him to stand on (the highest with room), and a player put there */
@@ -401,6 +409,25 @@ static void after(GameTestHelper h, int t, Runnable r) {
                     });
                 });
             });
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "sit_9")
+    public void youCanSitWhereverYouCanStandOnHim(GameTestHelper h) {
+        BlockPos pad = pad(h, GRID_PAD);
+        HollowbellEntity e = giant(h, pad);
+        ready(h, e, () -> {
+            ServerPlayer owner = player(h, Vec3.atBottomCenterOf(pad).add(0, 0, 0));
+            makeOwner(owner);
+            List<SitGrid.Spot> all = SitGrid.standable(e, owner);
+            h.assertTrue(all.size() > 20, "somewhere on him to stand (" + all.size() + ")");
+            List<SitGrid.Spot> some = SitGrid.sample(all, 12);
+            var bad = SitGrid.tryAll(e, owner, some, f -> partName(e, f));
+            System.out.println("[sit-grid] " + some.size() + " of " + all.size() + " spots tried; "
+                    + (bad.isEmpty() ? "all sat" : SitGrid.report(bad, some.size())));
+            System.out.println("[sit-grid] before the fix: " + SitGrid.report(SitGrid.OLD_KIT, some.size()));
+            h.assertTrue(bad.isEmpty(), SitGrid.report(bad, some.size()));
+            done(h, e, pad, owner);
         });
     }
 

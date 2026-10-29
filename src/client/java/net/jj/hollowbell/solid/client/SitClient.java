@@ -75,7 +75,7 @@ public final class SitClient {
             if (seated) ClientPlayNetworking.send(new SitPayload(-1, false));
             else if (!p.isPassenger()) {
                 SitHost h = Sitting.standingOn(p);
-                if (h != null) ClientPlayNetworking.send(new SitPayload(h.solidSelf().getId(), true));
+                if (h != null) ClientPlayNetworking.send(new SitPayload(h.solidSelf().getId(), Sitting.gameSpot(h, p)));
             }
         }
         shiftWas = shift;
@@ -97,6 +97,6 @@ public final class SitClient {
         int id = h.solidSelf().getId();
         if (id != countingOn) COUNTER.reset();
         countingOn = id;
-        if (COUNTER.press(Util.getMillis())) ClientPlayNetworking.send(new SitPayload(id, true));
+        if (COUNTER.press(Util.getMillis())) ClientPlayNetworking.send(new SitPayload(id, Sitting.gameSpot(h, p)));
     }
 }

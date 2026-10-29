@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectCategory;
@@ -70,15 +71,21 @@ public final class Sitting {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((e, src, amount) -> !sparedNow(e, src));
     }
 
+    /**
+     * how far (blocks) the spot their game says they stand on may be from where the server has them: the server sees
+     * them a tick or two late, and a part of him that moves (a leg stepping, a head swinging) carries them on meanwhile
+     */
+    public static final double GAME_REACH = 3.0;
+
     /** the gesture or the key, from a player's game */
-    static void asked(ServerPlayer p, SitPayload pay) {
+    public static void asked(ServerPlayer p, SitPayload pay) {
         if (!pay.sit()) {
             if (p.getVehicle() instanceof SitSeat s) standUp(s, p);
             return;
         }
         if (p.isPassenger()) return;
         Entity e = p.level().getEntity(pay.giant());
-        if (e instanceof SitHost h && trySit(p, h) == Result.SAT) return;
+        if (e instanceof SitHost h && trySit(p, h, pay.spot()) == Result.SAT) return;
         // (their game and the server may disagree on which of him they stand on, by a tick)
         SitHost h = under(p);
         if (h != null && h != e) trySit(p, h);
@@ -86,46 +93,115 @@ public final class Sitting {
 
     /** sit down on him where they stand, if they may */
     public static Result trySit(ServerPlayer p, SitHost h) {
+        return trySit(p, h, null);
+    }
+
+    /**
+     * sit down on him where they stand, if they may: on the spot of him their own game has them standing on (it moves
+     * them with the part under them, so it knows), if it says one and that's near where the server has them; or on
+     * the spot the server finds under them
+     */
+    public static Result trySit(ServerPlayer p, SitHost h, @Nullable Solid.Anchor fromGame) {
         if (p.isPassenger() || p.isSpectator() || !p.isAlive() || p.isSleeping()) return Result.BUSY;
         Entity s = h.solidSelf();
         if (s.level() != p.level() || s.isRemoved() || h.sitDying())
             return Result.NOT_ON_HIM;
         if (!h.sitAllowed(p)) return Result.NOT_ALLOWED;
-        Solid.Anchor a = spotUnder(h, p);
+        Solid.Anchor a = fromGame != null ? theirSpot(h, p, fromGame) : null;
+        if (a == null) a = spotUnder(h, p);
         if (a == null) return Result.NOT_ON_HIM;
         sit(p, h, a);
         return Result.SAT;
     }
 
+    /** the spot their game says they stand on, if it's a solid part of him that's there now, near them; or null */
+    static @Nullable Solid.Anchor theirSpot(SitHost h, Entity p, Solid.Anchor a) {
+        if (!Solid.live(h, p)) return null;
+        SolidShape sh = h.solidShape();
+        int f = a.frame();
+        if (f < 0 || f >= sh.frames() || sh.kind[f] != SolidShape.SOLID) return null;
+        SolidCache c = Solid.frames(h);
+        if (f >= c.on.length || !c.on[f]) return null;
+        Vector3f r = a.rest();
+        if (!Float.isFinite(r.x) || !Float.isFinite(r.y) || !Float.isFinite(r.z)) return null;
+        Vec3 w = Solid.toWorld(c, f, r);
+        if (w.distanceToSqr(p.position()) > GAME_REACH * GAME_REACH) return null;
+        return new Solid.Anchor(f, new Vector3f(r));
+    }
+
     /** the one of him (this mod's) they stand on now, or null */
     public static @Nullable SitHost under(Entity p) {
         for (SolidBody b : Solid.bodies(p.level().isClientSide))
-            if (b instanceof SitHost h && Solid.anchorUnder(h, p, REACH, REACH) != null) return h;
+            if (b instanceof SitHost h && footing(h, p, REACH, REACH) != null) return h;
         return null;
     }
 
     /** standing on him (as their own game sees it: close over a top of his) */
     public static @Nullable SitHost standingOn(Entity p) {
         for (SolidBody b : Solid.bodies(p.level().isClientSide))
-            if (b instanceof SitHost h && Solid.anchorUnder(h, p, 0.6, 0.6) != null) return h;
+            if (b instanceof SitHost h && footing(h, p, 0.6, 0.6) != null) return h;
         return null;
+    }
+
+    /**
+     * The top of his their feet are on: over any of the columns their feet reach into, down to a sliver of them on
+     * his edge (where crouching lets you stand, or a thin leg is under one side of you), the one nearest their feet,
+     * from `over` blocks under their feet to `under` over them (a top a little under them first: one far over their
+     * feet in a column at their side is a wall they're against, not a floor). Fixed to the part that carries it; its
+     * spot is right under them (their middle, at that top's height). Null if none.
+     */
+    public static @Nullable Solid.Anchor footing(SitHost h, Entity p, double over, double under) {
+        if (!Solid.live(h, p) || !h.solidBox().inflate(0, over + 1, 0).intersects(p.getBoundingBox())) return null;
+        double feet = p.getY(), cw = Solid.columnWidth(h);
+        AABB box = p.getBoundingBox().deflate(1e-3, 0, 1e-3);
+        int xa = Mth.floor(box.minX / cw),
+                xb = Mth.floor((box.maxX - 1e-7) / cw),
+                za = Mth.floor(box.minZ / cw),
+                zb = Mth.floor((box.maxZ - 1e-7) / cw);
+        if ((long) (xb - xa + 1) * (zb - za + 1) > 64) {
+            xa = xb = Mth.floor(p.getX() / cw);
+            za = zb = Mth.floor(p.getZ() / cw);
+        }
+        Solid.Runs r = new Solid.Runs();
+        int bestF = -1;
+        double bestY = feet, bestD = Double.MAX_VALUE;
+        // (the line right under their middle first, then the columns under the rest of them)
+        for (int i = xa - 1; i <= xb; i++)
+            for (int k = za; k <= zb; k++) {
+                if (i < xa && k > za) break;
+                boolean mid = i < xa;
+                if (mid) Solid.column(h, p.getX(), p.getZ(), feet - over - 1, feet + under, false, r);
+                else Solid.column(h, (i + 0.5) * cw, (k + 0.5) * cw, feet - over - 1, feet + under, false, r);
+                for (int j = 0; j < r.n; j++) {
+                    double top = r.top[j];
+                    if (top > feet + under - 1e-3 || top < feet - over) continue;
+                    // (a top over their feet only holds them in the column under their middle; a column at their side
+                    // reaching up past their feet is him beside them)
+                    if (!mid && top > feet + 0.6) continue;
+                    double d = Math.abs(top - feet) + (Solid.headroom(r, j, 1.0) ? 0 : 4);
+                    if (d < bestD) {
+                        bestD = d;
+                        bestF = r.frame[j];
+                        bestY = top;
+                    }
+                }
+            }
+        if (bestF < 0) return null;
+        SolidShape sh = h.solidShape();
+        int cf = sh.frameOfBone[h.solidCarryBone(sh.bone[bestF])];
+        if (cf >= 0) bestF = cf;
+        return new Solid.Anchor(
+                bestF, Solid.toRest(Solid.frames(h), bestF, p.getX(), bestY, p.getZ(), new Vector3f()));
+    }
+
+    /** the spot of him under their feet as their own game has it (sent with the gesture), or null */
+    public static @Nullable Solid.Anchor gameSpot(SitHost h, Entity p) {
+        return footing(h, p, 0.6, 0.6);
     }
 
     /** the spot of him under their feet: on the top nearest their feet, fixed to the part that carries it */
     public static @Nullable Solid.Anchor spotUnder(SitHost h, Entity p) {
-        Solid.Anchor a = Solid.anchorUnder(h, p, REACH, REACH);
-        if (a == null) return null;
-        double y = p.getY(), best = Double.MAX_VALUE;
-        Solid.Runs r = Solid.column(h, p.getX(), p.getZ(), p.getY() - REACH - 0.1, p.getY() + REACH, false, new Solid.Runs());
-        for (int j = 0; j < r.n; j++) {
-            double d = Math.abs(r.top[j] - p.getY());
-            if (d < best && Solid.headroom(r, j, 1.0)) {
-                best = d;
-                y = r.top[j];
-            }
-        }
-        return new Solid.Anchor(
-                a.frame(), Solid.toRest(Solid.frames(h), a.frame(), p.getX(), y, p.getZ(), new Vector3f()));
+        return footing(h, p, REACH, REACH);
     }
 
     /** sits them on that spot (no checks: trySit makes them) */
@@ -231,12 +307,25 @@ public final class Sitting {
     /** where on that spot (or right by it, on him) someone can stand now, or null */
     static @Nullable Vec3 standingSpot(SitHost h, Entity p, Vec3 spot) {
         AABB box = p.getDimensions(Pose.STANDING).makeBoundingBox(spot.add(0, 0.01, 0));
-        if (Solid.clear(h, p, box) && Solid.floorUnder(h, spot.add(0, 0.01, 0))) return spot.add(0, 0.01, 0);
+        if (Solid.clear(h, p, box) && floorUnder(h, box)) return spot.add(0, 0.01, 0);
         Vec3 f = Solid.freeSpot(h, p, spot.add(0, 0.01, 0), Vec3.ZERO, true);
-        if (f.distanceToSqr(spot) < 2.5 * 2.5
-                && Solid.floorUnder(h, f)
-                && Solid.clear(h, p, p.getDimensions(Pose.STANDING).makeBoundingBox(f))) return f;
+        AABB fb = p.getDimensions(Pose.STANDING).makeBoundingBox(f);
+        if (f.distanceToSqr(spot) < 2.5 * 2.5 && floorUnder(h, fb) && Solid.clear(h, p, fb)) return f;
         return null;
+    }
+
+    /** a top of his up to a block under a box's feet, under any of it (standing there, it would stand on him) */
+    static boolean floorUnder(SitHost h, AABB box) {
+        double cw = Solid.columnWidth(h), y = box.minY;
+        AABB b = box.deflate(1e-3, 0, 1e-3);
+        if (Solid.floorUnder(h, new Vec3((b.minX + b.maxX) / 2, y, (b.minZ + b.maxZ) / 2))) return true;
+        Solid.Runs r = new Solid.Runs();
+        for (int i = Mth.floor(b.minX / cw); i <= Mth.floor((b.maxX - 1e-7) / cw); i++)
+            for (int k = Mth.floor(b.minZ / cw); k <= Mth.floor((b.maxZ - 1e-7) / cw); k++) {
+                Solid.column(h, (i + 0.5) * cw, (k + 0.5) * cw, y - 1.0, y + 0.05, false, r);
+                for (int j = 0; j < r.n; j++) if (r.top[j] >= y - 1.0 && r.top[j] <= y + 0.05) return true;
+            }
+        return false;
     }
 
     /** he's gone: whoever sat on him goes onto the ground beside where he was (his set-down if he's still there) */
