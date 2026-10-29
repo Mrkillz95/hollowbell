@@ -14,7 +14,9 @@
     "BiomeMusicMixin",
     "LookGlowMixin",
     "SolidFrameMixin",
-    "AmbientMixin"
+    "AmbientMixin",
+    "VertexBufferAccess",
+    "FrustumAccess"
   ],
   "injectors": {
     "defaultRequire": 1
