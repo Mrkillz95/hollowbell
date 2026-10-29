@@ -34,6 +34,7 @@ public class PerfTests implements FabricGameTest {
         "detail.sounds",
         "detail.music",
         "detail.renderDistance",
+        "detail.drawing",
         "hollowbell.soundRings",
         "hollowbell.rimShiver",
         "hollowbell.venomClouds",
@@ -55,6 +56,7 @@ public class PerfTests implements FabricGameTest {
         }
         for (double d = 10; d < 3000; d *= 1.7)
             for (float s : new float[] {0.05f, 0.3f, 1f, 2f}) out.add((double) Detail.lod(d, s));
+        out.add(GiantsPerf.fastDrawing() ? 1.0 : 0.0);
         out.add((double) Detail.farSightBlocks());
         out.add(Detail.renderDistance());
         out.add((double) Detail.settleEvery(Vec3.ZERO, 1f));
@@ -70,7 +72,8 @@ public class PerfTests implements FabricGameTest {
         JsonObject values = new JsonObject();
         for (var u : head.getAsJsonArray("uses")) {
             String id = u.getAsString();
-            if (id.equals("detail.animation") || id.equals("detail.lootBeams")) values.addProperty(id, 0);
+            if (id.equals("detail.animation") || id.equals("detail.lootBeams") || id.equals("detail.drawing"))
+                values.addProperty(id, 0);
             else if (id.equals("detail.farSight") || id.equals("fx.fog")) values.addProperty(id, true);
             else values.addProperty(id, 1);
         }
@@ -94,7 +97,8 @@ public class PerfTests implements FabricGameTest {
         h.assertTrue("hollowbell".equals(head.get("giant").getAsString()), "the header doesn't name him");
         List<String> uses = new ArrayList<>();
         for (var u : head.getAsJsonArray("uses")) uses.add(u.getAsString());
-        for (String want : new String[] {"fx.particles", "fx.bigImpacts", "detail.model", "detail.renderDistance"})
+        for (String want :
+                new String[] {"fx.particles", "fx.bigImpacts", "detail.model", "detail.renderDistance", "detail.drawing"})
             h.assertTrue(uses.contains(want), "he doesn't list " + want);
         h.assertFalse(uses.contains("feature.meetings"), "he lists a setting he doesn't read");
         h.assertTrue(lines.size() - 1 <= 64, "too many settings of his own");
@@ -155,6 +159,26 @@ public class PerfTests implements FabricGameTest {
             h.assertTrue(GiantsPerf.count(4, GiantsPerf.world("hollowbell.bellings")) == 1, "the Belling count is off");
             h.assertTrue(GiantsPerf.count(10, GiantsPerf.world("hollowbell.bellings")) == 3, "the hatch cap is off");
             h.assertTrue(GiantsPerf.count(0, 1f) == 0, "shedding turned off came back");
+        } finally {
+            GiantsPerf.reset();
+        }
+        h.succeed();
+    }
+
+    /** the Drawing choice: Classic unless the guide says Fast, and back again */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "perf_drawing")
+    public void drawingIsClassicUnlessFast(GameTestHelper h) {
+        GiantsPerf.reset();
+        try {
+            h.assertFalse(GiantsPerf.fastDrawing(), "Fast drawing without the guide asking");
+            for (int v : new int[] {1, 0, 1, 0}) {
+                GiantsBridge.giants(
+                        null, "perfset", "{\"perf\":1,\"side\":\"client\",\"values\":{\"detail.drawing\":" + v + "}}");
+                h.assertTrue(GiantsPerf.fastDrawing() == (v == 1), "Drawing " + v + " not taken");
+            }
+            GiantsBridge.giants(
+                    null, "perfset", "{\"perf\":1,\"side\":\"server\",\"values\":{\"detail.drawing\":1}}");
+            h.assertFalse(GiantsPerf.fastDrawing(), "the world's levels turned on this game's Fast drawing");
         } finally {
             GiantsPerf.reset();
         }

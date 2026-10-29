@@ -16,6 +16,8 @@ import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
+import net.jj.hollowbell.mixin.FrustumAccess;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
@@ -32,6 +34,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+import org.joml.FrustumIntersection;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -129,6 +132,23 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     @Override
     public void render(
             HollowbellEntity e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int packedLight) {
+        if (!RenderStats.on) {
+            drawHim(e, partial, ps);
+            return;
+        }
+        long t0 = System.nanoTime(), a0 = RenderStats.allocated();
+        drawHim(e, partial, ps);
+        RenderStats.renderNs += System.nanoTime() - t0;
+        RenderStats.allocBytes += RenderStats.allocated() - a0;
+    }
+
+    private void drawHim(HollowbellEntity e, float partial, PoseStack ps) {
+        if (GiantsPerf.fastDrawing()) {
+            if (!poses.isEmpty()) poses.clear();
+            drawFast(e, partial, ps);
+            return;
+        }
+        if (!fastKept.isEmpty()) fastKept.clear();
         BellMeshes meshes = BellMeshes.INSTANCE;
         if (!meshes.ensureReady()) return;
         BellPieces pieces = BellPieces.get();
@@ -285,6 +305,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 }
                 m.vb.bind();
                 m.vb.draw();
+                if (RenderStats.on) RenderStats.draws++;
             }
         }
         shader.clear();
@@ -352,6 +373,10 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
 
     /** a popped pod goes dark and stays dark; everything flashes red when he is hurt */
     private float[] tint(HollowbellEntity e, int b, float k, float hurt, float dying) {
+        return tint(e, b, k, hurt, dying, new float[3]);
+    }
+
+    private float[] tint(HollowbellEntity e, int b, float k, float hurt, float dying, float[] out) {
         float r = 1f, g = 1f - hurt, bb = 1f - hurt;
         if (rig.kind[b] == BellRig.Kind.POD && e.isPodPopped(rig.part[b])) {
             r = 0.22f;
@@ -363,7 +388,10 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             g *= 1f - 0.6f * dying;
             bb *= 1f - 0.5f * dying;
         }
-        return new float[] {r * k, g * k, bb * k};
+        out[0] = r * k;
+        out[1] = g * k;
+        out[2] = bb * k;
+        return out;
     }
 
     /**
@@ -371,6 +399,20 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
      * bone by face, re-sorted off the render thread as you move). Called after the other creatures are drawn.
      */
     public static void drawGlass() {
+        if (!RenderStats.on) {
+            drawAllGlass();
+            drawAllGlassFast();
+            return;
+        }
+        long t0 = System.nanoTime(), a0 = RenderStats.allocated();
+        drawAllGlass();
+        drawAllGlassFast();
+        RenderStats.glassNs += System.nanoTime() - t0;
+        RenderStats.allocBytes += RenderStats.allocated() - a0;
+        RenderStats.frames++;
+    }
+
+    private static void drawAllGlass() {
         if (glass.isEmpty()) return;
         BellMeshes meshes = BellMeshes.INSTANCE;
         BellRig rig = BellRig.get();
@@ -443,6 +485,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 }
                 m.vb.bind();
                 m.vb.draw();
+                if (RenderStats.on) RenderStats.glassDraws++;
             }
         }
         shader.clear();
@@ -457,5 +500,348 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     /** a frame that never reached the glass pass (a screenshot, a paused frame) must not leave it for the next */
     public static void forgetFrame() {
         glass.clear();
+        fastGlass.clear();
+        BellMeshes.INSTANCE.frameStart();
+    }
+
+    // Fast drawing (the guide's Drawing: Fast): the same picture as drawHim and drawAllGlass, made with no new objects
+    // each frame, and each one of him with his own back-to-front order for his glass. Every number is worked out just
+    // as above, in the same order, so the picture is the same.
+
+    /** each one's own matrices and what his glass pass needs, kept from frame to frame */
+    private static final class Kept {
+        final Matrix4f[] draw, hang, units;
+        final boolean[] shown;
+        /** each slice: on the screen (the solid and glowing blocks of one that isn't are not drawn) */
+        final boolean[] unitOn;
+        final Matrix4f entity = new Matrix4f(), view = new Matrix4f(), proj = new Matrix4f();
+        final Vector3f l0w = new Vector3f(), l1w = new Vector3f();
+        int who, lod;
+        boolean sliced, red;
+        float lit, hurt, fogStart, fogEnd;
+
+        Kept(BellRig rig, BellPieces pieces) {
+            draw = rig.newPose();
+            hang = pieces.newHang();
+            units = pieces.newPose();
+            shown = new boolean[rig.boneCount()];
+            unitOn = new boolean[Math.max(rig.boneCount(), pieces.count)];
+        }
+    }
+
+    private final Map<HollowbellEntity, Kept> fastKept = new WeakHashMap<>();
+    /** the glass waiting to be drawn this frame, Fast */
+    private static final List<Kept> fastGlass = new ArrayList<>();
+
+    // scratch for the render thread
+    private final Matrix4f abs = new Matrix4f(), boneAbs = new Matrix4f(), mvS = new Matrix4f(), boneWorldS = new Matrix4f();
+    private final Matrix3f rotS = new Matrix3f();
+    private final Matrix4f clipM = new Matrix4f();
+    private final FrustumIntersection clipS = new FrustumIntersection();
+    private final Vector3f ccS = new Vector3f(), l0S = new Vector3f(), l1S = new Vector3f(), scaleS = new Vector3f();
+    private final float[] tintS = new float[3];
+    private final BlockPos.MutableBlockPos lightAt = new BlockPos.MutableBlockPos();
+
+    private void drawFast(HollowbellEntity e, float partial, PoseStack ps) {
+        BellMeshes meshes = BellMeshes.INSTANCE;
+        if (!meshes.ensureReady()) return;
+        BellPieces pieces = BellPieces.get();
+        Kept kp = fastKept.get(e);
+        if (kp == null) fastKept.put(e, kp = new Kept(rig, pieces));
+        Matrix4f[] draw = kp.draw, hang = kp.hang;
+        e.fillState(partial);
+        rig.computePose(e.state, draw, hang);
+        float s = e.bellScale();
+        Minecraft mc0 = Minecraft.getInstance();
+        var cam0 = mc0.gameRenderer.getMainCamera().getPosition();
+        double dist = Math.sqrt(e.distanceToSqr(cam0.x, cam0.y, cam0.z));
+        float k = (float) shrink(dist);
+        Matrix4f entity = kp.entity
+                .scaling(k)
+                .mul(ps.last().pose())
+                .rotateY(-e.getYRot() * Mth.DEG_TO_RAD)
+                .scale(s);
+        boolean ghost = ghostFade >= 0;
+        Frustum fr = ghost || k < 1 ? null : frustum;
+        Matrix4f view = kp.view.set(RenderSystem.getModelViewMatrix());
+        Matrix4f proj = kp.proj.set(RenderSystem.getProjectionMatrix());
+        Minecraft mc = mc0;
+        boolean nether = mc.level != null && mc.level.effects().constantAmbientLight();
+        Vector3f l0w = LIGHT0, l1w = nether ? NLIGHT1 : LIGHT1;
+
+        boolean known = false;
+        int bl = 0, sl = 0;
+        double ex = e.getX(), ey = e.getY(), ez = e.getZ();
+        for (int i = 0; i < 3; i++) {
+            double up = i == 0 ? 2 : i == 1 ? (rig.rimY + 30) * s : rig.crownY * s + 2;
+            lightAt.set(Mth.floor(ex), Mth.floor(ey + up), Mth.floor(ez));
+            if (!e.level().hasChunkAt(lightAt)) continue;
+            known = true;
+            int l = LevelRenderer.getLightColor(e.level(), lightAt);
+            bl = Math.max(bl, LightTexture.block(l));
+            sl = Math.max(sl, LightTexture.sky(l));
+        }
+        if (!known) sl = Math.max(0, 15 - e.level().getSkyDarken());
+        float lit = 0.3f + 0.7f * Math.max(bl, sl) / 15f;
+        float hurt = e.hurtTime > 0 ? 0.3f : 0f;
+        float dying = e.isDeadOrDying() ? Mth.clamp((e.deathTime + partial) / 200f, 0f, 1f) : 0f;
+        lit *= 1f - 0.35f * dying;
+
+        int far = Detail.lod(dist, s);
+        if (ghost) far = Math.max(far, Detail.FAR);
+        int lod = switch (far) {
+            case Detail.TINY -> BellMeshes.TINY;
+            case Detail.FAR -> BellMeshes.FAR;
+            default -> BellMeshes.FULL;
+        };
+        boolean sliced = lod != BellMeshes.TINY;
+        Matrix4f[] units = draw;
+        if (sliced) {
+            units = kp.units;
+            pieces.pose(e.state, draw, hang, units);
+        }
+        int unitCount = sliced ? pieces.count : rig.boneCount();
+
+        RenderType rt = RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+        rt.setupRenderState();
+        ShaderInstance shader = RenderSystem.getShader();
+        if (shader == null) {
+            rt.clearRenderState();
+            return;
+        }
+        float wantFog = Math.min((float) Detail.renderDistance() * 1.2f, 420f * Math.max(0.2f, s) + 220f);
+        float fogStart0 = RenderSystem.getShaderFogStart(), fogEnd0 = RenderSystem.getShaderFogEnd();
+        float farSight = Detail.farSightBlocks();
+        float fe = Math.max(fogEnd0, Math.max(wantFog, farSight * 1.25f));
+        float fs = Math.max(fogStart0, Math.min(wantFog * 0.85f, fe * 0.45f));
+        fs *= k;
+        fe *= k;
+        if (ghost) {
+            float dk = (float) dist * k;
+            fs = Mth.lerp(ghostFade, dk * 0.5f, fs);
+            fe = Mth.lerp(ghostFade, dk * 0.6f, fe);
+        }
+        RenderSystem.setShaderFogStart(fs);
+        RenderSystem.setShaderFogEnd(fe);
+        shader.setDefaultUniforms(VertexFormat.Mode.QUADS, view, proj, mc.getWindow());
+        shader.apply();
+        boolean[] shown = kp.shown;
+        double px = Mth.lerp(partial, e.xo, e.getX()),
+                py = Mth.lerp(partial, e.yo, e.getY()),
+                pz = Mth.lerp(partial, e.zo, e.getZ());
+        Matrix4f abs = this.abs.identity()
+                .translate((float) px, (float) py, (float) pz)
+                .rotateY(-e.getYRot() * Mth.DEG_TO_RAD)
+                .scale(s);
+        Matrix4f boneAbs = this.boneAbs;
+        Vector3f cc = ccS;
+        BellModel model = BellModel.get();
+        FrustumAccess plain = fr != null && fr.getClass() == Frustum.class ? (FrustumAccess) fr : null;
+        for (int b = 0; b < shown.length; b++) {
+            shown[b] = rig.shown(e.state, b);
+            float[] bb = model.bounds[b];
+            if (!shown[b] || bb == null || fr == null) continue;
+            boneAbs.set(abs).mul(draw[b]);
+            boneAbs.transformPosition(cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f));
+            float r = (0.5f
+                                            * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0])
+                                                    + (bb[4] - bb[1]) * (bb[4] - bb[1])
+                                                    + (bb[5] - bb[2]) * (bb[5] - bb[2]))
+                                            * 1.35f
+                                    + 8f)
+                            * s
+                    + 1f;
+            boolean vis = plain != null
+                    ? plain.hollowbell$cubeInFrustum(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r)
+                    : fr.isVisible(new AABB(cc.x - r, cc.y - r, cc.z - r, cc.x + r, cc.y + r, cc.z + r));
+            if (!vis) shown[b] = false;
+        }
+        // and each slice on the screen: one wholly off it draws nothing, so it isn't sent. Tested against the very
+        // matrices it is drawn with (so the shake and bob of the view count), with a ball round its box and a block to
+        // spare; only the solid and glowing blocks (the glass keeps its order just as Classic keeps it)
+        boolean[] unitOn = kp.unitOn;
+        FrustumIntersection clip = clipS.set(clipM.set(proj).mul(view).mul(entity), true);
+        for (int u = 0; u < unitCount; u++) {
+            int b = sliced ? pieces.bone[u] : u;
+            unitOn[u] = shown[b];
+            float[] bb = sliced ? pieces.bounds[u] : model.bounds[b];
+            if (!shown[b] || bb == null) continue;
+            units[u].transformPosition(cc.set((bb[0] + bb[3]) * 0.5f, (bb[1] + bb[4]) * 0.5f, (bb[2] + bb[5]) * 0.5f));
+            units[u].getScale(scaleS);
+            float r = (0.5f
+                                    * (float) Math.sqrt((bb[3] - bb[0]) * (bb[3] - bb[0])
+                                            + (bb[4] - bb[1]) * (bb[4] - bb[1])
+                                            + (bb[5] - bb[2]) * (bb[5] - bb[2]))
+                            + 1f)
+                    * Math.max(scaleS.x, Math.max(scaleS.y, scaleS.z));
+            if (!clip.testSphere(cc.x, cc.y, cc.z, r)) unitOn[u] = false;
+        }
+        Matrix4f mv = mvS, boneWorld = boneWorldS;
+        Matrix3f rot = rotS;
+        Vector3f l0 = l0S, l1 = l1S;
+        for (int pass = 0; pass < 2; pass++) {
+            int kind = pass == 0 ? BellMeshes.SOLID : BellMeshes.GLOW;
+            int lastBone = -1;
+            for (int u = 0; u < unitCount; u++) {
+                int b = sliced ? pieces.bone[u] : u;
+                if (!shown[b]) continue;
+                BellMeshes.Mesh m = meshes.mesh(lod, kind, u);
+                if (m == null) continue;
+                // (a slice off the screen isn't drawn, but the light and colour of its bone are still worked out from
+                // the bone's first slice, as Classic does)
+                boolean on = unitOn[u];
+                if (!on && b == lastBone) continue;
+                boneWorld.set(entity).mul(units[u]);
+                if (b != lastBone) {
+                    lastBone = b;
+                    if (kind == BellMeshes.GLOW) glowLight(l0, l1);
+                    else {
+                        boneWorld.get3x3(rot).normal().transpose();
+                        rot.transform(l0.set(l0w)).normalize();
+                        rot.transform(l1.set(l1w)).normalize();
+                    }
+                    if (shader.LIGHT0_DIRECTION != null) {
+                        shader.LIGHT0_DIRECTION.set(l0);
+                        shader.LIGHT0_DIRECTION.upload();
+                    }
+                    if (shader.LIGHT1_DIRECTION != null) {
+                        shader.LIGHT1_DIRECTION.set(l1);
+                        shader.LIGHT1_DIRECTION.upload();
+                    }
+                    float[] c = tint(
+                            e, b, kind == BellMeshes.GLOW ? glow(e, b, lit, partial) : lit, hurt, dying, tintS);
+                    if (shader.COLOR_MODULATOR != null) {
+                        shader.COLOR_MODULATOR.set(c[0], c[1], c[2], 1f);
+                        shader.COLOR_MODULATOR.upload();
+                    }
+                }
+                if (!on) continue;
+                mv.set(view).mul(boneWorld);
+                upload(shader.MODEL_VIEW_MATRIX, mv);
+                m.vb.bind();
+                m.vb.draw();
+                if (RenderStats.on) RenderStats.draws++;
+            }
+        }
+        shader.clear();
+        VertexBuffer.unbind();
+        RenderSystem.setShaderFogStart(fogStart0);
+        RenderSystem.setShaderFogEnd(fogEnd0);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        if (nether) Lighting.setupNetherLevel();
+        else Lighting.setupLevel();
+        rt.clearRenderState();
+        kp.who = e.getId();
+        kp.sliced = sliced;
+        kp.lod = lod;
+        kp.lit = lit * (1f - 0.2f * dying);
+        kp.hurt = hurt;
+        kp.red = e.state.red;
+        kp.fogStart = fs;
+        kp.fogEnd = fe;
+        kp.l0w.set(l0w);
+        kp.l1w.set(l1w);
+        fastGlass.add(kp);
+    }
+
+    // the glass pass's scratch: the units with glass, how far each is, sorted furthest first
+    private static float[] gKey = new float[1024];
+    private static int[] gUnit = new int[1024], gIdx = new int[1024];
+    private static boolean[] gRed = new boolean[1024];
+    private static final Matrix4f gMv = new Matrix4f(), gBoneWorld = new Matrix4f(), gInv = new Matrix4f();
+    private static final Matrix3f gRot = new Matrix3f();
+    private static final Vector3f gL0 = new Vector3f(), gL1 = new Vector3f(), gCam = new Vector3f(), gC = new Vector3f(),
+            gScale = new Vector3f();
+
+    private static void drawAllGlassFast() {
+        if (fastGlass.isEmpty()) return;
+        BellMeshes meshes = BellMeshes.INSTANCE;
+        BellRig rig = BellRig.get();
+        BellModel model = BellModel.get();
+        RenderType rt = RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
+        rt.setupRenderState();
+        ShaderInstance shader = RenderSystem.getShader();
+        if (shader == null) {
+            rt.clearRenderState();
+            fastGlass.clear();
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        float fogStart0 = RenderSystem.getShaderFogStart(), fogEnd0 = RenderSystem.getShaderFogEnd();
+        Matrix4f mv = gMv, boneWorld = gBoneWorld, inv = gInv;
+        Matrix3f rot = gRot;
+        Vector3f l0 = gL0, l1 = gL1, cam = gCam, c = gC;
+        BellPieces pieces = BellPieces.get();
+        for (Kept gl : fastGlass) {
+            RenderSystem.setShaderFogStart(gl.fogStart);
+            RenderSystem.setShaderFogEnd(gl.fogEnd);
+            shader.setDefaultUniforms(VertexFormat.Mode.QUADS, gl.view, gl.proj, mc.getWindow());
+            shader.apply();
+            Matrix4f[] units = gl.sliced ? gl.units : gl.draw;
+            int unitCount = gl.sliced ? pieces.count : rig.boneCount();
+            if (gKey.length < unitCount) {
+                gKey = new float[unitCount];
+                gUnit = new int[unitCount];
+                gIdx = new int[unitCount];
+                gRed = new boolean[unitCount];
+            }
+            int n = 0;
+            for (int u = 0; u < unitCount; u++) {
+                int b = gl.sliced ? pieces.bone[u] : u;
+                if (!gl.shown[b]) continue;
+                boolean redLoops = gl.red && rig.kind[b] == BellRig.Kind.ARM;
+                BellMeshes.Mesh m =
+                        meshes.mesh(gl.lod, redLoops && gl.sliced ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
+                if (m == null) continue;
+                float[] bb = gl.sliced ? pieces.bounds[u] : model.bounds[b];
+                if (bb == null) continue;
+                boneWorld.set(gl.entity).mul(units[u]);
+                boneWorld.transformPosition(c.set((bb[0] + bb[3]) / 2, (bb[1] + bb[4]) / 2, (bb[2] + bb[5]) / 2));
+                gKey[n] = c.lengthSquared();
+                gUnit[n] = u;
+                gRed[n] = redLoops && gl.sliced;
+                gIdx[n] = n;
+                n++;
+            }
+            // furthest first; equal ones keep their order (a stable sort, as the list sort was)
+            final float[] key = gKey;
+            IntArrays.mergeSort(gIdx, 0, n, (a, b2) -> Float.compare(key[b2], key[a]));
+            float unit = Math.max(1e-3f, gl.entity.getScale(gScale).x);
+            for (int i = 0; i < n; i++) {
+                int o = gIdx[i];
+                int u = gUnit[o];
+                BellMeshes.Mesh m = meshes.mesh(gl.lod, gRed[o] ? BellMeshes.CLEAR_RED : BellMeshes.CLEAR, u);
+                boneWorld.set(gl.entity).mul(units[u]);
+                boneWorld.invert(inv);
+                inv.transformPosition(cam.set(0, 0, 0));
+                mv.set(gl.view).mul(boneWorld);
+                upload(shader.MODEL_VIEW_MATRIX, mv);
+                boneWorld.get3x3(rot).normal().transpose();
+                rot.transform(l0.set(gl.l0w)).normalize();
+                rot.transform(l1.set(gl.l1w)).normalize();
+                if (shader.LIGHT0_DIRECTION != null) {
+                    shader.LIGHT0_DIRECTION.set(l0);
+                    shader.LIGHT0_DIRECTION.upload();
+                }
+                if (shader.LIGHT1_DIRECTION != null) {
+                    shader.LIGHT1_DIRECTION.set(l1);
+                    shader.LIGHT1_DIRECTION.upload();
+                }
+                float k = gl.lit;
+                if (shader.COLOR_MODULATOR != null) {
+                    shader.COLOR_MODULATOR.set(k, k * (1f - gl.hurt), k * (1f - gl.hurt), 1f);
+                    shader.COLOR_MODULATOR.upload();
+                }
+                meshes.drawSorted(m, gl.who, cam, Math.max(3f, 0.03f * (float) Math.sqrt(gKey[o])) / unit);
+                if (RenderStats.on) RenderStats.glassDraws++;
+            }
+        }
+        shader.clear();
+        VertexBuffer.unbind();
+        RenderSystem.setShaderFogStart(fogStart0);
+        RenderSystem.setShaderFogEnd(fogEnd0);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        rt.clearRenderState();
+        fastGlass.clear();
     }
 }

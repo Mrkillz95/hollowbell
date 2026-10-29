@@ -1,5 +1,6 @@
 package net.jj.hollowbell.client.render;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
@@ -16,7 +17,9 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.mixin.VertexBufferAccess;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
@@ -69,6 +72,13 @@ public final class BellMeshes {
         @Nullable
         CompletableFuture<SortJob> sorting;
 
+        // Fast drawing: who the order above is for, and the glass of any other one of him drawn in his own order
+        int owner = Integer.MIN_VALUE;
+        long ownerFrame = Long.MIN_VALUE;
+
+        @Nullable
+        List<Order> others;
+
         Mesh(VertexBuffer vb, @Nullable MeshData.SortState sort, int quads) {
             this.vb = vb;
             this.sort = sort;
@@ -77,6 +87,18 @@ public final class BellMeshes {
     }
 
     record SortJob(ByteBufferBuilder mem, ByteBufferBuilder.Result result) {}
+
+    /** (Fast drawing) another one of him's own back-to-front order for a see-through mesh, in its own index buffer */
+    static final class Order {
+        int who;
+        long used;
+        int ibo;
+        boolean loaded;
+        final Vector3f sortedFor = new Vector3f(Float.NaN, 0, 0);
+
+        @Nullable
+        CompletableFuture<SortJob> sorting;
+    }
 
     /** [lod][kind][slice] (see {@link BellPieces}), except the tiny version: [TINY][kind][bone] */
     private Mesh[][][] meshes;
@@ -106,6 +128,9 @@ public final class BellMeshes {
             building = null;
             return false;
         }
+        // Fast drawing: sent to the graphics card a few milliseconds a frame, not all in one long frame
+        if (uploading != null || GiantsPerf.fastDrawing()) return uploadSome(b);
+        long t0 = System.nanoTime();
         meshes = new Mesh[3][4][];
         for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) meshes[l][k] = new Mesh[b.parts[l][k].length];
         int nb = b.parts[TINY][0].length;
@@ -127,8 +152,224 @@ public final class BellMeshes {
         quadCount = q;
         farQuadCount = fq;
         ready = true;
+        long dt = System.nanoTime() - t0;
+        RenderStats.uploadNs += dt;
+        RenderStats.uploadMaxFrameNs = Math.max(RenderStats.uploadMaxFrameNs, dt);
+        RenderStats.uploadFrames++;
         HollowbellMod.LOG.info("On the GPU: {} faces in {} bones ({} faces far away)", q, nb, fq);
         return true;
+    }
+
+    // Fast drawing: the upload spread over frames, and each one of him's own glass order
+
+    /** what is left to send, while it goes a bit at a time: the next part (lod, kind, index) */
+    private @Nullable Built uploading;
+
+    private int upLod, upKind, upIndex;
+    /** the frame count (see {@link #frameStart}) and how long this frame has spent sending so far */
+    private long frame, budgetFrame = -1, budgetUsedNs;
+
+    private static final long BUDGET_NS = 3_000_000L;
+    /** see-through meshes another one of him has his own order for */
+    private final List<Mesh> withOthers = new ArrayList<>();
+
+    private boolean uploadSome(Built b) {
+        long t0 = System.nanoTime();
+        if (uploading == null) {
+            uploading = b;
+            meshes = new Mesh[3][4][];
+            for (int l = 0; l < 3; l++) for (int k = 0; k < 4; k++) meshes[l][k] = new Mesh[b.parts[l][k].length];
+            upLod = upKind = upIndex = 0;
+        }
+        if (budgetFrame != frame) {
+            budgetFrame = frame;
+            budgetUsedNs = 0;
+        }
+        // (back on Classic halfway through: the rest goes now, as Classic sends it)
+        boolean all = !GiantsPerf.fastDrawing();
+        boolean any = false;
+        while (upLod < 3) {
+            if (!all && budgetUsedNs + (System.nanoTime() - t0) >= BUDGET_NS) break;
+            Part[] row = b.parts[upLod][upKind];
+            if (upIndex >= row.length) {
+                upIndex = 0;
+                if (++upKind == 4) {
+                    upKind = 0;
+                    upLod++;
+                }
+                continue;
+            }
+            Part p = row[upIndex];
+            if (p != null) {
+                VertexBuffer vb = new VertexBuffer(VertexBuffer.Usage.STATIC);
+                vb.bind();
+                vb.upload(p.data);
+                meshes[upLod][upKind][upIndex] = new Mesh(vb, p.sort, p.quads);
+                any = true;
+            }
+            upIndex++;
+        }
+        VertexBuffer.unbind();
+        long dt = System.nanoTime() - t0;
+        budgetUsedNs += dt;
+        RenderStats.uploadNs += dt;
+        RenderStats.uploadMaxFrameNs = Math.max(RenderStats.uploadMaxFrameNs, budgetUsedNs);
+        if (any) RenderStats.uploadFrames++;
+        if (upLod < 3) return false;
+        uploading = null;
+        for (ByteBufferBuilder m : b.memory) if (m != null) m.close();
+        long q = 0, fq = 0;
+        for (int k = 0; k < 4; k++) {
+            for (Mesh m : meshes[FULL][k]) if (m != null) q += m.quads;
+            for (Mesh m : meshes[FAR][k]) if (m != null) fq += m.quads;
+        }
+        quadCount = q;
+        farQuadCount = fq;
+        ready = true;
+        HollowbellMod.LOG.info(
+                "On the GPU: {} faces in {} bones ({} faces far away), sent a bit a frame",
+                q,
+                b.parts[TINY][0].length,
+                fq);
+        return true;
+    }
+
+    /** a new frame (called as the world starts to draw) */
+    public void frameStart() {
+        frame++;
+        // other ones' glass orders nobody has drawn with for a while (all of them, back on Classic) are let go
+        if (withOthers.isEmpty()) return;
+        boolean fast = GiantsPerf.fastDrawing();
+        if (fast && frame % 240 != 0) return;
+        long old = fast ? frame - 600 : Long.MAX_VALUE;
+        for (int i = withOthers.size() - 1; i >= 0; i--) {
+            Mesh m = withOthers.get(i);
+            if (m.others != null) m.others.removeIf(o -> o.used < old && free(o));
+            if (m.others == null || m.others.isEmpty()) {
+                m.others = null;
+                withOthers.remove(i);
+            }
+        }
+    }
+
+    /** lets an order's index buffer go; false (keep it for now) while a sort for it is still running */
+    private static boolean free(Order o) {
+        if (o.sorting != null) {
+            if (!o.sorting.isDone()) return false;
+            try {
+                SortJob j = o.sorting.join();
+                if (j != null) {
+                    j.result.close();
+                    j.mem.close();
+                }
+            } catch (CompletionException | CancellationException e) {
+                HollowbellMod.LOG.debug("Glass sort failed", e);
+            }
+            o.sorting = null;
+        }
+        if (o.ibo != 0) GlStateManager._glDeleteBuffers(o.ibo);
+        o.ibo = 0;
+        o.loaded = false;
+        return true;
+    }
+
+    /**
+     * (Fast drawing) draws a see-through mesh for one of him (who), sorted back to front for where the camera is in
+     * the bone's rest space. The first one to draw a mesh keeps its own index buffer; any other one of him on screen
+     * gets an order of his own, so two of him no longer sort the same glass back and forth for each other.
+     */
+    public void drawSorted(Mesh m, int who, Vector3f camRest, float moveBy) {
+        if (m.sort == null) {
+            m.vb.bind();
+            m.vb.draw();
+            return;
+        }
+        if (m.owner == who || m.ownerFrame < frame - 20) {
+            m.owner = who;
+            m.ownerFrame = frame;
+            keepSorted(m, camRest, moveBy);
+            m.vb.bind();
+            m.vb.draw();
+            return;
+        }
+        Order o = order(m, who);
+        keepSorted(m, o, camRest, moveBy);
+        m.vb.bind();
+        if (!o.loaded) {
+            // (until his own order is ready: the first one's, as Classic draws it)
+            m.vb.draw();
+            return;
+        }
+        GlStateManager._glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, o.ibo);
+        RenderSystem.drawElements(VertexFormat.Mode.QUADS.asGLMode, m.quads * 6, m.sort.indexType().asGLType);
+        // (the mesh's own index buffer back in its vertex array, for whoever draws it next)
+        GlStateManager._glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ((VertexBufferAccess) m.vb).hollowbell$indexBufferId());
+    }
+
+    private static final int GL_ELEMENT_ARRAY_BUFFER = 34963, GL_COPY_WRITE_BUFFER = 36663, GL_STATIC_DRAW = 35044;
+
+    private Order order(Mesh m, int who) {
+        if (m.others == null) {
+            m.others = new ArrayList<>(2);
+            withOthers.add(m);
+        }
+        Order spare = null;
+        for (Order o : m.others) {
+            if (o.who == who) {
+                o.used = frame;
+                return o;
+            }
+            if (spare == null && o.used < frame - 20) spare = o;
+        }
+        if (spare == null) m.others.add(spare = new Order());
+        else {
+            spare.sortedFor.set(Float.NaN, 0, 0);
+            spare.loaded = false;
+        }
+        spare.who = who;
+        spare.used = frame;
+        return spare;
+    }
+
+    /** {@link #keepSorted(Mesh, Vector3f, float)} for another one's own order */
+    private void keepSorted(Mesh m, Order o, Vector3f camRest, float moveBy) {
+        if (o.sorting != null) {
+            if (!o.sorting.isDone()) return;
+            SortJob j;
+            try {
+                j = o.sorting.join();
+            } catch (CompletionException | CancellationException e) {
+                HollowbellMod.LOG.debug("Glass sort failed", e);
+                o.sorting = null;
+                return;
+            }
+            o.sorting = null;
+            if (j != null) {
+                if (o.ibo == 0) o.ibo = GlStateManager._glGenBuffers();
+                // (sent through a binding no vertex array keeps)
+                GlStateManager._glBindBuffer(GL_COPY_WRITE_BUFFER, o.ibo);
+                GlStateManager._glBufferData(GL_COPY_WRITE_BUFFER, j.result.byteBuffer(), GL_STATIC_DRAW);
+                GlStateManager._glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+                j.result.close();
+                j.mem.close();
+                o.loaded = true;
+                if (RenderStats.on) RenderStats.sortUploads++;
+            }
+            return;
+        }
+        if (!Float.isNaN(o.sortedFor.x) && o.sortedFor.distanceSquared(camRest) < moveBy * moveBy) return;
+        o.sortedFor.set(camRest);
+        if (RenderStats.on) RenderStats.sortsStarted++;
+        Vector3f at = new Vector3f(camRest);
+        MeshData.SortState st = m.sort;
+        int bytes = m.quads * 6 * 4 + 256;
+        o.sorting = CompletableFuture.supplyAsync(
+                () -> {
+                    ByteBufferBuilder mem = new ByteBufferBuilder(bytes);
+                    ByteBufferBuilder.Result r = st.buildSortedIndexBuffer(mem, VertexSorting.byDistance(at));
+                    return new SortJob(mem, r);
+                },
+                Util.backgroundExecutor());
     }
 
     public boolean isReady() {
@@ -161,11 +402,13 @@ public final class BellMeshes {
                 m.vb.bind();
                 m.vb.uploadIndexBuffer(j.result);
                 j.mem.close();
+                if (RenderStats.on) RenderStats.sortUploads++;
             }
             return;
         }
         if (!Float.isNaN(m.sortedFor.x) && m.sortedFor.distanceSquared(camRest) < moveBy * moveBy) return;
         m.sortedFor.set(camRest);
+        if (RenderStats.on) RenderStats.sortsStarted++;
         Vector3f at = new Vector3f(camRest);
         MeshData.SortState st = m.sort;
         int bytes = m.quads * 6 * 4 + 256;
@@ -405,9 +648,26 @@ public final class BellMeshes {
         return true;
     }
 
+    /** a sort still running when the meshes go: its memory is let go once it ends */
+    private static void letGoLater(Order o) {
+        if (o.ibo != 0) GlStateManager._glDeleteBuffers(o.ibo);
+        o.ibo = 0;
+        if (o.sorting != null)
+            o.sorting.thenAccept(j -> {
+                if (j != null) {
+                    j.result.close();
+                    j.mem.close();
+                }
+            });
+    }
+
     /** textures changed (resource pack switch): throw the meshes away, they rebuild on the next frame */
     public void invalidate() {
         RenderSystem.recordRenderCall(() -> {
+            for (Mesh m : withOthers) if (m.others != null) for (Order o : m.others) if (!free(o)) letGoLater(o);
+            withOthers.clear();
+            if (uploading != null) for (ByteBufferBuilder m : uploading.memory) if (m != null) m.close();
+            uploading = null;
             if (meshes != null)
                 for (Mesh[][] a : meshes) for (Mesh[] b : a) for (Mesh m : b) if (m != null) m.vb.close();
             meshes = null;

@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.hollowbell.client.dev.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "BellRendererTrace",
+    "DrawElementsTrace",
+    "ShaderUniforms",
+    "UniformTrace"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
