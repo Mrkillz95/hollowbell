@@ -689,6 +689,14 @@ final class BellHolds {
 
     void dropSeat(@Nullable Seat st) {
         if (st == null) return;
+        if (!NoWait.loaded(st.level(), st.blockPosition())) {
+            // (its land isn't loaded: letting go the usual way reads the block under the seat, and the server would
+            // stop and wait for that land. Gone first, it lets them off at the same spot without reading it.)
+            List<Entity> on = List.copyOf(st.getPassengers());
+            st.discard();
+            for (Entity e : on) e.fallDistance = 0;
+            return;
+        }
         for (Entity e : st.getPassengers()) {
             e.stopRiding();
             e.fallDistance = 0;

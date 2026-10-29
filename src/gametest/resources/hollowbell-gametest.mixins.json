@@ -6,7 +6,8 @@
   "mixins": [
     "ArmsOnlyMixin",
     "ChunkCacheAccess",
-    "MobAccess"
+    "MobAccess",
+    "SyncLoadWatch"
   ],
   "injectors": {
     "defaultRequire": 1

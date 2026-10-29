@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
@@ -33,7 +35,8 @@ import org.jetbrains.annotations.Nullable;
  * cleared first, only bedrock is left, and what was in chests comes out on the new ground. Structures standing there
  * stop being structures (no more witches from a painted-over hut, /locate stops pointing there). His ground goes depth
  * blocks down from the new top (5 unless told; caves under it stay open). A chunk or two a tick, so the server keeps
- * up. It can't be undone.
+ * up; land that isn't loaded is asked for a few chunks ahead and made on the world's own threads, and painted once it's
+ * there, so the server never stops and waits for it. It can't be undone.
  */
 public final class Painter {
     private Painter() {}
@@ -42,6 +45,12 @@ public final class Painter {
      * how deep /giants paint lays his ground when not told (the top block and four under it), and the least and most
      */
     public static final int DEPTH = 5, MIN_DEPTH = 1, MAX_DEPTH = 64;
+
+    /** the land a paint is waiting for, held until it's painted */
+    private static final TicketType<ChunkPos> PAINT =
+            TicketType.create("hollowbell_paint", Comparator.comparingLong(ChunkPos::toLong));
+    /** how many chunks ahead are asked for at once */
+    private static final int AHEAD = 24;
 
     private static final class Job {
         UUID who;
@@ -53,6 +62,8 @@ public final class Painter {
         BellPlan plan;
         final ArrayDeque<ChunkPos> todo = new ArrayDeque<>();
         int total, done;
+        /** the chunks asked for (held by a PAINT ticket) */
+        final LongOpenHashSet asked = new LongOpenHashSet();
     }
 
     private static final List<Job> jobs = new ArrayList<>();
@@ -114,7 +125,36 @@ public final class Painter {
 
     /** drop every paint waiting */
     public static void forget() {
+        for (Job j : jobs) letGo(j);
         jobs.clear();
+    }
+
+    private static void letGo(Job j) {
+        var src = j.level.getChunkSource();
+        for (long c : j.asked) {
+            ChunkPos cp = new ChunkPos(c);
+            src.removeRegionTicket(PAINT, cp, 0, cp);
+        }
+        j.asked.clear();
+    }
+
+    /**
+     * The first chunk near the front of the line that is loaded now, taken out of the line; the ones before it that
+     * aren't are asked for (made on the world's own threads). Null if none of them is loaded yet. (Each chunk is
+     * painted on its own, so the order they come in makes no difference.)
+     */
+    private static @Nullable ChunkPos nextLoaded(Job j) {
+        var src = j.level.getChunkSource();
+        int n = 0;
+        for (var it = j.todo.iterator(); it.hasNext() && n++ < AHEAD; ) {
+            ChunkPos cp = it.next();
+            if (src.getChunkNow(cp.x, cp.z) != null) {
+                it.remove();
+                return cp;
+            }
+            if (j.asked.add(cp.toLong())) src.addRegionTicket(PAINT, cp, 0, cp);
+        }
+        return null;
     }
 
     /** every tick: a chunk or two, about 8 ms at most */
@@ -123,17 +163,22 @@ public final class Painter {
         long t0 = System.nanoTime();
         Job j = jobs.get(0);
         while (!j.todo.isEmpty() && (System.nanoTime() - t0 < 8_000_000L)) {
-            ChunkPos cp = j.todo.poll();
+            ChunkPos cp = nextLoaded(j);
+            // (none of the next ones is loaded yet: they're asked for, and painted once they're there; the server never
+            // stops and waits for land)
+            if (cp == null) break;
             try {
                 paintChunk(j, cp);
             } catch (Throwable t) {
                 HollowbellMod.LOG.error("Painting chunk {} failed", cp, t);
             }
+            if (j.asked.remove(cp.toLong())) j.level.getChunkSource().removeRegionTicket(PAINT, cp, 0, cp);
             j.done++;
             if (j.done % 16 == 0 && !j.todo.isEmpty())
                 tell(server, j, Component.translatable("command.hollowbell.paint_progress", j.done, j.total));
         }
         if (j.todo.isEmpty()) {
+            letGo(j);
             jobs.remove(0);
             tell(server, j, Component.translatable("command.hollowbell.paint_done", j.total));
         }
@@ -148,6 +193,7 @@ public final class Painter {
                 paintChunk(j, cp);
                 j.done++;
             }
+            letGo(j);
         }
     }
 
