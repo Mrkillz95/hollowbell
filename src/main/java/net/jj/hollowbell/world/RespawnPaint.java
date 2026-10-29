@@ -55,13 +55,9 @@ public final class RespawnPaint extends SavedData {
             TicketType.create("hollowbell_respawn_paint", Comparator.comparingLong(ChunkPos::toLong));
     /** how many chunks ahead are asked for at once */
     private static final int AHEAD = 16;
-    /** how long the next chunk is waited for (clock ms) before it's loaded the old way, waiting */
-    private static final long GIVE_UP = 60_000L;
     /** the chunks asked for (not kept with the world: a restart asks again) */
     private final LongOpenHashSet asked = new LongOpenHashSet();
-    /** since when (clock ms) the next chunk has been waited for */
-    private long waiting;
-
+    
     private RespawnPaint() {}
 
     public static RespawnPaint get(MinecraftServer server) {
@@ -191,14 +187,9 @@ public final class RespawnPaint extends SavedData {
         }
         while (!r.todo.isEmpty() && System.nanoTime() - t0 < 4_000_000L) {
             Long c = r.nextLoaded(over);
-            if (c == null) {
-                // (land not loaded yet: waited for without the server stopping; after a minute, the old way)
-                long now = System.currentTimeMillis();
-                if (r.waiting == 0) r.waiting = now;
-                if (now - r.waiting < GIVE_UP) break;
-                c = r.todo.poll();
-            }
-            r.waiting = 0;
+            // (none of the next ones is loaded yet: they're asked for, and painted once they're there; the server never
+            // stops and waits for land)
+            if (c == null) break;
             r.step(over, c);
         }
         if (r.todo.isEmpty()) r.letGo(over);

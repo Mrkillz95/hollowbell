@@ -6,6 +6,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.Giants;
+import net.jj.hollowbell.world.NoWait;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.EnderDragonPart;
@@ -38,11 +40,23 @@ public final class LookTrace {
     /** how near the spot a look lands on a creature has to be, to be taken instead */
     public static final double NEAR_SPOT = 4.5;
 
+    /** how far along this line (up to range) the land is loaded all the way */
+    static double loadedAlong(Level l, Vec3 from, Vec3 dir, double range) {
+        for (double t = 0; t < range + 4; t += 4) {
+            double u = Math.min(t, range);
+            if (!NoWait.loaded(l, Mth.floor(from.x + dir.x * u), Mth.floor(from.z + dir.z * u)))
+                return Math.max(0, t - 4);
+        }
+        return range;
+    }
+
     /** the creature (or giant's part) a look along this line lands on, or null */
     public static @Nullable Entity trace(
             Level l, Vec3 from, Vec3 dir, double range, @Nullable Player who, @Nullable Entity also) {
         dir = dir.normalize();
-        Vec3 to = from.add(dir.scale(range));
+        // (on the server, the look's blocks are only read as far as the land is loaded: reading land that isn't makes
+        // the server stop and wait while it's loaded or made)
+        Vec3 to = from.add(dir.scale(l.isClientSide() ? range : loadedAlong(l, from, dir, range)));
         CollisionContext cc = who != null ? CollisionContext.of(who) : CollisionContext.empty();
         // (collider: grass, flowers and the like have none, so the look goes through them)
         BlockHitResult bh = l.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, cc));

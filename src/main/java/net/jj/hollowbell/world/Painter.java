@@ -51,8 +51,6 @@ public final class Painter {
             TicketType.create("hollowbell_paint", Comparator.comparingLong(ChunkPos::toLong));
     /** how many chunks ahead are asked for at once */
     private static final int AHEAD = 24;
-    /** how long the next chunk is waited for (clock ms) before it's loaded the old way, waiting */
-    private static final long GIVE_UP = 60_000L;
 
     private static final class Job {
         UUID who;
@@ -66,8 +64,6 @@ public final class Painter {
         int total, done;
         /** the chunks asked for (held by a PAINT ticket) */
         final LongOpenHashSet asked = new LongOpenHashSet();
-        /** since when (clock ms) the next chunk has been waited for */
-        long waiting;
     }
 
     private static final List<Job> jobs = new ArrayList<>();
@@ -168,14 +164,9 @@ public final class Painter {
         Job j = jobs.get(0);
         while (!j.todo.isEmpty() && (System.nanoTime() - t0 < 8_000_000L)) {
             ChunkPos cp = nextLoaded(j);
-            if (cp == null) {
-                // (land not loaded yet: waited for without the server stopping; after a minute, the old way)
-                long now = System.currentTimeMillis();
-                if (j.waiting == 0) j.waiting = now;
-                if (now - j.waiting < GIVE_UP) break;
-                cp = j.todo.poll();
-            }
-            j.waiting = 0;
+            // (none of the next ones is loaded yet: they're asked for, and painted once they're there; the server never
+            // stops and waits for land)
+            if (cp == null) break;
             try {
                 paintChunk(j, cp);
             } catch (Throwable t) {
