@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.28
+# Hollowbell (Java mod), version 1.12.29
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,14 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- No more long freezes: his moves no longer make the game wait for land that isn't loaded yet. Over land
+  nobody has loaded, his footsteps and effects don't load it.
+- Painting his ground, and painting it again when he comes back, now happen a bit at a time instead of
+  freezing the game.
+- His deep toll is easier on the game.
+
+### 1.12.28
 
 - Sitting on him now works anywhere you can stand on him: right out to his edges, and on the parts of him that
   move, like a stepping leg or a swinging head. Getting up from an edge puts you back on that spot.
