@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.15 |
-| Pitchgut | 1.35.30 |
-| Furrowmaw | 1.17.27 |
-| Fire & Ice Cerberus | 2.18.27 |
-| Hollowbell | 1.12.29 |
-| Lantern Willow | 1.10.30 |
-| Wreckback | 1.2.35 |
-| The Swarmforge | 1.4.33 |
-| The Gloamwick | 1.2.14 |
+| Giants Guide | 1.4.16 |
+| Pitchgut | 1.35.31 |
+| Furrowmaw | 1.17.28 |
+| Fire & Ice Cerberus | 2.18.28 |
+| Hollowbell | 1.12.30 |
+| Lantern Willow | 1.10.31 |
+| Wreckback | 1.2.36 |
+| The Swarmforge | 1.4.34 |
+| The Gloamwick | 1.2.15 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.6), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.7), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.6.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.7.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -81,6 +81,24 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.14: the Controls tab on Giants Performance, to change every giant's keys there, how giants
   back down from a wild fight they're losing (and `/giants flee`), and sitting anywhere on a giant with a triple
   crouch.
+- New in the Guide 1.4.16: the Drawing setting (in Detail on Giants Performance): Fast to start with, Classic for
+  the old drawing.
+
+## New in 1.6.7
+
+- **New Performance setting: Drawing** (Giants Performance, Detail). It's Fast by default: the same picture, with
+  less work for your graphics card. It's much faster for the Swarmforge's robots, the Lantern Willow, and Furrowmaw
+  and Pitchgut up close. A giant may show up a few frames late the first time you see him. If anything looks wrong,
+  switch to Classic (the old drawing) on the Performance screen. No preset changes it.
+- **The Swarmforge's** robot army finds its paths with less work, and the small hitch when his robots settle is
+  smaller.
+- **The Lantern Willow** costs the game almost nothing when nobody is near him.
+- **Hollowbell's** landing cracks now spread over a few ticks instead of freezing the game when he lands.
+- **Pitchgut's** footsteps at the edge of loaded land no longer freeze the game.
+- The Giants Guide (1.4.16) explains the Drawing setting.
+
+Inside: Pitchgut 1.35.31, Furrowmaw 1.17.28, Cerberus 2.18.28, Hollowbell 1.12.30, Lantern Willow 1.10.31,
+Wreckback 1.2.36, Swarmforge 1.4.34, Gloamwick 1.2.15.
 
 ## New in 1.6.6
 
