@@ -41,6 +41,8 @@ loom {
             vmArg "-Dhollowbell.debug=true"
             vmArg "-Xmx3G"
             vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest-report.xml"
+            // -Pjfr=file: a flight recording of the run (for finding what a slow tick spent its time on)
+            if (project.hasProperty("jfr")) vmArg "-XX:StartFlightRecording=filename=" + project.property("jfr") + ",settings=profile,jdk.ExecutionSample#period=2ms"
             runDir "build/gametest"
         }
         autotest {
@@ -119,9 +121,11 @@ def allTests = [
     'net.jj.hollowbell.test.SitTests',
     'net.jj.hollowbell.test.HuntSightTests'
 ]
+// probes: long measuring runs, never in the usual run, only when named with -Ponly
+def probeTests = ['net.jj.hollowbell.test.StallProbe']
 def onlyTests = project.findProperty('only')
 def tests = !onlyTests ? allTests :
-        allTests.findAll { t -> onlyTests.toString().split(',').any { t.endsWith('.' + it) } }
+        (allTests + probeTests).findAll { t -> onlyTests.toString().split(',').any { t.endsWith('.' + it) } }
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": project.version }
