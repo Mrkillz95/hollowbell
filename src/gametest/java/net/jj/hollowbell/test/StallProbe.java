@@ -30,6 +30,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -424,6 +425,77 @@ public class StallProbe implements FabricGameTest {
                 RespawnPaint.tick(srv); // (drops whatever is left: the ground was let go)
                 BellConfig.V.griefing = grief;
                 h.succeed();
+            }
+        });
+    }
+
+    /**
+     * His landings crack the ground: as big as a crack gets (a sky dive at full size, radius 48) and two smaller,
+     * on grass with plants on it, the ticks after each one. The cracks are drawn from his random seeded the same each
+     * time, so the count and sum of the cracked spots can be compared run to run (the same cracks).
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 3000, batch = "stall_probe_crack")
+    public void crackingCostsOnlyAFewMillisecondsATick(GameTestHelper h) {
+        MinecraftServer srv = h.getLevel().getServer();
+        ServerLevel l = h.getLevel();
+        int[] at = spot(h, 45);
+        hold(l, at[0], at[1], 4);
+        HollowbellEntity e = bell(l, at[0] + 30, at[1] + 30);
+        boolean grief = BellConfig.V.griefing;
+        BellConfig.V.griefing = true;
+        l.getGameRules().getRule(GameRules.RULE_MOBGRIEFING).set(true, srv);
+        int R = 50, g = l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at[0], at[1]) - 1;
+        BlockPos c = new BlockPos(at[0], g + 1, at[1]);
+        int[] radii = {16, 32, 48, 48, 48};
+        int[] st = {0};
+        StringBuilder b = new StringBuilder(), log = new StringBuilder();
+        Stat all = new Stat();
+        watch("crack");
+        h.onEachTick(() -> {
+            int t = ++st[0];
+            if (st[0] < 0) return;
+            int k = t / 100, in = t % 100;
+            if (k >= radii.length) {
+                b.append(all.line("all after"));
+                b.append(unwatch());
+                b.append(log);
+                write("crack", b);
+                st[0] = -100000;
+                BellConfig.V.griefing = grief;
+                e.discard();
+                letGo(l, at[0], at[1], 4);
+                h.succeed();
+                return;
+            }
+            if (in == 1)
+                for (int dx = -R; dx <= R; dx++)
+                    for (int dz = -R; dz <= R; dz++) {
+                        l.setBlock(c.offset(dx, -1, dz), Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
+                        l.setBlock(c.offset(dx, 0, dz), Blocks.SHORT_GRASS.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    }
+            if (in == 20) {
+                e.getRandom().setSeed(0xC4AC6L + k);
+                long a = System.nanoTime();
+                e.moves().crack(c, radii[k]);
+                log.append(String.format("# crack r %d: the call itself %.2f ms%n", radii[k], (System.nanoTime() - a) / 1e6));
+            }
+            if (in > 20 && in <= 81) {
+                long ns = lastTick(srv);
+                all.add(ns);
+                log.append(k).append(' ').append(in - 21).append(' ').append(ns / 1000).append('\n');
+            }
+            if (in == 95) {
+                int n = 0, plants = 0;
+                long sum = 0;
+                for (int dx = -R; dx <= R; dx++)
+                    for (int dz = -R; dz <= R; dz++) {
+                        if (l.getBlockState(c.offset(dx, -1, dz)).is(Blocks.COARSE_DIRT)) {
+                            n++;
+                            sum = sum * 31 + (dx + 64) * 128 + dz + 64;
+                        }
+                        if (l.getBlockState(c.offset(dx, 0, dz)).isAir()) plants++;
+                    }
+                b.append(String.format("crack r %2d: cracked %5d  plants gone %5d  sum %016x%n", radii[k], n, plants, sum));
             }
         });
     }

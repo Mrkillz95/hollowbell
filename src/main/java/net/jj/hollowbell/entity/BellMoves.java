@@ -22,6 +22,7 @@ import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.CarryPath;
 import net.jj.hollowbell.solid.GiantHull;
+import net.jj.hollowbell.world.Cracks;
 import net.jj.hollowbell.world.NoWait;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -1304,22 +1305,20 @@ public final class BellMoves {
         return BellConfig.V.griefing && level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
     }
 
-    /** the ground cracks under the slam: grass and dirt go to coarse dirt, plants go */
-    void crack(BlockPos c, int r) {
-        ServerLevel l = level();
+    /**
+     * the ground cracks under the slam: grass and dirt go to coarse dirt, plants go. The spots are picked now; the
+     * cracking runs out from the middle over the next ticks (see Cracks)
+     */
+    public void crack(BlockPos c, int r) {
         r = Math.min(r, 48);
+        long[] spots = new long[(2 * r + 1) * (2 * r + 1)];
+        int n = 0;
         for (int dx = -r; dx <= r; dx++)
             for (int dz = -r; dz <= r; dz++) {
                 if (dx * dx + dz * dz > r * r || h.getRandom().nextInt(3) == 0) continue;
-                if (!NoWait.loaded(l, c.offset(dx, 0, dz))) continue; // (never waits for land being made)
-                BlockPos top = l.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.offset(dx, 0, dz));
-                BlockPos below = top.below();
-                BlockState st = l.getBlockState(below);
-                if (st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.PODZOL) || st.is(Blocks.MYCELIUM))
-                    l.setBlock(below, Blocks.COARSE_DIRT.defaultBlockState(), 3);
-                BlockState up = l.getBlockState(top);
-                if (!up.isAir() && up.canBeReplaced() && up.getFluidState().isEmpty()) l.destroyBlock(top, false);
+                spots[n++] = Cracks.spot(c.getX() + dx, c.getZ() + dz);
             }
+        Cracks.add(level(), c.getX(), c.getZ(), spots, n);
     }
 
     /** a big moment for everyone near to see (fx/BigFx): what kind, where, how big (blocks, for his size now) */
