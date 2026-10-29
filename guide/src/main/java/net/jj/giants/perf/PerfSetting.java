@@ -16,6 +16,8 @@ import java.util.Locale;
  * @param owner   the giant it belongs to ("" for the guide's own)
  * @param perGiant one copy of it per installed giant ("detail.renderDistance.gloamwick"); each giant is sent its own
  *                 copy under the plain id ("detail.renderDistance")
+ * @param presetFree no preset changes it, built-in or a player's own: picking one or "reset to preset" leaves it as
+ *                 the player set it, and moving it doesn't make the preset Custom (the guide's Drawing)
  */
 public record PerfSetting(
         String id,
@@ -34,7 +36,8 @@ public record PerfSetting(
         List<String> options,
         String unit,
         String owner,
-        boolean perGiant) {
+        boolean perGiant,
+        boolean presetFree) {
     public static final String EFFECTS = "effects", DETAIL = "detail", GIANT = "giant", FEATURES = "features";
 
     public enum Kind {

@@ -37,6 +37,9 @@ public final class PerfCatalog {
                     .25),
             choice("detail.lootBeams", PerfSetting.DETAIL, Cost.LOW, false, List.of("All", "Near only", "Off"), 0, 0,
                     0, 1, 2),
+            // the giants' newer, faster way of drawing: no preset changes it, each player picks it
+            presetFree(choice("detail.drawing", PerfSetting.DETAIL, Cost.HIGH, false, List.of("Classic", "Fast"), 0,
+                    0, 0, 0, 0)),
             pct("detail.sounds", PerfSetting.DETAIL, Cost.LOW, 1, 1, 1, 1, 1),
             pct("detail.music", PerfSetting.DETAIL, Cost.LOW, 1, 1, 1, 1, 1),
             // Features: the whole world's, operators only
@@ -81,7 +84,8 @@ public final class PerfCatalog {
                 List.of(),
                 "%",
                 giant,
-                true);
+                true,
+                false);
     }
 
     /** the language key for one of a guide setting's lines */
@@ -113,6 +117,13 @@ public final class PerfCatalog {
             List<String> options, String unit, double[] lv) {
         return new PerfSetting(
                 id, section, kind, min, max, step, lv[0], lv, cost, server, key(id, "name"), key(id, "what"),
-                key(id, "loses"), options, unit, "", false);
+                key(id, "loses"), options, unit, "", false, false);
+    }
+
+    /** the same setting, but no preset changes it (it stays as each player set it) */
+    private static PerfSetting presetFree(PerfSetting s) {
+        return new PerfSetting(
+                s.id(), s.section(), s.kind(), s.min(), s.max(), s.step(), s.def(), s.levels(), s.cost(), s.server(),
+                s.name(), s.what(), s.loses(), s.options(), s.unit(), s.owner(), s.perGiant(), true);
     }
 }

@@ -36,10 +36,14 @@ public final class PerfPresets {
      */
     public record Change(PerfSetting setting, double from, double to, boolean removes) {}
 
-    /** what these values turn down or take away compared with Highest, in the settings' order */
+    /**
+     * What these values turn down or take away compared with Highest, in the settings' order (never one that no
+     * preset changes).
+     */
     public static List<Change> changes(Map<String, Double> values, List<PerfSetting> settings) {
         List<Change> out = new ArrayList<>();
         for (PerfSetting s : settings) {
+            if (s.presetFree()) continue;
             double v = s.clamp(values.getOrDefault(s.id(), s.def()));
             if (Math.abs(v - s.def()) < 1e-9) continue;
             out.add(new Change(s, s.def(), v, s.removes(v)));
