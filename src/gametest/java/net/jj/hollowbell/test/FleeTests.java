@@ -241,7 +241,7 @@ public class FleeTests implements FabricGameTest {
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 220, batch = "flee_rest")
-    public void thereHeRestsAndHealsALittle(GameTestHelper h) {
+    public void thereHeRestsButDoesNotHeal(GameTestHelper h) {
         HollowbellEntity e = him(h);
         Zombie z = fakeGiant(h, e.position(), 6, 6, "fire_ice_cerberus");
         Zombie other = fakeGiant(h, e.position(), -6, -6, "fire_ice_cerberus");
@@ -251,20 +251,17 @@ public class FleeTests implements FabricGameTest {
             lowAndHit(e, z);
             e.flee().restForTests(h.getLevel().getGameTime());
             h.assertTrue(e.flee().resting() && !e.flee().running(), "the run is over: he rests");
+            e.setCalmTicks(0); // (fresh from the giant fight)
             hp[0] = e.healthNow();
-        });
-        h.runAfterDelay(105, () -> {
-            float now = e.healthNow(), max = e.healthMax();
-            h.assertTrue(now > hp[0], "resting, he heals: " + hp[0] + " -> " + now);
-            h.assertTrue(backedDown(e), "still backed down: no giant fights him");
-            h.assertTrue(e.meetFoe() == null, "and he starts nothing with a giant close by: " + e.meetFoe());
-            e.setHealthTo(max * 0.495f);
         });
         h.runAfterDelay(190, () -> {
             try {
-                float share = e.healthNow() / e.healthMax();
-                h.assertTrue(share <= BellFlee.REST_HEAL_TO + 0.001f, "never past half: " + share);
-                h.assertTrue(share >= 0.49f, "and he keeps what he has: " + share);
+                float now = e.healthNow();
+                h.assertTrue(e.flee().resting(), "he's still resting");
+                // (no rest heal any more: only the heal every giant has, five minutes out of a fight)
+                h.assertTrue(now <= hp[0] + 0.001f, "resting right after a giant fight, he healed: " + hp[0] + " -> " + now);
+                h.assertTrue(backedDown(e), "still backed down: no giant fights him");
+                h.assertTrue(e.meetFoe() == null, "and he starts nothing with a giant close by: " + e.meetFoe());
             } finally {
                 gone(e, z, other);
             }

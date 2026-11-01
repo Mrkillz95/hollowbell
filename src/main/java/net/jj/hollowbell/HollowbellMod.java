@@ -69,6 +69,8 @@ public class HollowbellMod implements ModInitializer {
     public void onInitialize() {
         // his fight music plays only while he is in a fight with you: the server says who
         FightWith.init();
+        // anything a Hollowbell hurts puts off his healing
+        net.jj.hollowbell.entity.HollowbellEntity.hookFightClock();
         BellConfig.load();
         ModBlocks.init();
         ModSounds.init();

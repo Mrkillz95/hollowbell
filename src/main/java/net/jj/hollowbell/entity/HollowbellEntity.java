@@ -1449,6 +1449,35 @@ public class HollowbellEntity extends Monster implements SitHost {
         health.heal();
     }
 
+    /** ticks since his last fight (hurt, hurting something, hunting something, a giant fight): see BellHealth */
+    public int calmTicks() {
+        return health.calmTicks;
+    }
+
+    /** the tests (and his save): how long he has been out of a fight */
+    public void setCalmTicks(int t) {
+        health.calmTicks = Math.max(0, t);
+    }
+
+    /** over his own ground (the Bell Hollows), where he heals faster */
+    public boolean healsAtHome() {
+        return health.atHome();
+    }
+
+    /**
+     * Anything he (or a creature, shot or sting of his) hurts puts off his healing: hooked up once, for every
+     * Hollowbell.
+     */
+    public static void hookFightClock() {
+        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DAMAGE.register(
+                (victim, src, base, taken, blocked) -> {
+                    if (!(victim.level() instanceof ServerLevel sl)) return;
+                    Entity by = Giants.behind(src);
+                    if (!(by instanceof HollowbellEntity)) by = Giants.helperOwner(src, sl);
+                    if (by instanceof HollowbellEntity h && h != victim) h.health.fought();
+                });
+    }
+
     public void setHealthTo(float v) {
         health.setHealthTo(v);
     }
@@ -2096,8 +2125,10 @@ public class HollowbellEntity extends Monster implements SitHost {
         HollowbellMod.LOG.info(s);
     }
 
-    /** ticks the slow heal waits after any hurt */
-    public static final int HEAL_PAUSE = 300;
+    /** ticks he must be out of a fight before he heals on his own (healPauseMinutes: 5 minutes) */
+    public static int healPause() {
+        return BellHealth.healPause();
+    }
 
     // solid (the solid kit's adapter)
 

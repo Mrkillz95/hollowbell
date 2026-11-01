@@ -365,7 +365,7 @@
   "codex.hollowbell.order_tip.forgive": "He forgets the grudges he holds against people and mobs that hurt him.",
   "codex.hollowbell.order_tip.blocks": "Whether his moves break blocks. Needs cheats (op).",
   "codex.hollowbell.order_tip.harvest": "Whether he pulls up trees and creatures on his own when he's idle. Needs cheats (op).",
-  "codex.hollowbell.order_tip.sleep": "He drifts down near the ground and sleeps. A hit or any order wakes him.",
+  "codex.hollowbell.order_tip.sleep": "He drifts down near the ground and sleeps, and heals while he sleeps. A hit or any order wakes him.",
   "codex.hollowbell.order_tip.wake": "He wakes up and gets going again.",
   "codex.hollowbell.order_tip.area_blocks": "How far he may go from here, in blocks (32 or more).",
   "codex.hollowbell.order_tip.keep_here": "He stays within this many blocks of where you stand now. He drifts back in if he is outside.",

@@ -16,7 +16,8 @@ import org.jetbrains.annotations.Nullable;
  * Backing down from a giants' fight, and where to (JJ, Oct 27). He never backs down from a fight a player started
  * (the book sent him, /giants meet, somebody riding him), and from a wild one only while /giants flee is on. When he
  * does, he climbs up out of reach and flies to the middle of the Bell Hollows, or to whoever holds his book when
- * they're in this world, at most {@link #FLEE_CAP} blocks; there he settles, rests and heals a little.
+ * they're in this world, at most {@link #FLEE_CAP} blocks; there he settles and rests (no healing
+ * of its own: he heals only as every giant does, see BellHealth).
  */
 public final class BellFlee {
     private final HollowbellEntity hb;
@@ -31,10 +32,6 @@ public final class BellFlee {
     public static final long FLEE_TICKS = 3600L;
     /** how long he rests once he's there (three minutes) */
     public static final long REST_TICKS = 3600L;
-    /** he heals while he rests, but never past this share of his health */
-    public static final float REST_HEAL_TO = 0.5f;
-    /** the share of his health he gets back each second of rest (a quarter over the whole rest) */
-    public static final float REST_HEAL_PER_SECOND = 0.25f / (REST_TICKS / 20f);
 
     /** his meeting fight (meetFoe) was started by a player: the book's order or /giants meet */
     boolean ordered;
@@ -122,7 +119,7 @@ public final class BellFlee {
         return run;
     }
 
-    /** resting after the run: settled, calm, no new fights, healing a little */
+    /** resting after the run: settled, calm, no new fights */
     public boolean resting() {
         return restUntil >= 0;
     }
@@ -143,7 +140,7 @@ public final class BellFlee {
         hb.yieldUntil = Math.max(hb.yieldUntil, hb.fleeUntil);
     }
 
-    /** once a second: the run (kept up as his owner moves), then the rest, when he heals a little */
+    /** once a second: the run (kept up as his owner moves), then the rest */
     public void fleeTick(ServerLevel sl) {
         long now = sl.getGameTime();
         if (restFor > 0 && restUntil < 0) {
@@ -161,11 +158,6 @@ public final class BellFlee {
             if (there || far || now >= hb.fleeUntil) restFrom(now);
         } else if (resting()) {
             if (now >= restUntil) restUntil = -1L;
-            else {
-                float most = hb.healthMax(), hp = hb.healthNow();
-                if (most > 0f && hp > 0f && hp < most * REST_HEAL_TO)
-                    hb.setHealthTo(Math.min(most * REST_HEAL_TO, hp + most * REST_HEAL_PER_SECOND));
-            }
         }
     }
 

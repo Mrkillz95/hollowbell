@@ -8,6 +8,10 @@ into his hollow dome and see what he's caught.
 
 ## What's new
 
+- New healing rule, the same for every giant: he heals while he sleeps, and once he's been out of a fight for five
+  minutes (nothing has hurt him, he has hurt nothing and he is hunting nothing): 2% of his health a minute over the
+  Bell Hollows, 1% anywhere else. Nothing else heals him on his own, not even resting after he backs down. Settings:
+  `passiveHeal`, `healHomePerMinute`, `healAwayPerMinute`, `healPauseMinutes`.
 - The cracks he leaves when he lands now spread over a few ticks instead of freezing the game.
 - New Drawing setting (Giants Performance, Detail): Fast, the default, draws the same picture with less work for
   your graphics card. He may show up a few frames late the first time you see him. If anything looks wrong, switch
@@ -62,7 +66,7 @@ into his hollow dome and see what he's caught.
 
 - When he's losing a wild fight with another giant (one no player started), he backs down, climbs up out of reach and
   flies home to the middle of the Bell Hollows (or to whoever holds his book, if they're in the same world), up to
-  about 1,500 blocks away. There he rests for a few minutes and heals a little, up to half his health, and starts no
+  about 1,500 blocks away. There he rests for a few minutes and starts no
   fights. He never backs down from a fight a player started: one his book sent him into, one started with
   `/giants meet`, or while somebody rides him. New for operators: `/giants flee on|off [giant]` (off: giants fight
   their wild fights to the end; on its own it shows each giant's setting).
@@ -160,6 +164,9 @@ down and go after anything that comes close.
 Pop his pods first. They hang low among his strands, and once a third of them are gone he sinks to the ground for a
 while. If a strand grabs you, hit it and it lets go. When a red message comes up, a heavy move is coming, so get well
 out from under him. Right after a heavy move he's worn out for a few seconds, and that's the time to hit him.
+
+He heals while he sleeps, and once he's been out of a fight for five minutes: 2% of his health a minute over the
+Bell Hollows, 1% anywhere else. In a fight he doesn't heal at all.
 
 When he dies, his loot waits in a Loot Cache on a small pedestal where he fell, with a beam over it you can see from
 far off. Inside: the Stinger (a whip-like sword you can also throw like a harpoon), bell glass for armour, his pods,

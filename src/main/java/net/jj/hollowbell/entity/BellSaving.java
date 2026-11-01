@@ -33,6 +33,7 @@ final class BellSaving {
         tag.putFloat("SleepK", hb.sleepiness());
         tag.putInt("BellVariant", hb.variant());
         tag.putFloat("BellHp", hb.healthNow());
+        tag.putInt("BellCalm", hb.calmTicks());
         tag.putFloat("BellHpMax", hb.healthMax());
         tag.putFloat("BellBaseMax", hb.baseMax);
         tag.putFloat("BellHealthMult", hb.healthMult);
@@ -139,6 +140,7 @@ final class BellSaving {
             hb.hp = tag.getFloat("BellHp");
             hb.getEntityData().set(HollowbellEntity.DATA_HP, hb.hp);
         } else hb.hp = -1f;
+        hb.setCalmTicks(tag.getInt("BellCalm")); // (none saved: 0, so five minutes before he heals)
         if (tag.contains("Pods")) {
             int mask = tag.getInt("Pods");
             for (int i = 0; i < hb.rig.pods.length && i < 31; i++) hb.state.podPopped[i] = (mask & (1 << i)) != 0;

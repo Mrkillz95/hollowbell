@@ -15,6 +15,7 @@ import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.solid.Solid;
+import net.jj.hollowbell.world.HomeGround;
 import net.jj.hollowbell.world.Shrine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -53,10 +54,8 @@ final class BellHealth {
     /** per giant that hit him: the game tick, and the biggest blow it landed that tick */
     final Map<UUID, float[]> giantHits = new HashMap<>();
 
-    /** health last tick and the last hurt, for the slow heal */
+    /** health last tick, for his healing (any drop is a hurt) */
     float healSeen = -1f;
-
-    long healHurtAt = Long.MIN_VALUE / 4;
 
     BellHealth(HollowbellEntity hb) {
         this.hb = hb;
@@ -214,6 +213,7 @@ final class BellHealth {
     boolean takeDamage(DamageSource src, float dealt) {
         Entity att = src.getEntity();
         hb.hurtAt = hb.level().getGameTime();
+        calmTicks = 0; // (any hurt puts off his healing)
         hb.wakeUp();
         hb.lastHitBig = dealt > hb.healthMax() * 0.02f;
         if (HollowbellEntity.DEBUG) HollowbellMod.LOG.info("Hurt {} by {} ({})", dealt, src.getMsgId(), att);
@@ -538,18 +538,24 @@ final class BellHealth {
         }
     }
 
-    /** passiveHealPerMinute percent of his most health a minute, a little each second, paused after any hurt */
+    /**
+     * Healing on his own, the same rule for every giant. While he sleeps, and once he has been out of any fight for
+     * healPauseMinutes (5): healHomePerMinute percent of his most health a minute (2) over his own ground, the Bell
+     * Hollows, healAwayPerMinute (1) anywhere else, a little each second. Nothing else heals him on his own.
+     */
     void passiveHeal() {
-        long now = hb.level().getGameTime();
         float hpNow = hb.healthNow(), max = hb.healthMax();
-        if (healSeen >= 0f && hpNow < healSeen - 0.001f) healHurtAt = now;
+        if (healSeen >= 0f && hpNow < healSeen - 0.001f) calmTicks = 0;
+        if (inFight()) calmTicks = 0;
+        else if (calmTicks < 1_000_000) calmTicks++;
         if (BellConfig.V.passiveHeal
                 && hb.tickCount % 20 == 0
                 && !(hb.isDeadOrDying())
                 && hpNow > 0f
                 && hpNow < max
-                && now - healHurtAt >= HollowbellEntity.HEAL_PAUSE) {
-            float v = Math.min(max, hpNow + max * Mth.clamp(BellConfig.V.passiveHealPerMinute, 0f, 100f) / 100f / 60f);
+                && (hb.asleep() || calmTicks >= healPause())) {
+            float rate = atHome() ? BellConfig.V.healHomePerMinute : BellConfig.V.healAwayPerMinute;
+            float v = Math.min(max, hpNow + max * Mth.clamp(rate, 0f, 100f) / 100f / 60f);
             hb.hp = v;
             hb.getEntityData().set(HollowbellEntity.DATA_HP, v);
             hpNow = v;
@@ -557,8 +563,27 @@ final class BellHealth {
         healSeen = hpNow;
     }
 
-    /** ticks since he was last hurt, as the slow heal sees it */
-    public long sinceHurtForHeal() {
-        return hb.level().getGameTime() - healHurtAt;
+    /** ticks since his last fight: hurt, hurting something, hunting something, or a fight with another giant */
+    int calmTicks;
+
+    /** how long he must be out of a fight before he heals (healPauseMinutes, in ticks) */
+    static int healPause() {
+        return Math.round(Mth.clamp(BellConfig.V.healPauseMinutes, 0f, 60f) * 1200f);
+    }
+
+    /** in a fight right now: a live target of any kind, or a fight with another giant */
+    private boolean inFight() {
+        LivingEntity t = hb.getTarget();
+        return (t != null && t.isAlive()) || hb.meetFoe() != null;
+    }
+
+    /** a fight: his healing waits again */
+    void fought() {
+        calmTicks = 0;
+    }
+
+    /** over his own ground, the Bell Hollows (the biome where he is) */
+    boolean atHome() {
+        return hb.level().getBiome(hb.blockPosition()).is(HomeGround.BELL_HOLLOWS);
     }
 }

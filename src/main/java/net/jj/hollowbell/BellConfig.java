@@ -25,13 +25,17 @@ public final class BellConfig {
         public float health = 6000f;
         /** his health times this (/giants health): set for all the giants at once, 0.1 to 10 */
         public float healthMultiplier = 1.0f;
-        /** A very slow heal of his own: on or off. */
-        public boolean passiveHeal = true;
         /**
-         * How much of his most health that slow heal gives back a minute, in percent. It waits 15 seconds after every
-         * hurt.
+         * He heals on his own (on or off): while he sleeps, and once he has been out of any fight for healPauseMinutes
+         * (nothing has hurt him, he has hurt nothing and he is hunting nothing).
          */
-        public float passiveHealPerMinute = 1.0f;
+        public boolean passiveHeal = true;
+        /** How much of his most health he gets back a minute over his own ground, the Bell Hollows, in percent. */
+        public float healHomePerMinute = 2.0f;
+        /** How much of his most health he gets back a minute anywhere else, in percent. */
+        public float healAwayPerMinute = 1.0f;
+        /** How many minutes out of any fight before he starts to heal (0 to 60). */
+        public float healPauseMinutes = 5.0f;
         /** Multiplies every hit he lands. */
         public float damageMultiplier = 1.0f;
         /** His hits on anything that isn't a player are multiplied by this. */
@@ -287,7 +291,9 @@ public final class BellConfig {
         v.spawnEggScale = clamp(v.spawnEggScale, 0.03f, 2f, 1f);
         v.smallEggScale = clamp(v.smallEggScale, 0.03f, 2f, 0.2f);
         v.worldScale = clamp(v.worldScale, 0.03f, 2f, 1f);
-        v.passiveHealPerMinute = clamp(v.passiveHealPerMinute, 0f, 100f, 1f);
+        v.healHomePerMinute = clamp(v.healHomePerMinute, 0f, 100f, 2f);
+        v.healAwayPerMinute = clamp(v.healAwayPerMinute, 0f, 100f, 1f);
+        v.healPauseMinutes = clamp(v.healPauseMinutes, 0f, 60f, 5f);
         v.podPopShare = clamp(v.podPopShare, 0f, 1f, 0.01f);
         v.podsToSink = clamp(v.podsToSink, 0f, 1f, 0.34f);
         v.grudgeRate = clamp(v.grudgeRate, 0f, 100f, 1f);
