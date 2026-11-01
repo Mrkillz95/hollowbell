@@ -159,9 +159,9 @@ Wreckback 1.2.33, Swarmforge 1.4.31, Gloamwick 1.2.12.
   take below half his health and a last-stand take below a quarter.
 - **The giants are balanced against each other.** After a full duel test between them, their blows on each other
   were evened out so no one giant wins every fight. Players see no change.
-- **Beaten giants run away and heal.** When a giant is losing a wild fight with another giant (one no player
+- **Beaten giants run away.** When a giant is losing a wild fight with another giant (one no player
   started), he backs down, gets out of reach and goes home to the middle of his ground, or to whoever holds his book
-  if they're in the same world. There he rests for a few minutes, heals up to half his health and starts no fights.
+  if they're in the same world. There he rests for a few minutes and starts no fights.
   A giant never runs from a fight a player started: one his book sent him into, one started with `/giants meet`, or
   while somebody rides him.
 - **Grudges:** when another giant's helper hurts a giant, he blames that giant. A giant hunts whatever hurt him until
@@ -673,9 +673,9 @@ Swarmforge 1.3.1.
   even if he is far away, asleep or out of the world, and keeps at it until it dies, it's lost for 30 seconds or you
   give a new order. A part of another giant counts as that giant. It glows for a moment, only for you, and the chat
   says why when he can't.
-- **A very slow heal.** Those six heal 1% of their health a minute on their own, and nothing for 15 seconds after any
-  hurt, so in a fight it hardly counts (Wreckback 2% a minute in deep water). Settings `passiveHeal` and
-  `passiveHealPerMinute`.
+- **Healing on their own.** Every giant heals while he sleeps, and once he's been out of a fight for five minutes:
+  2% of his health a minute in his own ground, 1% anywhere else. Settings `passiveHeal`, `healHomePerMinute`,
+  `healAwayPerMinute` and `healPauseMinutes`.
 - **The Willow's Drink the land doesn't heal him any more** (and grows no lures back). It's just an attack now.
 - **Wreckback is solid all over.** You can stand on any part of him and ride it, nobody ends up inside him, and
   giants don't go through him when they fight or walk into him.
