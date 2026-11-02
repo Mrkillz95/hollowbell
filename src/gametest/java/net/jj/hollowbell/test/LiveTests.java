@@ -62,7 +62,7 @@ public class LiveTests implements FabricGameTest {
                     && head.get("giant").getAsString().equals("hollowbell"), "the header: " + head);
             h.assertTrue(head.getAsJsonArray("does").size() == 11, "what he can do: " + head);
             h.assertTrue(head.getAsJsonArray("moods").get(1).getAsString().equals("hunting"), "his moods: " + head);
-            h.assertTrue(Math.abs(head.getAsJsonArray("size").get(0).getAsDouble() - 0.03) < 1e-6
+            h.assertTrue(Math.abs(head.getAsJsonArray("size").get(0).getAsDouble() - 0.01) < 1e-6
                     && Math.abs(head.getAsJsonArray("size").get(1).getAsDouble() - 2) < 1e-6, "his sizes: " + head);
             JsonObject a = row(s, e.getUUID()), b = row(s, f.getUUID());
             h.assertTrue(a != null && b != null, "both listed: " + lines);
@@ -123,7 +123,7 @@ public class LiveTests implements FabricGameTest {
                     "size: " + r);
             h.assertTrue(Math.abs(other.bellScale() - S) < 1e-4, "the other one's size stays");
             r = act(s, id, "size", "9", "-");
-            h.assertTrue(r.equals(List.of("no", "Size has to be a number from 0.03 to 2.")), "too big: " + r);
+            h.assertTrue(r.equals(List.of("no", "Size has to be a number from 0.01 to 2.")), "too big: " + r);
             h.assertTrue(act(s, id, "size", "big", "-").get(0).equals("no"), "not a number");
             // mood: hunting, then calm (grudges gone)
             e.setVariant(HollowbellEntity.HUNTER);

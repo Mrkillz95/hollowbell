@@ -431,6 +431,8 @@ public final class BellMoves {
         if (h.sunk()
                 && (which == Moves.DROP || which == Moves.GRAB || which == Moves.HARVEST || which == Moves.SKY_DIVE))
             return false;
+        // (tinier than his old smallest size he lifts nothing: see bigEnoughToHold)
+        if (!h.bigEnoughToHold() && (which == Moves.GRAB || which == Moves.HARVEST)) return false;
         target = at;
         struckThisMove.clear();
         hitAt.clear();
@@ -733,7 +735,7 @@ public final class BellMoves {
         int crowd = near(h.bodyBox().inflate(bell)).size();
         boolean heavy = h.level().getGameTime() >= heavyReadyAt && heavyWaitOver() && !h.sunk();
         boolean night = h.level().getSkyDarken() > 6;
-        boolean carry = HollowbellEntity.canCarry(tg);
+        boolean carry = HollowbellEntity.canCarry(tg) && h.bigEnoughToHold();
         boolean arm = armReaches(tg);
         boolean clear = clearShot(tg);
         boolean crowded = bellingsNear() >= 8;

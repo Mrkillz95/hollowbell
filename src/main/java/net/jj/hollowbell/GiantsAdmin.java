@@ -60,7 +60,19 @@ public final class GiantsAdmin {
             String name,
             String what,
             @Nullable Field field,
-            Object jar) {}
+            Object jar,
+            List<String> options,
+            @Nullable Field field2) {
+        public Row(String id, String cat, String type, double min, double max, double step, String when, String name,
+                String what, @Nullable Field field, Object jar) {
+            this(id, cat, type, min, max, step, when, name, what, field, jar, List.of(), null);
+        }
+
+        /** a config field (or two, for a range) stands behind it: it has a server default */
+        public boolean config() {
+            return field != null;
+        }
+    }
 
     private static final List<Row> ROWS = new ArrayList<>();
     private static final Map<String, Row> BY_ID = new LinkedHashMap<>();
@@ -108,6 +120,7 @@ public final class GiantsAdmin {
         try {
             Field f = BellConfig.Values.class.getField(id);
             Class<?> t = f.getType();
+            if (t == String.class) throw new IllegalStateException("a choice needs its options: " + id);
             String type = t == boolean.class ? "bool" : t == int.class ? "int" : "float";
             add(new Row(id, cat, type, min, max, step, when, name, what, f, f.get(new BellConfig.Values())));
         } catch (ReflectiveOperationException e) {
@@ -117,6 +130,30 @@ public final class GiantsAdmin {
 
     private static void cfg(String id, String cat, String when, String name, String what) {
         cfg(id, cat, 0, 1, 1, when, name, what);
+    }
+
+    /** a choice: a String config field holding one of the options */
+    private static void choice(String id, String cat, List<String> options, String when, String name, String what) {
+        try {
+            Field f = BellConfig.Values.class.getField(id);
+            add(new Row(id, cat, "choice", 0, options.size() - 1, 1, when, name, what, f,
+                    f.get(new BellConfig.Values()), List.copyOf(options), null));
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("no config field " + id, e);
+        }
+    }
+
+    /** a range of two float config fields, low and high: its value is [low, high] */
+    private static void range(String id, String low, String high, String cat, double min, double max, double step,
+            String when, String name, String what) {
+        try {
+            Field lo = BellConfig.Values.class.getField(low), hi = BellConfig.Values.class.getField(high);
+            BellConfig.Values d = new BellConfig.Values();
+            add(new Row(id, cat, "range", min, max, step, when, name, what, lo,
+                    new float[] {lo.getFloat(d), hi.getFloat(d)}, List.of(), hi));
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("no config field " + low + "/" + high, e);
+        }
     }
 
     private static void add(Row r) {
@@ -130,11 +167,11 @@ public final class GiantsAdmin {
                 "One of him rises on his own somewhere out in the world.");
         cfg("maxInWorld", "spawning", 0, 20, 1, NEW_SPAWNS, "Most at once",
                 "Most of him in the world at once; past it the oldest goes when another comes. 0 = no limit.");
-        cfg("worldScale", "spawning", 0.03, 2, 0.01, NEW_SPAWNS, "Size of the world's own",
+        cfg("worldScale", "spawning", 0.01, 2, 0.01, NEW_SPAWNS, "Size of the world's own",
                 "How big the one that rises on his own is (1 = full size).");
-        cfg("spawnEggScale", "spawning", 0.03, 2, 0.01, NEW_SPAWNS, "Spawn egg size",
+        cfg("spawnEggScale", "spawning", 0.01, 2, 0.01, NEW_SPAWNS, "Spawn egg size",
                 "His size from a spawn egg and a plain summon (1 = full size).");
-        cfg("smallEggScale", "spawning", 0.03, 2, 0.01, NEW_SPAWNS, "Small spawn egg size",
+        cfg("smallEggScale", "spawning", 0.01, 2, 0.01, NEW_SPAWNS, "Small spawn egg size",
                 "His size from the small spawn egg.");
         cfg("worldRespawnDays", "spawning", 0, 1000, 1, NEW_SPAWNS, "Days before he comes back",
                 "Days after the world's own one dies before the next one rises.");
@@ -245,6 +282,36 @@ public final class GiantsAdmin {
                 "With nobody near he steps out of the world and keeps going as a sum.");
         cfg("awayBlocks", "load", 0, 100000, 16, LIVE, "Steps out past",
                 "How far the nearest player has to be before he steps out. 0 = worked out for you.");
+        // Part 4 (ADMIN_BRIDGE.md 19): the behaviour settings every giant shares
+        range("spawnSize", "spawnSizeMin", "spawnSizeMax", "spawning", 0.01, 4, 0.01, NEW_SPAWNS, "Size spread",
+                "Each one that comes on his own (the world's own and his companions) comes at Size of the world's own"
+                        + " times a random number in this range. 1-1 = always that size.");
+        cfg("worldCount", "spawning", 1, 8, 1, NEW_SPAWNS, "How many come",
+                "How many of him the world keeps: the world's own one, and companions who come beside him (all at once"
+                        + " the first time, then one each time Days before he comes back has passed). Never past Most"
+                        + " at once.");
+        cfg("respawn", "spawning", LIVE, "Comes back after he falls",
+                "Off: once the world's own one falls, no other comes in this world (and lost companions aren't"
+                        + " replaced). Taking one away by command still brings the next.");
+        choice("temper", "behaviour", GiantsBehave.TEMPERS, LIVE, "Temper",
+                "peaceful: never starts a fight with a player, only fights back. normal: as his mood says. hunter:"
+                        + " hunts every player he sees, whatever his mood.");
+        choice("roam", "behaviour", GiantsBehave.ROAMS, LIVE, "Roaming",
+                "home: wanders as he always has. wander: never settles, travels the whole world. stay: stays where he"
+                        + " is unless sent somewhere or fighting.");
+        cfg("seekGiants", "behaviour", LIVE, "Seeks out other giants",
+                "He travels to the nearest other giant and fights it, whatever kind (needs Fights other giants and"
+                        + " Giant meetings).");
+        cfg("raidVillages", "behaviour", LIVE, "Raids",
+                "He heads for the nearest village or player and attacks: villagers, iron golems and players there are"
+                        + " his targets.");
+        choice("sleepSchedule", "behaviour", GiantsBehave.SLEEPS, LIVE, "Sleeps",
+                "usual: as he always does. day: sleeps all day, wakes at dusk and hunts all night. never: never lies"
+                        + " down on his own.");
+        cfg("nightStrength", "stats", 0.5, 4, 0.05, LIVE, "Strength at night",
+                "At night (in a world with nights) every hit he lands times this.");
+        cfg("lootMultiplier", "loot", 0, 10, 0.25, LIVE, "Loot",
+                "What he drops when he falls, times this (0 = nothing).");
         // each fighting move: on or off, its wait and its wind (the book's cost)
         for (int m : Moves.ORDER) {
             String n = Moves.NAMES[m], shown = moveName(m);
@@ -270,7 +337,7 @@ public final class GiantsAdmin {
 
     // what the world has set (from the guide), swapped whole so any thread reads a whole one
 
-    private static volatile Map<String, JsonPrimitive> world = Map.of();
+    private static volatile Map<String, JsonElement> world = Map.of();
     private static volatile Map<String, Double> all = Map.of();
     private static volatile boolean[] moveOn = filled(true);
     private static volatile float[] moveCool = filledF(), moveWind = filledF();
@@ -293,7 +360,7 @@ public final class GiantsAdmin {
     }
 
     /** the world's own values, as the guide sent them (after checking) */
-    public static Map<String, JsonPrimitive> world() {
+    public static Map<String, JsonElement> world() {
         return world;
     }
 
@@ -322,14 +389,19 @@ public final class GiantsAdmin {
         o.addProperty("id", r.id());
         o.addProperty("cat", r.cat());
         o.addProperty("type", r.type());
+        if (!r.options().isEmpty()) {
+            JsonArray opts = new JsonArray();
+            for (String x : r.options()) opts.add(x);
+            o.add("options", opts);
+        }
         if (!r.type().equals("bool")) {
             o.addProperty("min", r.min());
             o.addProperty("max", r.max());
             o.addProperty("step", r.step());
         }
-        o.add("default", prim(serverDefault(r)));
-        o.add("value", prim(current(r)));
-        o.add("jar", prim(r.jar()));
+        o.add("default", json(serverDefault(r)));
+        o.add("value", json(current(r)));
+        o.add("jar", json(r.jar()));
         o.addProperty("set", world.containsKey(r.id()));
         o.addProperty("when", r.when());
         o.addProperty("name", r.name());
@@ -339,6 +411,16 @@ public final class GiantsAdmin {
             o.addProperty("group", r.id().substring(5, r.id().lastIndexOf('.')));
         }
         return o;
+    }
+
+    /** a value as JSON: a range ([low, high]) as an array, anything else as prim */
+    static JsonElement json(Object v) {
+        if (v instanceof float[] a) {
+            JsonArray x = new JsonArray();
+            for (float f : a) x.add(Double.parseDouble(Float.toString(f)));
+            return x;
+        }
+        return prim(v);
     }
 
     private static JsonPrimitive prim(Object v) {
@@ -351,19 +433,24 @@ public final class GiantsAdmin {
 
     /** the server's default: what his config file says (a move's: on, x1, x1) */
     public static Object serverDefault(Row r) {
-        return r.field() == null ? r.jar() : BellConfig.fileValue(r.field());
+        if (r.field() == null) return r.jar();
+        if (r.field2() != null)
+            return new float[] {(Float) BellConfig.fileValue(r.field()), (Float) BellConfig.fileValue(r.field2())};
+        return BellConfig.fileValue(r.field());
     }
 
     /** the value in use now */
     public static Object current(Row r) {
         if (r.field() != null) {
             try {
+                if (r.field2() != null)
+                    return new float[] {r.field().getFloat(BellConfig.V), r.field2().getFloat(BellConfig.V)};
                 return r.field().get(BellConfig.V);
             } catch (IllegalAccessException e) {
                 return r.jar();
             }
         }
-        JsonPrimitive p = world.get(r.id());
+        JsonElement p = world.get(r.id());
         if (p == null) return r.jar();
         return r.type().equals("bool") ? (Object) p.getAsBoolean() : (Object) p.getAsDouble();
     }
@@ -374,7 +461,7 @@ public final class GiantsAdmin {
      * couldn't take; null if it can't be read at all.
      */
     public static @Nullable List<String> receive(@Nullable MinecraftServer server, String arg) {
-        Map<String, JsonPrimitive> w = new LinkedHashMap<>();
+        Map<String, JsonElement> w = new LinkedHashMap<>();
         Map<String, Double> a = new HashMap<>();
         List<String> out = new ArrayList<>();
         out.add("ok");
@@ -384,7 +471,7 @@ public final class GiantsAdmin {
             JsonObject values = o.has("values") ? o.getAsJsonObject("values") : new JsonObject();
             for (Map.Entry<String, JsonElement> e : values.entrySet()) {
                 Row r = BY_ID.get(e.getKey());
-                JsonPrimitive v = r == null ? null : check(r, e.getValue());
+                JsonElement v = r == null ? null : check(r, e.getValue());
                 if (v == null) out.add(rejected(e.getKey(), r == null ? "unknown" : "bad value"));
                 else w.put(r.id(), v);
             }
@@ -415,9 +502,38 @@ public final class GiantsAdmin {
     }
 
     /** a value pulled into its row's range and onto its step; null if it isn't one of that type */
-    static @Nullable JsonPrimitive check(Row r, JsonElement e) {
-        if (e == null || !e.isJsonPrimitive()) return null;
+    static @Nullable JsonElement check(Row r, JsonElement e) {
+        if (e == null) return null;
+        if (r.type().equals("range")) {
+            double lo, hi;
+            try {
+                if (e.isJsonArray() && e.getAsJsonArray().size() == 2) {
+                    lo = e.getAsJsonArray().get(0).getAsDouble();
+                    hi = e.getAsJsonArray().get(1).getAsDouble();
+                } else if (e.isJsonPrimitive() && e.getAsJsonPrimitive().isNumber()) lo = hi = e.getAsDouble();
+                else return null;
+            } catch (RuntimeException bad) {
+                return null;
+            }
+            if (!Double.isFinite(lo) || !Double.isFinite(hi)) return null;
+            lo = Math.max(r.min(), Math.min(r.max(), lo));
+            hi = Math.max(r.min(), Math.min(r.max(), hi));
+            JsonArray a = new JsonArray();
+            a.add(Math.min(lo, hi));
+            a.add(Math.max(lo, hi));
+            return a;
+        }
+        if (!e.isJsonPrimitive()) return null;
         JsonPrimitive p = e.getAsJsonPrimitive();
+        if (r.type().equals("choice")) {
+            if (p.isNumber()) {
+                double d = p.getAsDouble();
+                int k = (int) d;
+                return k == d && k >= 0 && k < r.options().size() ? new JsonPrimitive(r.options().get(k)) : null;
+            }
+            String t = p.getAsString().trim().toLowerCase(java.util.Locale.ROOT);
+            return r.options().contains(t) ? new JsonPrimitive(t) : null;
+        }
         if (r.type().equals("bool")) return p.isBoolean() ? p : null;
         if (!p.isNumber()) return null;
         double d = p.getAsDouble();
@@ -428,7 +544,7 @@ public final class GiantsAdmin {
     }
 
     /** the world's values in, his config put together again with them on top */
-    static void put(Map<String, JsonPrimitive> w, Map<String, Double> a) {
+    static void put(Map<String, JsonElement> w, Map<String, Double> a) {
         boolean[] on = filled(true);
         float[] cool = filledF(), wind = filledF();
         for (var e : w.entrySet()) {
@@ -483,6 +599,11 @@ public final class GiantsAdmin {
             if (r == null || r.field() == null) continue;
             try {
                 switch (r.type()) {
+                    case "range" -> {
+                        r.field().setFloat(v, e.getValue().getAsJsonArray().get(0).getAsFloat());
+                        r.field2().setFloat(v, e.getValue().getAsJsonArray().get(1).getAsFloat());
+                    }
+                    case "choice" -> r.field().set(v, e.getValue().getAsString());
                     case "bool" -> r.field().setBoolean(v, e.getValue().getAsBoolean());
                     case "int" -> r.field().setInt(v, e.getValue().getAsInt());
                     default -> r.field().setFloat(v, e.getValue().getAsFloat());
@@ -504,6 +625,7 @@ public final class GiantsAdmin {
     }
 
     private static String plain(Object v) {
+        if (v instanceof float[] a && a.length == 2) return plain(a[0]) + "-" + plain(a[1]);
         if (v instanceof Boolean b) return b ? "on" : "off";
         if (v instanceof Float f) return new java.math.BigDecimal(Float.toString(f)).stripTrailingZeros()
                 .toPlainString();

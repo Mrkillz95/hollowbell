@@ -202,6 +202,7 @@ final class BellHolds {
     boolean startCarry(LivingEntity who) {
         if (h.sunk()
                 || h.isDeadOrDying()
+                || !h.bigEnoughToHold()
                 || mv.grabbed != null
                 || mv.grabbedTree != null
                 || !HollowbellEntity.canCarry(who)

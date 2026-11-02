@@ -388,8 +388,28 @@ final class BellFlight {
                 if (d.lengthSqr() < 1e-4) d = new Vec3(1, 0, 0);
                 want = hb.position().add(d.normalize().scale(60 * s + 30));
                 hb.wanderTo = null;
+            } else if (net.jj.hollowbell.GiantsBehave.stays()) {
+                // (Part 4, roam stay) he picks no spot of his own and isn't pulled home: he stays where he is
+                hb.wanderTo = null;
+            } else if (net.jj.hollowbell.GiantsBehave.wanders()) {
+                // (Part 4, roam wander) far off along the way he's going, and the next as soon as he's there (a spot
+                // from seeking giants or a raid comes first while it's fresh)
+                boolean given = hb.wanderTo != null && hb.level().getGameTime() < hb.roamUntil;
+                boolean there = hb.wanderTo == null || hb.horiz(hb.wanderTo) <= 8 * s + 3;
+                if (!given && (there || --hb.wanderIn <= 0)) {
+                    hb.wanderIn = 6000;
+                    hb.goal = null;
+                    hb.wanderTo = hb.farSpot();
+                    hb.cruise = hb.getRandom().nextInt(3) == 0
+                            ? (20 + hb.getRandom().nextDouble() * 30) * s + 4
+                            : (2 + hb.getRandom().nextDouble() * 14) * s + 1;
+                }
+                if (hb.wanderTo != null && hb.horiz(hb.wanderTo) > 8 * s + 3) want = hb.wanderTo;
             } else {
-                if (--hb.wanderIn <= 0 || (hb.home != null && hb.horiz(hb.home) > wanderRange() * 1.3)) {
+                // (a spot given by seeking giants or a raid: his home doesn't pull him back from it while it's fresh)
+                boolean given = hb.wanderTo != null && hb.level().getGameTime() < hb.roamUntil;
+                if (--hb.wanderIn <= 0
+                        || (!given && hb.home != null && hb.horiz(hb.home) > wanderRange() * 1.3)) {
                     hb.wanderIn = 300 + hb.getRandom().nextInt(500);
                     Vec3 c = hb.isGuardian() && hb.home != null ? hb.home : hb.position();
                     double a = hb.getRandom().nextDouble() * Math.PI * 2,

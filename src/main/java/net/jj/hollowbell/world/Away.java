@@ -471,6 +471,22 @@ public final class Away extends SavedData {
                 }
             }
             r.settle(now);
+            // (Part 4, roam wander) a sum that got there with nobody near keeps travelling (a book's circle holds him)
+            if (!r.going
+                    && !r.stay
+                    && !r.hold
+                    && r.follow == null
+                    && !(r.body.contains("BoundR") && r.body.getInt("BoundR") > 0)
+                    && r.speed > 0
+                    && net.jj.hollowbell.GiantsBehave.wanders()) {
+                double[] far = net.jj.hollowbell.GiantsBehave.farSpot(
+                        l, r.fromX, r.fromZ, l.random.nextDouble() * 360, l.random);
+                r.toX = far[0];
+                r.toZ = far[1];
+                r.start = now;
+                r.going = true;
+                setDirty();
+            }
             Vec3 s = r.spot(now);
             double back = backRange(server, r.scale);
             for (ServerPlayer p : l.players()) {

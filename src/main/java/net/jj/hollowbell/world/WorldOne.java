@@ -63,6 +63,8 @@ public class WorldOne extends SavedData {
     private int deathX, deathZ;
 
     private boolean deathKnown;
+    /** (Part 4) one of him has fallen in this world: with respawn off no other comes (saved) */
+    private boolean fell;
 
     public static final int GROUND_VERSION = 3;
 
@@ -179,6 +181,8 @@ public class WorldOne extends SavedData {
         placed = false;
         alive = false;
         dueAt = -1;
+        fell = false;
+        drawnScale = Float.NaN;
         x = 0;
         z = 0;
         oneId = null;
@@ -560,6 +564,7 @@ public class WorldOne extends SavedData {
         w.homeRadius = tag.contains("HomeRadius") ? tag.getInt("HomeRadius") : 320;
         w.homeSeed = tag.getLong("HomeSeed");
         w.groundVersion = tag.contains("GroundVersion") ? tag.getInt("GroundVersion") : 1;
+        w.fell = tag.getBoolean("Fell");
         if (tag.contains("DeathX")) {
             w.deathKnown = true;
             w.deathX = tag.getInt("DeathX");
@@ -597,6 +602,7 @@ public class WorldOne extends SavedData {
         tag.putInt("HomeRadius", homeRadius);
         tag.putLong("HomeSeed", homeSeed);
         tag.putInt("GroundVersion", groundVersion);
+        if (fell) tag.putBoolean("Fell", true);
         if (deathKnown) {
             tag.putInt("DeathX", deathX);
             tag.putInt("DeathZ", deathZ);
@@ -722,6 +728,7 @@ public class WorldOne extends SavedData {
      */
     public void died(ServerLevel level, HollowbellEntity h) {
         alive = false;
+        fell = true;
         oneId = null;
         // measured from where he fell if that was the overworld, otherwise from where he was last seen in it
         boolean over = h.level().dimension() == Level.OVERWORLD;
@@ -985,6 +992,8 @@ public class WorldOne extends SavedData {
             return;
         }
         if (dueAt < 0 || level.getGameTime() < dueAt) return;
+        // (Part 4) respawn off: once one has fallen, no other comes
+        if (heldBackByRespawn()) return;
         // and the spawner never pushes anybody out to make room
         int max = BellConfig.V.maxInWorld;
         if (max > 0 && away.count() >= max) return;
@@ -1142,7 +1151,7 @@ public class WorldOne extends SavedData {
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
         if (e == null) return;
         e.setBellScale(Mth.clamp(
-                net.jj.hollowbell.GiantsAdmin.sized(BellConfig.V.worldScale),
+                net.jj.hollowbell.GiantsAdmin.sized(spawnScale(level)),
                 HollowbellEntity.MIN_SCALE,
                 HollowbellEntity.MAX_SCALE));
         e.setVariant(HollowbellEntity.CALM);
@@ -1157,8 +1166,71 @@ public class WorldOne extends SavedData {
         level.addFreshEntityWithPassengers(e);
         alive = true;
         dueAt = -1;
+        drawnScale = Float.NaN;
         setDirty();
         HollowbellMod.LOG.info("The Hollowbell has come down at {}, {}, {}", x, y, z);
+    }
+
+    /** (Part 4, spawnSize) the size drawn for the next one, kept while he waits to come down */
+    private float drawnScale = Float.NaN;
+
+    /** the next one's size before the all-giants one: worldScale, or worldScale x the spread drawn once */
+    private float spawnScale(ServerLevel level) {
+        if (BellConfig.V.spawnSizeMin == 1f && BellConfig.V.spawnSizeMax == 1f) return BellConfig.V.worldScale;
+        if (Float.isNaN(drawnScale)) drawnScale = net.jj.hollowbell.GiantsBehave.spawnScale(level.random);
+        return drawnScale;
+    }
+
+    /** (Part 4) respawn is off and one of him has fallen: no new one comes down while it stays off */
+    public boolean heldBackByRespawn() {
+        return !BellConfig.V.respawn && fell;
+    }
+
+    /** (Part 4) one of him has fallen in this world (respawn off: no other comes) */
+    public boolean fellOnce() {
+        return fell;
+    }
+
+    /** how many of him the world holds, counted as the cap counts: standing in any level, and out of the world */
+    public static int standing(MinecraftServer server) {
+        int n = 0;
+        for (ServerLevel l : server.getAllLevels())
+            n += l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()).size();
+        return n + Away.get(server).count();
+    }
+
+    /**
+     * (Part 4, worldCount) a companion beside the world's own one: a wild one, calm as the world's own comes, at the
+     * spawn size, coming down out of the sky 1.5 to 3 times his reach away over loaded land. Null if no spot.
+     */
+    public static @Nullable HollowbellEntity companion(ServerLevel level, HollowbellEntity lead) {
+        float size = Mth.clamp(
+                net.jj.hollowbell.GiantsAdmin.sized(net.jj.hollowbell.GiantsBehave.spawnScale(level.random)),
+                HollowbellEntity.MIN_SCALE,
+                HollowbellEntity.MAX_SCALE);
+        double reach = Math.max(lead.bellRadius(), 110 * lead.bellScale());
+        int[] at = null;
+        for (int i = 0; i < 8 && at == null; i++) {
+            double a = level.random.nextDouble() * Math.PI * 2;
+            double d = Math.max(12, reach * (1.5 + 1.5 * level.random.nextDouble()));
+            int cx = Mth.floor(lead.getX() + Math.cos(a) * d), cz = Mth.floor(lead.getZ() + Math.sin(a) * d);
+            if (!NoWait.loaded(level, cx, cz) || !level.getWorldBorder().isWithinBounds(cx, cz)) continue;
+            if (lead.warded(cx, cz)) continue;
+            at = new int[] {cx, cz};
+        }
+        if (at == null) return null;
+        HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
+        if (e == null) return null;
+        e.setBellScale(size);
+        e.setVariant(HollowbellEntity.CALM);
+        int y = NoWait.heightOrGuess(level, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at[0], at[1]);
+        e.moveTo(at[0] + 0.5, Math.max(y, level.getMinBuildHeight() + 1), at[1] + 0.5,
+                level.random.nextFloat() * 360f, 0f);
+        e.setHome(lead.home() != null ? lead.home() : e.position());
+        level.getChunkSource().addRegionTicket(TICKET, new ChunkPos(e.blockPosition()), 2, e.getId());
+        level.addFreshEntityWithPassengers(e);
+        HollowbellMod.LOG.info("A companion Hollowbell comes down at {}, {}", at[0], at[1]);
+        return e;
     }
 
     public static void serverTick(MinecraftServer server) {

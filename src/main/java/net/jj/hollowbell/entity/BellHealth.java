@@ -523,6 +523,8 @@ final class BellHealth {
                 } finally {
                     List<ItemStack> loot = hb.caught;
                     hb.caught = null;
+                    // (Part 4) times the world's loot setting
+                    loot = net.jj.hollowbell.GiantsBehave.loot(loot, hb.getRandom());
                     if (!loot.isEmpty()) {
                         boolean grief =
                                 BellConfig.V.griefing && sl.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);

@@ -142,6 +142,7 @@ final class BellTargets {
                                 > (foe ? Meeting.range(hb.bellScale()) * 2 + hb.senseRange() : hb.senseRange() * 1.6)
                         || pastHisCircle(t.position())
                         || (hb.isGuardian()
+                                && !net.jj.hollowbell.GiantsBehave.huntsNow(hb.level())
                                 && hb.home != null
                                 && t.position().distanceTo(hb.home) > hb.guardRange() * 1.3
                                 && hb.angerTicks <= 0))) {
@@ -197,7 +198,11 @@ final class BellTargets {
                 && !grudges.has(t.getUUID())
                 && !t.getUUID().equals(hb.hunted);
         if (t != null && !onMob) return;
-        if (hb.variant() == HollowbellEntity.CALM && hb.angerTicks <= 0) return;
+        // (Part 4) his temper: a hunter's (or a day sleeper's at night, or a raider's) eyes whatever his mood;
+        // peaceful, no player only seen
+        boolean hunts = net.jj.hollowbell.GiantsBehave.huntsNow(hb.level()),
+                peaceful = net.jj.hollowbell.GiantsBehave.peaceful();
+        if (hb.variant() == HollowbellEntity.CALM && hb.angerTicks <= 0 && !hunts) return;
         double r = hb.senseRange();
         Player best = null;
         double bd = Double.MAX_VALUE;
@@ -205,7 +210,9 @@ final class BellTargets {
             if (!fairGame(p) || pastHisCircle(p.position())) continue;
             double d = hb.horiz(p.position());
             if (d > r) continue;
-            if (hb.isGuardian() && hb.home != null && p.position().distanceTo(hb.home) > hb.guardRange()) continue;
+            if (peaceful && bySightOnly(p)) continue;
+            if (hb.isGuardian() && !hunts && hb.home != null && p.position().distanceTo(hb.home) > hb.guardRange())
+                continue;
             // (picked on sight: one he can't see from anywhere on him is left be)
             if (d < bd && (!bySightOnly(p) || HuntSight.sees(hb.level(), lookouts(p), p))) {
                 bd = d;
@@ -233,7 +240,9 @@ final class BellTargets {
                         // (another giant is met by the meeting rules, not picked like any monster: see meetTick; nor is
                         // its
                         // helper, which he only fights when it goes for him)
-                        e -> e instanceof Enemy
+                        e -> (e instanceof Enemy
+                                        || net.jj.hollowbell.GiantsBehave.raidPrey(e)
+                                                && !net.jj.hollowbell.GiantsBehave.peaceful())
                                 && !(e instanceof Player)
                                 && !Giants.isGiant(e)
                                 && !e.getTags().contains(Giants.KIN)
@@ -385,6 +394,13 @@ final class BellTargets {
                 && hb.level().getGameTime() >= hb.fleeUntil;
     }
 
+    /** (Part 4, seekGiants) free to go looking for a giant: free to meet, fights and meetings on */
+    public boolean freeToSeek() {
+        return freeToMeet()
+                && BellConfig.V.fightGiants
+                && net.jj.hollowbell.GiantsPerf.worldOn("feature.meetings");
+    }
+
     /** the giant this body or part belongs to, as a creature */
     static @Nullable LivingEntity giantOf(Entity e) {
         return Giants.ownerOf(e);
@@ -476,7 +492,7 @@ final class BellTargets {
             best = g;
         }
         if (best == null) return;
-        Meeting.Way way = Meeting.way(Meeting.ME, Meeting.kindOf(best));
+        Meeting.Way way = Meeting.wayNow(Meeting.kindOf(best));
         if (way == Meeting.Way.FIGHT && BellConfig.V.fightGiants) startMeeting(best);
         else if (way == Meeting.Way.AVOID) {
             hb.meetAvoid = best.getUUID();

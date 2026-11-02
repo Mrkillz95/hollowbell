@@ -238,7 +238,8 @@ public class FlightTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "sizes")
     public void theSmallestAndTheBiggestWork(GameTestHelper h) {
-        HollowbellEntity tiny = spawnAway(h, HollowbellEntity.MIN_SCALE, HollowbellEntity.HUNTER, 70);
+        // (the smallest that still lifts things: below it he holds nothing, see BehaviourTests.heCanBeAboutTwoBlocksTall)
+        HollowbellEntity tiny = spawnAway(h, HollowbellEntity.HOLD_MIN_SCALE, HollowbellEntity.HUNTER, 70);
         HollowbellEntity big = spawnAway(h, HollowbellEntity.MAX_SCALE, HollowbellEntity.HUNTER, 72);
         Pig[] p = new Pig[1];
         h.runAfterDelay(20, () -> {

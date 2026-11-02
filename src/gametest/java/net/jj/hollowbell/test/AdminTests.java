@@ -62,7 +62,7 @@ public class AdminTests implements FabricGameTest {
         // every config field is an admin setting or deliberately not one (a new field must pick)
         for (Field f : BellConfig.Values.class.getFields()) {
             if (Modifier.isStatic(f.getModifiers())) continue;
-            h.assertTrue(ids.contains(f.getName()) ^ GiantsAdmin.NOT_ADMIN.contains(f.getName()),
+            h.assertTrue((ids.contains(f.getName()) || GiantsAdmin.rows().stream().anyMatch(r -> r.field() != null && r.field().getName().equals(f.getName()) || r.field2() != null && r.field2().getName().equals(f.getName()))) ^ GiantsAdmin.NOT_ADMIN.contains(f.getName()),
                     f.getName() + " is either an admin setting or listed as not one");
         }
         // each fighting move: on, wait and wind

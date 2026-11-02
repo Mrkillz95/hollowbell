@@ -71,6 +71,7 @@ dependencies {
 // the game test classes; ./gradlew runGametest -Ponly=SolidTests,HeightTests runs just those
 def allTests = [
     'net.jj.hollowbell.test.HollowbellGameTests',
+    'net.jj.hollowbell.test.BehaviourTests',
     'net.jj.hollowbell.test.MoveTests',
     'net.jj.hollowbell.test.KillTests',
     'net.jj.hollowbell.test.GrabTests',

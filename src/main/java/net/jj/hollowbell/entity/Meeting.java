@@ -94,6 +94,12 @@ public final class Meeting {
         return TABLE[a].charAt(b) == 'f' ? Way.FIGHT : Way.AVOID;
     }
 
+    /** (Part 4) what he does now: seeking other giants, every meeting with another kind is a fight */
+    public static Way wayNow(@Nullable String other) {
+        Way w = way(ME, other);
+        return w == Way.AVOID && BellConfig.V.seekGiants ? Way.FIGHT : w;
+    }
+
     /** which giant this is (its kind tag first, then its entity type's mod), or null for anything else */
     public static @Nullable String kindOf(@Nullable Entity e) {
         if (e == null) return null;

@@ -178,6 +178,13 @@ public final class AdminScope {
         if (!world) {
             Map<Field, Object> file = new LinkedHashMap<>();
             for (var e : values.entrySet()) {
+                GiantsAdmin.Row rr = GiantsAdmin.row(e.getKey());
+                // (a range: both its fields)
+                if (rr != null && rr.field2() != null && e.getValue() instanceof float[] lh && lh.length == 2) {
+                    file.put(rr.field(), lh[0]);
+                    file.put(rr.field2(), lh[1]);
+                    continue;
+                }
                 try {
                     file.put(BellConfig.Values.class.getField(e.getKey()), e.getValue());
                 } catch (NoSuchFieldException ex) {
@@ -227,9 +234,13 @@ public final class AdminScope {
         if (r == null) return List.of("no", rejected(id, "unknown"));
         // (a move's switch, wait and wind are only ever kept for a world: his file has none)
         if (r.field() == null) return List.of("no", rejected(id, "world only"));
-        JsonPrimitive v = GiantsAdmin.check(r, value);
+        com.google.gson.JsonElement v = GiantsAdmin.check(r, value);
         if (v == null) return List.of("no", rejected(id, "bad value"));
         Object typed = switch (r.type()) {
+            case "range" -> new float[] {
+                v.getAsJsonArray().get(0).getAsFloat(), v.getAsJsonArray().get(1).getAsFloat()
+            };
+            case "choice" -> v.getAsString();
             case "bool" -> v.getAsBoolean();
             case "int" -> v.getAsInt();
             default -> v.getAsFloat();
@@ -247,7 +258,12 @@ public final class AdminScope {
         return o.toString();
     }
 
-    private static JsonPrimitive json(Object v) {
+    private static com.google.gson.JsonElement json(Object v) {
+        if (v instanceof float[] a) {
+            com.google.gson.JsonArray x = new com.google.gson.JsonArray();
+            for (float f : a) x.add(Double.parseDouble(Float.toString(f)));
+            return x;
+        }
         if (v instanceof Boolean b) return new JsonPrimitive(b);
         if (v instanceof Float f) return new JsonPrimitive(Double.parseDouble(Float.toString(f)));
         if (v instanceof Number n) return new JsonPrimitive(n);
@@ -256,6 +272,21 @@ public final class AdminScope {
 
     /** a value typed for a config field (on/off, a number), in the field's own type; null if it isn't one */
     public static @Nullable Object parse(String id, String text) {
+        GiantsAdmin.Row row = GiantsAdmin.row(id);
+        if (row != null && row.type().equals("range")) {
+            String[] w = text.trim().replace("..", "-").split("\s*-\s*|\s+");
+            try {
+                float lo = Float.parseFloat(w[0]), hi = w.length > 1 ? Float.parseFloat(w[1]) : lo;
+                if (w.length > 2 || !Float.isFinite(lo) || !Float.isFinite(hi)) return null;
+                return new float[] {Math.min(lo, hi), Math.max(lo, hi)};
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        if (row != null && row.type().equals("choice")) {
+            String t = text.trim().toLowerCase(Locale.ROOT);
+            return row.options().contains(t) ? t : null;
+        }
         try {
             Field f = BellConfig.Values.class.getField(id);
             String v = text.trim().toLowerCase(Locale.ROOT);

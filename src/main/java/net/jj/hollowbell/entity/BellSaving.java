@@ -75,6 +75,8 @@ final class BellSaving {
         }
         if (hb.bornAt >= 0) tag.putLong("BornAt", hb.bornAt);
         if (hb.worldOne) tag.putBoolean("WorldOne", true);
+        if (hb.companionsCame) tag.putBoolean("CompanionsCame", true);
+        if (hb.companionAt != 0) tag.putLong("CompanionAt", hb.companionAt);
         if (hb.deathBy != null) tag.putUUID("DeathBy", hb.deathBy);
         // (his waits as time left: the game clock of another world, or after a long time away, means nothing)
         tag.putLong("HeavyIn", hb.moves.heavyIn());
@@ -192,6 +194,8 @@ final class BellSaving {
         // one from before ages were kept counts as the oldest there is
         hb.bornAt = tag.contains("BornAt") ? tag.getLong("BornAt") : hb.loadedFromSave ? 0 : -1;
         hb.worldOne = tag.getBoolean("WorldOne");
+        hb.companionsCame = tag.getBoolean("CompanionsCame");
+        hb.companionAt = tag.getLong("CompanionAt");
         hb.deathBy = tag.hasUUID("DeathBy") ? tag.getUUID("DeathBy") : null;
         hb.heavyIn = tag.contains("HeavyIn") ? tag.getLong("HeavyIn") : -1;
         hb.fightFor = tag.contains("FightFor") ? tag.getLong("FightFor") : -1;

@@ -180,6 +180,29 @@ public final class BellConfig {
          * settings.
          */
         public int awayBlocks = 0;
+        // Part 4 (ADMIN_BRIDGE.md 19): behaviour settings every giant shares. As shipped they change nothing.
+        /** the world's own one (and his companions) come at worldScale times a random number from here... */
+        public float spawnSizeMin = 1.0f;
+        /** ...to here (1 and 1: always worldScale) */
+        public float spawnSizeMax = 1.0f;
+        /** how many of him the world keeps: the world's own one and companions beside him (1 = only him) */
+        public int worldCount = 1;
+        /** off: once the world's own one falls, no other comes in this world */
+        public boolean respawn = true;
+        /** peaceful (never starts a fight with a player), normal (as his mood says), hunter (hunts every player) */
+        public String temper = "normal";
+        /** home (wanders as always), wander (travels the whole world), stay (stays where he is) */
+        public String roam = "home";
+        /** he travels to the nearest other giant and fights it */
+        public boolean seekGiants = false;
+        /** he heads for villages and players and attacks */
+        public boolean raidVillages = false;
+        /** usual, day (sleeps all day, hunts all night), never */
+        public String sleepSchedule = "usual";
+        /** at night his hits times this */
+        public float nightStrength = 1.0f;
+        /** what he drops when he falls, times this */
+        public float lootMultiplier = 1.0f;
     }
 
     /**
@@ -403,9 +426,9 @@ public final class BellConfig {
         v.mobDamage = clamp(v.mobDamage, 0f, 100f, 2.5f);
         v.giantArmor = clamp(v.giantArmor, 0f, 10f, 1.38f);
         v.explosionArmor = clamp(v.explosionArmor, 0f, 10f, 0.35f);
-        v.spawnEggScale = clamp(v.spawnEggScale, 0.03f, 2f, 1f);
-        v.smallEggScale = clamp(v.smallEggScale, 0.03f, 2f, 0.2f);
-        v.worldScale = clamp(v.worldScale, 0.03f, 2f, 1f);
+        v.spawnEggScale = clamp(v.spawnEggScale, 0.01f, 2f, 1f);
+        v.smallEggScale = clamp(v.smallEggScale, 0.01f, 2f, 0.2f);
+        v.worldScale = clamp(v.worldScale, 0.01f, 2f, 1f);
         v.healHomePerMinute = clamp(v.healHomePerMinute, 0f, 100f, 2f);
         v.healAwayPerMinute = clamp(v.healAwayPerMinute, 0f, 100f, 1f);
         v.healPauseMinutes = clamp(v.healPauseMinutes, 0f, 60f, 5f);
@@ -415,6 +438,7 @@ public final class BellConfig {
         v.podRegrowSeconds = Math.max(0, v.podRegrowSeconds);
         v.sunkSeconds = Math.max(0, v.sunkSeconds);
         v.shedCount = Math.max(0, v.shedCount);
+        GiantsBehave.clamp(v);
     }
 
     /** kept within lo..hi; a value that isn't a number at all goes back to the default */

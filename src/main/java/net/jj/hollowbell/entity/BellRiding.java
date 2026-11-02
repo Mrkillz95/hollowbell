@@ -124,7 +124,7 @@ final class BellRiding {
      * you up his side, round the rim and over the dome, and sets you down on his crown (see BellMoves.runCarry).
      */
     public boolean comeAndGetMe(LivingEntity who) {
-        if (hb.rider != null || hb.isDeadOrDying() || hb.resting() || who == hb) return false;
+        if (hb.rider != null || hb.isDeadOrDying() || hb.resting() || who == hb || !hb.bigEnoughToHold()) return false;
         hb.fetching = who.getUUID();
         hb.setStay(false);
         return true;

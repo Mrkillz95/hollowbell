@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.jj.hollowbell.Adv;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.Detail;
+import net.jj.hollowbell.GiantsBehave;
 import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
@@ -81,7 +82,7 @@ import org.joml.Vector3f;
  */
 public class HollowbellEntity extends Monster implements SitHost {
     public static final int CALM = 0, HUNTER = 1, GUARDIAN = 2;
-    public static final float MIN_SCALE = 0.03f, MAX_SCALE = 2f;
+    public static final float MIN_SCALE = 0.01f, MAX_SCALE = 2f;
 
     static final EntityDataAccessor<Float> DATA_SCALE =
             SynchedEntityData.defineId(HollowbellEntity.class, EntityDataSerializers.FLOAT);
@@ -227,6 +228,14 @@ public class HollowbellEntity extends Monster implements SitHost {
     long bornAt = -1;
     /** the one the world keeps (see WorldOne); saved with him */
     boolean worldOne;
+    /** (the world's own one, ADMIN_BRIDGE 19.4 worldCount) his companions came, and when the next may */
+    boolean companionsCame;
+
+    long companionAt;
+    /** (roam wander) the way he is travelling, degrees; NaN until he first picks a far spot */
+    double roamHeading = Double.NaN;
+    /** (seekGiants, raids) the wander spot was given by roamLook: until this tick his home doesn't pull it back */
+    long roamUntil;
     /** true when he was read back from a save (or from being away), not freshly made: the cap leaves him be */
     boolean loadedFromSave;
     /** bound to a circle he will not leave on his own (the book's "keep to here"); boundR <= 0 = free */
@@ -381,7 +390,9 @@ public class HollowbellEntity extends Monster implements SitHost {
         long now = level().getGameTime();
         if (asleep) {
             if (rider != null) wakeUp();
-            else if (isHunter()) {
+            // (Part 4) a day sleeper gets up at dusk
+            else if (tickCount % 20 == 0 && GiantsBehave.daySleeper(level()) && !level().isDay()) wakeUp();
+            else if (huntsLikeAHunter() && !GiantsBehave.peaceful()) {
                 double r = 32 * bellScale() + 8;
                 for (Player p : level().players())
                     if (targets.fairGame(p)
@@ -403,9 +414,10 @@ public class HollowbellEntity extends Monster implements SitHost {
                     || now - hurtAt < 600
                     || moves.holdsStill();
             // a hunter only sleeps at night; calm and guardian whenever they're left alone
-            boolean may = !isHunter() || level().isNight();
-            quiet = busy || !may ? 0 : quiet + 1;
-            if (quiet >= quietBeforeSleep) goToSleep();
+            // (Part 4) a day sleeper sleeps by day only, whatever his mood; never: he doesn't lie down on his own
+            boolean may = GiantsBehave.daySleeper(level()) ? level().isDay() : !huntsLikeAHunter() || level().isNight();
+            quiet = busy || !may || GiantsBehave.neverSleeps() ? 0 : quiet + 1;
+            if (quiet >= (GiantsBehave.daySleeper(level()) ? GiantsBehave.DAY_SLEEP_AFTER : quietBeforeSleep)) goToSleep();
         }
         float k = entityData.get(DATA_SLEEP);
         float want = asleep ? 1f : 0f;
@@ -472,6 +484,11 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     public boolean isGuardian() {
         return variant() == GUARDIAN;
+    }
+
+    /** a hunting one, or one whose temper makes every one of him a hunter (Part 4) */
+    public boolean huntsLikeAHunter() {
+        return isHunter() || GiantsBehave.hunterTemper();
     }
 
     public Mood mood() {
@@ -1038,6 +1055,11 @@ public class HollowbellEntity extends Monster implements SitHost {
         if (!frozen) sleepTick();
         if (!frozen) targets.meetTick(now);
         if (!asleep && !frozen) targets.pickTarget();
+        // (Part 4) seeking giants, raids, and the world's own one's companions: each once every ten seconds
+        if (level() instanceof ServerLevel sl0 && GiantsBehave.lookNow(this)) {
+            if (!frozen && (BellConfig.V.raidVillages || BellConfig.V.seekGiants)) roamLook(sl0);
+            if (worldOne && BellConfig.V.worldCount > 1) companionsTick(sl0);
+        }
         if (comeTo != null && !frozen) flight.comeTick();
         flight.followTick();
         if (!frozen) moves.tick();
@@ -1205,6 +1227,22 @@ public class HollowbellEntity extends Monster implements SitHost {
         return goal;
     }
 
+    /** the spot he is wandering to of his own accord (not an order), or null */
+    public @Nullable Vec3 wandering() {
+        return wanderTo;
+    }
+
+    /** forget the spot he was wandering to (he picks again when he will) */
+    public void clearWandering() {
+        wanderTo = null;
+        roamUntil = 0;
+    }
+
+    /** (Part 4, seekGiants) free to go looking for another giant just now */
+    public boolean freeToSeek() {
+        return targets.freeToSeek();
+    }
+
     public void callTo(Player p) {
         setGoal(p.position());
     }
@@ -1320,6 +1358,17 @@ public class HollowbellEntity extends Monster implements SitHost {
     /** small creatures from the other giant mods he may still pick up (Furrowmaw's furrowlings) */
     public static final TagKey<EntityType<?>> CARRIED_ANYWAY = TagKey.create(
             Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(HollowbellMod.MOD_ID, "carried_anyway"));
+
+    /** below his old smallest size (0.03, about 6 blocks tall) he is smaller than a player */
+    public static final float HOLD_MIN_SCALE = 0.03f;
+
+    /**
+     * Big enough to pick things up, carry somebody up to his crown and keep anything in his dome: at his old smallest
+     * size and up (Part 4 let him go down to 0.01, about 2 blocks tall; that small he lifts and holds nothing).
+     */
+    public boolean bigEnoughToHold() {
+        return bellScale() >= HOLD_MIN_SCALE;
+    }
 
     /**
      * Whether his strands and arms can pick this up. Never the giants: Pitchgut, Cerberus, Furrowmaw, any boss, any
@@ -1928,7 +1977,81 @@ public class HollowbellEntity extends Monster implements SitHost {
         float size = Mth.clamp(0.2f + 0.8f * (float) Math.pow(bellScale(), 0.6), 0.25f, 1.5f);
         float f = base * BellConfig.V.damageMultiplier * net.jj.hollowbell.GiantsAdmin.all("all.damage") * size;
         if (!(to instanceof Player)) f *= BellConfig.V.mobDamage;
-        return f;
+        return GiantsBehave.nightHit(level(), f);
+    }
+
+    /**
+     * Seeking other giants and raids (Part 4): once every ten seconds, free and with nothing better to do, the next
+     * place to make for becomes his wander spot (never an order; his home doesn't pull him back from it).
+     */
+    public void roamLook(ServerLevel sl) {
+        if (GiantsBehave.stays() || asleep || frozen || stay || isDeadOrDying()) return;
+        if (rider != null || goal != null || comeTo != null || fetching != null || flight.follow != null) return;
+        if (yielding() || targets.keepAwayFrom() != null) return;
+        Vec3 to = null;
+        if (BellConfig.V.raidVillages && getTarget() == null)
+            to = GiantsBehave.raidSpot(sl, this, p -> targets.fairGame(p) && !pastCircle(p.position()));
+        if (to == null && BellConfig.V.seekGiants && targets.freeToSeek()) {
+            to = GiantsBehave.seekSpot(sl, this, e -> e != this
+                    && e.isAlive()
+                    && Giants.isGiant(e)
+                    && Giants.ownerOf(e) == e
+                    && Meeting.way(Meeting.ME, Meeting.kindOf(e)) != Meeting.Way.NONE
+                    && !Meeting.yielding(e)
+                    && targets.meetCooldownLeft(e.getUUID()) <= 0
+                    && targets.fairGame((LivingEntity) e));
+        }
+        if (to == null) return;
+        to = keptIn(to);
+        if (warded(to.x, to.z)) return;
+        wanderTo = new Vec3(to.x, getY(), to.z);
+        roamUntil = sl.getGameTime() + 220;
+        wanderIn = Math.max(wanderIn, 220);
+    }
+
+    /** bound to a circle, a spot too far outside it */
+    private boolean pastCircle(Vec3 at) {
+        return bound() && Math.hypot(at.x - boundX, at.z - boundZ) > boundR + 110 * bellScale() + 40;
+    }
+
+    /** (roam wander) a far spot along the way he's travelling */
+    Vec3 farSpot() {
+        if (Double.isNaN(roamHeading)) roamHeading = getYRot();
+        double[] s = GiantsBehave.farSpot(level(), getX(), getZ(), roamHeading, random);
+        roamHeading = s[2];
+        return new Vec3(s[0], getY(), s[1]);
+    }
+
+    /**
+     * The world's own one's companions (Part 4, worldCount): once every ten seconds while he is here. The first
+     * time every missing one comes at once; after that one each time worldRespawnDays has passed.
+     */
+    public void companionsTick(ServerLevel sl) {
+        int want = BellConfig.V.worldCount, cap = BellConfig.V.maxInWorld;
+        if (want <= 1) return;
+        net.minecraft.server.MinecraftServer server = sl.getServer();
+        int n = WorldOne.standing(server);
+        if (n >= want || cap > 0 && n >= cap) {
+            if (n >= want) companionsCame = true;
+            return;
+        }
+        long now = sl.getGameTime();
+        int come;
+        if (!companionsCame) {
+            // (respawn off: none once one of him has fallen)
+            if (!BellConfig.V.respawn && WorldOne.get(server).fellOnce()) return;
+            come = want - n;
+        } else {
+            if (!BellConfig.V.respawn || now < companionAt) return;
+            come = 1;
+        }
+        if (cap > 0) come = Math.min(come, cap - n);
+        int made = 0;
+        for (int i = 0; i < come; i++) if (WorldOne.companion(sl, this) != null) made++;
+        if (made > 0) {
+            companionAt = now + Math.max(1200L, BellConfig.V.worldRespawnDays * 24000L);
+            if (n + made >= want) companionsCame = true;
+        }
     }
 
     public long bornAt() {
@@ -2170,7 +2293,7 @@ public class HollowbellEntity extends Monster implements SitHost {
                 && !ghost
                 && (!isDeadOrDying() || lowering)
                 && solidVer > 0
-                && bellScale() >= 0.02f
+                && bellScale() >= MIN_SCALE
                 && BellSolid.ready()
                 && (!level().isClientSide || tickCount > 1);
     }
