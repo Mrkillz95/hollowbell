@@ -1,0 +1,76 @@
+# Pictures of the Giants Admin Book with the eight giants loaded:
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+# (they land in build/autotest/screenshots). A few settings are changed first so the pages show changed values,
+# the danger rating moving and clashes; GUISCALE is set by the line below (copy the file for 1 and 3).
+guiscale 2
+wait 40
+cmd giants admin set wreckback healthMultiplier 2
+cmd giants admin set wreckback move.claw_snip.on off
+cmd giants admin set wreckback move.claw_snip.cooldown 0.5
+cmd giants admin set all damage 1.5
+cmd giants admin set all health 1.25
+cmd giants admin set pitchgut maxInWorld 0
+cmd giants admin set hollowbell chunkLoading off
+cmd giants admin set cerberus chunkLoading off
+wait 20
+adminintro unseen
+adminmode simple
+adminbook home
+wait 60
+mouse 2 2
+wait 10
+shot ab_intro_0
+adminintro 2
+adminbook home
+wait 30
+mouse 2 2
+shot ab_intro_2
+close
+adminintro seen
+adminbook home
+wait 40
+mouse 2 2
+wait 10
+shot ab_home
+adminbook home 400
+wait 30
+mouse 2 2
+shot ab_home_end
+adminbook all
+wait 30
+mouse 2 2
+shot ab_all
+adminbook wreckback
+wait 30
+mouse 2 2
+shot ab_wreckback_simple
+adminmode advanced
+adminbook wreckback
+wait 30
+mouse 2 2
+shot ab_wreckback_top
+adminbook wreckback 900
+wait 30
+mouse 2 2
+shot ab_wreckback_moves
+adminbook swarmforge 300
+wait 30
+mouse 2 2
+shot ab_swarmforge
+adminbook home 0 heal
+wait 30
+mouse 2 2
+shot ab_search_heal
+adminconfirm wreckback homeRadius
+adminbook wreckback
+wait 30
+mouse 2 2
+shot ab_confirm_newland
+close
+adminscope all
+adminbook wreckback
+wait 30
+mouse 2 2
+shot ab_allworlds
+close
+quit

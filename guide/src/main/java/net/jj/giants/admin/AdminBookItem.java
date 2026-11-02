@@ -18,8 +18,8 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
 /**
- * The Giants Admin Book (/giants adminbook, operators only). Its pages come in Part 2 (ADMIN_BOOK.md); for now it
- * points to /giants admin. In anybody else's hands it does nothing but say it is for admins.
+ * The Giants Admin Book (/giants adminbook, operators only): every giant's settings for this world, on pages
+ * (AdminBook, ADMIN_BOOK.md). In anybody else's hands it does nothing but say it is for admins.
  */
 public class AdminBookItem extends Item {
     public static final AdminBookItem BOOK =
@@ -42,13 +42,8 @@ public class AdminBookItem extends Item {
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        if (!level.isClientSide && player instanceof ServerPlayer p) {
-            p.displayClientMessage(
-                    Component.literal(p.hasPermissions(AdminCommand.OPS)
-                            ? "Its pages are still being written. For now: /giants admin."
-                            : "This book is for admins."),
-                    true);
-        }
+        // (the server decides: an operator's game opens the book, anyone else is told it is for admins)
+        if (!level.isClientSide && player instanceof ServerPlayer p) AdminBook.open(p);
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }
 

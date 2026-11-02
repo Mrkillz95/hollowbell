@@ -163,6 +163,8 @@ public final class AdminWorld extends SavedData {
     }
 
     public void log(Change c) {
+        // (whoever has the admin book open sees it next tick)
+        AdminBook.changed(c.giant());
         log.add(c);
         while (log.size() > MOST_LOG) log.remove(0);
         setDirty();

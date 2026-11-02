@@ -98,10 +98,18 @@ public final class AdminJson {
 
     /** one setting line from a giant's mod, made safe; null if it can't be used */
     public static @Nullable AdminSetting setting(String giant, @Nullable JsonObject o) {
+        return setting(giant, o, false);
+    }
+
+    /**
+     * The same, also taking the all-giants ids when {@code shared} (the admin book's page of them, from the guide
+     * itself: a giant's own list may never hold one).
+     */
+    public static @Nullable AdminSetting setting(String giant, @Nullable JsonObject o, boolean shared) {
         if (o == null) return null;
         String id = str(o, "id", 64);
         Type type = Type.of(str(o, "type", 16));
-        if (!ID.matcher(id).matches() || type == null || id.startsWith("all.")) return null;
+        if (!ID.matcher(id).matches() || type == null || id.startsWith("all.") != shared) return null;
         String cat = str(o, "cat", 16);
         if (!AdminSetting.CATEGORIES.contains(cat)) cat = "behaviour";
         String when = str(o, "when", 16);
@@ -180,6 +188,34 @@ public final class AdminJson {
         } catch (RuntimeException e) {
             return or;
         }
+    }
+
+    /** one setting as a line of the giant's list (the same words), for the admin book's pages */
+    public static JsonObject write(AdminSetting s) {
+        JsonObject o = new JsonObject();
+        o.addProperty("id", s.id());
+        o.addProperty("cat", s.cat());
+        o.addProperty("type", s.type().word());
+        if (s.type() != Type.BOOL) {
+            o.addProperty("min", s.min());
+            o.addProperty("max", s.max());
+            o.addProperty("step", s.step());
+        }
+        if (s.type() == Type.CHOICE) {
+            JsonArray a = new JsonArray();
+            for (String x : s.options()) a.add(x);
+            o.add("options", a);
+        }
+        o.add("default", s.def());
+        o.add("value", s.value());
+        o.add("jar", s.jar());
+        o.addProperty("set", s.set());
+        o.addProperty("when", s.when());
+        o.addProperty("name", s.name());
+        if (!s.what().isEmpty()) o.addProperty("what", s.what());
+        if (!s.key().isEmpty()) o.addProperty("key", s.key());
+        if (!s.group().isEmpty()) o.addProperty("group", s.group());
+        return o;
     }
 
     /** the "adminset" argument: the world's values for one giant, and the all-giants ones */

@@ -8,6 +8,9 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.jj.giants.GiantsGuideMod;
 import net.jj.giants.client.GuideScreen;
+import net.jj.giants.client.admin.AdminBookClient;
+import net.jj.giants.client.admin.AdminBookScreen;
+import net.jj.giants.client.admin.AdminPrefs;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Map;
 import net.jj.giants.client.perf.ControlsClient;
@@ -40,7 +43,9 @@ import net.minecraft.world.level.levelgen.presets.WorldPresets;
  * Development only (-Djj_giants.autotest=<script>), the same idea as the giants' own: makes a creative flat world, runs
  * a list of lines with waits between them, takes screenshots, then quits. Never runs in a normal game. Lines: join
  * HOST:PORT (a real server instead), wait N, cmd ... (as an operator, own world only), chat /..., guiscale N, gui
- * on|off, guide KEY TAB [SCROLL], perf [SCROLL] [SEARCH], controls [SCROLL] [SEARCH], bind KEYNAME KEY, vanillacontrols, gesturedemo GIANT, mouse X Y, close, shot NAME, quit.
+ * on|off, guide KEY TAB [SCROLL], perf [SCROLL] [SEARCH], controls [SCROLL] [SEARCH], bind KEYNAME KEY, vanillacontrols, gesturedemo GIANT, mouse X Y, close, shot NAME, quit,
+ * adminbook [PAGE] [SCROLL] [SEARCH], adminmode simple|advanced, adminscope world|all, adminintro N|seen|unseen,
+ * adminconfirm GIANT ID.
  */
 public final class AutoTest implements ClientModInitializer {
     private static List<String> script;
@@ -206,6 +211,37 @@ public final class AutoTest implements ClientModInitializer {
                 } catch (ReflectiveOperationException e) {
                     GiantsGuideMod.LOG.warn("autotest: can't move the mouse: {}", e.toString());
                 }
+                continue;
+            }
+            // adminbook [PAGE] [SCROLL] [SEARCH...]: the Giants Admin Book (home, all, or a giant's key), asked of the
+            // server like the book itself does (so an operator only)
+            if (s.equals("adminbook") || s.startsWith("adminbook ")) {
+                String[] a = s.substring(9).trim().split(" +", 3);
+                AdminBookScreen.showAt(
+                        a.length > 0 && !a[0].isEmpty() ? a[0] : "home",
+                        a.length > 1 ? Double.parseDouble(a[1]) : 0,
+                        a.length > 2 ? a[2] : "");
+                AdminBookClient.open();
+                continue;
+            }
+            // adminmode simple|advanced, adminscope world|all, adminintro N|seen|unseen, adminconfirm GIANT ID
+            if (s.startsWith("adminmode ")) {
+                AdminPrefs.advanced(s.endsWith("advanced"));
+                continue;
+            }
+            if (s.startsWith("adminscope ")) {
+                AdminBookScreen.scopeAt(s.endsWith("all"));
+                continue;
+            }
+            if (s.startsWith("adminintro ")) {
+                String a = s.substring(11).trim();
+                if (a.equals("seen") || a.equals("unseen")) AdminPrefs.seenIntro(a.equals("seen"));
+                else AdminBookScreen.introAt(Integer.parseInt(a));
+                continue;
+            }
+            if (s.startsWith("adminconfirm ")) {
+                String[] a = s.substring(13).trim().split(" +");
+                AdminBookScreen.confirmAt(a[0], a[1]);
                 continue;
             }
             if (s.equals("close")) {

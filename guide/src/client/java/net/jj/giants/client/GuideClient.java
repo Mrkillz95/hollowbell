@@ -4,6 +4,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.jj.giants.GuideItem;
+import net.jj.giants.client.admin.AdminBookClient;
 import net.jj.giants.client.perf.PerfClient;
 import net.jj.giants.net.ToldPayload;
 import net.minecraft.client.Minecraft;
@@ -15,5 +16,6 @@ public class GuideClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(ToldPayload.TYPE, (p, ctx) -> Live.told(p));
         ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> Live.forget());
         PerfClient.init();
+        AdminBookClient.init();
     }
 }
