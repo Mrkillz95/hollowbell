@@ -4,6 +4,8 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.jj.giants.admin.AdminBookItem;
+import net.jj.giants.admin.AdminServer;
 import net.jj.giants.net.LiveNews;
 import net.jj.giants.perf.PerfServer;
 import net.minecraft.commands.Commands;
@@ -41,6 +43,9 @@ public class GiantsGuideMod implements ModInitializer {
                 })));
         LiveNews.register();
         PerfServer.register();
+        // the admin settings: /giants admin, the world's values for every giant, the admin book (ADMIN_BRIDGE.md)
+        AdminBookItem.register();
+        AdminServer.register();
         LOG.info(
                 "Giants Guide loaded: {} of {} giants installed",
                 Giants.installed().size(),

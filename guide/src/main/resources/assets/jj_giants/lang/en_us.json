@@ -1,6 +1,8 @@
 {
   "item.jj_giants.giants_guide": "Giants Guide",
   "item.jj_giants.giants_guide.tip": "Right-click: all about the giants you have.",
+  "item.jj_giants.admin_book": "Giants Admin Book",
+  "item.jj_giants.admin_book.tip": "For admins: every giant's settings for this world.",
   "message.jj_giants.given": "Here is a Giants Guide.",
   "guide.jj_giants.title": "Giants Guide",
   "guide.jj_giants.close": "Close (Esc)",
