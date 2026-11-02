@@ -607,12 +607,16 @@ public final class BellMoves {
             case Moves.MEDIUM -> (angry ? 40 : 60) + r.nextInt(40);
             default -> 90 + r.nextInt(40);
         };
+        // (the admin book's wait for this move and for all giants: x1 changes nothing)
+        float waitTimes = net.jj.hollowbell.GiantsAdmin.moveCooldown(was);
+        if (waitTimes != 1f) cooldown = Math.round(cooldown * waitTimes);
         if (tier == Moves.HEAVY && was != Moves.NONE) {
             // worn out: slower, drooping, nothing for a few seconds; and a while before the next heavy one
             tired = 100;
             h.setTired(true);
             h.sound(h.position().add(0, rig.rimY * s(), 0), ModSounds.TIRED, 2.5f, 0.8f);
-            heavyReadyAt = h.level().getGameTime() + (angry ? 300 : 500) + r.nextInt(300);
+            heavyReadyAt = h.level().getGameTime()
+                    + Math.round(((angry ? 300 : 500) + r.nextInt(300)) * waitTimes);
         }
     }
 
@@ -682,7 +686,8 @@ public final class BellMoves {
         if (h.asleep()) return; // asleep: nothing is started
         LivingEntity tg = h.getTarget();
         if (tg == null) {
-            if (BellConfig.V.harvest && --harvestIn <= 0) {
+            // (his harvest move turned off in this world: none of that either)
+            if (BellConfig.V.harvest && net.jj.hollowbell.GiantsAdmin.moveOn(Moves.HARVEST) && --harvestIn <= 0) {
                 harvestIn = 500 + h.getRandom().nextInt(900);
                 if (h.variant() != HollowbellEntity.CALM || h.getRandom().nextInt(3) == 0) start(Moves.HARVEST, null);
             }
@@ -765,6 +770,9 @@ public final class BellMoves {
         if (d < bell)
             for (int m : new int[] {Moves.LASH, Moves.SWEEP, Moves.SLAM, Moves.WRAP, Moves.CURTAIN})
                 if (w[m] > 0) w[m]++;
+        // (a move this world has turned off: never)
+        for (int m = 1; m < w.length; m++)
+            if (w[m] > 0 && !net.jj.hollowbell.GiantsAdmin.moveOn(m)) w[m] = 0;
         if (why != null)
             why.append(String.format(
                     "%.0f out (%.1f bells), %.0f up%s%s%s%s%s",

@@ -424,20 +424,25 @@ public class HollowbellEntity extends Monster implements SitHost {
         s = Mth.clamp(s, MIN_SCALE, MAX_SCALE);
         float ratio = hp > 0 && healthMax() > 0 ? hp / healthMax() : 1f;
         entityData.set(DATA_SCALE, s);
-        baseMax = Math.max(40f, BellConfig.V.health * BellConfig.V.healthMultiplier * s);
-        healthMult = BellConfig.V.healthMultiplier;
+        baseMax = Math.max(40f, BellConfig.V.health * healthTimes() * s);
+        healthMult = healthTimes();
         setMax(baseMax * playerBoost(), ratio);
         refreshDimensions();
     }
 
     /** /giants health changed the multiplier: his most health follows it, and he keeps his share of it */
     public void healthMultChanged() {
-        float now = BellConfig.V.healthMultiplier;
+        float now = healthTimes();
         if (baseMax <= 0f || Math.abs(now - healthMult) < 1.0E-4f) return;
         float ratio = healthMax() > 0 ? hp / healthMax() : 1f;
         baseMax = baseMax * now / healthMult;
         healthMult = now;
         setMax(baseMax * playerBoost(), Mth.clamp(ratio, 0f, 1f));
+    }
+
+    /** his health multiplier: his own (/giants health) times the all-giants one (the admin book) */
+    public static float healthTimes() {
+        return BellConfig.V.healthMultiplier * net.jj.hollowbell.GiantsAdmin.all("all.health");
     }
 
     float playerBoost() {
@@ -1572,7 +1577,8 @@ public class HollowbellEntity extends Monster implements SitHost {
     public double travelSpeed() {
         if (sunk()) return 0.01;
         float s = bellScale();
-        return (0.10 + 0.16 * Math.sqrt(s)) * (angry() ? 1.15 : 1.0) * 0.8 * speedMul;
+        return (0.10 + 0.16 * Math.sqrt(s)) * (angry() ? 1.15 : 1.0) * 0.8 * speedMul
+                * net.jj.hollowbell.GiantsAdmin.all("all.speed");
     }
 
     /** ticks with nobody anywhere near him */
@@ -1920,7 +1926,7 @@ public class HollowbellEntity extends Monster implements SitHost {
     public float dmg(float base, Entity to) {
         // the numbers in the moves are for full size; a small one hits a good deal less, a huge one more
         float size = Mth.clamp(0.2f + 0.8f * (float) Math.pow(bellScale(), 0.6), 0.25f, 1.5f);
-        float f = base * BellConfig.V.damageMultiplier * size;
+        float f = base * BellConfig.V.damageMultiplier * net.jj.hollowbell.GiantsAdmin.all("all.damage") * size;
         if (!(to instanceof Player)) f *= BellConfig.V.mobDamage;
         return f;
     }

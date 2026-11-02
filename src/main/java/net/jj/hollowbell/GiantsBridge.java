@@ -56,6 +56,9 @@ public final class GiantsBridge {
         // the Giants Guide's performance screen: his settings out, the levels in (GiantsPerf)
         if (action.equals("perf")) return GiantsPerf.describe();
         if (action.equals("perfset")) return GiantsPerf.receive(arg);
+        // the Giants Guide's admin settings (/giants admin, the admin book): his list out, the world's values in
+        if (action.equals("admin")) return GiantsAdmin.describe();
+        if (action.equals("adminset")) return GiantsAdmin.receive(server, arg);
         // the Giants Guide's Controls tab: the triple crouch to sit, on or off (on your own game, server null)
         if ("controlget".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlGet(arg);
         if ("controlset".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlSet(arg);
@@ -154,7 +157,9 @@ public final class GiantsBridge {
             V.oneInTheWorld = on;
             BellConfig.save();
         }
-        out.add(WHO + (V.oneInTheWorld ? "he rises on his own." : "he only comes when summoned."));
+        var F = BellConfig.fileValues();
+        out.add(WHO + (F.oneInTheWorld ? "he rises on his own." : "he only comes when summoned.")
+                + GiantsAdmin.note("oneInTheWorld"));
     }
 
     private static void limit(MinecraftServer server, String a, List<String> out) {
@@ -169,7 +174,9 @@ public final class GiantsBridge {
             }
             if (V.maxInWorld > 0) WorldOne.limitNow(null, server.overworld());
         }
-        out.add(WHO + (V.maxInWorld <= 0 ? "no limit." : "at most " + V.maxInWorld + "."));
+        var F = BellConfig.fileValues();
+        out.add(WHO + (F.maxInWorld <= 0 ? "no limit." : "at most " + F.maxInWorld + ".")
+                + GiantsAdmin.note("maxInWorld"));
     }
 
     /** /giants flee: backing down from a wild fight he's losing (one a player started, he never does) */
@@ -179,10 +186,12 @@ public final class GiantsBridge {
             BellConfig.V.fleeInWildFights = on;
             BellConfig.save();
         }
+        var F = BellConfig.fileValues();
         out.add(WHO
-                + (BellConfig.V.fleeInWildFights
+                + (F.fleeInWildFights
                         ? "he backs down from a wild fight he's losing."
-                        : "he fights wild fights to the end."));
+                        : "he fights wild fights to the end.")
+                + GiantsAdmin.note("fleeInWildFights"));
     }
 
     private static void fight(String a, List<String> out) {
@@ -192,7 +201,9 @@ public final class GiantsBridge {
             V.fightGiants = on;
             BellConfig.save();
         }
-        out.add(WHO + (V.fightGiants ? "he fights the other bosses." : "he leaves the other bosses alone."));
+        var F = BellConfig.fileValues();
+        out.add(WHO + (F.fightGiants ? "he fights the other bosses." : "he leaves the other bosses alone.")
+                + GiantsAdmin.note("fightGiants"));
     }
 
     private static void meetings(String a, List<String> out) {
@@ -202,10 +213,12 @@ public final class GiantsBridge {
             V.meetings = on;
             BellConfig.save();
         }
+        var F = BellConfig.fileValues();
         out.add(WHO
-                + (V.meetings
+                + (F.meetings
                         ? "he fights or keeps away from the giants he meets."
-                        : "he takes no notice of the giants he meets."));
+                        : "he takes no notice of the giants he meets.")
+                + GiantsAdmin.note("meetings"));
     }
 
     private static void meet(MinecraftServer server, String arg, List<String> out) {
@@ -250,8 +263,10 @@ public final class GiantsBridge {
             V.offscreenTravel = on;
             BellConfig.save();
         }
+        var F = BellConfig.fileValues();
         out.add(WHO
-                + (V.offscreenTravel ? "he steps out of the world when nobody is near." : "he stays in the world."));
+                + (F.offscreenTravel ? "he steps out of the world when nobody is near." : "he stays in the world.")
+                + GiantsAdmin.note("offscreenTravel"));
     }
 
     private static void volume(String a, List<String> out) {
@@ -289,8 +304,10 @@ public final class GiantsBridge {
                 return;
             }
         }
+        var F = BellConfig.fileValues();
         out.add(WHO + "boss bars show "
-                + (V.bossBarRange > 0 ? V.bossBarRange + " blocks off." : "as far as his size says."));
+                + (F.bossBarRange > 0 ? F.bossBarRange + " blocks off." : "as far as his size says.")
+                + GiantsAdmin.note("bossBarRange"));
     }
 
     /** /giants paint stop: his paint jobs, if any are running, are dropped */
@@ -311,7 +328,9 @@ public final class GiantsBridge {
                 return;
             }
         }
-        out.add(WHO + "heavy moves wait " + V.heavyDelaySeconds + " seconds into a fight.");
+        var F = BellConfig.fileValues();
+        out.add(WHO + "heavy moves wait " + F.heavyDelaySeconds + " seconds into a fight."
+                + GiantsAdmin.note("heavyDelaySeconds"));
     }
 
     private static void griefing(String a, List<String> out) {
@@ -321,7 +340,9 @@ public final class GiantsBridge {
             V.griefing = on;
             BellConfig.save();
         }
-        out.add(WHO + (V.griefing ? "he breaks blocks." : "he doesn't break blocks."));
+        var F = BellConfig.fileValues();
+        out.add(WHO + (F.griefing ? "he breaks blocks." : "he doesn't break blocks.")
+                + GiantsAdmin.note("griefing"));
     }
 
     private static void where(MinecraftServer server, String action, List<String> out) {
@@ -405,7 +426,19 @@ public final class GiantsBridge {
         }
         if (!OpsCommand.has(kv[0])) return;
         String bad = kv.length > 1 ? OpsCommand.set(kv[0], kv[1]) : null;
-        out.add(WHO + kv[0] + (bad != null ? " can't be set to " + kv[1] + "." : " = " + OpsCommand.get(kv[0])));
+        // (set: the server's default, and a value this world keeps for itself still wins)
+        out.add(WHO + kv[0]
+                + (bad != null
+                        ? " can't be set to " + kv[1] + "."
+                        : kv.length > 1
+                                ? " = " + OpsCommand.fileText(kv[0]) + noted(OpsCommand.name(kv[0]))
+                                : " = " + OpsCommand.get(kv[0])));
+    }
+
+    /** the admin settings' note for a setting this world keeps its own value for, after a full stop; or nothing */
+    private static String noted(String id) {
+        String note = GiantsAdmin.note(id);
+        return note.isEmpty() ? "" : "." + note;
     }
 
     private static void paint(MinecraftServer server, String a, String arg, List<String> out) {
@@ -487,9 +520,11 @@ public final class GiantsBridge {
                 out.add(WHO + "the multiplier has to be a number from 0.1 to 10.");
                 return;
             }
-            float k = m / BellConfig.V.healthMultiplier;
+            // (what his health is times before and after: a value this world keeps for itself still wins)
+            float before = HollowbellEntity.healthTimes();
             BellConfig.V.healthMultiplier = m;
             BellConfig.save();
+            float k = before > 0f ? HollowbellEntity.healthTimes() / before : 1f;
             for (HollowbellEntity h : standing(server)) h.healthMultChanged();
             Away away = Away.get(server);
             for (Away.Rec r : away.all()) {
@@ -498,7 +533,8 @@ public final class GiantsBridge {
             }
             away.setDirty();
         }
-        out.add(WHO + "health x" + times(BellConfig.V.healthMultiplier) + ".");
+        out.add(WHO + "health x" + times(BellConfig.fileValues().healthMultiplier) + "."
+                + GiantsAdmin.note("healthMultiplier"));
     }
 
     private static void damageMult(String a, List<String> out) {
@@ -511,7 +547,8 @@ public final class GiantsBridge {
             BellConfig.V.damageMultiplier = m;
             BellConfig.save();
         }
-        out.add(WHO + "damage x" + times(BellConfig.V.damageMultiplier) + ".");
+        out.add(WHO + "damage x" + times(BellConfig.fileValues().damageMultiplier) + "."
+                + GiantsAdmin.note("damageMultiplier"));
     }
 
     /** /giants info: alive or coming back, who owns him, his health and the multipliers */

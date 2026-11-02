@@ -224,6 +224,8 @@ public class HollowbellMod implements ModInitializer {
             if (world.dimension() == Level.OVERWORLD) WorldOne.worldLoaded(world);
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
+            // the world's admin settings go with it: the next world starts from the config file
+            GiantsAdmin.clear();
             CodexOrders.forgetEverything();
             NoWait.forget();
             Cracks.forget();

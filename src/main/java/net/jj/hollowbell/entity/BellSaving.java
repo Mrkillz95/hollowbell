@@ -126,7 +126,8 @@ final class BellSaving {
         if (tag.contains("HollowbellEgg")) {
             int v = tag.getInt("HollowbellEgg");
             hb.getEntityData().set(HollowbellEntity.DATA_VARIANT, v == 3 ? HollowbellEntity.HUNTER : v);
-            float sc = v == 3 ? BellConfig.V.smallEggScale : BellConfig.V.spawnEggScale;
+            float sc = net.jj.hollowbell.GiantsAdmin.sized(
+                    v == 3 ? BellConfig.V.smallEggScale : BellConfig.V.spawnEggScale);
             hb.getEntityData()
                     .set(
                             HollowbellEntity.DATA_SCALE,
@@ -216,8 +217,8 @@ final class BellSaving {
         // one saved with no base health (from an egg): his most health for his size, keeping how hurt he was
         if (hb.hp >= 0f && hb.baseMax <= 0f) {
             float ratio = hb.healthMax() > 0 ? hb.hp / hb.healthMax() : 1f;
-            hb.baseMax = Math.max(40f, BellConfig.V.health * BellConfig.V.healthMultiplier * hb.bellScale());
-            hb.healthMult = BellConfig.V.healthMultiplier;
+            hb.baseMax = Math.max(40f, BellConfig.V.health * HollowbellEntity.healthTimes() * hb.bellScale());
+            hb.healthMult = HollowbellEntity.healthTimes();
             hb.setMax(hb.baseMax, Mth.clamp(ratio, 0f, 1f));
         }
         // (one saved before /giants health last changed it)

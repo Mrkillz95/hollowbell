@@ -106,6 +106,7 @@
   "message.hollowbell.codex_attacking": "%s!",
   "message.hollowbell.codex_calloff": "He leaves it.",
   "message.hollowbell.codex_cannot_attack": "He can't do that right now.",
+  "message.hollowbell.codex_move_off": "That move is turned off in this world.",
   "message.hollowbell.codex_cannot_ride": "He can't carry you right now.",
   "message.hollowbell.codex_come": "He's coming (%s blocks away).",
   "message.hollowbell.book_taken": "Only one Hollowbell book at a time. %s has it.",

@@ -87,11 +87,14 @@ public final class CodexOrders {
 
     /** how long before the book can ask for the same move again: light ones soon, heavy ones not for a good while */
     public static int attackCool(int move) {
-        return switch (Moves.tier(move)) {
+        int ticks = switch (Moves.tier(move)) {
             case Moves.LIGHT -> 120;
             case Moves.MEDIUM -> 300;
             default -> 700;
         };
+        // (the admin book's wait for this move and for all giants: x1 changes nothing)
+        float times = net.jj.hollowbell.GiantsAdmin.moveCooldown(move);
+        return times == 1f ? ticks : Math.round(ticks * times);
     }
 
     private static final Map<UUID, long[]> lastUse = new HashMap<>();
@@ -146,6 +149,14 @@ public final class CodexOrders {
     }
 
     public static float windCost(int action, int arg) {
+        float base = baseWindCost(action, arg);
+        // (the admin book: this move's wind and all giants' wind cost, x1 changing nothing)
+        float times = net.jj.hollowbell.GiantsAdmin.all("all.windCost")
+                * (action == CodexPayload.ATTACK_MOVE ? net.jj.hollowbell.GiantsAdmin.moveWind(arg) : 1f);
+        return times == 1f ? base : base * times;
+    }
+
+    private static float baseWindCost(int action, int arg) {
         return switch (action) {
             case CodexPayload.ATTACK_MOVE -> arg > 0 && arg < MOVE_WIND.length ? MOVE_WIND[arg] : 0.10f;
             case CodexPayload.RIDE -> 0.06f;
@@ -179,6 +190,10 @@ public final class CodexOrders {
     /** a move pressed while riding his crown: the same clock the book uses */
     public static void moveFromCrown(ServerPlayer p, HollowbellEntity m, int which) {
         if (which <= 0 || which >= Moves.NAMES.length) return;
+        if (!net.jj.hollowbell.GiantsAdmin.moveOn(which)) {
+            say(p, "codex_move_off");
+            return;
+        }
         if (coolLeft(p, which) > 0) return;
         float cost = windCost(CodexPayload.ATTACK_MOVE, which);
         if (!m.mood().hasWind(cost)) {
@@ -267,6 +282,10 @@ public final class CodexOrders {
         if (action == CodexPayload.ATTACK_MOVE) {
             int which = pay.arg();
             if (which <= 0 || which >= Moves.NAMES.length) return false;
+            if (!net.jj.hollowbell.GiantsAdmin.moveOn(which)) {
+                say(p, "codex_move_off");
+                return false;
+            }
             long left = coolLeft(p, which);
             if (left > 0) {
                 say(p, "codex_cooling", (int) Math.ceil(left / 20.0));
@@ -400,6 +419,12 @@ public final class CodexOrders {
             case CodexPayload.ATTACK_MOVE -> {
                 int which = pay.arg();
                 if (which <= 0 || which >= Moves.NAMES.length) return;
+                // (turned off in this world while the order waited)
+                if (!net.jj.hollowbell.GiantsAdmin.moveOn(which)) {
+                    m.mood().refund(windCost(action, which));
+                    say(p, "codex_move_off");
+                    return;
+                }
                 LivingEntity at = m.getTarget();
                 HitResult h = looking(p, 320);
                 if (h instanceof EntityHitResult eh && eh.getEntity() instanceof LivingEntity le) at = le;

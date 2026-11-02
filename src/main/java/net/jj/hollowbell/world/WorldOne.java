@@ -962,7 +962,10 @@ public class WorldOne extends SavedData {
         }
         HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
         if (e == null) return;
-        e.setBellScale(Mth.clamp(BellConfig.V.worldScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+        e.setBellScale(Mth.clamp(
+                net.jj.hollowbell.GiantsAdmin.sized(BellConfig.V.worldScale),
+                HollowbellEntity.MIN_SCALE,
+                HollowbellEntity.MAX_SCALE));
         e.setVariant(HollowbellEntity.CALM);
         e.markWorldOne();
         oneId = e.getUUID(); // named first, so his arrival never meets the cap

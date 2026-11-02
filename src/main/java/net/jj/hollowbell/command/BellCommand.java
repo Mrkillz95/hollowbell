@@ -867,7 +867,10 @@ public final class BellCommand {
     }
 
     private static float eggSize() {
-        return Mth.clamp(BellConfig.V.spawnEggScale, HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE);
+        return Mth.clamp(
+                net.jj.hollowbell.GiantsAdmin.sized(BellConfig.V.spawnEggScale),
+                HollowbellEntity.MIN_SCALE,
+                HollowbellEntity.MAX_SCALE);
     }
 
     private static int bossbarSay(CommandContext<CommandSourceStack> c) {
@@ -1006,11 +1009,15 @@ public final class BellCommand {
             c.getSource().sendFailure(Component.translatable("command.hollowbell.config_bad", bad));
             return 0;
         }
-        String now = OpsCommand.get(key);
-        Component said = now.equals("true") || now.equals("false")
-                ? Component.translatable(
-                        now.equals("true") ? "command.hollowbell.set_on" : "command.hollowbell.set_off", plain(key))
-                : Component.translatable("command.hollowbell.set", plain(key), now);
+        // (the server's default: what the file says now; a value this world keeps for itself still wins)
+        String now = OpsCommand.fileText(key);
+        Component said = (now.equals("true") || now.equals("false")
+                        ? Component.translatable(
+                                now.equals("true") ? "command.hollowbell.set_on" : "command.hollowbell.set_off",
+                                plain(key))
+                        : Component.translatable("command.hollowbell.set", plain(key), now))
+                .copy()
+                .append(net.jj.hollowbell.GiantsAdmin.note(OpsCommand.name(key)));
         c.getSource().sendSuccess(() -> said, true);
         return 1;
     }

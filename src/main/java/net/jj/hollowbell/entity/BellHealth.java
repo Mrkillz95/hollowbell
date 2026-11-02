@@ -555,7 +555,11 @@ final class BellHealth {
                 && hpNow < max
                 && (hb.asleep() || calmTicks >= healPause())) {
             float rate = atHome() ? BellConfig.V.healHomePerMinute : BellConfig.V.healAwayPerMinute;
-            float v = Math.min(max, hpNow + max * Mth.clamp(rate, 0f, 100f) / 100f / 60f);
+            // (the admin book's all-giants healing: x1 changes nothing, 0 none)
+            float v = Math.min(
+                    max,
+                    hpNow + max * Mth.clamp(rate, 0f, 100f) / 100f / 60f
+                            * net.jj.hollowbell.GiantsAdmin.all("all.healing"));
             hb.hp = v;
             hb.getEntityData().set(HollowbellEntity.DATA_HP, v);
             hpNow = v;

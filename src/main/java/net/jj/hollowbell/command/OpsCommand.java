@@ -28,6 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The nearest one's state: who he goes for, his wind, grudges, home, cooldowns, freezing him, his speed, whether he can
@@ -257,6 +258,18 @@ public final class OpsCommand {
 
     public static boolean has(String key) {
         return field(key) != null;
+    }
+
+    /** a setting's own name, however it was typed (the admin settings use the same names), or the key as typed */
+    public static String name(String key) {
+        Field f = field(key);
+        return f == null ? key : f.getName();
+    }
+
+    /** the config file's own value of a setting (the server's default) as text, or null if there's none */
+    public static @Nullable String fileText(String key) {
+        Field f = field(key);
+        return f == null ? null : String.valueOf(BellConfig.fileValue(f));
     }
 
     /** what it's set to now, or null when there's no such setting */

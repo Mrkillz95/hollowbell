@@ -168,7 +168,77 @@ public final class BellConfig {
         public int awayBlocks = 0;
     }
 
+    /**
+     * The settings in use: the config file's (the server's defaults) with this world's admin settings on top
+     * (GiantsAdmin, set from the Giants Guide). With no admin settings it is just the file.
+     */
     public static Values V = new Values();
+    /** what the config file says: the server's defaults. Only this is ever written to the file */
+    private static Values FILE = new Values();
+    /** V as it was last put together: a field of V that differs from it was changed since (by a command) */
+    private static Values APPLIED = new Values();
+
+    private static final Gson COPIER = new Gson();
+
+    private static Values copy(Values v) {
+        return COPIER.fromJson(COPIER.toJson(v), Values.class);
+    }
+
+    private static java.util.List<java.lang.reflect.Field> fields() {
+        java.util.List<java.lang.reflect.Field> out = new java.util.ArrayList<>();
+        for (var f : Values.class.getFields())
+            if (!java.lang.reflect.Modifier.isStatic(f.getModifiers())) out.add(f);
+        return out;
+    }
+
+    /** what the config file says (the server's defaults): read it, don't change it (change V and save) */
+    public static Values fileValues() {
+        return FILE;
+    }
+
+    /** the config file's value of one field (the server's default) */
+    public static Object fileValue(java.lang.reflect.Field f) {
+        try {
+            return f.get(FILE);
+        } catch (IllegalAccessException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Whatever was changed in V since it was last put together (a command, the book, /hollowbell config) is a change
+     * to the server's defaults: it goes into FILE. A field the world keeps its own value for is put back to that
+     * value by the next compose, so the change only reaches the file.
+     */
+    private static synchronized void takeChanges() {
+        for (var f : fields()) {
+            try {
+                Object now = f.get(V);
+                if (!java.util.Objects.equals(now, f.get(APPLIED))) f.set(FILE, now);
+            } catch (IllegalAccessException e) {
+                // (public fields only)
+            }
+        }
+    }
+
+    /** V put together again: the file's values, then the world's admin settings on top. V stays the same object */
+    public static synchronized void compose() {
+        takeChanges();
+        composeFresh();
+    }
+
+    private static synchronized void composeFresh() {
+        Values next = copy(FILE);
+        GiantsAdmin.applyTo(next);
+        for (var f : fields()) {
+            try {
+                f.set(V, f.get(next));
+            } catch (IllegalAccessException e) {
+                // (public fields only)
+            }
+        }
+        APPLIED = copy(V);
+    }
 
     /** which version of the settings this build writes; save() and load() both stamp it */
     private static final int VERSION = 12;
@@ -182,19 +252,26 @@ public final class BellConfig {
         return FabricLoader.getInstance().getConfigDir().resolve("hollowbell.json");
     }
 
+    /**
+     * Writes the server's defaults: V as it is now, except where the world keeps its own value (that stays out of the
+     * file). Without admin settings this is exactly V, as it always was.
+     */
     public static void save() {
+        takeChanges();
         // an unreadable file is never written over (the settings still change for this session)
         if (locked) {
             HollowbellMod.LOG.warn(
                     "Not writing {}: it couldn't be read, so it is left as it is until it reads cleanly", file());
+            composeFresh();
             return;
         }
-        V.configVersion = Math.max(V.configVersion, VERSION);
+        FILE.configVersion = Math.max(FILE.configVersion, VERSION);
         try {
-            write(new GsonBuilder().setPrettyPrinting().create().toJson(V));
+            write(new GsonBuilder().setPrettyPrinting().create().toJson(FILE));
         } catch (IOException e) {
             HollowbellMod.LOG.warn("Could not write {}: {}", file(), e.toString());
         }
+        composeFresh();
     }
 
     /** written beside it first, then put in its place, so a crash halfway never leaves half a file */
@@ -216,8 +293,9 @@ public final class BellConfig {
                 Values v = gson.fromJson(Files.readString(file()), Values.class);
                 if (v == null) throw new IllegalStateException("the file is empty");
                 migrate(v);
-                V = v;
-            } else V = new Values();
+                FILE = v;
+            } else FILE = new Values();
+            composeFresh();
             locked = false;
             save();
             return true;
@@ -232,7 +310,8 @@ public final class BellConfig {
             } catch (IOException copyFailed) {
                 HollowbellMod.LOG.warn("Could not copy {} to hollowbell.json.bad: {}", file(), copyFailed.toString());
             }
-            V = new Values();
+            FILE = new Values();
+            composeFresh();
             locked = true;
             return false;
         }
