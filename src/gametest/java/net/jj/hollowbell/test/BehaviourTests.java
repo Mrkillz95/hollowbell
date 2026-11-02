@@ -282,7 +282,8 @@ public class BehaviourTests implements FabricGameTest {
         Vec3 at = spot(e, 90, 0);
         force(h, (int) at.x, (int) at.z, 1, true);
         HollowbellGameTests.runsEntities(h, (int) at.x, (int) at.z, 1);
-        Zombie other = EntityType.ZOMBIE.create(h.getLevel());
+        // (a cow: a hostile stand-in is gone the moment another test turns the world to Peaceful)
+        net.minecraft.world.entity.Mob other = EntityType.COW.create(h.getLevel());
         other.moveTo(at.x, at.y, at.z, 0f, 0f);
         other.setNoAi(true);
         other.setInvulnerable(true);
