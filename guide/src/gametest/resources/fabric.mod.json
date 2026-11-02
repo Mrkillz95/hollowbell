@@ -7,6 +7,7 @@
   "entrypoints": {
     "fabric-gametest": [
       "net.jj.giants.test.GuideGameTests",
+      "net.jj.giants.test.PresetGameTests",
       "net.jj.giants.test.PerfGameTests",
       "net.jj.giants.test.ControlsGameTests",
       "net.jj.giants.test.AdminGameTests",

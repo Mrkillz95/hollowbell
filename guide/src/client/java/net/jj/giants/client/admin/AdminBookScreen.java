@@ -2341,9 +2341,8 @@ public class AdminBookScreen extends Screen {
 
     private static String presetName = "", importText = "";
 
-    /** the names of the presets still to come (ADMIN_BOOK.md's picker layout), shown greyed */
-    private static final List<String> SUGGESTED = List.of("My Giant", "Pocket Giants", "Titans", "Gentle Giants",
-            "Kaiju War", "Night Terrors", "Wild Sizes");
+    /** the suggested presets still to come (ADMIN_BOOK.md's picker layout), shown greyed: My Giant (Part 5) */
+    private static final List<String> SUGGESTED = List.of("My Giant");
 
     private void presetRows() {
         JsonObject p = AdminBookClient.presets();
@@ -2357,8 +2356,9 @@ public class AdminBookScreen extends Screen {
         }));
         // Classic first, marked as the default
         for (JsonObject b : objects(p, "builtin")) if (bool(b, "default")) builtInRow(b);
-        // the suggested ones still to come: greyed, nothing to press
+        // the suggested ones (Part 4), then the one still to come: greyed, nothing to press
         rows.add(new Head(tr("presets.suggested"), tr("presets.suggested.note"), null));
+        for (JsonObject b : objects(p, "builtin")) if (str(b, "group").equals("suggested")) builtInRow(b);
         List<String> chips = SUGGESTED;
         int[] layout = chipRows(chips);
         rows.add(new Block(layout[0] * 16 + 2, (g, x, y, w, mx, my) -> {
@@ -2378,7 +2378,9 @@ public class AdminBookScreen extends Screen {
             }
         }));
         // (Part 3) every other built-in preset, nothing hidden
-        List<JsonObject> others = objects(p, "builtin").stream().filter(b -> !bool(b, "default")).toList();
+        List<JsonObject> others = objects(p, "builtin").stream()
+                .filter(b -> !bool(b, "default") && !str(b, "group").equals("suggested"))
+                .toList();
         if (!others.isEmpty()) {
             rows.add(new Head(tr("presets.all"), tr("presets.all.note"), null));
             for (JsonObject b : others) builtInRow(b);

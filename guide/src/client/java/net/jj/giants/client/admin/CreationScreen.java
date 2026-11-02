@@ -31,8 +31,8 @@ public class CreationScreen extends Screen {
     private static final int GOLD = AdminBookScreen.GOLD, TEXT = AdminBookScreen.TEXT, GREY = AdminBookScreen.GREY,
             DIM = AdminBookScreen.DIM, KEY = AdminBookScreen.KEY, TITLE = AdminBookScreen.TITLE,
             PANEL = AdminBookScreen.PANEL, EDGE = AdminBookScreen.EDGE;
-    private static final List<String> SUGGESTED = List.of("My Giant", "Pocket Giants", "Titans", "Gentle Giants",
-            "Kaiju War", "Night Terrors", "Wild Sizes");
+    /** the suggested presets still to come, greyed: My Giant (Part 5) */
+    private static final List<String> SUGGESTED = List.of("My Giant");
 
     private final Screen parent;
     private final AdminDraft draft;
@@ -107,9 +107,12 @@ public class CreationScreen extends Screen {
         items.add(new Item("head", Component.translatable("admin.jj_giants.creation.suggested"),
                 List.of(Component.translatable("admin.jj_giants.creation.suggested.note").getVisualOrderText()), null,
                 "", 16));
+        for (JsonObject b : built) if (str(b, "group").equals("suggested")) preset(b, tw);
         items.add(new Item("chips", Component.empty(), List.of(), null, "", chipRows(tw) * 16 + 2));
         items.add(new Item("head", Component.translatable("admin.jj_giants.creation.all"), List.of(), null, "", 16));
-        for (JsonObject b : built) if (!(b.has("default") && b.get("default").getAsBoolean())) preset(b, tw);
+        for (JsonObject b : built)
+            if (!(b.has("default") && b.get("default").getAsBoolean()) && !str(b, "group").equals("suggested"))
+                preset(b, tw);
         items.add(new Item("head", Component.translatable("admin.jj_giants.creation.saved"), List.of(), null, "",
                 16));
         List<JsonObject> saved = objects(presets, "saved");

@@ -706,7 +706,7 @@ public final class AdminBook {
             j.addProperty("name", b.name());
             j.addProperty("about", b.about());
             j.addProperty("default", id.equals("classic"));
-            j.addProperty("group", id.equals("classic") ? "default" : "all");
+            j.addProperty("group", AdminTransfer.group(id));
             addRating(j, view, b);
             built.add(j);
         }

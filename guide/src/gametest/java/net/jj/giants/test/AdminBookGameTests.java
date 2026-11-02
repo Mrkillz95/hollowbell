@@ -458,7 +458,8 @@ public class AdminBookGameTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE)
     public void clashesAreFoundAndOnlyWhenTheyAreReal(GameTestHelper h) {
         h.assertTrue(AdminInsight.ruleIds().equals(List.of("grief_unloaded", "heal_rates_zero", "heal_rates_unused",
-                "never_backs_down", "ward_no_time", "free_orders", "wind_unused", "size_capped")),
+                "never_backs_down", "ward_no_time", "free_orders", "wind_unused", "size_capped", "count_capped",
+                "count_alone", "seek_no_fight", "raid_peaceful", "stay_roams", "tiny_war")),
                 "" + AdminInsight.ruleIds());
         h.assertTrue(AdminInsight.warnings(List.of(giant("a"), giant("b")), Map.of()).isEmpty(), "as shipped: none");
         // each rule, alone

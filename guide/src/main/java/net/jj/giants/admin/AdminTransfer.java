@@ -35,7 +35,12 @@ public final class AdminTransfer {
      * only changes what it names, and the values: "all" and each giant's key to id to value.
      */
     public record Bundle(String id, String name, String about, boolean replace,
-            Map<String, Map<String, JsonElement>> values) {}
+            Map<String, Map<String, JsonElement>> values, List<String> keep) {
+        public Bundle(String id, String name, String about, boolean replace,
+                Map<String, Map<String, JsonElement>> values) {
+            this(id, name, about, replace, values, List.of());
+        }
+    }
 
     /**
      * What applying a bundle would do.
@@ -67,6 +72,36 @@ public final class AdminTransfer {
                 + "\",\"replace\":false,\"giants\":{" + g + "}}";
     }
 
+    /** (Part 4) the Suggested group (ADMIN_BOOK.md, the preset picker's layout); My Giant comes in Part 5 */
+    public static final List<String> SUGGESTED = List.of("pocket_giants", "titans", "gentle_giants", "kaiju_war",
+            "night_terrors", "wild_sizes");
+
+    /** a Part 4 re-tune preset: a replace that keeps where the grounds go (ADMIN_BRIDGE.md 19.8) */
+    private static String retune(String id, String name, String about, String all, String every,
+            Map<String, String> own) {
+        StringBuilder g = new StringBuilder();
+        for (String k : EVERY_GIANT) {
+            StringBuilder v = new StringBuilder(every);
+            String extra = own.get(k);
+            if (extra != null && !extra.isEmpty()) v.append(v.length() == 0 ? "" : ",").append(extra);
+            g.append(g.length() == 0 ? "" : ",").append('"').append(k).append("\":{").append(v).append('}');
+        }
+        return "{\"admin\":1,\"preset\":\"" + id + "\",\"name\":\"" + name + "\",\"about\":\"" + about
+                + "\",\"replace\":true,\"keep\":[\"worldgen\"],\"all\":{" + all + "},\"giants\":{" + g + "}}";
+    }
+
+    /** each giant's size for about two blocks tall (his height at size 1: ADMIN_BRIDGE.md 19.2) */
+    private static final Map<String, String> POCKET_SIZE = Map.of(
+            "pitchgut", "\"worldScale\":0.012", "furrowmaw", "\"worldScale\":0.049",
+            "cerberus", "\"worldScale\":0.011", "hollowbell", "\"worldScale\":0.011",
+            "lanternwillow", "\"worldScale\":0.011", "wreckback", "\"worldScale\":0.011",
+            "swarmforge", "\"worldScale\":0.015", "gloamwick", "\"worldScale\":0.011");
+
+    private static final String TITAN_ALL = "\"all.health\":2.5,\"all.damage\":3,\"all.speed\":1.25,"
+            + "\"all.size\":2,\"all.cooldowns\":0.5";
+    private static final String TITAN_EACH = "\"temper\":\"hunter\",\"fleeInWildFights\":false,\"yieldAt\":0,"
+            + "\"griefing\":true";
+
     static {
         BUILT_IN.put("classic", "{\"admin\":1,\"preset\":\"classic\",\"name\":\"Classic\",\"about\":\"Every giant as"
                 + " the server's config files have him: every setting this world changed goes back.\","
@@ -80,10 +115,87 @@ public final class AdminTransfer {
                 "Every giant's ground is far out: it begins 5,000 to 20,000 blocks from spawn. Best for a new world:"
                         + " land already made stays as it is.",
                 "{\"groundNearest\":5000,\"groundFarthest\":20000}"));
+        // Part 4: the re-tune presets (ADMIN_BRIDGE.md 19.9). Suggested first, in the picker's order.
+        BUILT_IN.put("pocket_giants", retune("pocket_giants", "Pocket Giants",
+                "Player-sized giants, about two blocks tall, with health and hits to match. Four of each kind roam"
+                        + " together, and they come back after a day.",
+                "\"all.damage\":0.6",
+                "\"spawnSize\":[0.85,1.25],\"worldCount\":4,\"maxInWorld\":6,\"worldRespawnDays\":1",
+                POCKET_SIZE));
+        BUILT_IN.put("titans", retune("titans", "Titans",
+                "Twice the size, three times the damage, two and a half times the health and faster. Always hunting,"
+                        + " never backing down, short waits between moves, breaking blocks, slow to heal.",
+                TITAN_ALL + ",\"all.healing\":0.5", TITAN_EACH, Map.of()));
+        BUILT_IN.put("gentle_giants", retune("gentle_giants", "Gentle Giants",
+                "Giants never attack unless hit first, hold no grudges, forgive many hits and their orders cost no"
+                        + " wind: for peaceful exploring and riding.",
+                "", "\"temper\":\"peaceful\",\"grudgeRate\":0,\"freeHits\":20,\"bookCosts\":false", Map.of()));
+        BUILT_IN.put("kaiju_war", retune("kaiju_war", "Kaiju War",
+                "Giants seek each other out across the world and fight whenever they meet, breaking blocks as they"
+                        + " go. Players are the survivors in between.",
+                "", "\"seekGiants\":true,\"fightGiants\":true,\"meetings\":true,\"meetCooldown\":1,"
+                        + "\"griefing\":true", Map.of()));
+        BUILT_IN.put("night_terrors", retune("night_terrors", "Night Terrors",
+                "Giants sleep all day and hunt all night, twice as strong after dark. The Gloamwick's Eclipse comes"
+                        + " much more often.",
+                "", "\"sleepSchedule\":\"day\",\"nightStrength\":2", Map.of("gloamwick", "\"eclipseOften\":true")));
+        BUILT_IN.put("wild_sizes", retune("wild_sizes", "Wild Sizes",
+                "Every giant that comes on his own is a random size, from tiny to twice as big, with health and hits"
+                        + " to match.",
+                "", "\"spawnSize\":[0.1,2]", Map.of()));
+        // All presets
+        BUILT_IN.put("siege", retune("siege", "Siege",
+                "Giants head for villages and players and attack, breaking blocks, and come back a day after they"
+                        + " fall. Survive the assault.",
+                "", "\"raidVillages\":true,\"griefing\":true,\"worldRespawnDays\":1", Map.of()));
+        BUILT_IN.put("one_life", retune("one_life", "One Life",
+                "Each giant comes once per world: he never comes back after he falls and never heals on his own. A"
+                        + " kill is for good.",
+                "", "\"respawn\":false,\"passiveHeal\":false,\"worldCount\":1", Map.of()));
+        BUILT_IN.put("boss_rush", retune("boss_rush", "Boss Rush",
+                "Short, hard fights: less health, harder hits, shorter waits. Giants come back a minute after they fall"
+                        + " and drop three times the loot.",
+                "\"all.health\":0.6,\"all.damage\":1.25,\"all.cooldowns\":0.75",
+                "\"worldRespawnDays\":0,\"ownedRespawnDays\":0,\"lootMultiplier\":3", Map.of()));
+        BUILT_IN.put("nomads", retune("nomads", "Nomads",
+                "Giants never stay home: they wander the whole world, so one may turn up anywhere.",
+                "", "\"roam\":\"wander\"", Map.of()));
+        BUILT_IN.put("hardcore", retune("hardcore", "Hardcore",
+                "Titans' strength, no healing on their own, no free hits for book holders, and orders cost twice the"
+                        + " wind.",
+                TITAN_ALL + ",\"all.windCost\":2", TITAN_EACH + ",\"passiveHeal\":false,\"freeHits\":0", Map.of()));
+        BUILT_IN.put("builder_showcase", retune("builder_showcase", "Builder / Showcase",
+                "Calm giants that stay where they are: they never start a fight, their hits do next to nothing, they"
+                        + " break no blocks and leave each other alone. For screenshots, maps and videos.",
+                "\"all.damage\":0.1",
+                "\"temper\":\"peaceful\",\"roam\":\"stay\",\"griefing\":false,\"fightGiants\":false,"
+                        + "\"meetings\":false",
+                Map.of()));
+        BUILT_IN.put("public_server_safe", retune("public_server_safe", "Public Server Safe",
+                "No block breaking, no land kept loaded, one of each at most, slightly softer hits and smaller"
+                        + " Swarmforge armies.",
+                "\"all.damage\":0.8", "\"griefing\":false,\"chunkLoading\":false,\"maxInWorld\":1",
+                Map.of("swarmforge", "\"robotLimit\":120,\"armyPoints\":200")));
+        BUILT_IN.put("lite", retune("lite", "Lite",
+                "Fewer, smaller giants for weak computers and busy servers: half size, one of each, no ambient sounds"
+                        + " and smaller Swarmforge armies.",
+                "", "\"worldScale\":0.5,\"maxInWorld\":1,\"ambientSounds\":false",
+                Map.of("swarmforge", "\"robotLimit\":120,\"armyPoints\":150")));
+        BUILT_IN.put("speedrun", retune("speedrun", "Speedrun",
+                "Weaker giants for quick fights: half the health, softer hits, and orders cost half the wind.",
+                "\"all.health\":0.5,\"all.damage\":0.75,\"all.windCost\":0.5", "", Map.of()));
+        // (Part 3's two last, after every re-tune one)
+        BUILT_IN.put("close_quarters", BUILT_IN.remove("close_quarters"));
+        BUILT_IN.put("far_frontier", BUILT_IN.remove("far_frontier"));
     }
 
     public static Set<String> presets() {
         return BUILT_IN.keySet();
+    }
+
+    /** (Part 4) where a built-in preset is listed: "default" (Classic), "suggested" or "all" */
+    public static String group(String id) {
+        return id.equals("classic") ? "default" : SUGGESTED.contains(id) ? "suggested" : "all";
     }
 
     /** a built-in preset by its id or its name ("Far Frontier"); null if there's none */
@@ -122,8 +234,13 @@ public final class AdminTransfer {
         boolean replace = !(o.get("replace") instanceof com.google.gson.JsonPrimitive p) || !p.isBoolean()
                 || p.getAsBoolean();
         String id = AdminJson.str(o, "preset", 32);
-        return new Bundle(id.isEmpty() ? "import" : id, AdminJson.str(o, "name", 48), AdminJson.str(o, "about", 240),
-                replace, values);
+        // (Part 4) the categories a replace leaves as they are ("keep":["worldgen"])
+        List<String> keep = new ArrayList<>();
+        if (o.get("keep") instanceof com.google.gson.JsonArray ka)
+            for (JsonElement k : ka)
+                if (k.isJsonPrimitive() && AdminSetting.CATEGORIES.contains(k.getAsString())) keep.add(k.getAsString());
+        return new Bundle(id.isEmpty() ? "import" : id, AdminJson.str(o, "name", 48), AdminJson.str(o, "about", 400),
+                replace, values, List.copyOf(keep));
     }
 
     private static Map<String, JsonElement> map(JsonObject o) {
@@ -141,6 +258,11 @@ public final class AdminTransfer {
         if (!b.name().isEmpty()) o.addProperty("name", b.name());
         if (!b.about().isEmpty()) o.addProperty("about", b.about());
         o.addProperty("replace", b.replace());
+        if (!b.keep().isEmpty()) {
+            com.google.gson.JsonArray k = new com.google.gson.JsonArray();
+            for (String c : b.keep()) k.add(c);
+            o.add("keep", k);
+        }
         JsonObject giants = new JsonObject();
         for (var e : b.values().entrySet()) {
             JsonObject v = new JsonObject();
@@ -211,7 +333,8 @@ public final class AdminTransfer {
         // the all-giants ones
         Map<String, JsonElement> wantAll = b.values().getOrDefault(AdminCatalog.ALL, Map.of());
         for (AdminSetting s : AdminServer.shared(w))
-            consider(w, AdminCatalog.ALL, "All giants", s, wantAll, b.replace(), steps, creation, locked);
+            consider(w, AdminCatalog.ALL, "All giants", s, wantAll, b.replace() && !b.keep().contains(s.cat()), steps,
+                    creation, locked);
         for (String id : wantAll.keySet())
             if (AdminCatalog.shared(id) == null) skipped.add("all giants " + id);
         // each giant here that speaks the protocol
@@ -222,7 +345,8 @@ public final class AdminTransfer {
             seen.add(g.key());
             Map<String, JsonElement> want = b.values().getOrDefault(g.key(), Map.of());
             for (AdminSetting s : r.settings())
-                consider(w, g.key(), r.name(), s, want, b.replace(), steps, creation, locked);
+                consider(w, g.key(), r.name(), s, want, b.replace() && !b.keep().contains(s.cat()), steps, creation,
+                        locked);
             for (String id : want.keySet()) if (r.setting(id) == null) skipped.add(r.name() + " " + id);
         }
         for (String g : b.values().keySet())

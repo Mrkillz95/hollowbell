@@ -52,7 +52,18 @@ public final class AdminInsight {
      * @param uses  the all-giants multipliers his mod applies
      */
     public record View(String key, String name, Map<String, Double> now, Map<String, Double> jar,
-            Map<String, String> names, List<String> uses, Map<String, Double> most) {
+            Map<String, String> names, List<String> uses, Map<String, Double> most, Map<String, Double> high) {
+        public View(String key, String name, Map<String, Double> now, Map<String, Double> jar,
+                Map<String, String> names, List<String> uses, Map<String, Double> most) {
+            this(key, name, now, jar, names, uses, most, Map.of());
+        }
+
+        /** a range's high end (or the value, or 1) */
+        public double hi(String id) {
+            Double h = high.get(id);
+            return h != null ? h : v(id, 1);
+        }
+
         public boolean has(String id) {
             return now.containsKey(id);
         }
@@ -85,9 +96,16 @@ public final class AdminInsight {
 
     /** a giant's report as the book sees it */
     public static View view(AdminJson.Report r) {
-        Map<String, Double> now = new HashMap<>(), jar = new HashMap<>(), most = new HashMap<>();
+        Map<String, Double> now = new HashMap<>(), jar = new HashMap<>(), most = new HashMap<>(),
+                high = new HashMap<>();
         Map<String, String> names = new HashMap<>();
         for (AdminSetting s : r.settings()) {
+            if (s.value() != null && s.value().isJsonArray() && s.value().getAsJsonArray().size() == 2)
+                try {
+                    high.put(s.id(), s.value().getAsJsonArray().get(1).getAsDouble());
+                } catch (RuntimeException e) {
+                    // (left out)
+                }
             Double n = number(s, s.value()), j = number(s, s.jar());
             if (n == null) continue;
             now.put(s.id(), n);
@@ -95,11 +113,19 @@ public final class AdminInsight {
             most.put(s.id(), s.max());
             names.put(s.id(), s.name());
         }
-        return new View(r.giant(), r.name(), now, jar, names, r.uses(), most);
+        return new View(r.giant(), r.name(), now, jar, names, r.uses(), most, high);
     }
 
-    /** a value as a number (on 1, off 0, a choice its place); null for a size range */
+    /** a value as a number (on 1, off 0, a choice its place, a size range its middle) */
     static @Nullable Double number(AdminSetting s, @Nullable JsonElement v) {
+        // (Part 4) a size range counts as its middle
+        if (v != null && v.isJsonArray() && v.getAsJsonArray().size() == 2) {
+            try {
+                return (v.getAsJsonArray().get(0).getAsDouble() + v.getAsJsonArray().get(1).getAsDouble()) / 2;
+            } catch (RuntimeException e) {
+                return null;
+            }
+        }
         if (v == null || !v.isJsonPrimitive()) return null;
         JsonPrimitive p = v.getAsJsonPrimitive();
         try {
@@ -162,6 +188,42 @@ public final class AdminInsight {
         double lh = 0, ld = 0, ls = 0, lc = 0, lheal = 0, noHeal = 0;
         double grief = 0, grief0 = 0, griefN = 0, grudge = 0, grudgeN = 0, stubborn = 0, stubborn0 = 0, fleeN = 0;
         double count = 0, count0 = 0;
+        // (Part 4, ADMIN_BRIDGE.md 19.7) temper, strength at night, roaming, size, how many
+        double temper = 0, temperN = 0, lnight = 0, nightN = 0, roam = 0, roamN = 0, lsize = 0, sizeN = 0, many = 0,
+                manyN = 0;
+        double hunters = 0, gentle = 0;
+        for (View g : gs) {
+            if (g.has("temper")) {
+                temperN++;
+                // (options peaceful, normal, hunter: a choice counts as its place)
+                double t = g.v("temper", 1), t0 = g.jar.getOrDefault("temper", 1.0);
+                double by = (t < 0.5 ? -1.5 : t > 1.5 ? 0.5 : 0) - (t0 < 0.5 ? -1.5 : t0 > 1.5 ? 0.5 : 0);
+                temper += by;
+                if (t < 0.5) gentle++;
+                if (t > 1.5) hunters++;
+            }
+            if (g.has("nightStrength")) {
+                nightN++;
+                lnight += log2(g.ratio("nightStrength"));
+            }
+            if (g.has("roam") || g.has("seekGiants") || g.has("raidVillages")) {
+                roamN++;
+                if (g.on("raidVillages")) roam += 0.5;
+                if (g.on("seekGiants")) roam += 0.25;
+                double rm = g.v("roam", 0);
+                if (rm > 0.5 && rm < 1.5) roam += 0.25;
+                if (rm > 1.5) roam -= 0.25;
+            }
+            if (g.has("worldScale")) {
+                sizeN++;
+                lsize += log2(g.ratio("worldScale") * g.v("spawnSize", 1) / g.jar.getOrDefault("spawnSize", 1.0)
+                        * g.all(all, "all.size"));
+            }
+            if (g.has("worldCount")) {
+                manyN++;
+                many += g.v("worldCount", 1) / g.jar.getOrDefault("worldCount", 1.0);
+            }
+        }
         for (View g : gs) {
             String base = g.has("health") ? "health" : "headHealth";
             lh += log2(g.ratio("healthMultiplier") * g.ratio(base) * g.all(all, "all.health"));
@@ -215,6 +277,20 @@ public final class AdminInsight {
             else parts.add(new Part("only " + AdminSetting.plain(count) + " of " + AdminSetting.plain(count0)
                     + " come on their own", clamp(0.75 * log2(count / count0), -0.75, 0)));
         }
+        if (temperN > 0 && temper != 0)
+            parts.add(new Part(temper > 0 ? (hunters >= temperN ? "always hunting" : "more hunters")
+                    : gentle >= temperN ? "peaceful giants" : "fewer start fights", temper / temperN));
+        if (nightN > 0 && lnight != 0)
+            parts.add(new Part((lnight > 0 ? "stronger" : "weaker") + " at night (x"
+                    + times(Math.pow(2, lnight / nightN)) + ")", 1.25 * 0.5 * lnight / nightN));
+        if (roamN > 0 && roam != 0)
+            parts.add(new Part(roam > 0 ? "giants that come looking" : "giants that stay put", roam / roamN));
+        if (sizeN > 0 && lsize != 0)
+            parts.add(new Part((lsize > 0 ? "bigger" : "smaller") + " giants (x" + times(Math.pow(2, lsize / sizeN))
+                    + ")", clamp(0.5 * lsize / sizeN, -1, 0.75)));
+        if (manyN > 0 && many / manyN > 1)
+            parts.add(new Part(AdminSetting.plain(Math.round(many / manyN * 10) / 10.0) + " of each kind",
+                    clamp(0.75 * log2(many / manyN), 0, 0.75)));
         double score = 3;
         for (Part p : parts) score += p.by();
         int level = (int) clamp(Math.floor(score + 0.5), 1, 5);
@@ -315,7 +391,38 @@ public final class AdminInsight {
                     c -> "{who}: " + c.g.nameOf("worldScale") + " " + AdminSetting.plain(c.v("worldScale"))
                             + " x the all-giants Spawn size x" + AdminSetting.plain(c.all.get("all.size"))
                             + " is past {his} biggest (" + AdminSetting.plain(c.g.most().get("worldScale"))
-                            + "), so {he} {comes} at that."));
+                            + "), so {he} {comes} at that."),
+            // Part 4 (ADMIN_BRIDGE.md 19.7)
+            new Rule("count_capped",
+                    c -> c.has("worldCount", "maxInWorld") && c.v("worldCount") > 1 && c.v("maxInWorld") > 0
+                            && c.v("maxInWorld") < c.v("worldCount"),
+                    c -> "{who}: " + c.g.nameOf("worldCount") + " is " + AdminSetting.plain(c.v("worldCount"))
+                            + ", but " + c.g.nameOf("maxInWorld") + " is " + AdminSetting.plain(c.v("maxInWorld"))
+                            + ", so only " + AdminSetting.plain(c.v("maxInWorld")) + " {comes}."),
+            new Rule("count_alone",
+                    c -> c.has("worldCount", "oneInTheWorld") && c.v("worldCount") > 1 && !c.g.on("oneInTheWorld"),
+                    c -> "{who}: companions come beside the world's own one, but " + c.g.nameOf("oneInTheWorld")
+                            + " is off, so none come."),
+            new Rule("seek_no_fight",
+                    c -> c.has("seekGiants", "fightGiants", "meetings") && c.g.on("seekGiants")
+                            && (!c.g.on("fightGiants") || !c.g.on("meetings")),
+                    c -> "{who}: " + c.g.nameOf("seekGiants") + " is on, but " + c.g.nameOf("fightGiants") + " or "
+                            + c.g.nameOf("meetings") + " is off, so {he} {walks} to other giants and {leaves} them"
+                            + " be."),
+            new Rule("raid_peaceful",
+                    c -> c.has("raidVillages", "temper") && c.g.on("raidVillages") && c.v("temper") < 0.5,
+                    c -> "{who}: " + c.g.nameOf("raidVillages") + " is on, but " + c.g.nameOf("temper")
+                            + " is peaceful, so {he} {walks} to villages and players and {leaves} them be."),
+            new Rule("stay_roams",
+                    c -> c.has("roam") && c.v("roam") > 1.5 && (c.g.on("seekGiants") || c.g.on("raidVillages")),
+                    c -> "{who}: " + c.g.nameOf("roam") + " is stay, so " + c.g.nameOf("seekGiants") + " and "
+                            + c.g.nameOf("raidVillages") + " do nothing."),
+            new Rule("tiny_war",
+                    c -> c.has("seekGiants", "worldScale") && c.g.on("seekGiants")
+                            && c.v("worldScale") * c.g.hi("spawnSize") * (c.g.uses().contains("all.size")
+                                    ? c.all.getOrDefault("all.size", 1.0) : 1) < 0.1,
+                    c -> "{who}: " + c.g.nameOf("seekGiants") + " is on at a tiny size, so {he} mostly {gets}"
+                            + " crushed."));
 
     /** the rules' ids, in the order they are checked */
     public static List<String> ruleIds() {
@@ -369,7 +476,10 @@ public final class AdminInsight {
                 .replace("{his}", many ? "their" : "his")
                 .replace("{comes}", many ? "come" : "comes")
                 .replace("{heals}", many ? "heal" : "heals")
-                .replace("{backs}", many ? "back" : "backs");
+                .replace("{backs}", many ? "back" : "backs")
+                .replace("{walks}", many ? "walk" : "walks")
+                .replace("{leaves}", many ? "leave" : "leaves")
+                .replace("{gets}", many ? "get" : "gets");
     }
 
     // the preset

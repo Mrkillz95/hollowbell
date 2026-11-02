@@ -258,8 +258,10 @@ public class CreationGameTests implements FabricGameTest {
         var built = p.getAsJsonArray("builtin");
         List<String> ids = new ArrayList<>();
         for (JsonElement e : built) ids.add(e.getAsJsonObject().get("id").getAsString());
-        h.assertTrue(ids.equals(List.of("classic", "close_quarters", "far_frontier")), "order " + ids);
-        JsonObject first = built.get(0).getAsJsonObject(), cqj = built.get(1).getAsJsonObject();
+        // (Part 4's re-tune presets come between Classic and these two)
+        h.assertTrue(ids.get(0).equals("classic") && ids.subList(ids.size() - 2, ids.size())
+                .equals(List.of("close_quarters", "far_frontier")), "order " + ids);
+        JsonObject first = built.get(0).getAsJsonObject(), cqj = built.get(ids.size() - 2).getAsJsonObject();
         h.assertTrue(first.get("default").getAsBoolean() && first.get("group").getAsString().equals("default"),
                 "Classic isn't the default");
         h.assertTrue(cqj.get("group").getAsString().equals("all") && cqj.get("level").getAsInt() == 3,

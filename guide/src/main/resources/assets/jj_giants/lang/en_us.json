@@ -1502,8 +1502,8 @@
   "admin.jj_giants.book.presets.preview": "Preview…",
   "admin.jj_giants.book.presets.preview.tip": "Shows every change it would make and the danger rating before and after, then asks.",
   "admin.jj_giants.book.presets.suggested": "Suggested",
-  "admin.jj_giants.book.presets.suggested.note": "Coming in later updates, with the rest of the presets.",
-  "admin.jj_giants.book.presets.soon.tip": "Coming in a later update.",
+  "admin.jj_giants.book.presets.suggested.note": "The best ones to start with. My Giant comes in a later update.",
+  "admin.jj_giants.book.presets.soon.tip": "My Giant: each new player picks a giant on first join. Coming in a later update.",
   "admin.jj_giants.book.presets.saved": "Saved on this server",
   "admin.jj_giants.book.presets.saved.note": "Kept for the whole server, so every world on it can use them.",
   "admin.jj_giants.book.presets.saved.none": "None yet: save this world's settings below.",
@@ -1568,7 +1568,7 @@
   "admin.jj_giants.creation.button.tip": "Pick a preset for the giants and change any of their settings before the world is made.",
   "admin.jj_giants.creation.title": "Giants for the new world",
   "admin.jj_giants.creation.suggested": "Suggested",
-  "admin.jj_giants.creation.suggested.note": "Coming soon",
+  "admin.jj_giants.creation.suggested.note": "The best ones to start with",
   "admin.jj_giants.creation.all": "All presets",
   "admin.jj_giants.creation.saved": "Saved on this game",
   "admin.jj_giants.creation.saved.none": "None yet. Save one from Edit settings… (Presets) or from an admin book.",
@@ -1580,5 +1580,5 @@
   "admin.jj_giants.creation.replace.title": "Replace your changes?",
   "admin.jj_giants.creation.replace.body": "Picking %s puts the new world's settings back to that preset. The changes you made after picking go.",
   "admin.jj_giants.creation.none": "No giant here has admin settings, so there is nothing to set.",
-  "admin.jj_giants.creation.soon.tip": "Coming in a later update."
+  "admin.jj_giants.creation.soon.tip": "My Giant: each new player picks a giant on first join. Coming in a later update."
 }
