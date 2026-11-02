@@ -463,6 +463,28 @@ public final class FarOrders {
         return n;
     }
 
+    /**
+     * One left in land nobody has loaded, fetched to be killed (true) or taken out of the world for good (false) when
+     * his chunk brings him in, as /hollowbell kill and remove do for every one (the Giants Guide's live control).
+     * False if he isn't written down there.
+     */
+    public static boolean fetchOne(MinecraftServer server, UUID id, boolean kill) {
+        Away a = Away.get(server);
+        var p = a.parked().get(id);
+        if (p == null) return false;
+        for (ServerLevel l : server.getAllLevels()) {
+            String dim = l.dimension().location().toString();
+            if (!p.dim().equals(dim) || l.getEntity(id) != null) continue;
+            fetches.add(new Fetch(
+                    id, dim, p.x(), p.z(), Vec3.ZERO, null, l.getGameTime() + 20 * 20, 0f, kill, !kill));
+            ChunkPos cp = new ChunkPos(Mth.floor(p.x()) >> 4, Mth.floor(p.z()) >> 4);
+            l.getChunkSource().addRegionTicket(FETCH, cp, 2, cp);
+            a.setDirty();
+            return true;
+        }
+        return false;
+    }
+
     /** dead, and his chunk kept going until he's gone (his death takes a while) */
     public static void kill(ServerLevel l, HollowbellEntity h) {
         l.getChunkSource().addRegionTicket(DYING, new ChunkPos(h.blockPosition()), 2, h.getId());
