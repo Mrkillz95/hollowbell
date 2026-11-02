@@ -66,7 +66,7 @@ into his hollow dome and see what he's caught.
 
 - When he's losing a wild fight with another giant (one no player started), he backs down, climbs up out of reach and
   flies home to the middle of the Bell Hollows (or to whoever holds his book, if they're in the same world), up to
-  about 1,500 blocks away. There he rests for a few minutes and starts no
+  about 1,500 blocks away. There he rests for a few minutes and heals a little, up to half his health, and starts no
   fights. He never backs down from a fight a player started: one his book sent him into, one started with
   `/giants meet`, or while somebody rides him. New for operators: `/giants flee on|off [giant]` (off: giants fight
   their wild fights to the end; on its own it shows each giant's setting).
