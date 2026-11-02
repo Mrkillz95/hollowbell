@@ -66,6 +66,9 @@ public final class GiantsBridge {
         if (action.equals("adminset")) return GiantsAdmin.receive(server, arg);
         // /giants admin set ... allworlds: one setting's server default, into his config file (AdminScope)
         if (action.equals("admindefault")) return AdminScope.receiveDefault(server, arg);
+        // the Giants Guide's live control: every one of him, and one action on one of them (GiantsLive)
+        if (action.equals("live")) return GiantsLive.describe(server, arg);
+        if (action.equals("liveact")) return GiantsLive.act(server, arg);
         // the Giants Guide's Controls tab: the triple crouch to sit, on or off (on your own game, server null)
         if ("controlget".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlGet(arg);
         if ("controlset".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlSet(arg);

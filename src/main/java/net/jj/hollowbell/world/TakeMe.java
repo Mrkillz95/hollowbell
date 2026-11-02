@@ -79,6 +79,34 @@ public final class TakeMe {
                 }
             }
         }
+        // one put away with his chunk where nobody was near (not loaded, not out of the world): beside him, he loads
+        // round you
+        if (pick == null && which <= 0) {
+            Map.Entry<UUID, Away.Parked> lay = null;
+            double bd = Double.MAX_VALUE;
+            for (var e : Away.get(server).parked().entrySet()) {
+                ServerLevel l = level(server, e.getValue().dim());
+                if (l.getEntity(e.getKey()) != null) continue;
+                double d = (l == p.level() ? 0 : 1e12)
+                        + Mth.square(e.getValue().x() - p.getX())
+                        + Mth.square(e.getValue().z() - p.getZ());
+                if (d < bd) {
+                    bd = d;
+                    lay = e;
+                }
+            }
+            if (lay != null) pick = new Lying(lay.getKey(), lay.getValue());
+        }
+        return tpTo(p, pick);
+    }
+
+    /**
+     * Takes this player to this one of him (a {@link HollowbellEntity}, an {@link Away.Rec} or a {@link Lying} from
+     * {@link #listed}; null: the world's own one lying unloaded, or where the next one comes down), the way
+     * /hollowbell tp does. The Giants Guide's live control uses it (GiantsLive).
+     */
+    public static Component tpTo(ServerPlayer p, @Nullable Object pick) {
+        MinecraftServer server = p.server;
         if (pick instanceof HollowbellEntity h) {
             ServerLevel l = (ServerLevel) h.level();
             return land(p, l, h.getX(), h.getZ(), h.bellScale());
@@ -94,29 +122,6 @@ public final class TakeMe {
             if (NoWait.onTheWay(p)) return c;
             return Component.translatable(
                     "command.hollowbell.tp_waiting", Mth.floor(k.at().x()), Mth.floor(k.at().z()));
-        }
-        // one put away with his chunk where nobody was near (not loaded, not out of the world): beside him, he loads
-        // round you
-        if (which <= 0) {
-            Map.Entry<UUID, Away.Parked> lay = null;
-            double bd = Double.MAX_VALUE;
-            for (var e : Away.get(server).parked().entrySet()) {
-                ServerLevel l = level(server, e.getValue().dim());
-                if (l.getEntity(e.getKey()) != null) continue;
-                double d = (l == p.level() ? 0 : 1e12)
-                        + Mth.square(e.getValue().x() - p.getX())
-                        + Mth.square(e.getValue().z() - p.getZ());
-                if (d < bd) {
-                    bd = d;
-                    lay = e;
-                }
-            }
-            if (lay != null) {
-                Away.Parked k = lay.getValue();
-                Component c = land(p, level(server, k.dim()), k.x(), k.z(), k.sizeOr(BellConfig.V.worldScale));
-                if (NoWait.onTheWay(p)) return c;
-                return Component.translatable("command.hollowbell.tp_waiting", Mth.floor(k.x()), Mth.floor(k.z()));
-            }
         }
         // none standing: where the next one comes down
         WorldOne w = WorldOne.get(server);

@@ -100,6 +100,15 @@ public final class BookRule extends SavedData {
         setDirty();
     }
 
+    /**
+     * A fresh copy given to this player, as an op's /give: they hold the book from now on and any other copy goes
+     * quiet (the Giants Guide's live control)
+     */
+    public void given(ServerPlayer p, ItemStack s) {
+        hold(p, giveId(s));
+        markQuiet(s, false);
+    }
+
     /** /hollowbell book free: nobody holds it now */
     public void free() {
         holder = null;
