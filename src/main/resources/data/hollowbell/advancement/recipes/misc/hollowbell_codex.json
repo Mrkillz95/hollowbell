@@ -1,0 +1,43 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_hollowbell_pod": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "hollowbell:hollowbell_pod"
+          }
+        ]
+      }
+    },
+    "has_bell_glass": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "hollowbell:bell_glass"
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "hollowbell:hollowbell_codex"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_hollowbell_pod",
+      "has_bell_glass",
+      "has_the_recipe"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "hollowbell:hollowbell_codex"
+    ]
+  }
+}

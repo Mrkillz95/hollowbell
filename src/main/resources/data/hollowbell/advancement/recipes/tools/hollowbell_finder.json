@@ -1,0 +1,54 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_compass": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:compass"
+          }
+        ]
+      }
+    },
+    "has_glass": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:glass"
+          }
+        ]
+      }
+    },
+    "has_amethyst_shard": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:amethyst_shard"
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "hollowbell:hollowbell_finder"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_compass",
+      "has_glass",
+      "has_amethyst_shard",
+      "has_the_recipe"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "hollowbell:hollowbell_finder"
+    ]
+  }
+}
