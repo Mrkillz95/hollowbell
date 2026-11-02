@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.30
+# Hollowbell (Java mod), version 1.12.31
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -12,6 +12,11 @@ into his hollow dome and see what he's caught.
   minutes (nothing has hurt him, he has hurt nothing and he is hunting nothing): 2% of his health a minute over the
   Bell Hollows, 1% anywhere else. Nothing else heals him on his own, not even resting after he backs down. Settings:
   `passiveHeal`, `healHomePerMinute`, `healAwayPerMinute`, `healPauseMinutes`.
+- His finder and his book now show up in your recipe book: the finder once you pick up a compass or any of its other
+  items, the book once you pick up something of his that goes in it.
+
+### 1.12.30
+
 - The cracks he leaves when he lands now spread over a few ticks instead of freezing the game.
 - New Drawing setting (Giants Performance, Detail): Fast, the default, draws the same picture with less work for
   your graphics card. He may show up a few frames late the first time you see him. If anything looks wrong, switch
