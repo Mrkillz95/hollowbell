@@ -1,76 +1,289 @@
-# Pictures of the Giants Admin Book with the eight giants loaded:
+# Pictures of the Giants Admin Book with the eight giants loaded, at GUI scales 2, 1 and 3:
 #   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
-# (they land in build/autotest/screenshots). A few settings are changed first so the pages show changed values,
-# the danger rating moving and clashes; GUISCALE is set by the line below (copy the file for 1 and 3).
-guiscale 2
+# (they land in build/autotest/screenshots). A few settings are changed first so the pages show changed values, the
+# danger rating moving and clashes; at scale 2 a change is made the book's way and a new-land one confirmed.
 wait 40
 cmd giants admin set wreckback healthMultiplier 2
 cmd giants admin set wreckback move.claw_snip.on off
 cmd giants admin set wreckback move.claw_snip.cooldown 0.5
 cmd giants admin set all damage 1.5
 cmd giants admin set all health 1.25
-cmd giants admin set pitchgut maxInWorld 0
+cmd giants admin set pitchgut yieldAt 0
 cmd giants admin set hollowbell chunkLoading off
 cmd giants admin set cerberus chunkLoading off
 wait 20
+guiscale 2
+wait 10
 adminintro unseen
 adminmode simple
-adminbook home
-wait 60
-mouse 2 2
-wait 10
-shot ab_intro_0
-adminintro 2
-adminbook home
-wait 30
-mouse 2 2
-shot ab_intro_2
-close
-adminintro seen
+adminscope world
 adminbook home
 wait 40
 mouse 2 2
-wait 10
-shot ab_home
-adminbook home 400
-wait 30
+wait 25
+shot ab_s2_intro_1
+close
+adminintro 3
+adminbook home
 mouse 2 2
-shot ab_home_end
+wait 25
+shot ab_s2_intro_4
+close
+adminintro seen
+adminbook home
+mouse 2 2
+wait 25
+shot ab_s2_home
+adminbook home 600
+mouse 2 2
+wait 25
+shot ab_s2_home_end
 adminbook all
-wait 30
 mouse 2 2
-shot ab_all
+wait 25
+shot ab_s2_all
 adminbook wreckback
-wait 30
 mouse 2 2
-shot ab_wreckback_simple
+wait 25
+shot ab_s2_wreckback_simple
+adminbook wreckback 2000
+mouse 2 2
+wait 25
+shot ab_s2_wreckback_simple_end
 adminmode advanced
 adminbook wreckback
-wait 30
 mouse 2 2
-shot ab_wreckback_top
-adminbook wreckback 900
-wait 30
+wait 25
+shot ab_s2_wreckback_advanced
+adminbook wreckback 1000
 mouse 2 2
-shot ab_wreckback_moves
-adminbook swarmforge 300
-wait 30
+wait 25
+shot ab_s2_wreckback_moves
+adminbook pitchgut
 mouse 2 2
-shot ab_swarmforge
+wait 25
+shot ab_s2_pitchgut
+adminbook gloamwick 1800
+mouse 2 2
+wait 25
+shot ab_s2_gloamwick_players
 adminbook home 0 heal
-wait 30
 mouse 2 2
-shot ab_search_heal
+wait 25
+shot ab_s2_search_heal
+adminbook home 0 zzzz
+mouse 2 2
+wait 25
+shot ab_s2_search_none
 adminconfirm wreckback homeRadius
 adminbook wreckback
-wait 30
 mouse 2 2
-shot ab_confirm_newland
+wait 25
+shot ab_s2_confirm_newland
 close
 adminscope all
 adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s2_allworlds
+close
+adminscope all
+adminbook all
+mouse 2 2
+wait 25
+shot ab_s2_allworlds_all
+close
+adminscope world
+adminmode simple
+adminbook wreckback
+wait 30
+adminset wreckback damageMultiplier 1.5
 wait 30
 mouse 2 2
-shot ab_allworlds
+wait 25
+shot ab_s2_changed
+adminset wreckback homeRadius 1000
+wait 10
+mouse 2 2
+wait 25
+shot ab_s2_confirm_by_change
+adminpress
+wait 40
+mouse 2 2
+wait 25
+shot ab_s2_confirmed
+adminmode simple
+adminbook wreckback
+mouse 444 189
+wait 25
+shot ab_s2_tooltip_q
+close
+adminmode simple
+close
+guiscale 1
+wait 10
+adminintro unseen
+adminmode simple
+adminscope world
+adminbook home
+wait 40
+mouse 2 2
+wait 25
+shot ab_s1_intro_1
+close
+adminintro 3
+adminbook home
+mouse 2 2
+wait 25
+shot ab_s1_intro_4
+close
+adminintro seen
+adminbook home
+mouse 2 2
+wait 25
+shot ab_s1_home
+adminbook home 600
+mouse 2 2
+wait 25
+shot ab_s1_home_end
+adminbook all
+mouse 2 2
+wait 25
+shot ab_s1_all
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s1_wreckback_simple
+adminbook wreckback 2000
+mouse 2 2
+wait 25
+shot ab_s1_wreckback_simple_end
+adminmode advanced
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s1_wreckback_advanced
+adminbook wreckback 1000
+mouse 2 2
+wait 25
+shot ab_s1_wreckback_moves
+adminbook pitchgut
+mouse 2 2
+wait 25
+shot ab_s1_pitchgut
+adminbook gloamwick 1800
+mouse 2 2
+wait 25
+shot ab_s1_gloamwick_players
+adminbook home 0 heal
+mouse 2 2
+wait 25
+shot ab_s1_search_heal
+adminbook home 0 zzzz
+mouse 2 2
+wait 25
+shot ab_s1_search_none
+adminconfirm wreckback homeRadius
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s1_confirm_newland
+close
+adminscope all
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s1_allworlds
+close
+adminscope all
+adminbook all
+mouse 2 2
+wait 25
+shot ab_s1_allworlds_all
+close
+adminscope world
+close
+guiscale 3
+wait 10
+adminintro unseen
+adminmode simple
+adminscope world
+adminbook home
+wait 40
+mouse 2 2
+wait 25
+shot ab_s3_intro_1
+close
+adminintro 3
+adminbook home
+mouse 2 2
+wait 25
+shot ab_s3_intro_4
+close
+adminintro seen
+adminbook home
+mouse 2 2
+wait 25
+shot ab_s3_home
+adminbook home 600
+mouse 2 2
+wait 25
+shot ab_s3_home_end
+adminbook all
+mouse 2 2
+wait 25
+shot ab_s3_all
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s3_wreckback_simple
+adminbook wreckback 2000
+mouse 2 2
+wait 25
+shot ab_s3_wreckback_simple_end
+adminmode advanced
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s3_wreckback_advanced
+adminbook wreckback 1000
+mouse 2 2
+wait 25
+shot ab_s3_wreckback_moves
+adminbook pitchgut
+mouse 2 2
+wait 25
+shot ab_s3_pitchgut
+adminbook gloamwick 1800
+mouse 2 2
+wait 25
+shot ab_s3_gloamwick_players
+adminbook home 0 heal
+mouse 2 2
+wait 25
+shot ab_s3_search_heal
+adminbook home 0 zzzz
+mouse 2 2
+wait 25
+shot ab_s3_search_none
+adminconfirm wreckback homeRadius
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s3_confirm_newland
+close
+adminscope all
+adminbook wreckback
+mouse 2 2
+wait 25
+shot ab_s3_allworlds
+close
+adminscope all
+adminbook all
+mouse 2 2
+wait 25
+shot ab_s3_allworlds_all
+close
+adminscope world
 close
 quit

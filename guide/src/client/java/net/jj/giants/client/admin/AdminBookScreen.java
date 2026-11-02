@@ -55,7 +55,7 @@ public class AdminBookScreen extends Screen {
             PANEL = 0xE8141210,
             EDGE = 0xFF6B5A44,
             LINE = 0x30FFFFFF;
-    private static final int SET_H = 26, SIZE_H = 38, MOVE_H = 20, HEAD_H = 20;
+    private static final int SET_H = 26, SIZE_H = 40, MOVE_H = 20, HEAD_H = 20;
     /** most lines a search shows */
     private static final int MOST_FOUND = 80;
     public static final String HOME = "home";
@@ -130,6 +130,33 @@ public class AdminBookScreen extends Screen {
         startConfirm = new String[] {giant, id};
     }
 
+    /**
+     * (the picture-taking) a change as if made with the setting's control on the open book: the same path (asked
+     * about first when it only reaches new land or a new world, then sent to the server)
+     */
+    public static boolean testChange(String giant, String id, String text) {
+        if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b)) return false;
+        AdminBookClient.Page p = AdminBookClient.page(giant);
+        AdminSetting s = p == null ? null : p.setting(id);
+        if (s == null) return false;
+        try {
+            b.commit(s, s.parse(text));
+            return true;
+        } catch (AdminSetting.BadValue e) {
+            return false;
+        }
+    }
+
+    /** (the picture-taking) presses the open question's first button ("Change it", "Next") */
+    public static boolean testPress() {
+        if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b) || b.modal == null)
+            return false;
+        // (a question's yes is its first button; the walkthrough's Next its last)
+        List<Button> bs = b.modal.buttons;
+        bs.get(b.modal instanceof Intro ? bs.size() - 1 : 0).onPress();
+        return true;
+    }
+
     static MutableComponent tr(String key, Object... args) {
         return Component.translatable("admin.jj_giants.book." + key, args);
     }
@@ -165,12 +192,13 @@ public class AdminBookScreen extends Screen {
     private JsonElement shown(AdminSetting s) {
         Pend p = pending.get(s.giant() + "/" + s.id());
         if (p != null) return p.v();
-        return allWorlds ? s.def() : s.value();
+        // (saving to all worlds, a world-only one still shows the world's value, greyed)
+        return allWorlds && editable(s) ? s.def() : s.value();
     }
 
     /** changed: this world has its own (or, saving to all worlds, the server default isn't what the mod ships) */
     private boolean changed(AdminSetting s) {
-        return allWorlds ? !AdminSetting.same(s.def(), s.jar()) && !shared(s) && !move(s) : s.set();
+        return allWorlds && editable(s) ? !AdminSetting.same(s.def(), s.jar()) : s.set();
     }
 
     /** whether it can be changed where changes go now (the all-giants and move ones only have world values) */
@@ -238,7 +266,11 @@ public class AdminBookScreen extends Screen {
         px0 = (width - pw) / 2;
         py0 = (height - ph) / 2;
         navX = px0 + 6;
-        navW = Mth.clamp(pw / 5, 76, 112);
+        int names = 0;
+        for (String k : navKeys())
+            names = Math.max(names, font.width(k.equals(HOME) ? tr("home").getString() : giantName(k)));
+        // (room for the picture, the name and a count)
+        navW = Mth.clamp(Math.max(pw / 5, names + 34), 76, Math.max(76, Math.min(120, pw / 4)));
         navY = py0 + 20;
         int entries = Math.max(2, navKeys().size());
         navRowH = entries * 20 <= ph - 26 ? 20 : entries * 17 <= ph - 26 ? 17 : 14;
@@ -426,7 +458,7 @@ public class AdminBookScreen extends Screen {
     }
 
     private int controlW() {
-        return Mth.clamp(lw / 3, 84, 132);
+        return Mth.clamp(lw * 3 / 10, 72, 132);
     }
 
     /** one setting: its name and notes on the left; its control and ↺ on the right */
@@ -449,18 +481,21 @@ public class AdminBookScreen extends Screen {
         }
 
         int textW() {
-            return lw - controlW() - 22 - (size ? previewW() + 4 : 0);
+            return lw - controlW() - 22;
         }
 
         @Override
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
-            boolean ch = changed(s), can = editable(s);
+            boolean ch = changed(s), can = editable(s), overPicture = false;
             if (ch) g.fill(x - 4, y + 2, x - 2, y + h - 2, GOLD);
             int tw = textW();
             // line 1: the name, "?", and when it takes effect
             Component marker = marker(s);
-            int markerW = marker.getString().isEmpty() ? 0 : font.width(marker) + 8;
-            String nm = cut(name(s).getString(), Math.max(30, tw - 12 - markerW));
+            String full = name(s).getString();
+            if (!marker.getString().isEmpty() && font.width(full) + 12 + font.width(marker) + 4 > tw)
+                marker = shortMarker(s);
+            int markerW = marker.getString().isEmpty() ? 0 : font.width(marker) + 4;
+            String nm = cut(full, Math.max(30, tw - 12 - markerW));
             int nx = g.drawString(font, nm, x, y + 3, !can ? GREY : ch ? GOLD : TEXT, false);
             int qx = nx + 3;
             boolean overQ = mx >= qx - 1 && mx < qx + 8 && my >= y + 2 && my < y + 12;
@@ -469,31 +504,40 @@ public class AdminBookScreen extends Screen {
             if (markerW > 0) g.drawString(font, marker, qx + 12, y + 3, markerColour(s), false);
             // line 2: the server default (or what the world keeps), then what it does
             MutableComponent l2 = line2(s);
-            int ux = g.drawString(font, l2, x, y + 14, GREY, false);
+            // (a size's lines 2 and 3 leave room for its picture)
+            int lineW = size ? tw - previewW() - 6 : tw;
+            String l2s = cut(l2.getString(), lineW);
+            int ux = l2s.equals(l2.getString()) ? g.drawString(font, l2, x, y + 14, GREY, false)
+                    : g.drawString(font, l2s, x, y + 14, GREY, false);
             String rest = what(s).getString();
-            if (!rest.isEmpty() && ux + 12 < x + tw)
-                g.drawString(font, cut("· " + rest, x + tw - ux - 4), ux + 4, y + 14, DIM, false);
+            if (!rest.isEmpty() && ux + 12 < x + lineW)
+                g.drawString(font, cut("· " + rest, x + lineW - ux - 4), ux + 4, y + 14, DIM, false);
             if (size) {
                 double v = number(shown(s));
                 String key = s.giant();
-                double fullH = shared(s) ? 200 : body(key)[0];
-                double tall = fullH * v;
+                double tall = (shared(s) ? 200 : body(key)[0]) * v;
                 g.drawString(font, cut(tr(shared(s) ? "size.all" : "size.tall", AdminSetting.plain(Math.round(tall)))
-                        .getString(), tw), x, y + 25, GREY, false);
-                preview(g, x + tw + 2, y + 3, previewW(), h - 6, shared(s) ? "" : key, v, s.max());
+                        .getString(), lineW), x, y + 25, GREY, false);
+                int bx = x + tw - previewW();
+                preview(g, bx, y + 13, previewW(), h - 15, shared(s) ? "" : key, v);
+                if (mx >= bx && mx < bx + previewW() && my >= Math.max(y + 13, ly0) && my < Math.min(y + h - 2, ly1)) {
+                    setTooltipForNextRenderPass(font.split(tr(shared(s) ? "size.tip.all" : "size.tip",
+                            AdminSetting.plain(Math.round(tall))), 220));
+                    overPicture = true;
+                }
             }
             if (ch || pending.containsKey(s.giant() + "/" + s.id()))
                 for (Placed p : ws)
                     if (p.w() != reset && p.w().visible)
                         g.renderOutline(p.w().getX() - 1, p.w().getY() - 1, p.w().getWidth() + 2, 18,
                                 pending.containsKey(s.giant() + "/" + s.id()) ? GREY : GOLD);
-            if (mx >= x - 4 && mx < x + tw && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
+            if (!overPicture && mx >= x - 4 && mx < x + tw && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
                 setTooltipForNextRenderPass(tip(s));
         }
     }
 
     private int previewW() {
-        return 58;
+        return Mth.clamp((lw - controlW() - 22) / 4, 40, 64);
     }
 
     /** what line 2 says: where the value comes from */
@@ -517,6 +561,17 @@ public class AdminBookScreen extends Screen {
             case AdminSetting.NEW_LAND -> tr("when.newLand");
             case AdminSetting.WORLD_CREATION -> tr("when.worldCreation");
             case AdminSetting.RESTART -> tr("when.restart");
+            default -> Component.empty();
+        };
+    }
+
+    /** the same in a word or two, for narrow pages */
+    static Component shortMarker(AdminSetting s) {
+        return switch (s.when()) {
+            case AdminSetting.NEW_SPAWNS -> tr("when.short.newSpawns");
+            case AdminSetting.NEW_LAND -> tr("when.short.newLand");
+            case AdminSetting.WORLD_CREATION -> tr("when.short.worldCreation");
+            case AdminSetting.RESTART -> tr("when.short.restart");
             default -> Component.empty();
         };
     }
@@ -1131,7 +1186,7 @@ public class AdminBookScreen extends Screen {
         // quick ways in
         rows.add(new Head(tr("home.quick"), null, null));
         Block quick = new Block(22, (g, x, y, w, mx, my) -> {});
-        int qx = 0;
+        int qx = 0, qy = 2;
         for (Object[] q : new Object[][] {
             {"home.quick.search", (Runnable) () -> setFocused(search)},
             {"home.quick.intro", (Runnable) () -> openIntro(0)},
@@ -1141,10 +1196,14 @@ public class AdminBookScreen extends Screen {
             Component c = q[0].equals("home.quick.mode") ? tr(advanced ? "home.quick.simple" : "home.quick.advanced")
                     : tr((String) q[0]);
             int bw = font.width(c) + 12;
-            if (qx + bw > lw) break;
+            if (qx > 0 && qx + bw > lw) {
+                // (on to the next row)
+                qx = 0;
+                qy += 20;
+                quick.h += 20;
+            }
             Runnable r = (Runnable) q[1];
-            Button b = Button.builder(c, x -> r.run()).bounds(0, 0, bw, 16).build();
-            quick.add(b, qx, 2, false);
+            quick.add(Button.builder(c, x -> r.run()).bounds(0, 0, bw, 16).build(), qx, qy, false);
             qx += bw + 4;
         }
         rows.add(quick);
@@ -1311,8 +1370,14 @@ public class AdminBookScreen extends Screen {
         drawHead(g, mx, my);
         g.fill(lx, ly0 - 3, lx + lw, ly0 - 2, EDGE);
         drawList(g, mx, my);
-        if (!status.getString().isEmpty() && Util.getMillis() - statusAt < 8000)
-            g.drawString(font, cut(status.getString(), pw - 12 - navW - 8), lx, py0 + ph - 11, statusColour, false);
+        if (!status.getString().isEmpty() && Util.getMillis() - statusAt < 8000) {
+            String line = cut(status.getString(), lw);
+            g.drawString(font, line, lx, py0 + ph - 11, statusColour, false);
+            // (all of it on hover, when it didn't fit)
+            if (!line.equals(status.getString()) && modal == null && mx >= lx && mx < lx + lw && my >= py0 + ph - 12
+                    && my < py0 + ph - 2)
+                setTooltipForNextRenderPass(font.split(status, 300));
+        }
         else if (AdminBookClient.home() == null)
             g.drawString(font, tr("asking"), lx, py0 + ph - 11, GREY, false);
     }
@@ -1415,26 +1480,28 @@ public class AdminBookScreen extends Screen {
     }
 
     /**
-     * A dark box with the ground, a player (1.8 blocks) and the giant at this size, to the same scale: the biggest
-     * size the setting takes fills the box, so the giant grows and shrinks with the slider. When he is too small to
-     * see that way the box zooms in to him (and says so).
+     * A dark box with the ground, a player (1.8 blocks) and the giant at this size, to the same scale. The giant
+     * fills the box; the player beside him is as big as he really is next to him (a speck beside a full-size giant,
+     * plain to see once the giant is small), never less than a dot.
      */
-    void preview(GuiGraphics g, int x, int y, int w, int h, String key, double size, double most) {
+    void preview(GuiGraphics g, int x, int y, int w, int h, String key, double size) {
         g.fill(x, y, x + w, y + h, 0x50000000);
         int ground = y + h - 2;
         g.fill(x + 1, ground, x + w - 1, ground + 1, 0x60FFFFFF);
         double[] b = body(key);
         double gh = Math.max(0.05, b[0] * size), gl = Math.max(0.05, b[1] * size);
-        double room = h - 5, roomW = w - 10;
-        double k = Math.min(room / (b[0] * Math.max(most, size)), roomW / (b[1] * Math.max(most, size)));
-        boolean zoom = gh * k < 6;
-        if (zoom) k = Math.min(room / Math.max(gh, 1.8), roomW / (gl + 1.2));
-        // the player: true to scale, but never less than a sliver, so he is always there to compare
-        int pH = Math.max(2, (int) Math.round(1.8 * k)), pW = Math.max(1, (int) Math.round(0.6 * k));
+        double k = Math.min((h - 4) / Math.max(gh, 1.8), (w - 8) / (gl + 1.2));
+        int pH = Math.max(1, (int) Math.round(1.8 * k)), pW = Math.max(1, (int) Math.round(0.6 * k));
         int px = x + 3;
         g.fill(px, ground - pH, px + pW, ground, 0xFFF0F0F0);
         if (pH >= 6) g.fill(px, ground - pH, px + pW, ground - pH + Math.max(1, pH / 4), 0xFFFFC890);
-        int gx = px + pW + 3;
+        if (pH < 5) {
+            // (a speck: a small mark over him so the eye finds him)
+            int mx0 = px + pW / 2, my0 = ground - pH - 3;
+            g.fill(mx0 - 1, my0 - 2, mx0 + 2, my0 - 1, 0xFFF0F0F0);
+            g.fill(mx0, my0 - 1, mx0 + 1, my0, 0xFFF0F0F0);
+        }
+        int gx = px + Math.max(pW, 3) + 2;
         int gw = Mth.clamp((int) Math.round(gl * k), 2, x + w - 2 - gx);
         int gt = Math.max(2, (int) Math.round(gh * k));
         int col = 0xFFB09070;
@@ -1462,7 +1529,6 @@ public class AdminBookScreen extends Screen {
                         ground, col);
             }
         }
-        if (zoom && w > 30) g.drawString(font, "+", x + w - 7, y + 1, GREY, false);
     }
 
     /** the part of an ellipse (in the box x, y, w, h) above the line yCut */

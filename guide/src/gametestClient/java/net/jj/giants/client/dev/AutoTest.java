@@ -239,6 +239,17 @@ public final class AutoTest implements ClientModInitializer {
                 else AdminBookScreen.introAt(Integer.parseInt(a));
                 continue;
             }
+            // adminset GIANT ID VALUE: a change as if made with that control on the open book; adminpress: the open
+            // question's yes (or the walkthrough's next)
+            if (s.startsWith("adminset ")) {
+                String[] a = s.substring(9).trim().split(" +", 3);
+                if (!AdminBookScreen.testChange(a[0], a[1], a[2])) GiantsGuideMod.LOG.warn("autotest: can't set {}", s);
+                continue;
+            }
+            if (s.equals("adminpress")) {
+                if (!AdminBookScreen.testPress()) GiantsGuideMod.LOG.warn("autotest: nothing to press");
+                continue;
+            }
             if (s.startsWith("adminconfirm ")) {
                 String[] a = s.substring(13).trim().split(" +");
                 AdminBookScreen.confirmAt(a[0], a[1]);
