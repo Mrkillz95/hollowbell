@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.17 |
-| Pitchgut | 1.35.32 |
-| Furrowmaw | 1.17.29 |
-| Fire & Ice Cerberus | 2.18.29 |
-| Hollowbell | 1.12.31 |
-| Lantern Willow | 1.10.32 |
-| Wreckback | 1.2.37 |
-| The Swarmforge | 1.4.35 |
-| The Gloamwick | 1.2.16 |
+| Giants Guide | 1.5.0 |
+| Pitchgut | 1.35.33 |
+| Furrowmaw | 1.17.30 |
+| Fire & Ice Cerberus | 2.18.30 |
+| Hollowbell | 1.12.32 |
+| Lantern Willow | 1.10.33 |
+| Wreckback | 1.2.38 |
+| The Swarmforge | 1.4.36 |
+| The Gloamwick | 1.2.17 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.8), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.7.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.8.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.7.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -84,6 +84,34 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.4.16: the Drawing setting (in Detail on Giants Performance): Fast to start with, Classic for
   the old drawing.
 - New in the Guide 1.4.17: the new healing rule for every giant, and the right number of Cerberus pelts.
+- New in the Guide 1.5.0: admin settings for operators. `/giants admin list|get|set|reset|log|preset|export|import`
+  changes any giant's settings, and the all-giants multipliers, for this world only, with a log of every change.
+  Every command that changes a setting takes `world` (this world, the same as saying nothing) or `allworlds` (the
+  server default). `/giants adminbook` gives the Giants Admin Book, whose pages come in the next update. The
+  Performance screen says "Sent to the server." when an operator's change goes through.
+
+## New in 1.7.0
+
+- **Admin settings, for operators.** Every giant's settings can now be changed for just this world, with
+  `/giants admin`: `list` (every setting of a giant, with its range and whether this world has its own value), `get`,
+  `set`, `reset` (one setting, one giant, or `everything`), `log` (who changed what, and when), `preset`, `export`
+  and `import` (the whole world's settings as one line of text). Each giant has his spawning, stats, behaviour,
+  every move (on or off, its wait and its wind cost), healing, taming, effects and server load, plus his own extras
+  (the Swarmforge can have each kind of robot switched off). `all` holds the all-giants multipliers: health, damage,
+  speed, size, move waits, healing and wind cost, on top of each giant's own. Settings marked "Only affects new
+  spawns" or "Only affects new land" say so when you change them. Values are kept in the world, other operators are
+  told about each change, and the giants' settings files stay the server default for every other world.
+- **`world` or `allworlds` on every setting command.** `/giants health`, `/giants damage`, `/giants preset`, each
+  giant's own commands (`/wreckback damage`, `/pitchgut heavydelay`, `config` and the rest) and the operator
+  switches in the books: nothing said or `world` changes this world, `allworlds` changes the server default. The
+  reply says which. A giant used without the Giants Guide keeps changing the server default when nothing is said.
+- `/giants adminbook` gives the Giants Admin Book. It's a placeholder for now: its pages come in the next update.
+- The Swarmforge's Loot Cache drops itself when you break it. The Pitchgut's Innards, the Swarmforge's crane seat
+  (the Hold) and the Hollowbell's stinger shots show their names. The Guide's Performance screen shows "Sent to the
+  server." instead of a code, and every giant's "stepped out of the world" server log line is worded the same.
+
+Inside: Pitchgut 1.35.33, Furrowmaw 1.17.30, Cerberus 2.18.30, Hollowbell 1.12.32, Lantern Willow 1.10.33,
+Wreckback 1.2.38, Swarmforge 1.4.36, Gloamwick 1.2.17, Giants Guide 1.5.0.
 
 ## New in 1.6.8
 
