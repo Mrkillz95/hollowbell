@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.6.0 |
-| Pitchgut | 1.35.34 |
-| Furrowmaw | 1.17.31 |
-| Fire & Ice Cerberus | 2.18.31 |
-| Hollowbell | 1.12.33 |
-| Lantern Willow | 1.10.34 |
-| Wreckback | 1.2.39 |
-| The Swarmforge | 1.4.37 |
-| The Gloamwick | 1.2.18 |
+| Giants Guide | 1.7.0 |
+| Pitchgut | 1.35.35 |
+| Furrowmaw | 1.17.32 |
+| Fire & Ice Cerberus | 2.18.32 |
+| Hollowbell | 1.12.34 |
+| Lantern Willow | 1.10.35 |
+| Wreckback | 1.2.40 |
+| The Swarmforge | 1.4.38 |
+| The Gloamwick | 1.2.19 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.8.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.9.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.8.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.9.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -93,6 +93,26 @@ A book about every giant you have. Right-click it to open it.
   pages, with search, Simple and Advanced, a danger rating and clash warnings on Home, Live control of every giant
   in the world (with Summon here), a Changes page with undo and snapshots, moderators, locks, a Presets page with
   saved presets and an export/import paste box, and a settings sync file for server owners.
+- New in the Guide 1.7.0: a Giants… button on Create World's More tab picks a preset and changes any giant
+  setting before the world is made (Edit settings… opens the admin book for the new world), the presets Close
+  Quarters and Far Frontier, and `config/jj_giants_admin/new_world.txt` for dedicated servers.
+
+## New in 1.9.0
+
+- **Giants… on Create World.** The More tab has a Giants… button: pick a preset (Classic, Close Quarters, Far
+  Frontier or one you saved), see its danger rating, and Edit settings… to change any giant setting in the admin
+  book before the world is made. It all goes into the world before its first land, and the change log says "Set at
+  world creation".
+- **Four new world settings for every giant**: Nearest to spawn and Farthest from spawn (world creation only),
+  Room from other grounds and Copies of his ground (only land not made yet). As shipped, worlds are made exactly as
+  before.
+- **New presets**: Close Quarters (grounds 500 to 1,500 blocks from spawn, smaller and 50 apart) and Far Frontier
+  (5,000 to 20,000 blocks out). More presets come in the next updates.
+- **For servers**: put a preset name or a settings string in `config/jj_giants_admin/new_world.txt` and every
+  brand-new world the server makes gets it.
+
+Inside: Pitchgut 1.35.35, Furrowmaw 1.17.32, Cerberus 2.18.32, Hollowbell 1.12.34, Lantern Willow 1.10.35,
+Wreckback 1.2.40, Swarmforge 1.4.38, Gloamwick 1.2.19, Giants Guide 1.7.0.
 
 ## New in 1.8.0
 
