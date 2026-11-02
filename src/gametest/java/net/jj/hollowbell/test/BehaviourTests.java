@@ -426,6 +426,22 @@ public class BehaviourTests implements FabricGameTest {
             lead.moveTo(here.getX() + 0.5, here.getY(), here.getZ() + 0.5, 0f, 0f);
             lead.companionsTick(l);
             h.assertTrue(WorldOne.standing(l.getServer()) == 0, "a companion came with respawn off");
+            // (JJ) and one still standing (a companion, an egg's) isn't made the world's own one: gone for good
+            set(h, "\"respawn\":false,\"oneInTheWorld\":true");
+            HollowbellEntity left = ModEntities.HOLLOWBELL.create(l);
+            left.moveTo(here.getX() + 0.5, here.getY() + 1, here.getZ() + 0.5, 0f, 0f);
+            left.setBellScale(0.05f);
+            l.addFreshEntity(left);
+            try {
+                for (int i = 0; i < 101; i++) w.tick(l.getServer().overworld());
+                h.assertTrue(!left.isWorldOne() && !w.aliveNow(), "a companion took over with respawn off");
+                set(h, "\"oneInTheWorld\":true");
+                for (int i = 0; i < 101; i++) w.tick(l.getServer().overworld());
+                h.assertTrue(left.isWorldOne() && w.aliveNow(),
+                        "with respawn on the one standing is the world's own again");
+            } finally {
+                left.discard();
+            }
             set(h, "\"oneInTheWorld\":true");
             h.assertFalse(w.heldBackByRespawn(), "with respawn on again the next one comes once due");
         } finally {

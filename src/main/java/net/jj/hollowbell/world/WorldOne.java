@@ -979,6 +979,9 @@ public class WorldOne extends SavedData {
         // only a real death or a remove that reached him ends the world's own one; not finding him means nothing
         // (he may be asleep in a chunk nobody is near)
         if (alive) return;
+        // (Part 4, JJ) respawn off: once the world's own one has fallen his kind is gone for good here: no new
+        // one, and none still standing (a companion, an egg's) is made the world's own one
+        if (!BellConfig.V.respawn && fell) return;
         // somebody already has one out, in the world or out of it: that is the one, and nothing new comes down
         HollowbellEntity already = anyOther(server, null);
         if (already != null) {
