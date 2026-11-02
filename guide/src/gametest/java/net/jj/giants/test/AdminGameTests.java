@@ -313,6 +313,32 @@ public class AdminGameTests implements FabricGameTest {
         done(h);
     }
 
+    /** with the Hollowbell's own mod loaded (-Pgiants): his real bridge, end to end */
+    @GameTest(template = EMPTY_STRUCTURE)
+    public void hollowbellForRealWhenHeIsHere(GameTestHelper h) {
+        Giant hb = Giants.byKey("hollowbell");
+        if (!Giants.loaded(hb)) {
+            h.succeed();
+            return;
+        }
+        MinecraftServer s = h.getLevel().getServer();
+        AdminServer.useGiants(null);
+        AdminJson.Report r = AdminServer.report(s, hb);
+        h.assertTrue(r != null && r.settings().size() > 100, "his list: " + (r == null ? 0 : r.settings().size()));
+        h.assertTrue(AdminServer.set(s, "T", "hollowbell", "healthMultiplier", "2").ok(), "set");
+        h.assertTrue(AdminServer.report(s, hb).setting("healthMultiplier").value().getAsDouble() == 2.0, "in use");
+        AdminServer.Result ground = AdminServer.set(s, "T", "hollowbell", "homeRadius", "1200");
+        h.assertTrue(ground.ok() && ground.lines().contains("Only affects land not made yet."),
+                "his ground's size says it only reaches new land: " + ground.lines());
+        h.assertTrue(AdminServer.set(s, "T", "hollowbell", "move.grab.on", "off").ok(), "a move off");
+        h.assertTrue(!AdminServer.report(s, hb).setting("move.grab.on").value().getAsBoolean(), "it is off");
+        h.assertTrue(AdminServer.set(s, "T", "all", "damage", "1.5").ok(), "all damage");
+        AdminServer.reset(s, "T", "everything", null);
+        h.assertTrue(AdminServer.report(s, hb).setting("healthMultiplier").value().getAsDouble() == 1.0, "back");
+        h.assertTrue(AdminServer.report(s, hb).setting("move.grab.on").value().getAsBoolean(), "the move back on");
+        h.succeed();
+    }
+
     /** with Wreckback's own mod loaded (-Pgiants): his real bridge, end to end */
     @GameTest(template = EMPTY_STRUCTURE)
     public void wreckbackForRealWhenHeIsHere(GameTestHelper h) {
