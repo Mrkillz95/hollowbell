@@ -261,8 +261,8 @@ public class AdminBookScreen extends Screen {
         seenVersion = AdminBookClient.version();
         seenSaid = AdminBookClient.saidAt();
 
-        pw = Math.min(width - 8, 640);
-        ph = Math.min(height - 8, 420);
+        pw = Math.min(width - 8, 720);
+        ph = Math.min(height - 8, 460);
         px0 = (width - pw) / 2;
         py0 = (height - ph) / 2;
         navX = px0 + 6;
@@ -503,9 +503,10 @@ public class AdminBookScreen extends Screen {
             g.drawString(font, "?", qx + 1, y + 3, overQ ? 0xFF202020 : BLUE, false);
             if (markerW > 0) g.drawString(font, marker, qx + 12, y + 3, markerColour(s), false);
             // line 2: the server default (or what the world keeps), then what it does
-            MutableComponent l2 = line2(s);
+            MutableComponent l2 = line2(s, false);
             // (a size's lines 2 and 3 leave room for its picture)
             int lineW = size ? tw - previewW() - 6 : tw;
+            if (font.width(l2) > lineW) l2 = line2(s, true);
             String l2s = cut(l2.getString(), lineW);
             int ux = l2s.equals(l2.getString()) ? g.drawString(font, l2, x, y + 14, GREY, false)
                     : g.drawString(font, l2s, x, y + 14, GREY, false);
@@ -541,16 +542,17 @@ public class AdminBookScreen extends Screen {
     }
 
     /** what line 2 says: where the value comes from */
-    private MutableComponent line2(AdminSetting s) {
+    private MutableComponent line2(AdminSetting s, boolean narrow) {
+        String n = narrow ? ".short" : "";
         if (allWorlds) {
-            if (shared(s) || move(s)) return tr("line.world_only");
-            MutableComponent c = tr("line.ships", show(s, s.jar()));
-            if (s.set()) c.append(tr("line.keeps", show(s, s.value())).withStyle(st -> st.withColor(ORANGE)));
+            if (shared(s) || move(s)) return tr("line.world_only" + n);
+            MutableComponent c = tr("line.ships" + n, show(s, s.jar()));
+            if (s.set()) c.append(tr("line.keeps" + n, show(s, s.value())).withStyle(st -> st.withColor(ORANGE)));
             return c;
         }
         if (s.set())
-            return tr("line.this_world").withStyle(st -> st.withColor(GOLD))
-                    .append(tr("line.default_after", show(s, s.def())).withStyle(st -> st.withColor(GREY)));
+            return tr("line.this_world" + n).withStyle(st -> st.withColor(GOLD))
+                    .append(tr("line.default_after" + n, show(s, s.def())).withStyle(st -> st.withColor(GREY)));
         return tr("line.default", show(s, s.def()));
     }
 
@@ -1341,6 +1343,8 @@ public class AdminBookScreen extends Screen {
 
     @Override
     public void removed() {
+        // (a number typed and not sent yet goes when the book closes)
+        for (Row r : rows) for (Placed p : r.ws) if (p.w() instanceof NumBox nb && nb.isFocused()) nb.send();
         AdminBookClient.closed();
     }
 

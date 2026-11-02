@@ -112,6 +112,11 @@ wait 40
 mouse 2 2
 wait 25
 shot ab_s2_confirmed
+cmd giants admin set wreckback damageMultiplier 3
+wait 30
+mouse 2 2
+wait 25
+shot ab_s2_refreshed_by_command
 adminmode simple
 adminbook wreckback
 mouse 444 189
