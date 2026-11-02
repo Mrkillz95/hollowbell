@@ -500,4 +500,25 @@ public class BehaviourTests implements FabricGameTest {
             finish(h, e, p[0], p[1]);
         });
     }
+
+    /** (Part 4) the choice settings can be set with /hollowbell config like any other (the server default here) */
+    @net.minecraft.gametest.framework.GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "beh_config_choice")
+    public void theChoicesTakeConfigCommands(net.minecraft.gametest.framework.GameTestHelper h) {
+        var server = h.getLevel().getServer();
+        var src = server.createCommandSourceStack().withPermission(4).withSuppressedOutput();
+        String was = net.jj.hollowbell.BellConfig.V.temper;
+        try {
+            server.getCommands().performPrefixedCommand(src, "hollowbell config temper hunter allworlds");
+            h.assertTrue(net.jj.hollowbell.BellConfig.V.temper.equals("hunter"), "config temper hunter: " + net.jj.hollowbell.BellConfig.V.temper);
+            server.getCommands().performPrefixedCommand(src, "hollowbell config roam wander allworlds");
+            h.assertTrue(net.jj.hollowbell.BellConfig.V.roam.equals("wander"), "config roam wander: " + net.jj.hollowbell.BellConfig.V.roam);
+            server.getCommands().performPrefixedCommand(src, "hollowbell config sleepSchedule nonsense allworlds");
+            h.assertTrue(net.jj.hollowbell.BellConfig.V.sleepSchedule.equals("usual"), "a wrong option is refused");
+        } finally {
+            server.getCommands().performPrefixedCommand(src, "hollowbell config temper " + was + " allworlds");
+            server.getCommands().performPrefixedCommand(src, "hollowbell config roam home allworlds");
+        }
+        h.assertTrue(net.jj.hollowbell.BellConfig.V.temper.equals(was) && net.jj.hollowbell.BellConfig.V.roam.equals("home"), "back");
+        h.succeed();
+    }
 }
