@@ -1278,7 +1278,8 @@ public class AdminBookScreen extends Screen {
         JsonObject gj = homeGiant(key);
         boolean speaks = key.equals(AdminCatalog.ALL) || gj == null || gj.get("speaks") == null
                 || gj.get("speaks").getAsBoolean();
-        Component sub = !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n) : tr("tile.default");
+        Component sub = ownPage(key) ? tr(key + ".tile") : !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n)
+                : tr("tile.default");
         g.drawString(font, cut(sub.getString(), tw), tx, y + 16, !speaks ? DIM : n > 0 ? GOLD : GREY, false);
     }
 
@@ -1361,7 +1362,7 @@ public class AdminBookScreen extends Screen {
                 return s == null || AdminSetting.same(allWorlds ? s.def() : s.value(), e.getValue().v());
             });
             // (a moderator's book: Live control is its only page)
-            if (!navKeys().contains(pageKey)) go(navKeys().get(0));
+            if (!AdminBookClient.role().isEmpty() && !navKeys().contains(pageKey)) go(navKeys().get(0));
             rebuild();
         }
         // the Live control page, once a second while it is open (not while something is held or asked)
@@ -1397,8 +1398,14 @@ public class AdminBookScreen extends Screen {
         if (want != navRowH) navRowH = want;
         build();
         scroll = sc;
-        if (wantScroll >= 0 && AdminBookClient.home() != null
-                && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank())) {
+        boolean there = switch (pageKey) {
+            case LIVE -> AdminBookClient.live() != null;
+            case PRESETS -> AdminBookClient.presets() != null;
+            case CHANGES -> AdminBookClient.changes() != null;
+            default -> AdminBookClient.home() != null
+                    && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
+        };
+        if (wantScroll >= 0 && there) {
             scroll = wantScroll;
             wantScroll = -1;
         }
@@ -2452,7 +2459,9 @@ public class AdminBookScreen extends Screen {
             if (!about.isEmpty()) out.addAll(font.split(Component.literal(about).withStyle(ChatFormatting.GRAY), w));
             int n = (int) dbl(p, "count", 0);
             out.addAll(font.split(n == 0 ? tr("preview.nothing") : tr("preview.changes", n), w));
-            List<JsonObject> ch = objects(p, "changes");
+            // (the ones that only reach new land first: the note below speaks of them)
+            List<JsonObject> ch = new ArrayList<>(objects(p, "changes"));
+            ch.sort(java.util.Comparator.comparing(c -> !bool(c, "creation")));
             // (as many as fit; the rest counted)
             int room = Math.max(3, (height - 120) / 10 - out.size() - 6);
             for (int i = 0; i < ch.size(); i++) {

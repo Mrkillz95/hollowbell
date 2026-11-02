@@ -125,6 +125,8 @@ public final class AutoTest implements ClientModInitializer {
             mc.getToasts().clear();
             return;
         }
+        // (no "goal reached" toasts over the pictures)
+        mc.getToasts().clear();
         if (wait > 0) {
             wait--;
             return;

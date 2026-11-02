@@ -617,13 +617,14 @@ public class AdminBook2GameTests implements FabricGameTest {
             return;
         }
         ServerPlayer alex = player(h, true);
-        alex.teleportTo(h.getLevel(), alex.getX() + 2000, 200, alex.getZ() + 2000, 0, 0);
+        // (in loaded land beside the test, so the summoned ones stand in the world)
         List<String> made = new ArrayList<>();
         for (String k : keys) {
             AdminServer.Result r = AdminLive.summon(s, alex, k, "0.1", null);
             h.assertTrue(r.ok(), k + " summon: " + r.lines());
             JsonObject row = newest(s, k, made);
-            h.assertTrue(row != null, k + ": the summoned one is listed");
+            h.assertTrue(row != null, k + ": the summoned one is listed (" + r.lines() + ") "
+                    + AdminLive.state(s).toString().substring(0, Math.min(900, AdminLive.state(s).toString().length())));
             h.assertTrue(Math.abs(row.get("size").getAsDouble() - 0.1) < 0.02, k + ": at size 0.1: " + row);
             h.assertTrue(row.get("state").getAsString().equals("here"), k + ": here");
             h.assertTrue(Math.abs(row.get("x").getAsDouble() - alex.getX()) < 40, k + ": at the op: " + row);

@@ -1552,5 +1552,8 @@
   "admin.jj_giants.book.mods.add.yes": "Make them one",
   "admin.jj_giants.book.mods.add.tip": "Live control only. Kept with this world.",
   "admin.jj_giants.book.intro.4.title": "Live control, presets and undo",
-  "admin.jj_giants.book.intro.4.body": "Live control lists every giant with where he is and how he is: teleport there, heal, size, sleep, calm, give his book, send him home, remove or kill, or summon one where you stand. Presets previews before it applies; Changes undoes anything and keeps snapshots. The padlock on a setting locks it against presets and other admins."
+  "admin.jj_giants.book.intro.4.body": "Live control lists every giant with where he is and how he is: teleport there, heal, size, sleep, calm, give his book, send him home, remove or kill, or summon one where you stand. Presets previews before it applies; Changes undoes anything and keeps snapshots. The padlock on a setting locks it against presets and other admins.",
+  "admin.jj_giants.book.live.tile": "Every giant, right now",
+  "admin.jj_giants.book.presets.tile": "Preview, save, import",
+  "admin.jj_giants.book.changes.tile": "Undo, snapshots, locks"
 }
