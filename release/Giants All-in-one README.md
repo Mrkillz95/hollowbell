@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.5.0 |
-| Pitchgut | 1.35.33 |
-| Furrowmaw | 1.17.30 |
-| Fire & Ice Cerberus | 2.18.30 |
-| Hollowbell | 1.12.32 |
-| Lantern Willow | 1.10.33 |
-| Wreckback | 1.2.38 |
-| The Swarmforge | 1.4.36 |
-| The Gloamwick | 1.2.17 |
+| Giants Guide | 1.6.0 |
+| Pitchgut | 1.35.34 |
+| Furrowmaw | 1.17.31 |
+| Fire & Ice Cerberus | 2.18.31 |
+| Hollowbell | 1.12.33 |
+| Lantern Willow | 1.10.34 |
+| Wreckback | 1.2.39 |
+| The Swarmforge | 1.4.37 |
+| The Gloamwick | 1.2.18 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.7.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.8.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.7.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.8.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -89,6 +89,31 @@ A book about every giant you have. Right-click it to open it.
   Every command that changes a setting takes `world` (this world, the same as saying nothing) or `allworlds` (the
   server default). `/giants adminbook` gives the Giants Admin Book, whose pages come in the next update. The
   Performance screen says "Sent to the server." when an operator's change goes through.
+- New in the Guide 1.6.0: the Giants Admin Book (`/giants adminbook`, operators). Every setting of every giant on
+  pages, with search, Simple and Advanced, a danger rating and clash warnings on Home, Live control of every giant
+  in the world (with Summon here), a Changes page with undo and snapshots, moderators, locks, a Presets page with
+  saved presets and an export/import paste box, and a settings sync file for server owners.
+
+## New in 1.8.0
+
+- **The Giants Admin Book.** `/giants adminbook` gives operators a book with every giant setting on pages: Home (the
+  preset, a danger rating from 1 Gentle to 5 Brutal, settings that clash, moderators), All giants, a page for each
+  giant, search, Simple or Advanced, a "?" on every setting, markers for settings that only reach new spawns or new
+  land, saving for this world or all worlds, a size picture beside a player, and a short walkthrough.
+- **Live control.** Every giant in the world in one list (where he is, health, size, mood, asleep, fighting, owner,
+  out of the world or not loaded) with Teleport, Heal, Size, Sleep, Wake, Calm, Forgive, Owner, Home, Remove and
+  Kill, and Summon here for admins.
+- **Changes.** The change log with Undo and Undo to here, snapshots kept before every preset, import and full reset
+  (the last 10, with Restore), and locked settings.
+- **Moderators** (Live control only) and **locks** (a locked setting keeps its value until an admin unlocks it), in
+  the book or with `/giants admin moderator add|remove <player>` and `/giants admin lock|unlock|locks`.
+- **Presets page.** Classic now (the other presets come in the next updates), your own presets saved for the whole
+  server, a preview of every change with the danger rating before and after, and export/import with a paste box.
+- **Settings sync** for server owners: put a settings string in `config/jj_giants_admin/sync.txt` and the server
+  makes it the default for every world when it starts (`/giants admin sync status|now`).
+
+Inside: Pitchgut 1.35.34, Furrowmaw 1.17.31, Cerberus 2.18.31, Hollowbell 1.12.33, Lantern Willow 1.10.34,
+Wreckback 1.2.39, Swarmforge 1.4.37, Gloamwick 1.2.18, Giants Guide 1.6.0.
 
 ## New in 1.7.0
 
