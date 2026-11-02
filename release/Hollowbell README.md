@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.33
+# Hollowbell (Java mod), version 1.12.34
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,14 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Four new world settings for the Giants Admin Book (in the all-in-one jar), also on the Create World
+  screen's new Giants… button: how near and how far from spawn his ground may begin (when the world is made;
+  as shipped 2,100 to 14,100 blocks), the room kept between his ground and every other giant's, and how many
+  copies of his ground the world has (both only for land not made yet). Left as shipped, worlds are made exactly
+  as before.
+
+### 1.12.33
 
 - The Giants Admin Book (operators, `/giants adminbook`, in the all-in-one jar) can now control him live: its Live
   control page lists every one of him the world knows (where he is, his health, size and mood, whether he's asleep
