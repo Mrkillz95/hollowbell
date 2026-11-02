@@ -29,21 +29,33 @@ cmd giants admin preset pocket_giants
 cmd giants admin confirm
 wait 20
 cmd time set 6000
-cmd tp @s 0 -60 0 0 10
+# (for the picture: different kinds this close would fight, and they keep still)
+cmd giants meetings off world
+cmd giants fight off world
+cmd giants admin set pitchgut roam stay
+cmd giants admin set furrowmaw roam stay
+cmd giants admin set cerberus roam stay
+cmd giants admin set hollowbell roam stay
+cmd giants admin set lanternwillow roam stay
+cmd giants admin set wreckback roam stay
+cmd giants admin set swarmforge roam stay
+cmd giants admin set gloamwick roam stay
+cmd tp @s 0 -60 -7 0 14
 wait 20
-cmd execute positioned 3 -60 6 run wreckback summon calm 0.011
-cmd execute positioned -3 -60 6 run cerberus summon calm 0.011
-cmd execute positioned 0 -60 9 run pitchgut summon calm 0.012
-cmd execute positioned 6 -60 10 run gloamwick summon calm 0.011
-cmd execute positioned -6 -60 10 run lanternwillow summon calm 0.011
-cmd execute positioned 9 -60 5 run swarmforge summon calm 0.015
-cmd execute positioned -9 -60 5 run furrowmaw summon calm 0.049
-cmd execute positioned 0 -60 14 run hollowbell summon calm 0.011
-wait 100
+cmd execute positioned 2.5 -60 4 run wreckback summon calm 0.011
+cmd execute positioned -2.5 -60 4 run cerberus summon calm 0.011
+cmd execute positioned 0 -60 6 run pitchgut summon calm 0.012
+cmd execute positioned 5 -60 6 run gloamwick summon calm 0.011
+cmd execute positioned -5 -60 6 run lanternwillow summon calm 0.011
+cmd execute positioned 7 -60 3 run swarmforge summon calm 0.015
+cmd execute positioned -8 -60 3 run furrowmaw summon calm 0.03
+cmd execute positioned 0 -60 9 run hollowbell summon calm 0.011
+# (after their arrivals: the Furrowmaw rears up out of the ground, the Hollowbell comes down from the sky)
+wait 300
 gui off
 wait 10
 shot p4_pocket_world
-cmd tp @s 0 -59 -2 0 25
+cmd tp @s 1 -60 -2 5 22
 wait 40
 shot p4_pocket_close
 gui on

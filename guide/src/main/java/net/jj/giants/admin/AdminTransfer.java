@@ -92,7 +92,7 @@ public final class AdminTransfer {
 
     /** each giant's size for about two blocks tall (his height at size 1: ADMIN_BRIDGE.md 19.2) */
     private static final Map<String, String> POCKET_SIZE = Map.of(
-            "pitchgut", "\"worldScale\":0.012", "furrowmaw", "\"worldScale\":0.049",
+            "pitchgut", "\"worldScale\":0.012", "furrowmaw", "\"worldScale\":0.03",
             "cerberus", "\"worldScale\":0.011", "hollowbell", "\"worldScale\":0.011",
             "lanternwillow", "\"worldScale\":0.011", "wreckback", "\"worldScale\":0.011",
             "swarmforge", "\"worldScale\":0.015", "gloamwick", "\"worldScale\":0.011");
