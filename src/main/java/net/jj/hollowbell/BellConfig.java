@@ -110,6 +110,20 @@ public final class BellConfig {
          */
         public int homeRadius = 900;
         /**
+         * How close to the world's spawn his ground may begin (its nearest edge), in blocks, when his first ground and
+         * any extra copies are chosen. At the shipped 2100 to 14100 he chooses exactly as he always has.
+         */
+        public int groundNearest = 2100;
+        /** How far from the world's spawn his ground may begin at most (its nearest edge), in blocks. */
+        public int groundFarthest = 14100;
+        /**
+         * Blocks kept between his ground and every other giant's, edge to edge, whenever one of his grounds is chosen.
+         * 0: no rule while the world is new (a ground chosen after he falls still keeps 200 off).
+         */
+        public int groundGap = 0;
+        /** How many grounds of his own the world has (1 = one, as always). */
+        public int groundCopies = 1;
+        /**
          * How far off you can see him coming, in blocks, even past where the game would stop drawing him (0 = off, up
          * to 4096).
          */
@@ -371,6 +385,10 @@ public final class BellConfig {
         v.ownedRespawnDays = Math.max(0, v.ownedRespawnDays);
         v.respawnBlocks = Math.max(0, v.respawnBlocks);
         v.homeRadius = Math.max(200, Math.min(2000, v.homeRadius));
+        v.groundNearest = Math.max(0, Math.min(100000, v.groundNearest));
+        v.groundFarthest = Math.max(0, Math.min(100000, v.groundFarthest));
+        v.groundGap = Math.max(0, Math.min(20000, v.groundGap));
+        v.groundCopies = Math.max(1, Math.min(5, v.groundCopies));
         v.farSightBlocks = Math.max(0, Math.min(4096, v.farSightBlocks));
         v.soundVolume = Math.max(0f, Math.min(2f, v.soundVolume));
         v.bigEffects = Math.max(0f, Math.min(2f, v.bigEffects));

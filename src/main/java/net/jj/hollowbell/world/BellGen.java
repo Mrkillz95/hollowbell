@@ -183,14 +183,23 @@ public final class BellGen {
     public static void noised(ChunkAccess chunk, ChunkGenerator gen) {
         Snap s = SNAP;
         ChunkPos p = chunk.getPos();
-        if (s == null || !s.claimed || s.gen != gen) return;
-        if (p.getMaxBlockX() < s.minX - 48 || p.getMinBlockX() > s.maxX + 48) return;
-        if (p.getMaxBlockZ() < s.minZ - 48 || p.getMinBlockZ() > s.maxZ + 48) return;
+        if (!nearForTops(s, gen, p)) {
+            // (Part 3) or in or near one of the copies of his ground
+            boolean near = false;
+            for (Snap c : extras) near |= nearForTops(c, gen, p);
+            if (!near) return;
+        }
         Heightmap top = chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.WORLD_SURFACE_WG);
         int[] v = new int[256];
         for (int lx = 0; lx < 16; lx++)
             for (int lz = 0; lz < 16; lz++) v[lx * 16 + lz] = top.getFirstAvailable(lx, lz) - 1;
         TOPS.put(p.toLong(), v);
+    }
+
+    private static boolean nearForTops(@Nullable Snap s, ChunkGenerator gen, ChunkPos p) {
+        if (s == null || !s.claimed || s.gen != gen) return false;
+        if (p.getMaxBlockX() < s.minX - 48 || p.getMinBlockX() > s.maxX + 48) return false;
+        return p.getMaxBlockZ() >= s.minZ - 48 && p.getMinBlockZ() <= s.maxZ + 48;
     }
 
     /**
@@ -219,6 +228,23 @@ public final class BellGen {
 
     /** the one snapshot the generator threads read; replaced whole, never changed */
     public static volatile @Nullable Snap SNAP;
+
+    /**
+     * (Part 3, groundCopies above 1) the extra copies of his ground, each its own claimed snapshot (own seed, same
+     * radius): made by the world exactly like his own one, as it makes the land there, and never anywhere already
+     * made. Empty with one ground (as always). Replaced whole, never changed.
+     */
+    private static volatile Snap[] extras = new Snap[0];
+
+    public static Snap[] extras() {
+        return extras.clone();
+    }
+
+    /** the copy (claimed) that could take in some of this chunk or the chunks next to it, for this generator */
+    private static @Nullable Snap extraNear(Object generator, ChunkPos p) {
+        for (Snap c : extras) if (generator == c.generator && c.touchesNear(p)) return c;
+        return null;
+    }
 
     // made on the server thread
 
@@ -268,18 +294,35 @@ public final class BellGen {
         Snap s = SNAP;
         if (s == null) return;
         SNAP = s.withClaim(w.homeClaimed(), w.homeSeed(), w.homeX(), w.homeZ(), w.homeRadius());
+        // (Part 3) one snapshot per copy in use (a copy already told keeps its snapshot, and so its plans)
+        List<WorldOne.Extra> in = w.extrasInUse();
+        Snap[] was = extras;
+        if (in.isEmpty() && was.length == 0) return;
+        Snap[] now = new Snap[in.size()];
+        for (int i = 0; i < now.length; i++) {
+            WorldOne.Extra e = in.get(i);
+            Snap keep = null;
+            for (Snap c : was)
+                if (c.generator == s.generator && c.seed == e.seed() && c.cx == e.x() && c.cz == e.z()
+                        && c.radius == e.r()) keep = c;
+            now[i] = keep != null ? keep : s.withClaim(true, e.seed(), e.x(), e.z(), e.r());
+        }
+        extras = now;
     }
 
     /** the server stopped: nothing is kept for the next world */
     public static void forget() {
         SNAP = null;
+        extras = new Snap[0];
         TOPS.clear();
     }
 
     /** is this spot inside his ground's outline (the finder asks)? */
     public static boolean inGround(int x, int z) {
         Snap s = SNAP;
-        return s != null && s.claimed && s.inBox(x, z) && s.outline.dn(x, z) < 1;
+        if (s != null && s.claimed && s.inBox(x, z) && s.outline.dn(x, z) < 1) return true;
+        for (Snap c : extras) if (c.inBox(x, z) && c.outline.dn(x, z) < 1) return true;
+        return false;
     }
 
     // the biome hook (generator threads)
@@ -296,8 +339,11 @@ public final class BellGen {
     /** the overworld's biome source was asked for a biome: his ground's columns (from y 0 up) are the Bell Hollows */
     public static Holder<Biome> biome(Object source, Holder<Biome> in, int qx, int qy, int qz) {
         Snap s = SNAP;
-        if (s == null || !s.claimed || source != s.source) return in;
-        return wants(s, in, qx, qy, qz) ? s.biome : in;
+        if (s == null || source != s.source) return in;
+        if (s.claimed && wants(s, in, qx, qy, qz)) return s.biome;
+        // (Part 3) the copies of his ground
+        for (Snap c : extras) if (source == c.source && wants(c, in, qx, qy, qz)) return c.biome;
+        return in;
     }
 
     /**
@@ -345,7 +391,9 @@ public final class BellGen {
     public static void decorated(
             Object generator, WorldGenLevel level, ChunkAccess chunk, StructureManager structures) {
         Snap s = SNAP;
-        if (s == null || !s.claimed || generator != s.generator || !s.touchesNear(chunk.getPos())) return;
+        if (s == null || !s.claimed || generator != s.generator || !s.touchesNear(chunk.getPos()))
+            s = extraNear(generator, chunk.getPos()); // (Part 3) or a copy of his ground
+        if (s == null) return;
         try {
             if (s.touches(chunk.getPos())) HomeGround.decorate(level, chunk, s);
             HomeGround.tidyAround(level, chunk, s);
@@ -395,9 +443,11 @@ public final class BellGen {
 
     /** the structure hook: is this new structure start refused (for the overworld's own generator only)? */
     public static boolean refuses(Object generator, StructureStart start) {
+        if (!start.isValid()) return false;
         Snap s = SNAP;
-        if (s == null || !s.claimed || generator != s.generator || !start.isValid()) return false;
-        boolean no = refuses(s, start.getBoundingBox());
+        boolean no = s != null && s.claimed && generator == s.generator && refuses(s, start.getBoundingBox());
+        // (Part 3) the copies of his ground refuse the same
+        for (Snap c : extras) if (!no && generator == c.generator) no = refuses(c, start.getBoundingBox());
         if (no && DEBUG)
             HollowbellMod.LOG.info("No {} in the Bell Hollows at {}", start.getStructure(), start.getBoundingBox());
         return no;

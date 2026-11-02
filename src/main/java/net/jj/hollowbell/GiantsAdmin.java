@@ -146,6 +146,18 @@ public final class GiantsAdmin {
         cfg("homeRadius", "worldgen", 200, 2000, 50, NEW_LAND, "Size of his ground",
                 "How far the Bell Hollows reach from their middle, in blocks. Used the next time his ground is"
                         + " chosen (a new world, or /hollowbell ground new); land already made stays.");
+        cfg("groundNearest", "worldgen", 0, 100000, 100, WORLD_CREATION, "Nearest to spawn",
+                "How close to the world's spawn his ground may begin (its nearest edge), in blocks. Used when his first"
+                        + " ground and any extra copies are chosen.");
+        cfg("groundFarthest", "worldgen", 0, 100000, 100, WORLD_CREATION, "Farthest from spawn",
+                "How far from the world's spawn his ground may begin at most (its nearest edge), in blocks.");
+        cfg("groundGap", "worldgen", 0, 20000, 50, NEW_LAND, "Room from other grounds",
+                "Blocks kept between his ground and every other giant's (edge to edge) whenever one of his grounds is"
+                        + " chosen. 0 = no rule while the world is new (after he falls his next ground still keeps 200"
+                        + " off).");
+        cfg("groundCopies", "worldgen", 1, 5, 1, NEW_LAND, "Copies of his ground",
+                "How many grounds of his biome the world has. More than 1: the others are chosen by the same rules when"
+                        + " the world next starts, on land not made yet, and made as the world makes that land.");
         // stats
         cfg("health", "stats", 10, 1000000, 10, LIVE, "Health", "His health at full size; a smaller one has less.");
         cfg("healthMultiplier", "stats", 0.1, 10, 0.05, LIVE, "Health multiplier",

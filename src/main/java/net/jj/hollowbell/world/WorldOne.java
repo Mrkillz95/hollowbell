@@ -90,6 +90,17 @@ public class WorldOne extends SavedData {
         return groundVersion;
     }
 
+    /** (Part 3) an extra copy of his ground: where its middle is, how far it reaches, its own ground seed */
+    public record Extra(int x, int z, int r, long seed) {}
+
+    /** the extra copies chosen so far (groundCopies above 1); only the first copies-1 are made by the world */
+    private final List<Extra> extras = new ArrayList<>();
+
+    /** the copies the world makes now (the setting may ask for fewer than were chosen: the rest wait) */
+    public List<Extra> extrasInUse() {
+        return List.copyOf(extras.subList(0, Math.min(extras.size(), GroundRules.copies() - 1)));
+    }
+
     /** how far a new ground reaches, from the settings */
     public static int configRadius() {
         return Mth.clamp(BellConfig.V.homeRadius, 200, 2000);
@@ -172,6 +183,7 @@ public class WorldOne extends SavedData {
         z = 0;
         oneId = null;
         cooldown = 0;
+        extras.clear();
         forgetWard();
         dropHome();
     }
@@ -201,6 +213,14 @@ public class WorldOne extends SavedData {
      * time; if all of them are made somewhere, the least-made spot is taken.
      */
     private void intoUnmadeLand(ServerLevel level) {
+        intoUnmadeLand(level, false);
+    }
+
+    /**
+     * ...band: (Part 3) a first ground with the world's own band from spawn: instead of hopping further out each time
+     * it hops to another spot inside the band (and looks for good land only inside it)
+     */
+    private void intoUnmadeLand(ServerLevel level, boolean band) {
         int r = configRadius();
         BlockPos spawn = level.getSharedSpawnPos();
         int bestX = x, bestZ = z, best = Integer.MAX_VALUE;
@@ -211,6 +231,13 @@ public class WorldOne extends SavedData {
                 best = made;
                 bestX = x;
                 bestZ = z;
+            }
+            if (band) {
+                double a = level.random.nextDouble() * Math.PI * 2, d = GroundRules.draw(level.random, r);
+                x = Mth.floor(spawn.getX() + Math.cos(a) * d);
+                z = Mth.floor(spawn.getZ() + Math.sin(a) * d);
+                findSpot(level, true);
+                continue;
             }
             double dx = x - spawn.getX(), dz = z - spawn.getZ(), len = Math.max(1, Math.hypot(dx, dz));
             double a = Math.atan2(dz, dx) + (level.random.nextDouble() - 0.5) * 0.8;
@@ -295,23 +322,117 @@ public class WorldOne extends SavedData {
             BellGen.publish(w);
         }
         if (!IN_TESTS && BellConfig.V.oneInTheWorld && !w.homeClaimed) {
-            if (!w.placed) w.pickFirstSpot(over);
-            w.claimFresh(over);
+            if (!w.placed) w.firstGround(over);
+            else w.claimFresh(over);
             w.placed = true;
             if (!w.alive && w.dueAt < 0) w.dueAt = over.getGameTime();
             w.setDirty();
         }
+        // (Part 3) the extra copies the world asks for, chosen now, before any land is made
+        if (!IN_TESTS) w.chooseExtras(over);
         BellGen.publish(w);
     }
 
     /** a brand new world: he is somewhere out there already, a few thousand blocks from where people start */
     private void pickFirstSpot(ServerLevel level) {
         BlockPos spawn = level.getSharedSpawnPos();
+        boolean shipped = GroundRules.asShipped();
         double a = level.random.nextDouble() * Math.PI * 2;
-        double d = 3000 + level.random.nextDouble() * 12000;
+        // (Part 3) at the shipped band 3000 to 15000 to the middle, as always; else his near edge inside the band
+        double d = shipped ? 3000 + level.random.nextDouble() * 12000 : GroundRules.draw(level.random, configRadius());
         x = Mth.floor(spawn.getX() + Math.cos(a) * d);
         z = Mth.floor(spawn.getZ() + Math.sin(a) * d);
+        findSpot(level, !shipped);
+    }
+
+    /**
+     * A brand-new world's first ground: the spot picked (above), moved into land the world hasn't made, then (Part 3)
+     * clear of the other giants' grounds by the room the world asks (groundGap) and inside the band, and claimed.
+     * With nothing asked (the shipped band, no room) this is exactly the old pickFirstSpot + claimFresh.
+     */
+    private void firstGround(ServerLevel level) {
+        boolean shipped = GroundRules.asShipped();
+        pickFirstSpot(level);
+        intoUnmadeLand(level, !shipped);
+        BlockPos spawn = level.getSharedSpawnPos();
+        int[] p = GroundRules.settle(level.random, spawn.getX(), spawn.getZ(), x, z, configRadius(),
+                GroundRules.others(level.getServer(), GroundRules.ME), GroundRules.gap(), !shipped);
+        x = p[0];
+        z = p[1];
+        claimHome(level, x, z);
+    }
+
+    /** (the tests) the release's own last steps of a first ground: good land looked for round x, z, then claimFresh */
+    public BlockPos claimFreshNear(ServerLevel level, int atX, int atZ) {
+        x = atX;
+        z = atZ;
         findSpot(level);
+        claimFresh(level);
+        placed = true;
+        return new BlockPos(homeX, 0, homeZ);
+    }
+
+    /** (Part 3) the bridge's "grounds": his own ground, then each copy the world makes, with the room he keeps */
+    public List<String> groundLines() {
+        List<String> out = new ArrayList<>();
+        if (homeClaimed) out.add(GroundRules.line(homeX, homeZ, homeRadius, 0));
+        int i = 1;
+        for (Extra e : extrasInUse()) out.add(GroundRules.line(e.x(), e.z(), e.r(), i++));
+        return out;
+    }
+
+    /**
+     * (Part 3) the extra copies of his ground the setting asks for and the world hasn't chosen yet: each by the same
+     * rules as a new world's first ground (inside the band from spawn, open flattish land the world hasn't made), and
+     * kept clear of his own ground, the other copies and every other giant's ground (copyGap, at least 200). Only
+     * asks the world generator and the region files (never makes or loads land): the world makes them as it makes
+     * the land there.
+     */
+    public void chooseExtras(ServerLevel over) {
+        int want = GroundRules.copies() - 1;
+        BlockPos sp = over.getSharedSpawnPos();
+        while (extras.size() < want) {
+            int r = configRadius();
+            List<GroundRules.Ground> known = new ArrayList<>(GroundRules.others(over.getServer(), GroundRules.ME));
+            if (homeClaimed) known.add(new GroundRules.Ground(GroundRules.ME, homeX, homeZ, homeRadius, 0));
+            for (Extra e : extras) known.add(new GroundRules.Ground(GroundRules.ME, e.x(), e.z(), e.r(), 0));
+            int room = GroundRules.copyGap();
+            int bx = 0, bz = 0;
+            double best = -Double.MAX_VALUE;
+            for (int tries = 0; tries < 12; tries++) {
+                double a = over.random.nextDouble() * Math.PI * 2, d = GroundRules.draw(over.random, r);
+                int[] at = goodLandNear(over, Mth.floor(sp.getX() + Math.cos(a) * d),
+                        Mth.floor(sp.getZ() + Math.sin(a) * d), true);
+                double score = Math.min(0, GroundRules.slack(sp.getX(), sp.getZ(), at[0], at[1], r, known, room, true));
+                if (madeRegions(over, at[0], at[1], r) > 0 || playersNear(over, at[0], at[1], r)) score -= 100000;
+                if (score > best) {
+                    best = score;
+                    bx = at[0];
+                    bz = at[1];
+                }
+                if (score >= 0) break;
+            }
+            int[] p = GroundRules.settle(over.random, sp.getX(), sp.getZ(), bx, bz, r, known, room, true);
+            extras.add(new Extra(p[0], p[1], r, over.random.nextLong()));
+            setDirty();
+            HollowbellMod.LOG.info("Another Bell Hollows (copy {}) will be at {}, {}", extras.size(), p[0], p[1]);
+        }
+    }
+
+    /**
+     * (Part 3: the tests, and the bridge's "groundnew" in the test world) his ground chosen again exactly as a
+     * brand-new world chooses it, with the copies; returns where his own one is.
+     */
+    public BlockPos newWorldGround(ServerLevel over) {
+        homeClaimed = false;
+        extras.clear();
+        BellGen.publish(this);
+        firstGround(over);
+        placed = true;
+        chooseExtras(over);
+        BellGen.publish(this);
+        setDirty();
+        return new BlockPos(homeX, 0, homeZ);
     }
 
     // the crown holding him off
@@ -420,6 +541,11 @@ public class WorldOne extends SavedData {
 
     private WorldOne() {}
 
+    /** (the tests) a world's data read back from a saved tag, as the game reads it */
+    public static WorldOne readForTest(CompoundTag tag, HolderLookup.Provider p) {
+        return load(tag, p);
+    }
+
     private static WorldOne load(CompoundTag tag, HolderLookup.Provider p) {
         WorldOne w = new WorldOne();
         w.x = tag.getInt("X");
@@ -438,6 +564,11 @@ public class WorldOne extends SavedData {
             w.deathKnown = true;
             w.deathX = tag.getInt("DeathX");
             w.deathZ = tag.getInt("DeathZ");
+        }
+        net.minecraft.nbt.ListTag ex = tag.getList("Extras", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < ex.size(); i++) {
+            CompoundTag e = ex.getCompound(i);
+            w.extras.add(new Extra(e.getInt("X"), e.getInt("Z"), e.getInt("R"), e.getLong("Seed")));
         }
         w.upgradeGround();
         if (tag.contains("WardUntil")) {
@@ -469,6 +600,18 @@ public class WorldOne extends SavedData {
         if (deathKnown) {
             tag.putInt("DeathX", deathX);
             tag.putInt("DeathZ", deathZ);
+        }
+        if (!extras.isEmpty()) {
+            net.minecraft.nbt.ListTag ex = new net.minecraft.nbt.ListTag();
+            for (Extra e : extras) {
+                CompoundTag t = new CompoundTag();
+                t.putInt("X", e.x());
+                t.putInt("Z", e.z());
+                t.putInt("R", e.r());
+                t.putLong("Seed", e.seed());
+                ex.add(t);
+            }
+            tag.put("Extras", ex);
         }
         if (wardUntil > 0 || wardRestUntil > 0) {
             tag.putInt("WardX", wardX);
@@ -622,11 +765,30 @@ public class WorldOne extends SavedData {
         }
     }
 
-    /** never on another giant's ground: pushed out past its edge (those whose mods say where theirs is) */
+    /**
+     * never on another giant's ground: pushed out past its edge (those whose mods say where theirs is), by the old 200
+     * or the room the world asks for (his groundGap or theirs), if more
+     */
     private void keepOffOthers(ServerLevel level) {
-        int[] off = OtherGrounds.keepOff(OtherGrounds.of(level.getServer(), "hollowbell"), x, z, configRadius());
-        x = off[0];
-        z = off[1];
+        List<GroundRules.Ground> others = GroundRules.others(level.getServer(), GroundRules.ME);
+        int radius = configRadius();
+        for (int round = 0; round < 4; round++) {
+            boolean moved = false;
+            for (GroundRules.Ground o : others) {
+                double dx = x - o.x(), dz = z - o.z(), len = Math.hypot(dx, dz);
+                double keep = radius + o.r() + GroundRules.room(GroundRules.fallGap(), o.gap());
+                if (len >= keep) continue;
+                if (len < 1) {
+                    dx = 1;
+                    dz = 0;
+                    len = 1;
+                }
+                x = Mth.floor(o.x() + dx / len * keep);
+                z = Mth.floor(o.z() + dz / len * keep);
+                moved = true;
+            }
+            if (!moved) break;
+        }
     }
 
     /** where his ground is, for the other giants choosing theirs: "groundspot hollowbell x z radius", or nothing */
@@ -799,8 +961,8 @@ public class WorldOne extends SavedData {
         MinecraftServer server = level.getServer();
 
         if (!placed) { // natural spawning just turned on: he is somewhere out there already
-            pickFirstSpot(level);
-            if (!homeClaimed) claimFresh(level);
+            if (!homeClaimed) firstGround(level);
+            else pickFirstSpot(level);
             placed = true;
             alive = false;
             dueAt = level.getGameTime();
@@ -885,7 +1047,22 @@ public class WorldOne extends SavedData {
      * Up to 48 spots round it are weighed, each further out, and the best is taken; nothing is loaded to look.
      */
     private void findSpot(ServerLevel level) {
-        int ox = x, oz = z, bx = x, bz = z;
+        findSpot(level, false);
+    }
+
+    /** ...band: (Part 3) only spots inside the world's band from spawn are weighed (the first one always is) */
+    private void findSpot(ServerLevel level, boolean band) {
+        int[] at = goodLandNear(level, x, z, band);
+        x = at[0];
+        z = at[1];
+        avoidWard();
+    }
+
+    /** findSpot's weighing alone, round (ox, oz): the best middle near it */
+    private int[] goodLandNear(ServerLevel level, int ox, int oz, boolean band) {
+        int bx = ox, bz = oz;
+        BlockPos sp = level.getSharedSpawnPos();
+        double lo = configRadius() + GroundRules.nearest(), hi = configRadius() + GroundRules.farthest();
         double best = -1;
         for (int tries = 0; tries < 48; tries++) {
             int cx = ox, cz = oz;
@@ -893,6 +1070,10 @@ public class WorldOne extends SavedData {
                 double a = level.random.nextDouble() * Math.PI * 2, d = 300 + tries * 120 * level.random.nextDouble();
                 cx = ox + (int) (Math.cos(a) * d);
                 cz = oz + (int) (Math.sin(a) * d);
+                if (band) {
+                    double out = Math.hypot(cx - sp.getX(), cz - sp.getZ());
+                    if (out < lo || out > hi) continue;
+                }
             }
             double land = landShare(level, cx, cz);
             if (land < best - 0.2) continue;
@@ -905,9 +1086,7 @@ public class WorldOne extends SavedData {
             }
             if (land >= 0.94 && open) break;
         }
-        x = bx;
-        z = bz;
-        avoidWard();
+        return new int[] {bx, bz};
     }
 
     /** how far a new ground's centre must be from the old one so the two never overlap */

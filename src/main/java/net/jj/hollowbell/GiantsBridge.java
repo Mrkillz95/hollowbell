@@ -46,7 +46,8 @@ public final class GiantsBridge {
      * action: natural|limit|fight|meetings|meet (the other giant's
      * UUID)|away|volume|shake|bossbar|griefing|heavydelay|where|list|kill|remove|status|goto ("x z")|tp (player
      * UUID)|paint ("radius full|biome playerUUID")|paintstop|groundspot ("groundspot hollowbell x z radius", for
-     * the other giants choosing their grounds)|healthmult|damagemult ("" to say it, or 0.1 to 10)|heal|calm|sleep|
+     * the other giants choosing their grounds)|grounds (JSON lines, his ground then its copies)|groundnew (test
+     * world only)|healthmult|damagemult ("" to say it, or 0.1 to 10)|heal|calm|sleep|
      * wake|freeze (on or off)|summon ("dimension x y z entityUUID|- [mood] [size]", his own summon run
      * there)|home (player UUID, taken to the middle of his ground)|info. arg: the value as text, or "". Returns
      * lines to show the caller (prefixed with the boss's name, plain words); empty list = nothing; null = unknown
@@ -97,6 +98,15 @@ public final class GiantsBridge {
             case "groundspot" -> {
                 String spot = WorldOne.get(server).groundSpot();
                 if (spot != null) out.add(spot);
+            }
+            // (Part 3) every ground of his (his own, then the copies) with the room he keeps, as JSON lines
+            case "grounds" -> out.addAll(WorldOne.get(server).groundLines());
+            // (Part 3, the test world only) his ground chosen again as a brand-new world would, then "grounds"
+            case "groundnew" -> {
+                if (!WorldOne.IN_TESTS) return null;
+                WorldOne w = WorldOne.get(server);
+                w.newWorldGround(server.overworld());
+                out.addAll(w.groundLines());
             }
             case "healthmult" -> healthMult(server, sc, a, out);
             case "damagemult" -> damageMult(server, sc, a, out);
