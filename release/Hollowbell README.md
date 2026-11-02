@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.34
+# Hollowbell (Java mod), version 1.12.35
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,19 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Ten new behaviour settings for the Giants Admin Book (in the all-in-one jar): Size spread (each one that
+  comes on his own at a random size in a range), How many come (up to 8 of him at once), Comes back after he
+  falls, Temper (peaceful, normal or hunter), Roaming (home, wander the world or stay put), Seeks out other giants,
+  Raids (villages and players), Sleeps (as usual, by day or never), Strength at night and Loot. They drive the
+  new presets: Pocket Giants, Titans, Gentle Giants, Kaiju War, Night Terrors, Wild Sizes, Siege, One Life, Boss
+  Rush, Nomads, Hardcore, Builder / Showcase, Public Server Safe, Lite and Speedrun. `/hollowbell config` now takes
+  the choice settings too (temper, roam, sleepSchedule) and spawnSizeMin/spawnSizeMax. Left as shipped,
+  nothing about him changes.
+- He can now be made as small as size 0.01, about 2 blocks tall. Below size 0.03 he carries, grabs and
+  harvests nothing and can't be ridden.
+
+### 1.12.34
 
 - Four new world settings for the Giants Admin Book (in the all-in-one jar), also on the Create World
   screen's new Giants… button: how near and how far from spawn his ground may begin (when the world is made;
