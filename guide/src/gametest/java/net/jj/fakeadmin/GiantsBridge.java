@@ -19,11 +19,18 @@ public final class GiantsBridge {
     public static final int API = 1;
     /** what the guide last sent: the world's values, and the all-giants ones */
     public static JsonObject values = new JsonObject(), all = new JsonObject();
+    /** his "config file" as changed by /giants admin set ... allworlds (admindefault) */
+    public static JsonObject defaults = new JsonObject();
+    /** false: he speaks the admin protocol but not admindefault (a giant from Part 1b) */
+    public static boolean knowsDefault = true;
+
     public static int sets;
 
     public static void reset() {
         values = new JsonObject();
         all = new JsonObject();
+        defaults = new JsonObject();
+        knowsDefault = true;
         sets = 0;
     }
 
@@ -62,6 +69,7 @@ public final class GiantsBridge {
                 for (String[] o : OWN) {
                     JsonObject j = JsonParser.parseString(o[1]).getAsJsonObject();
                     j.addProperty("id", o[0]);
+                    if (defaults.has(o[0])) j.add("default", defaults.get(o[0]));
                     JsonElement v = values.get(o[0]);
                     j.add("value", v != null ? v : j.get("default"));
                     j.addProperty("set", v != null);
@@ -81,6 +89,18 @@ public final class GiantsBridge {
                 values = o.getAsJsonObject("values");
                 all = o.getAsJsonObject("all");
                 sets++;
+                out.add("ok");
+            }
+            case "admindefault" -> {
+                if (!knowsDefault) return null;
+                JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
+                String id = o.get("id").getAsString();
+                if (id.startsWith("move.")) {
+                    out.add("no");
+                    out.add("{\"rejected\":\"" + id + "\",\"why\":\"world only\"}");
+                    return out;
+                }
+                defaults.add(id, o.get("value"));
                 out.add("ok");
             }
             default -> {

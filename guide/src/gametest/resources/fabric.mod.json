@@ -9,7 +9,8 @@
       "net.jj.giants.test.GuideGameTests",
       "net.jj.giants.test.PerfGameTests",
       "net.jj.giants.test.ControlsGameTests",
-      "net.jj.giants.test.AdminGameTests"
+      "net.jj.giants.test.AdminGameTests",
+      "net.jj.giants.test.ScopeGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"

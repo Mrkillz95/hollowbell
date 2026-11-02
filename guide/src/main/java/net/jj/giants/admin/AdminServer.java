@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 public final class AdminServer {
     private AdminServer() {}
 
-    public static final String LIST = "admin", SET = "adminset";
+    public static final String LIST = "admin", SET = "adminset", DEFAULT = "admindefault";
 
     /** the giants to ask: null = every installed one (the tests put their own in) */
     private static @Nullable List<Giant> override;
@@ -70,6 +70,8 @@ public final class AdminServer {
             default -> n;
         };
         for (Giant g : giants()) if (g.key().equals(key)) return g;
+        // (a giant's own mod id: what his commands send over GuideBridge)
+        for (Giant g : giants()) if (g.modId().equals(n)) return g;
         return null;
     }
 
@@ -248,10 +250,89 @@ public final class AdminServer {
             if (r == null || after == null || !AdminSetting.same(after.value(), v))
                 lines.add(f.name() + ": kept for this world, but his mod didn't take it yet.");
         }
-        lines.add(0, f.name() + ": " + s.name() + " set to " + shown(s, v) + " (was " + shown(s, was) + ")."
-                + (f.giant() == null ? " On top of each giant's own." : ""));
+        lines.add(0, f.name() + ": " + s.name() + " set to " + shown(s, v) + " in this world (was " + shown(s, was)
+                + ")." + (f.giant() == null ? " On top of each giant's own." : ""));
         if (!s.whenNote().isEmpty()) lines.add(s.whenNote());
         return new Result(true, lines, List.of(who + " set " + f.name() + " " + s.name() + " to " + shown(s, v) + "."));
+    }
+
+    /**
+     * /giants admin set ... allworlds: the server default (the giant's config file), as his own commands with allworlds
+     * change it. The world's own values are left as they are (if it keeps its own for this one, that still wins, and
+     * the reply says so). Logged and told like any change.
+     */
+    public static Result setDefault(MinecraftServer server, String who, String which, String id, String text) {
+        Found f = setting(server, target(server, which), id);
+        if (f.why() != null) return Result.fail(f.why());
+        AdminSetting s = f.s();
+        if (f.giant() == null)
+            return Result.fail("The all-giants multipliers are only kept for each world: there's no server default to"
+                    + " change. Leave out allworlds.");
+        JsonElement v;
+        try {
+            v = s.parse(text);
+        } catch (AdminSetting.BadValue e) {
+            return Result.fail(e.getMessage());
+        }
+        com.google.gson.JsonObject arg = new com.google.gson.JsonObject();
+        arg.addProperty("admin", AdminJson.VERSION);
+        arg.addProperty("id", s.id());
+        arg.add("value", v);
+        List<String> r = call(server, f.giant(), DEFAULT, arg.toString());
+        if (r == null || r.isEmpty())
+            return Result.fail(f.name() + ": this version can't change its server default from here. Its own command"
+                    + " with allworlds does.");
+        if (!r.get(0).equals("ok"))
+            return Result.fail(String.join(" ", r).contains("world only")
+                    ? f.name() + ": " + s.name() + " is only kept for each world; it has no server default."
+                    : f.name() + ": his mod didn't take " + shown(s, v) + " for " + s.name() + ".");
+        AdminWorld w = AdminWorld.get(server);
+        w.log(new AdminWorld.Change(System.currentTimeMillis(), who, f.giant().key(), s.id(),
+                s.name() + " (server default)", shown(s, s.def()), shown(s, v), ""));
+        String line = f.name() + ": " + s.name() + " set to " + shown(s, v) + " for all worlds (server default; was "
+                + shown(s, s.def()) + ").";
+        if (s.set())
+            line += " This world keeps its own: " + shown(s, s.value()) + " (/giants admin reset " + f.giant().key()
+                    + " " + s.id() + ").";
+        List<String> lines = new ArrayList<>(List.of(line));
+        if (!s.whenNote().isEmpty()) lines.add(s.whenNote());
+        return new Result(true, lines, List.of(who + " set " + f.name() + " " + s.name() + " to " + shown(s, v)
+                + " for all worlds (server default)."));
+    }
+
+    /**
+     * GuideBridge "adminworld": one of a giant's own commands (or a switch in his book) changing a setting for this
+     * world. The same as /giants admin set by whoever ran it: checked, kept, logged, told to the other operators.
+     */
+    public static @Nullable List<String> fromGiant(MinecraftServer server, String arg) {
+        String giant, id, by;
+        JsonElement value;
+        try {
+            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseString(arg).getAsJsonObject();
+            if (o.get("admin").getAsInt() > AdminJson.VERSION) return null;
+            giant = o.get("giant").getAsString();
+            id = o.get("id").getAsString();
+            value = o.get("value");
+            by = o.has("by") ? o.get("by").getAsString() : "-";
+            if (value == null || value.isJsonNull()) return null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+        ServerPlayer player = null;
+        try {
+            player = server.getPlayerList().getPlayer(java.util.UUID.fromString(by));
+        } catch (IllegalArgumentException e) {
+            // "-": the server's console or a command block
+        }
+        String who = player != null ? player.getGameProfile().getName() : "Server";
+        Giant g = giant(giant);
+        Result r = set(server, who, g != null ? g.key() : giant, id, AdminSetting.text(value));
+        if (!r.ok()) return List.of("no", r.lines().isEmpty() ? "" : r.lines().get(0));
+        announce(server, player, r.announce());
+        List<String> out = new ArrayList<>();
+        out.add("ok");
+        out.addAll(r.lines());
+        return out;
     }
 
     /** /giants admin get: one setting, or what this world has set for a giant (or for all of them) */

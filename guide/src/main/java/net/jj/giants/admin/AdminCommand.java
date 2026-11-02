@@ -46,12 +46,7 @@ public final class AdminCommand {
                                         .then(setting()
                                                 .then(Commands.argument("value", StringArgumentType.greedyString())
                                                         .suggests(VALUES)
-                                                        .executes(c -> say(c, AdminServer.set(
-                                                                server(c),
-                                                                who(c),
-                                                                word(c, "giant"),
-                                                                word(c, "setting"),
-                                                                StringArgumentType.getString(c, "value"))))))))
+                                                        .executes(AdminCommand::set)))))
                         .then(Commands.literal("reset")
                                 .then(giant("giant", true)
                                         .executes(c -> say(c, AdminServer.reset(
@@ -94,11 +89,28 @@ public final class AdminCommand {
 
     private static final List<String> HELP = List.of(
             "/giants admin get <giant|all> [setting]: what this world has set, or one setting.",
-            "/giants admin set <giant|all> <setting> <value>: a setting for this world.",
+            "/giants admin set <giant|all> <setting> <value> [world|allworlds]: a setting for this world (or the"
+                    + " server default, for all worlds).",
             "/giants admin reset <giant|all|everything> [setting]: back to the server defaults.",
             "/giants admin list <giant|all> [category]: every setting there is.",
             "/giants admin log [count]: the recent changes.",
             "/giants admin preset <name>, export, import <text>, then confirm.");
+
+    /**
+     * /giants admin set ... [world|allworlds] (ADMIN_BRIDGE.md, "Command scope"): the last word of the value says where
+     * it goes; nothing said is this world.
+     */
+    private static int set(CommandContext<CommandSourceStack> c) {
+        String text = StringArgumentType.getString(c, "value").trim();
+        int sp = text.lastIndexOf(' ');
+        String last = sp < 0 ? "" : text.substring(sp + 1).toLowerCase(java.util.Locale.ROOT);
+        boolean all = last.equals("allworlds");
+        if (all || last.equals("world")) text = text.substring(0, sp).trim();
+        String giant = word(c, "giant"), id = word(c, "setting");
+        return say(c, all
+                ? AdminServer.setDefault(server(c), who(c), giant, id, text)
+                : AdminServer.set(server(c), who(c), giant, id, text));
+    }
 
     private static MinecraftServer server(CommandContext<CommandSourceStack> c) {
         return c.getSource().getServer();

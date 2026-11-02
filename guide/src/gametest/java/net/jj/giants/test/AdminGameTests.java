@@ -104,7 +104,7 @@ public class AdminGameTests implements FabricGameTest {
         h.assertTrue(AdminServer.report(s, OLD) == null, "an old giant (no admin) is left out");
         // set, get, reset: by the command, as an operator
         String said = run(s, 2, "giants admin set fakeadmin power 3").all();
-        h.assertTrue(said.contains("Fakeadmin: Power set to 3 (was 5)."), "set says so: " + said);
+        h.assertTrue(said.contains("Fakeadmin: Power set to 3 in this world (was 5)."), "set says so: " + said);
         h.assertTrue(net.jj.fakeadmin.GiantsBridge.values.get("power").getAsInt() == 3, "the giant was sent it");
         said = run(s, 2, "giants admin get fakeadmin power").all();
         h.assertTrue(said.contains("Power is 3 (server default 5, set for this world)."), "get: " + said);
@@ -185,7 +185,7 @@ public class AdminGameTests implements FabricGameTest {
     public void allGiantsMultipliersReachEveryGiant(GameTestHelper h) {
         MinecraftServer s = fresh(h);
         String said = run(s, 2, "giants admin set all health 2").all();
-        h.assertTrue(said.contains("All giants: Health set to x2 (was x1). On top of each giant's own."), said);
+        h.assertTrue(said.contains("All giants: Health set to x2 in this world (was x1). On top of each giant's own."), said);
         h.assertTrue(net.jj.fakeadmin.GiantsBridge.all.get("all.health").getAsDouble() == 2.0, "sent to him");
         said = run(s, 2, "giants admin get all health").all();
         h.assertTrue(said.contains("All giants: Health is x2 (server default x1, set for this world)."), said);
