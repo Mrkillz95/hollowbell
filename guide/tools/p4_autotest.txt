@@ -1,0 +1,85 @@
+# Part 4 pictures (ADMIN_BRIDGE.md 19): the Presets page with the re-tune presets, a Pocket Giants world with a few
+# giants about two blocks tall next to the player, and a Titans giant.
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+adminbook presets
+wait 60
+mouse 2 2
+wait 25
+shot p4_presets
+adminbook presets 200
+wait 30
+mouse 2 2
+wait 25
+shot p4_presets_all
+# the preview of a preset (Pocket Giants), from the open book
+adminreq {"do":"preset","name":"pocket_giants"}
+wait 40
+mouse 2 2
+wait 25
+shot p4_preview_pocket
+close
+# Pocket Giants: applied, then one of each summoned at his pocket size round the player
+cmd giants admin preset pocket_giants
+cmd giants admin confirm
+wait 20
+cmd time set 6000
+cmd tp @s 0 -60 0 0 10
+wait 20
+cmd execute positioned 3 -60 6 run wreckback summon calm 0.011
+cmd execute positioned -3 -60 6 run cerberus summon calm 0.011
+cmd execute positioned 0 -60 9 run pitchgut summon calm 0.012
+cmd execute positioned 6 -60 10 run gloamwick summon calm 0.011
+cmd execute positioned -6 -60 10 run lanternwillow summon calm 0.011
+cmd execute positioned 9 -60 5 run swarmforge summon calm 0.015
+cmd execute positioned -9 -60 5 run furrowmaw summon calm 0.049
+cmd execute positioned 0 -60 14 run hollowbell summon calm 0.011
+wait 100
+gui off
+wait 10
+shot p4_pocket_world
+cmd tp @s 0 -59 -2 0 25
+wait 40
+shot p4_pocket_close
+gui on
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p4_pocket_home
+close
+cmd wreckback remove
+cmd cerberus remove
+cmd pitchgut remove
+cmd gloamwick remove
+cmd lanternwillow remove
+cmd swarmforge remove
+cmd furrowmaw remove
+cmd hollowbell remove
+wait 40
+# Titans: applied; a Cerberus summoned at his usual size comes twice as big
+cmd giants admin preset titans
+cmd giants admin confirm
+wait 20
+cmd execute positioned 0 -60 260 run cerberus summon calm
+wait 120
+cmd tp @s 0 -40 -120 0 -18
+wait 120
+gui off
+wait 10
+shot p4_titan_cerberus
+gui on
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p4_titans_home
+close
+cmd cerberus remove
+wait 20
+quit

@@ -97,6 +97,13 @@ public final class AdminTransfer {
             "lanternwillow", "\"worldScale\":0.011", "wreckback", "\"worldScale\":0.011",
             "swarmforge", "\"worldScale\":0.015", "gloamwick", "\"worldScale\":0.011");
 
+    /** Lite: ambient sounds off where the server decides them (the Hollowbell's are each player's own) */
+    private static final Map<String, String> LITE_OWN = Map.of(
+            "pitchgut", "\"ambientSounds\":false", "furrowmaw", "\"ambientSounds\":false",
+            "cerberus", "\"ambientSounds\":false", "lanternwillow", "\"ambientSounds\":false",
+            "wreckback", "\"ambientSounds\":false", "gloamwick", "\"ambientSounds\":false",
+            "swarmforge", "\"ambientSounds\":false,\"robotLimit\":120,\"armyPoints\":150");
+
     private static final String TITAN_ALL = "\"all.health\":2.5,\"all.damage\":3,\"all.speed\":1.25,"
             + "\"all.size\":2,\"all.cooldowns\":0.5";
     private static final String TITAN_EACH = "\"temper\":\"hunter\",\"fleeInWildFights\":false,\"yieldAt\":0,"
@@ -179,8 +186,7 @@ public final class AdminTransfer {
         BUILT_IN.put("lite", retune("lite", "Lite",
                 "Fewer, smaller giants for weak computers and busy servers: half size, one of each, no ambient sounds"
                         + " and smaller Swarmforge armies.",
-                "", "\"worldScale\":0.5,\"maxInWorld\":1,\"ambientSounds\":false",
-                Map.of("swarmforge", "\"robotLimit\":120,\"armyPoints\":150")));
+                "", "\"worldScale\":0.5,\"maxInWorld\":1", LITE_OWN));
         BUILT_IN.put("speedrun", retune("speedrun", "Speedrun",
                 "Weaker giants for quick fights: half the health, softer hits, and orders cost half the wind.",
                 "\"all.health\":0.5,\"all.damage\":0.75,\"all.windCost\":0.5", "", Map.of()));
