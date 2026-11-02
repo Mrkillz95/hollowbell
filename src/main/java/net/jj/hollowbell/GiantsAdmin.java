@@ -442,7 +442,7 @@ public final class GiantsAdmin {
     }
 
     /** his full-size health as it is in use now: the setting times his own multiplier and the all-giants one */
-    private static float fullHealth() {
+    static float fullHealth() {
         return BellConfig.V.health * HollowbellEntity.healthTimes();
     }
 
@@ -450,7 +450,7 @@ public final class GiantsAdmin {
      * What changes at once for the ones standing: his most health (keeping the share of it he has now), and the same
      * for the ones out of the world (as /giants health does)
      */
-    private static void applyLive(MinecraftServer server, float fullBefore) {
+    static void applyLive(MinecraftServer server, float fullBefore) {
         for (ServerLevel l : server.getAllLevels())
             for (HollowbellEntity h : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()))
                 h.setBellScale(h.bellScale());

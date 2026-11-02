@@ -58,8 +58,11 @@ public final class GiantsCommand {
         "net.jj.gloamwick.GiantsBridge"
     };
 
-    /** which /giants this copy builds: a copy with a higher number has commands an older one lacks (3: flee) */
-    public static final int TREE = 3;
+    /**
+     * which /giants this copy builds: a copy with a higher number has commands an older one lacks (3: flee; 4: "world"
+     * or "allworlds" on the end of every change, ADMIN_BRIDGE.md "Command scope")
+     */
+    public static final int TREE = 4;
 
     private static final String MINE = GiantsBridge.class.getName();
 
@@ -208,6 +211,110 @@ public final class GiantsCommand {
             c.getSource().sendSuccess(() -> Component.literal(s), tellOps);
         }
         return lines.size();
+    }
+
+    // where a change goes (ADMIN_BRIDGE.md, "Command scope"): "world" = this world only (kept by the Giants Guide),
+    // "allworlds" = the server default (each giant's config file). Nothing said = this world, or the server default
+    // when the Guide isn't here (no per-world settings without it).
+
+    public static final String WORLD = "world", ALLWORLDS = "allworlds";
+
+    /** the Giants Guide's side of the bridge: it keeps each world's settings */
+    public static final String GUIDE = "net.jj.giants.GuideBridge";
+
+    public static final String NEED_GUIDE =
+            "Per-world settings need the Giants Guide. Add allworlds to change the server default.";
+
+    /** the tests' stand-in for the Giants Guide is in place */
+    public static volatile boolean testGuide;
+
+    /** true when the Giants Guide is installed (so a world can keep settings of its own) */
+    public static boolean guideHere() {
+        return testGuide || find(GUIDE) != null;
+    }
+
+    /** true when a change with this scope ("", world, allworlds) goes to this world's own settings */
+    private static boolean toWorld(String scope) {
+        return scope.equals(WORLD) || (scope.isEmpty() && guideHere());
+    }
+
+    /** a bridge that takes the scope words (its GiantsBridge has SCOPE >= 1) */
+    public static boolean takesScope(Class<?> bridge) {
+        try {
+            Object v = bridge.getField("SCOPE").get(null);
+            return v instanceof Integer i && i >= 1;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            // an older giant: it only knows the server default
+            return false;
+        }
+    }
+
+    /**
+     * What a bridge is sent for a change: the value, then "scope=world|allworlds" (nothing for nothing said) and
+     * "by=<player UUID>|-" (who, for the Guide's log). A bridge that doesn't take them gets the value alone.
+     */
+    public static String scopedArg(Class<?> bridge, String value, String scope, String by) {
+        if (!takesScope(bridge)) return value;
+        return value + (scope.isEmpty() ? "" : " scope=" + scope) + " by=" + by;
+    }
+
+    /** the words for where a change went, in place of a full stop */
+    public static String where(String scope) {
+        if (scope.equals(ALLWORLDS)) return " for all worlds (server default).";
+        if (toWorld(scope)) return " in this world.";
+        return " for all worlds (server default; per-world settings need the Giants Guide).";
+    }
+
+    private static String by(CommandContext<CommandSourceStack> c) {
+        return c.getSource().getPlayer() == null ? "-" : c.getSource().getPlayer().getUUID().toString();
+    }
+
+    /**
+     * A change asked of every loaded bridge (or only one), with its scope. An older bridge that can't keep a value
+     * for one world is left out of an explicit "world" (and says so); with nothing said it changes the server default
+     * as it always did, and the answer says that too.
+     */
+    public static List<String> askScoped(
+            MinecraftServer server, String action, String value, String only, String scope, String by) {
+        List<String> out = new ArrayList<>();
+        for (String b : BRIDGES) {
+            if (only != null && !only.equals(b)) continue;
+            Class<?> c = find(b);
+            if (c == null) continue;
+            boolean takes = takesScope(c);
+            if (!takes && scope.equals(WORLD)) {
+                out.add(nameOf(b) + ": this version can't keep a setting for one world. Add allworlds to change the"
+                        + " server default.");
+                continue;
+            }
+            List<String> said = ask(server, action, scopedArg(c, value, scope, by), b);
+            out.addAll(said);
+            if (!takes && !said.isEmpty() && scope.isEmpty() && guideHere())
+                out.add(nameOf(b) + ": this version only changes the server default, for all worlds.");
+        }
+        return out;
+    }
+
+    /** a change from /giants: explicit "world" with no Guide is refused; the Guide tells the other ops of a world one */
+    private static int change(CommandContext<CommandSourceStack> c, String action, String value, String only,
+            String scope) {
+        if (scope.equals(WORLD) && !guideHere()) {
+            c.getSource().sendFailure(Component.literal(NEED_GUIDE));
+            return 0;
+        }
+        return say(c, askScoped(c.getSource().getServer(), action, value, only, scope, by(c)), !toWorld(scope));
+    }
+
+    /** a change with "world" or "allworlds" after it, or nothing */
+    private interface Scoped {
+        int run(CommandContext<CommandSourceStack> c, String scope) throws CommandSyntaxException;
+    }
+
+    private static <T extends com.mojang.brigadier.builder.ArgumentBuilder<CommandSourceStack, T>> T scoped(
+            T node, Scoped run) {
+        return node.executes(c -> run.run(c, ""))
+                .then(Commands.literal(WORLD).executes(c -> run.run(c, WORLD)))
+                .then(Commands.literal(ALLWORLDS).executes(c -> run.run(c, ALLWORLDS)));
     }
 
     /** the actions that change something even with nothing after them (other ops are told of those) */
@@ -372,22 +479,29 @@ public final class GiantsCommand {
 
     public static final float[][] PRESET_MULTS = {{0.75f, 0.75f}, {1.0f, 1.0f}, {1.5f, 1.35f}};
 
-    /** /giants preset easy|normal|hard [name]: health and damage multipliers together */
-    private static int preset(CommandContext<CommandSourceStack> c, int which, String only) {
+    /** /giants preset easy|normal|hard [name] [world|allworlds]: health and damage multipliers together */
+    private static int preset(CommandContext<CommandSourceStack> c, int which, String only, String scope) {
+        if (scope.equals(WORLD) && !guideHere()) {
+            c.getSource().sendFailure(Component.literal(NEED_GUIDE));
+            return 0;
+        }
         float health = PRESET_MULTS[which][0], damage = PRESET_MULTS[which][1];
         MinecraftServer server = c.getSource().getServer();
-        List<String> lines = new ArrayList<>(ask(server, "healthmult", String.valueOf(health), only));
-        lines.addAll(ask(server, "damagemult", String.valueOf(damage), only));
+        List<String> lines =
+                new ArrayList<>(askScoped(server, "healthmult", String.valueOf(health), only, scope, by(c)));
+        lines.addAll(askScoped(server, "damagemult", String.valueOf(damage), only, scope, by(c)));
         if (lines.isEmpty()) {
             return say(c, lines, false);
         }
         List<String> out = new ArrayList<>();
         out.add("Preset " + PRESETS[which] + (only == null ? "" : " for " + nameOf(only)) + ": health x" + health
-                + ", damage x" + damage + ".");
+                + ", damage x" + damage + where(scope));
+        // each giant's own line only when it has more to say: trouble, a refusal, or the world keeping its own
         for (String s : lines) {
-            if (trouble(s) && !out.contains(s)) out.add(s);
+            boolean plain = (s.contains(": health x") || s.contains(": damage x")) && !s.contains("keeps its own");
+            if (!plain && !out.contains(s)) out.add(s);
         }
-        return say(c, out, true);
+        return say(c, out, !toWorld(scope));
     }
 
     /**
@@ -420,11 +534,17 @@ public final class GiantsCommand {
         return Commands.literal(name)
                 .requires(s -> s.hasPermission(2))
                 .executes(c -> say(c, ask(c.getSource().getServer(), action, ""), false))
-                .then(Commands.argument("multiplier", FloatArgumentType.floatArg(MULT_MIN, MULT_MAX))
-                        .executes(c -> run(c, action, String.valueOf(FloatArgumentType.getFloat(c, "multiplier"))))
-                        .then(which()
-                                .executes(c -> one(
-                                        c, action, String.valueOf(FloatArgumentType.getFloat(c, "multiplier"))))));
+                .then(scoped(
+                                Commands.argument("multiplier", FloatArgumentType.floatArg(MULT_MIN, MULT_MAX)),
+                                (c, s) -> change(c, action, multiplier(c), null, s))
+                        .then(scoped(which(), (c, s) -> {
+                            String b = picked(c);
+                            return b == null ? 0 : change(c, action, multiplier(c), b, s);
+                        })));
+    }
+
+    private static String multiplier(CommandContext<CommandSourceStack> c) {
+        return String.valueOf(FloatArgumentType.getFloat(c, "multiplier"));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> presets() {
@@ -432,11 +552,10 @@ public final class GiantsCommand {
                 Commands.literal("preset").requires(s -> s.hasPermission(2));
         for (int i = 0; i < PRESETS.length; i++) {
             int k = i;
-            p.then(Commands.literal(PRESETS[i])
-                    .executes(c -> preset(c, k, null))
-                    .then(which().executes(c -> {
+            p.then(scoped(Commands.literal(PRESETS[i]), (c, s) -> preset(c, k, null, s))
+                    .then(scoped(which(), (c, s) -> {
                         String b = picked(c);
-                        return b == null ? 0 : preset(c, k, b);
+                        return b == null ? 0 : preset(c, k, b, s);
                     })));
         }
         return p;
@@ -462,14 +581,26 @@ public final class GiantsCommand {
                 .requires(s -> s.hasPermission(2))
                 .executes(c -> say(c, ask(c.getSource().getServer(), "flee", ""), false));
         for (String v : new String[] {"on", "off"}) {
-            f.then(Commands.literal(v)
-                    .executes(c -> run(c, "flee", v))
-                    .then(which().executes(c -> one(c, "flee", v))));
+            f.then(scoped(Commands.literal(v), (c, s) -> change(c, "flee", v, null, s))
+                    .then(scoped(which(), (c, s) -> {
+                        String b = picked(c);
+                        return b == null ? 0 : change(c, "flee", v, b, s);
+                    })));
         }
         return f;
     }
 
+    /** /giants <name> [on|off [world|allworlds]]: a switch every giant has */
     private static LiteralArgumentBuilder<CommandSourceStack> toggle(String name) {
+        return Commands.literal(name)
+                .requires(s -> s.hasPermission(2))
+                .executes(c -> run(c, name, ""))
+                .then(scoped(Commands.literal("on"), (c, s) -> change(c, name, "on", null, s)))
+                .then(scoped(Commands.literal("off"), (c, s) -> change(c, name, "off", null, s)));
+    }
+
+    /** /giants shake [on|off]: how it looks on each game, not a world setting (no scope) */
+    private static LiteralArgumentBuilder<CommandSourceStack> lookToggle(String name) {
         return Commands.literal(name)
                 .requires(s -> s.hasPermission(2))
                 .executes(c -> run(c, name, ""))
@@ -493,9 +624,8 @@ public final class GiantsCommand {
                 .then(Commands.literal("limit")
                         .requires(s -> s.hasPermission(2))
                         .executes(c -> run(c, "limit", ""))
-                        .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20))
-                                .executes(c -> run(
-                                        c, "limit", String.valueOf(IntegerArgumentType.getInteger(c, "how many"))))))
+                        .then(scoped(Commands.argument("how many", IntegerArgumentType.integer(0, 20)), (c, s) -> change(
+                                c, "limit", String.valueOf(IntegerArgumentType.getInteger(c, "how many")), null, s))))
                 .then(toggle("fight"))
                 .then(toggle("away"))
                 .then(Commands.literal("volume")
@@ -503,21 +633,18 @@ public final class GiantsCommand {
                         .executes(c -> run(c, "volume", ""))
                         .then(Commands.argument("x", FloatArgumentType.floatArg(0.0f, 2.0f))
                                 .executes(c -> run(c, "volume", String.valueOf(FloatArgumentType.getFloat(c, "x"))))))
-                .then(toggle("shake"))
+                .then(lookToggle("shake"))
                 .then(Commands.literal("bossbar")
                         .requires(s -> s.hasPermission(2))
                         .executes(c -> run(c, "bossbar", ""))
-                        .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
-                                .executes(c -> run(
-                                        c, "bossbar", String.valueOf(IntegerArgumentType.getInteger(c, "blocks"))))))
+                        .then(scoped(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000)), (c, s) -> change(
+                                c, "bossbar", String.valueOf(IntegerArgumentType.getInteger(c, "blocks")), null, s))))
                 .then(toggle("griefing"))
                 .then(Commands.literal("heavydelay")
                         .requires(s -> s.hasPermission(2))
-                        .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
-                                .executes(c -> run(
-                                        c,
-                                        "heavydelay",
-                                        String.valueOf(IntegerArgumentType.getInteger(c, "seconds"))))))
+                        .then(scoped(Commands.argument("seconds", IntegerArgumentType.integer(0, 600)), (c, s) -> change(
+                                c, "heavydelay", String.valueOf(IntegerArgumentType.getInteger(c, "seconds")), null,
+                                s))))
                 .then(toggle("meetings"))
                 .then(Commands.literal("meet").requires(s -> s.hasPermission(2)).executes(GiantsCommand::meet))
                 .then(flee())
@@ -536,12 +663,13 @@ public final class GiantsCommand {
                         .executes(c -> run(c, "config", ""))
                         .then(Commands.argument("key", StringArgumentType.word())
                                 .executes(c -> runKeep(c, "config", StringArgumentType.getString(c, "key")))
-                                .then(Commands.argument("value", StringArgumentType.word())
-                                        .executes(c -> run(
-                                                c,
-                                                "config",
-                                                StringArgumentType.getString(c, "key") + " "
-                                                        + StringArgumentType.getString(c, "value"))))))
+                                .then(scoped(Commands.argument("value", StringArgumentType.word()), (c, s) -> change(
+                                        c,
+                                        "config",
+                                        StringArgumentType.getString(c, "key") + " "
+                                                + StringArgumentType.getString(c, "value"),
+                                        null,
+                                        s)))))
                 .then(Commands.literal("paint")
                         .requires(s -> s.hasPermission(2))
                         .then(Commands.literal("stop").executes(GiantsCommand::paintStop))

@@ -38,6 +38,8 @@ public final class GiantsBridge {
     private GiantsBridge() {}
 
     public static final int API = 1;
+    /** /giants may send "world" or "allworlds" on the end of a change (ADMIN_BRIDGE.md, Command scope) */
+    public static final int SCOPE = 1;
     private static final String WHO = "Hollowbell: ";
 
     /**
@@ -52,6 +54,9 @@ public final class GiantsBridge {
      */
     public static List<String> giants(MinecraftServer server, String action, String arg) {
         List<String> out = new ArrayList<>();
+        // "world" or "allworlds" from /giants comes on the end as "scope=... by=..." (AdminScope)
+        AdminScope.Scoped sc = AdminScope.scoped(arg);
+        arg = sc.rest();
         String a = arg == null ? "" : arg.trim().toLowerCase(Locale.ROOT);
         // the Giants Guide's performance screen: his settings out, the levels in (GiantsPerf)
         if (action.equals("perf")) return GiantsPerf.describe();
@@ -59,27 +64,29 @@ public final class GiantsBridge {
         // the Giants Guide's admin settings (/giants admin, the admin book): his list out, the world's values in
         if (action.equals("admin")) return GiantsAdmin.describe();
         if (action.equals("adminset")) return GiantsAdmin.receive(server, arg);
+        // /giants admin set ... allworlds: one setting's server default, into his config file (AdminScope)
+        if (action.equals("admindefault")) return AdminScope.receiveDefault(server, arg);
         // the Giants Guide's Controls tab: the triple crouch to sit, on or off (on your own game, server null)
         if ("controlget".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlGet(arg);
         if ("controlset".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlSet(arg);
         switch (action) {
-            case "natural" -> natural(a, out);
-            case "limit" -> limit(server, a, out);
-            case "fight" -> fight(a, out);
-            case "flee" -> flee(a, out);
-            case "meetings" -> meetings(a, out);
+            case "natural" -> natural(server, sc, a, out);
+            case "limit" -> limit(server, sc, a, out);
+            case "fight" -> fight(server, sc, a, out);
+            case "flee" -> flee(server, sc, a, out);
+            case "meetings" -> meetings(server, sc, a, out);
             case "meet" -> meet(server, arg, out);
-            case "away" -> away(a, out);
+            case "away" -> away(server, sc, a, out);
             case "volume" -> volume(a, out);
             case "shake" -> shake(a, out);
-            case "bossbar" -> bossbar(a, out);
-            case "heavydelay" -> heavyDelay(a, out);
-            case "griefing" -> griefing(a, out);
+            case "bossbar" -> bossbar(server, sc, a, out);
+            case "heavydelay" -> heavyDelay(server, sc, a, out);
+            case "griefing" -> griefing(server, sc, a, out);
             case "where", "list" -> where(server, action, out);
             case "kill" -> kill(server, out);
             case "remove" -> remove(server, out);
             case "goto" -> goTo(server, a, out);
-            case "config" -> config(arg, out);
+            case "config" -> config(server, sc, arg, out);
             case "paint" -> paint(server, a, arg, out);
             case "paintstop" -> paintStop(out);
             case "tp" -> tp(server, arg, out);
@@ -88,8 +95,8 @@ public final class GiantsBridge {
                 String spot = WorldOne.get(server).groundSpot();
                 if (spot != null) out.add(spot);
             }
-            case "healthmult" -> healthMult(server, a, out);
-            case "damagemult" -> damageMult(a, out);
+            case "healthmult" -> healthMult(server, sc, a, out);
+            case "damagemult" -> damageMult(server, sc, a, out);
             case "heal" -> {
                 int n = 0;
                 for (HollowbellEntity h : standing(server)) {
@@ -150,29 +157,29 @@ public final class GiantsBridge {
         return out;
     }
 
-    private static void natural(String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void natural(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         Boolean on = onOff(a);
         if (on != null) {
-            V.oneInTheWorld = on;
-            BellConfig.save();
+            said(out, write(server, sc, "oneInTheWorld", on), on ? "he rises on his own." : "he only comes when summoned.");
+            return;
         }
         var F = BellConfig.fileValues();
-        out.add(WHO + (F.oneInTheWorld ? "he rises on his own." : "he only comes when summoned.")
-                + GiantsAdmin.note("oneInTheWorld"));
+        out.add(WHO + (F.oneInTheWorld ? "he rises on his own." : "he only comes when summoned.") + GiantsAdmin.note("oneInTheWorld"));
     }
 
-    private static void limit(MinecraftServer server, String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void limit(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         if (!a.isEmpty()) {
+            int v;
             try {
-                V.maxInWorld = Mth.clamp(Integer.parseInt(a), 0, 20);
-                BellConfig.save();
+                v = Mth.clamp(Integer.parseInt(a), 0, 20);
             } catch (NumberFormatException e) {
                 out.add(WHO + "the limit has to be a number from 0 to 20.");
                 return;
             }
-            if (V.maxInWorld > 0) WorldOne.limitNow(null, server.overworld());
+            if (said(out, write(server, sc, "maxInWorld", v), v <= 0 ? "no limit." : "at most " + v + ".")
+                    && BellConfig.V.maxInWorld > 0)
+                WorldOne.limitNow(null, server.overworld());
+            return;
         }
         var F = BellConfig.fileValues();
         out.add(WHO + (F.maxInWorld <= 0 ? "no limit." : "at most " + F.maxInWorld + ".")
@@ -180,45 +187,34 @@ public final class GiantsBridge {
     }
 
     /** /giants flee: backing down from a wild fight he's losing (one a player started, he never does) */
-    private static void flee(String a, List<String> out) {
+    private static void flee(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         Boolean on = onOff(a);
         if (on != null) {
-            BellConfig.V.fleeInWildFights = on;
-            BellConfig.save();
+            said(out, write(server, sc, "fleeInWildFights", on), on ? "he backs down from a wild fight he's losing." : "he fights wild fights to the end.");
+            return;
         }
         var F = BellConfig.fileValues();
-        out.add(WHO
-                + (F.fleeInWildFights
-                        ? "he backs down from a wild fight he's losing."
-                        : "he fights wild fights to the end.")
-                + GiantsAdmin.note("fleeInWildFights"));
+        out.add(WHO + (F.fleeInWildFights ? "he backs down from a wild fight he's losing." : "he fights wild fights to the end.") + GiantsAdmin.note("fleeInWildFights"));
     }
 
-    private static void fight(String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void fight(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         Boolean on = onOff(a);
         if (on != null) {
-            V.fightGiants = on;
-            BellConfig.save();
+            said(out, write(server, sc, "fightGiants", on), on ? "he fights the other bosses." : "he leaves the other bosses alone.");
+            return;
         }
         var F = BellConfig.fileValues();
-        out.add(WHO + (F.fightGiants ? "he fights the other bosses." : "he leaves the other bosses alone.")
-                + GiantsAdmin.note("fightGiants"));
+        out.add(WHO + (F.fightGiants ? "he fights the other bosses." : "he leaves the other bosses alone.") + GiantsAdmin.note("fightGiants"));
     }
 
-    private static void meetings(String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void meetings(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         Boolean on = onOff(a);
         if (on != null) {
-            V.meetings = on;
-            BellConfig.save();
+            said(out, write(server, sc, "meetings", on), on ? "he fights or keeps away from the giants he meets." : "he takes no notice of the giants he meets.");
+            return;
         }
         var F = BellConfig.fileValues();
-        out.add(WHO
-                + (F.meetings
-                        ? "he fights or keeps away from the giants he meets."
-                        : "he takes no notice of the giants he meets.")
-                + GiantsAdmin.note("meetings"));
+        out.add(WHO + (F.meetings ? "he fights or keeps away from the giants he meets." : "he takes no notice of the giants he meets.") + GiantsAdmin.note("meetings"));
     }
 
     private static void meet(MinecraftServer server, String arg, List<String> out) {
@@ -256,17 +252,14 @@ public final class GiantsBridge {
         return;
     }
 
-    private static void away(String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void away(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         Boolean on = onOff(a);
         if (on != null) {
-            V.offscreenTravel = on;
-            BellConfig.save();
+            said(out, write(server, sc, "offscreenTravel", on), on ? "he steps out of the world when nobody is near." : "he stays in the world.");
+            return;
         }
         var F = BellConfig.fileValues();
-        out.add(WHO
-                + (F.offscreenTravel ? "he steps out of the world when nobody is near." : "he stays in the world.")
-                + GiantsAdmin.note("offscreenTravel"));
+        out.add(WHO + (F.offscreenTravel ? "he steps out of the world when nobody is near." : "he stays in the world.") + GiantsAdmin.note("offscreenTravel"));
     }
 
     private static void volume(String a, List<String> out) {
@@ -293,16 +286,18 @@ public final class GiantsBridge {
         out.add(WHO + "screen shake " + (V.screenShake ? "on." : "off."));
     }
 
-    private static void bossbar(String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void bossbar(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         if (!a.isEmpty()) {
+            int v;
             try {
-                V.bossBarRange = Mth.clamp(Integer.parseInt(a), 0, 100000);
-                BellConfig.save();
+                v = Mth.clamp(Integer.parseInt(a), 0, 100000);
             } catch (NumberFormatException e) {
                 out.add(WHO + "the boss bar range has to be a number of blocks.");
                 return;
             }
+            said(out, write(server, sc, "bossBarRange", v),
+                    "boss bars show " + (v > 0 ? v + " blocks off." : "as far as his size says."));
+            return;
         }
         var F = BellConfig.fileValues();
         out.add(WHO + "boss bars show "
@@ -317,32 +312,31 @@ public final class GiantsBridge {
         out.add(WHO + "stopped painting.");
     }
 
-    private static void heavyDelay(String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void heavyDelay(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         if (!a.isEmpty()) {
+            int v;
             try {
-                V.heavyDelaySeconds = Mth.clamp(Integer.parseInt(a), 0, 600);
-                BellConfig.save();
+                v = Mth.clamp(Integer.parseInt(a), 0, 600);
             } catch (NumberFormatException e) {
                 out.add(WHO + "the wait has to be a number of seconds from 0 to 600.");
                 return;
             }
+            said(out, write(server, sc, "heavyDelaySeconds", v), "heavy moves wait " + v + " seconds into a fight.");
+            return;
         }
         var F = BellConfig.fileValues();
         out.add(WHO + "heavy moves wait " + F.heavyDelaySeconds + " seconds into a fight."
                 + GiantsAdmin.note("heavyDelaySeconds"));
     }
 
-    private static void griefing(String a, List<String> out) {
-        var V = BellConfig.V;
+    private static void griefing(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         Boolean on = onOff(a);
         if (on != null) {
-            V.griefing = on;
-            BellConfig.save();
+            said(out, write(server, sc, "griefing", on), on ? "he breaks blocks." : "he doesn't break blocks.");
+            return;
         }
         var F = BellConfig.fileValues();
-        out.add(WHO + (F.griefing ? "he breaks blocks." : "he doesn't break blocks.")
-                + GiantsAdmin.note("griefing"));
+        out.add(WHO + (F.griefing ? "he breaks blocks." : "he doesn't break blocks.") + GiantsAdmin.note("griefing"));
     }
 
     private static void where(MinecraftServer server, String action, List<String> out) {
@@ -417,7 +411,7 @@ public final class GiantsBridge {
         out.add(WHO + (n == 0 ? "none to send." : n + " on the way to " + Mth.floor(x) + ", " + Mth.floor(z) + "."));
     }
 
-    private static void config(String arg, List<String> out) {
+    private static void config(MinecraftServer server, AdminScope.Scoped sc, String arg, List<String> out) {
         // "key" or "key value": only answers when this mod has that setting
         String[] kv = arg == null ? new String[0] : arg.trim().split("\\s+", 2);
         if (kv.length == 0 || kv[0].isEmpty()) {
@@ -425,14 +419,18 @@ public final class GiantsBridge {
             return;
         }
         if (!OpsCommand.has(kv[0])) return;
-        String bad = kv.length > 1 ? OpsCommand.set(kv[0], kv[1]) : null;
-        // (set: the server's default, and a value this world keeps for itself still wins)
-        out.add(WHO + kv[0]
-                + (bad != null
-                        ? " can't be set to " + kv[1] + "."
-                        : kv.length > 1
-                                ? " = " + OpsCommand.fileText(kv[0]) + noted(OpsCommand.name(kv[0]))
-                                : " = " + OpsCommand.get(kv[0])));
+        if (kv.length == 1) {
+            out.add(WHO + kv[0] + " = " + OpsCommand.get(kv[0]));
+            return;
+        }
+        String id = OpsCommand.name(kv[0]);
+        Object v = AdminScope.parse(id, kv[1]);
+        if (v == null) {
+            out.add(WHO + kv[0] + " can't be set to " + kv[1] + ".");
+            return;
+        }
+        AdminScope.Done d = write(server, sc, id, v);
+        said(out, d, kv[0] + " = " + (d.world() ? String.valueOf(v) : OpsCommand.fileText(kv[0])) + ".");
     }
 
     /** the admin settings' note for a setting this world keeps its own value for, after a full stop; or nothing */
@@ -513,7 +511,7 @@ public final class GiantsBridge {
     }
 
     /** /giants health: his health times m, every one keeping the share of his health he has now */
-    private static void healthMult(MinecraftServer server, String a, List<String> out) {
+    private static void healthMult(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         if (!a.isEmpty()) {
             Float m = mult(a);
             if (m == null) {
@@ -522,33 +520,47 @@ public final class GiantsBridge {
             }
             // (what his health is times before and after: a value this world keeps for itself still wins)
             float before = HollowbellEntity.healthTimes();
-            BellConfig.V.healthMultiplier = m;
-            BellConfig.save();
-            float k = before > 0f ? HollowbellEntity.healthTimes() / before : 1f;
-            for (HollowbellEntity h : standing(server)) h.healthMultChanged();
-            Away away = Away.get(server);
-            for (Away.Rec r : away.all()) {
-                r.hp *= k;
-                r.hpMax *= k;
+            AdminScope.Done d = write(server, sc, "healthMultiplier", m);
+            // (a world value reaches the standing ones as the Guide sends it back; the file's, here)
+            if (said(out, d, "health x" + times(m) + ".") && !d.world()) {
+                float k = before > 0f ? HollowbellEntity.healthTimes() / before : 1f;
+                for (HollowbellEntity h : standing(server)) h.healthMultChanged();
+                Away away = Away.get(server);
+                for (Away.Rec r : away.all()) {
+                    r.hp *= k;
+                    r.hpMax *= k;
+                }
+                away.setDirty();
             }
-            away.setDirty();
+            return;
         }
         out.add(WHO + "health x" + times(BellConfig.fileValues().healthMultiplier) + "."
                 + GiantsAdmin.note("healthMultiplier"));
     }
 
-    private static void damageMult(String a, List<String> out) {
+    private static void damageMult(MinecraftServer server, AdminScope.Scoped sc, String a, List<String> out) {
         if (!a.isEmpty()) {
             Float m = mult(a);
             if (m == null) {
                 out.add(WHO + "the multiplier has to be a number from 0.1 to 10.");
                 return;
             }
-            BellConfig.V.damageMultiplier = m;
-            BellConfig.save();
+            said(out, write(server, sc, "damageMultiplier", m), "damage x" + times(m) + ".");
+            return;
         }
         out.add(WHO + "damage x" + times(BellConfig.fileValues().damageMultiplier) + "."
                 + GiantsAdmin.note("damageMultiplier"));
+    }
+
+    /** a change asked for by /giants: for this world, or the server default (AdminScope) */
+    private static AdminScope.Done write(MinecraftServer server, AdminScope.Scoped sc, String id, Object v) {
+        return AdminScope.write(server, sc.scope(), sc.by(), id, v);
+    }
+
+    /** the line for a change: what it is now and where, or why nothing changed; true if it changed */
+    private static boolean said(List<String> out, AdminScope.Done d, String line) {
+        out.add(WHO + (d.ok() ? d.say(line) : d.why()));
+        return d.ok();
     }
 
     /** /giants info: alive or coming back, who owns him, his health and the multipliers */

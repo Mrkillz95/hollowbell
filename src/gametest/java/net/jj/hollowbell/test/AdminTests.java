@@ -134,13 +134,15 @@ public class AdminTests implements FabricGameTest {
         try {
             set(h, "{\"admin\":1,\"values\":{\"healthMultiplier\":3}}");
             List<String> said = GiantsBridge.giants(server(h), "healthmult", "1.5");
-            h.assertTrue(said.get(0).equals("Hollowbell: health x1.5. This world keeps its own: 3"
+            // (no Giants Guide here: nothing said is the server default, and the reply says so)
+            h.assertTrue(said.get(0).equals("Hollowbell: health x1.5 for all worlds (server default; per-world"
+                    + " settings need the Giants Guide). This world keeps its own: 3"
                     + " (/giants admin reset hollowbell healthMultiplier)."), "" + said);
             h.assertTrue(BellConfig.fileValues().healthMultiplier == 1.5f, "the server default changed");
             h.assertTrue(BellConfig.V.healthMultiplier == 3f, "the world's own still wins");
             said = GiantsBridge.giants(server(h), "config", "healthmultiplier 2");
-            h.assertTrue(said.get(0).startsWith("Hollowbell: healthmultiplier = 2.0. This world keeps its own: 3"),
-                    "" + said);
+            h.assertTrue(said.get(0).startsWith("Hollowbell: healthmultiplier = 2.0 for all worlds (server default;")
+                    && said.get(0).contains("This world keeps its own: 3"), "" + said);
             GiantsAdmin.clear();
             h.assertTrue(BellConfig.V.healthMultiplier == 2f, "without the world's, the file's");
             // without any world values the old commands say exactly what they said
@@ -148,7 +150,8 @@ public class AdminTests implements FabricGameTest {
             h.assertTrue(said.get(0).equals("Hollowbell: damage x" + plain(BellConfig.V.damageMultiplier) + "."),
                     "" + said);
             said = GiantsBridge.giants(server(h), "config", "healthMultiplier 2");
-            h.assertTrue(said.get(0).equals("Hollowbell: healthMultiplier = 2.0"), "" + said);
+            h.assertTrue(said.get(0).equals("Hollowbell: healthMultiplier = 2.0 for all worlds (server default;"
+                    + " per-world settings need the Giants Guide)."), "" + said);
         } finally {
             GiantsAdmin.clear();
             BellConfig.V.healthMultiplier = file;

@@ -62,6 +62,15 @@ public final class CodexOrders {
         p.displayClientMessage(Component.translatable("message.hollowbell." + key, args), true);
     }
 
+    /** an operator's switch in the book: for this world (AdminScope), and the line says where it went */
+    private static void switched(ServerPlayer p, String id, boolean on, String key) {
+        net.jj.hollowbell.AdminScope.Done d = net.jj.hollowbell.AdminScope.write(
+                p.getServer(), net.jj.hollowbell.AdminScope.Scope.UNSAID, p.getUUID(), id, on);
+        p.displayClientMessage(
+                d.ok() ? d.say(Component.translatable("message.hollowbell." + key)) : Component.literal(d.why()),
+                true);
+    }
+
     private static void say2(ServerPlayer p, String key, Object... args) {
         p.displayClientMessage(Component.translatable("message.hollowbell." + key, args), false);
     }
@@ -443,11 +452,8 @@ public final class CodexOrders {
                     return;
                 }
                 boolean on = pay.arg() != 0;
-                if (BellConfig.V.griefing != on) {
-                    BellConfig.V.griefing = on;
-                    BellConfig.save();
-                }
-                say(p, on ? "codex_break_on" : "codex_break_off");
+                // this world's own setting (the Giants Guide keeps it); without the Guide the server default
+                switched(p, "griefing", on, on ? "codex_break_on" : "codex_break_off");
             }
             case CodexPayload.HARVEST -> {
                 if (!p.hasPermissions(2)) {
@@ -455,11 +461,8 @@ public final class CodexOrders {
                     return;
                 }
                 boolean on = pay.arg() != 0;
-                if (BellConfig.V.harvest != on) {
-                    BellConfig.V.harvest = on;
-                    BellConfig.save();
-                }
-                say(p, on ? "codex_harvest_on" : "codex_harvest_off");
+                // this world's own setting (the Giants Guide keeps it); without the Guide the server default
+                switched(p, "harvest", on, on ? "codex_harvest_on" : "codex_harvest_off");
             }
             case CodexPayload.GO_TO_XZ -> {
                 Vec3 at = new Vec3(pay.x(), m.groundAt(pay.x(), pay.z()), pay.z());

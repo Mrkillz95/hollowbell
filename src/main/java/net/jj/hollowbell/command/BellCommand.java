@@ -18,6 +18,12 @@ import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import static net.jj.hollowbell.AdminScope.by;
+import static net.jj.hollowbell.AdminScope.reply;
+import static net.jj.hollowbell.AdminScope.withScope;
+import static net.jj.hollowbell.AdminScope.write;
+
+import net.jj.hollowbell.AdminScope;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.ModBlocks;
 import net.jj.hollowbell.ModEntities;
@@ -106,7 +112,7 @@ public final class BellCommand {
                 .then(removeCommand())
                 .then(healthCommand())
                 .then(damageCommand())
-                .then(toggle("griefing", "griefing", () -> BellConfig.V.griefing, v -> BellConfig.V.griefing = v))
+                .then(toggle("griefing", "griefing", () -> BellConfig.V.griefing, null))
                 .then(heavydelayCommand())
                 .then(toggle("shake", "screenShake", () -> BellConfig.V.screenShake, v -> BellConfig.V.screenShake = v))
                 .then(reloadCommand()));
@@ -174,17 +180,11 @@ public final class BellCommand {
         return Commands.literal("away")
                 .requires(OP)
                 .executes(c -> awaySay(c))
-                .then(Commands.literal("on")
-                        .executes(c -> set(c, () -> BellConfig.V.offscreenTravel = true, "offscreenTravel", true)))
-                .then(Commands.literal("off")
-                        .executes(c -> set(c, () -> BellConfig.V.offscreenTravel = false, "offscreenTravel", false)))
+                .then(withScope(Commands.literal("on"), (c, s) -> set(c, s, "offscreenTravel", true)))
+                .then(withScope(Commands.literal("off"), (c, s) -> set(c, s, "offscreenTravel", false)))
                 .then(Commands.literal("blocks")
-                        .then(Commands.argument("n", IntegerArgumentType.integer(0, 100000))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.awayBlocks = IntegerArgumentType.getInteger(c, "n"),
-                                        "awayBlocks",
-                                        IntegerArgumentType.getInteger(c, "n")))))
+                        .then(withScope(Commands.argument("n", IntegerArgumentType.integer(0, 100000)),
+                                (c, s) -> set(c, s, "awayBlocks", IntegerArgumentType.getInteger(c, "n")))))
                 .then(Commands.literal("now").executes(BellCommand::awayNow));
     }
 
@@ -192,15 +192,10 @@ public final class BellCommand {
         return Commands.literal("bossbar")
                 .requires(OP)
                 .executes(BellCommand::bossbarSay)
-                .then(Commands.literal("on").executes(c -> set(c, () -> BellConfig.V.bossBar = true, "bossBar", true)))
-                .then(Commands.literal("off")
-                        .executes(c -> set(c, () -> BellConfig.V.bossBar = false, "bossBar", false)))
-                .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000))
-                        .executes(c -> set(
-                                c,
-                                () -> BellConfig.V.bossBarRange = IntegerArgumentType.getInteger(c, "blocks"),
-                                "bossBarRange",
-                                IntegerArgumentType.getInteger(c, "blocks"))));
+                .then(withScope(Commands.literal("on"), (c, s) -> set(c, s, "bossBar", true)))
+                .then(withScope(Commands.literal("off"), (c, s) -> set(c, s, "bossBar", false)))
+                .then(withScope(Commands.argument("blocks", IntegerArgumentType.integer(0, 100000)),
+                        (c, s) -> set(c, s, "bossBarRange", IntegerArgumentType.getInteger(c, "blocks"))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> moodCommand() {
@@ -296,11 +291,11 @@ public final class BellCommand {
                 .then(Commands.argument("key", StringArgumentType.word())
                         .suggests((c, b) -> SharedSuggestionProvider.suggest(OpsCommand.keys(), b))
                         .executes(c -> configGet(c, StringArgumentType.getString(c, "key")))
-                        .then(Commands.argument("value", StringArgumentType.word())
-                                .executes(c -> configSet(
-                                        c,
-                                        StringArgumentType.getString(c, "key"),
-                                        StringArgumentType.getString(c, "value")))));
+                        .then(withScope(Commands.argument("value", StringArgumentType.word()), (c, s) -> configSet(
+                                c,
+                                StringArgumentType.getString(c, "key"),
+                                StringArgumentType.getString(c, "value"),
+                                s))));
     }
 
     /** set: everything about the nearest one */
@@ -547,8 +542,8 @@ public final class BellCommand {
         return Commands.literal("natural")
                 .requires(OP)
                 .executes(BellCommand::naturalSay)
-                .then(Commands.literal("on").executes(c -> setNatural(c, true)))
-                .then(Commands.literal("off").executes(c -> setNatural(c, false)));
+                .then(withScope(Commands.literal("on"), (c, s) -> setNatural(c, s, true)))
+                .then(withScope(Commands.literal("off"), (c, s) -> setNatural(c, s, false)));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> limitCommand() {
@@ -556,7 +551,9 @@ public final class BellCommand {
                 .requires(OP)
                 .executes(BellCommand::limitSay)
                 .then(Commands.argument("how many", IntegerArgumentType.integer(0, 20))
-                        .executes(BellCommand::setLimit));
+                        .executes(c -> setLimit(c, AdminScope.Scope.UNSAID))
+                        .then(Commands.literal("world").executes(c -> setLimit(c, AdminScope.Scope.WORLD)))
+                        .then(Commands.literal("allworlds").executes(c -> setLimit(c, AdminScope.Scope.ALLWORLDS))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> wardCommand() {
@@ -570,48 +567,27 @@ public final class BellCommand {
                     return 1;
                 }))
                 .then(Commands.literal("minutes")
-                        .then(Commands.argument("minutes", IntegerArgumentType.integer(1, 1440))
-                                .executes(c -> {
-                                    int v = IntegerArgumentType.getInteger(c, "minutes");
-                                    BellConfig.V.wardSeconds = v * 60;
-                                    BellConfig.save();
-                                    c.getSource()
-                                            .sendSuccess(
-                                                    () -> Component.translatable("command.hollowbell.ward_minutes", v),
-                                                    true);
-                                    return 1;
-                                })))
+                        .then(withScope(Commands.argument("minutes", IntegerArgumentType.integer(1, 1440)), (c, s) -> {
+                            int v = IntegerArgumentType.getInteger(c, "minutes");
+                            return reply(c, write(c.getSource().getServer(), s, by(c), "wardSeconds", v * 60),
+                                    Component.translatable("command.hollowbell.ward_minutes", v));
+                        })))
                 .then(Commands.literal("rest")
-                        .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 1440))
-                                .executes(c -> {
-                                    int v = IntegerArgumentType.getInteger(c, "minutes");
-                                    BellConfig.V.wardRestSeconds = v * 60;
-                                    BellConfig.save();
-                                    c.getSource()
-                                            .sendSuccess(
-                                                    () -> v == 0
-                                                            ? Component.translatable(
-                                                                    "command.hollowbell.ward_rest_none")
-                                                            : Component.translatable("command.hollowbell.ward_rest", v),
-                                                    true);
-                                    return 1;
-                                })))
+                        .then(withScope(Commands.argument("minutes", IntegerArgumentType.integer(0, 1440)), (c, s) -> {
+                            int v = IntegerArgumentType.getInteger(c, "minutes");
+                            return reply(c, write(c.getSource().getServer(), s, by(c), "wardRestSeconds", v * 60),
+                                    v == 0
+                                            ? Component.translatable("command.hollowbell.ward_rest_none")
+                                            : Component.translatable("command.hollowbell.ward_rest", v));
+                        })))
                 .then(Commands.literal("blocks")
-                        .then(Commands.argument("blocks", IntegerArgumentType.integer(0, 20000))
-                                .executes(c -> {
-                                    int v = IntegerArgumentType.getInteger(c, "blocks");
-                                    BellConfig.V.wardBlocks = v;
-                                    BellConfig.save();
-                                    c.getSource()
-                                            .sendSuccess(
-                                                    () -> v == 0
-                                                            ? Component.translatable(
-                                                                    "command.hollowbell.ward_blocks_none")
-                                                            : Component.translatable(
-                                                                    "command.hollowbell.ward_blocks", v),
-                                                    true);
-                                    return 1;
-                                })));
+                        .then(withScope(Commands.argument("blocks", IntegerArgumentType.integer(0, 20000)), (c, s) -> {
+                            int v = IntegerArgumentType.getInteger(c, "blocks");
+                            return reply(c, write(c.getSource().getServer(), s, by(c), "wardBlocks", v),
+                                    v == 0
+                                            ? Component.translatable("command.hollowbell.ward_blocks_none")
+                                            : Component.translatable("command.hollowbell.ward_blocks", v));
+                        })));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> areaCommand() {
@@ -638,10 +614,8 @@ public final class BellCommand {
                                     false);
                     return 1;
                 })
-                .then(Commands.literal("on")
-                        .executes(c -> set(c, () -> BellConfig.V.fightGiants = true, "fightGiants", true)))
-                .then(Commands.literal("off")
-                        .executes(c -> set(c, () -> BellConfig.V.fightGiants = false, "fightGiants", false)));
+                .then(withScope(Commands.literal("on"), (c, s) -> set(c, s, "fightGiants", true)))
+                .then(withScope(Commands.literal("off"), (c, s) -> set(c, s, "fightGiants", false)));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> meetingsCommand() {
@@ -657,10 +631,8 @@ public final class BellCommand {
                                     false);
                     return 1;
                 })
-                .then(Commands.literal("on")
-                        .executes(c -> set(c, () -> BellConfig.V.meetings = true, "meetings", true)))
-                .then(Commands.literal("off")
-                        .executes(c -> set(c, () -> BellConfig.V.meetings = false, "meetings", false)));
+                .then(withScope(Commands.literal("on"), (c, s) -> set(c, s, "meetings", true)))
+                .then(withScope(Commands.literal("off"), (c, s) -> set(c, s, "meetings", false)));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> volumeCommand() {
@@ -716,12 +688,8 @@ public final class BellCommand {
         return Commands.literal("health")
                 .requires(OP)
                 .executes(c -> say(c, "health", BellConfig.V.health))
-                .then(Commands.argument("health", FloatArgumentType.floatArg(10f, 1_000_000f))
-                        .executes(c -> set(
-                                c,
-                                () -> BellConfig.V.health = FloatArgumentType.getFloat(c, "health"),
-                                "health",
-                                FloatArgumentType.getFloat(c, "health"))));
+                .then(withScope(Commands.argument("health", FloatArgumentType.floatArg(10f, 1_000_000f)),
+                        (c, s) -> set(c, s, "health", FloatArgumentType.getFloat(c, "health"))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> damageCommand() {
@@ -730,26 +698,19 @@ public final class BellCommand {
                 .executes(c -> say(c, "damage", BellConfig.V.damageMultiplier))
                 .then(Commands.literal("mobs")
                         .executes(c -> say(c, "mobDamage", BellConfig.V.mobDamage))
-                        .then(Commands.argument("times", FloatArgumentType.floatArg(0f, 100f))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.mobDamage = FloatArgumentType.getFloat(c, "times"),
-                                        "mobDamage",
-                                        FloatArgumentType.getFloat(c, "times")))))
-                .then(Commands.argument("multiplier", FloatArgumentType.floatArg(0f, 100f))
-                        .executes(c -> set(
-                                c,
-                                () -> BellConfig.V.damageMultiplier = FloatArgumentType.getFloat(c, "multiplier"),
-                                "damage",
+                        .then(withScope(Commands.argument("times", FloatArgumentType.floatArg(0f, 100f)),
+                                (c, s) -> set(c, s, "mobDamage", FloatArgumentType.getFloat(c, "times")))))
+                .then(withScope(Commands.argument("multiplier", FloatArgumentType.floatArg(0f, 100f)),
+                        (c, s) -> set(c, s, "damage", "damageMultiplier",
                                 FloatArgumentType.getFloat(c, "multiplier"))));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> heavydelayCommand() {
         return Commands.literal("heavydelay")
                 .requires(OP)
-                .executes(c -> heavyDelay(c, -1))
-                .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
-                        .executes(c -> heavyDelay(c, IntegerArgumentType.getInteger(c, "seconds"))));
+                .executes(c -> heavyDelay(c, -1, AdminScope.Scope.UNSAID))
+                .then(withScope(Commands.argument("seconds", IntegerArgumentType.integer(0, 600)),
+                        (c, s) -> heavyDelay(c, IntegerArgumentType.getInteger(c, "seconds"), s)));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> reloadCommand() {
@@ -769,24 +730,14 @@ public final class BellCommand {
         return Commands.literal("wind")
                 .requires(OP)
                 .executes(BellCommand::windSay)
-                .then(Commands.literal("on")
-                        .executes(c -> set(c, () -> BellConfig.V.bookCosts = true, "bookCosts", "on")))
-                .then(Commands.literal("off")
-                        .executes(c -> set(c, () -> BellConfig.V.bookCosts = false, "bookCosts", "off")))
+                .then(withScope(Commands.literal("on"), (c, s) -> set(c, s, "bookCosts", "bookCosts", true, "on")))
+                .then(withScope(Commands.literal("off"), (c, s) -> set(c, s, "bookCosts", "bookCosts", false, "off")))
                 .then(Commands.literal("seconds")
-                        .then(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.windSeconds = IntegerArgumentType.getInteger(c, "seconds"),
-                                        "windSeconds",
-                                        IntegerArgumentType.getInteger(c, "seconds")))))
+                        .then(withScope(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600)),
+                                (c, s) -> set(c, s, "windSeconds", IntegerArgumentType.getInteger(c, "seconds")))))
                 .then(Commands.literal("grudge")
-                        .then(Commands.argument("rate", FloatArgumentType.floatArg(0f, 10f))
-                                .executes(c -> set(
-                                        c,
-                                        () -> BellConfig.V.grudgeRate = FloatArgumentType.getFloat(c, "rate"),
-                                        "grudgeRate",
-                                        FloatArgumentType.getFloat(c, "rate")))))
+                        .then(withScope(Commands.argument("rate", FloatArgumentType.floatArg(0f, 10f)),
+                                (c, s) -> set(c, s, "grudgeRate", FloatArgumentType.getFloat(c, "rate")))))
                 .then(Commands.argument("share", FloatArgumentType.floatArg(0f, 1f))
                         .executes(c -> {
                             HollowbellEntity h = nearest(c.getSource());
@@ -813,19 +764,32 @@ public final class BellCommand {
     }
 
     /** how long into a fight before his first heavy move: said, or set (seconds >= 0) */
-    private static int heavyDelay(CommandContext<CommandSourceStack> c, int seconds) {
-        if (seconds >= 0) {
-            BellConfig.V.heavyDelaySeconds = seconds;
-            BellConfig.save();
-        }
+    private static int heavyDelay(CommandContext<CommandSourceStack> c, int seconds, AdminScope.Scope s) {
+        if (seconds >= 0)
+            return reply(c, write(c.getSource().getServer(), s, by(c), "heavyDelaySeconds", seconds),
+                    Component.translatable("command.hollowbell.heavydelay", seconds));
         int now = BellConfig.V.heavyDelaySeconds;
-        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.heavydelay", now), seconds >= 0);
+        c.getSource().sendSuccess(() -> Component.translatable("command.hollowbell.heavydelay", now), false);
         return 1;
     }
 
-    /** "/hollowbell griefing [on|off]": bare says what it is; the old true/false form still works */
+    /**
+     * "/hollowbell griefing [on|off]": bare says what it is; the old true/false form still works. With put null it is
+     * a world setting (key is its config field), taking "world" or "allworlds" after it; shake (how it looks on each
+     * game) only ever goes in the config file.
+     */
     private static LiteralArgumentBuilder<CommandSourceStack> toggle(
-            String name, String key, BooleanSupplier get, Consumer<Boolean> put) {
+            String name, String key, BooleanSupplier get, @Nullable Consumer<Boolean> put) {
+        if (put == null)
+            return Commands.literal(name)
+                    .requires(OP)
+                    .executes(c -> say(c, key, get.getAsBoolean() ? "on" : "off"))
+                    .then(withScope(Commands.literal("on"), (c, s) -> set(c, s, key, key, true, "on")))
+                    .then(withScope(Commands.literal("off"), (c, s) -> set(c, s, key, key, false, "off")))
+                    .then(withScope(Commands.argument("value", BoolArgumentType.bool()), (c, s) -> {
+                        boolean v = BoolArgumentType.getBool(c, "value");
+                        return set(c, s, key, key, v, v ? "on" : "off");
+                    }));
         return Commands.literal(name)
                 .requires(OP)
                 .executes(c -> say(c, key, get.getAsBoolean() ? "on" : "off"))
@@ -1003,23 +967,26 @@ public final class BellCommand {
         return 1;
     }
 
-    private static int configSet(CommandContext<CommandSourceStack> c, String key, String value) {
-        String bad = OpsCommand.set(key, value);
-        if (bad != null) {
-            c.getSource().sendFailure(Component.translatable("command.hollowbell.config_bad", bad));
+    /** /hollowbell config key value [world|allworlds]: for this world, or the server default (AdminScope) */
+    private static int configSet(CommandContext<CommandSourceStack> c, String key, String value, AdminScope.Scope s) {
+        if (!OpsCommand.has(key)) {
+            c.getSource().sendFailure(Component.translatable("command.hollowbell.config_bad",
+                    "there's no setting called " + key));
             return 0;
         }
-        // (the server's default: what the file says now; a value this world keeps for itself still wins)
-        String now = OpsCommand.fileText(key);
-        Component said = (now.equals("true") || now.equals("false")
-                        ? Component.translatable(
-                                now.equals("true") ? "command.hollowbell.set_on" : "command.hollowbell.set_off",
-                                plain(key))
-                        : Component.translatable("command.hollowbell.set", plain(key), now))
-                .copy()
-                .append(net.jj.hollowbell.GiantsAdmin.note(OpsCommand.name(key)));
-        c.getSource().sendSuccess(() -> said, true);
-        return 1;
+        String id = OpsCommand.name(key);
+        Object v = AdminScope.parse(id, value);
+        if (v == null) {
+            c.getSource().sendFailure(Component.translatable("command.hollowbell.config_bad",
+                    key + " can't be " + value));
+            return 0;
+        }
+        AdminScope.Done d = write(c.getSource().getServer(), s, by(c), id, v);
+        String now = d.world() ? String.valueOf(v) : OpsCommand.fileText(key);
+        return reply(c, d, now.equals("true") || now.equals("false")
+                ? Component.translatable(
+                        now.equals("true") ? "command.hollowbell.set_on" : "command.hollowbell.set_off", plain(key))
+                : Component.translatable("command.hollowbell.set", plain(key), now));
     }
 
     private static int paint(CommandContext<CommandSourceStack> c, int radius, boolean full)
@@ -1281,6 +1248,30 @@ public final class BellCommand {
         return l.size();
     }
 
+    /** a world setting from a command (AdminScope): what = its words, id = its config field; it says v */
+    private static int set(
+            CommandContext<CommandSourceStack> c, AdminScope.Scope s, String what, String id, Object value, Object v) {
+        return reply(
+                c,
+                write(c.getSource().getServer(), s, by(c), id, value),
+                v instanceof Boolean on
+                        ? Component.translatable(
+                                on ? "command.hollowbell.set_on" : "command.hollowbell.set_off", plain(what))
+                        : Component.translatable("command.hollowbell.set", plain(what), String.valueOf(v)));
+    }
+
+    /** the same where its words are its field's name, saying the value */
+    private static int set(CommandContext<CommandSourceStack> c, AdminScope.Scope s, String id, Object value) {
+        return set(c, s, id, id, value, value);
+    }
+
+    /** the same with its own words */
+    private static int set(CommandContext<CommandSourceStack> c, AdminScope.Scope s, String what, String id,
+            Object value) {
+        return set(c, s, what, id, value, value);
+    }
+
+    /** volume and shake: how he sounds and looks on each game, only ever the config file (not world settings) */
     private static int set(CommandContext<CommandSourceStack> c, Runnable r, String what, Object v) {
         r.run();
         BellConfig.save();
@@ -1367,15 +1358,11 @@ public final class BellCommand {
         return 1;
     }
 
-    private static int setNatural(CommandContext<CommandSourceStack> c, boolean on) {
-        BellConfig.V.oneInTheWorld = on;
-        BellConfig.save();
-        c.getSource()
-                .sendSuccess(
-                        () -> Component.translatable(
-                                on ? "command.hollowbell.natural_on" : "command.hollowbell.natural_off"),
-                        true);
-        return 1;
+    private static int setNatural(CommandContext<CommandSourceStack> c, AdminScope.Scope s, boolean on) {
+        return reply(
+                c,
+                write(c.getSource().getServer(), s, by(c), "oneInTheWorld", on),
+                Component.translatable(on ? "command.hollowbell.natural_on" : "command.hollowbell.natural_off"));
     }
 
     /** everyone standing, in the world and out of it */
@@ -1395,18 +1382,16 @@ public final class BellCommand {
         return 1;
     }
 
-    private static int setLimit(CommandContext<CommandSourceStack> c) {
+    private static int setLimit(CommandContext<CommandSourceStack> c, AdminScope.Scope s) {
         int v = IntegerArgumentType.getInteger(c, "how many");
-        BellConfig.V.maxInWorld = v;
-        BellConfig.save();
-        c.getSource()
-                .sendSuccess(
-                        () -> v == 0
-                                ? Component.translatable("command.hollowbell.limit_set_none")
-                                : Component.translatable("command.hollowbell.limit_set", v),
-                        true);
-        if (v > 0) WorldOne.limitNow(null, c.getSource().getServer().overworld());
-        return 1;
+        int ok = reply(
+                c,
+                write(c.getSource().getServer(), s, by(c), "maxInWorld", v),
+                v == 0
+                        ? Component.translatable("command.hollowbell.limit_set_none")
+                        : Component.translatable("command.hollowbell.limit_set", v));
+        if (ok > 0 && BellConfig.V.maxInWorld > 0) WorldOne.limitNow(null, c.getSource().getServer().overworld());
+        return ok;
     }
 
     private static int wardSay(CommandContext<CommandSourceStack> c) {

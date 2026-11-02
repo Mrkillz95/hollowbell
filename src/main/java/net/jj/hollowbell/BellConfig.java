@@ -274,6 +274,24 @@ public final class BellConfig {
         composeFresh();
     }
 
+    /**
+     * Server defaults from a command with "allworlds" (ADMIN_BRIDGE.md, Command scope): each field's value goes
+     * straight into the file's values, whatever this world keeps for itself (even the same number), then the file is
+     * written (unless it couldn't be read) and V put together again.
+     */
+    public static synchronized void setDefaults(java.util.Map<java.lang.reflect.Field, Object> values) {
+        takeChanges();
+        for (var e : values.entrySet()) {
+            try {
+                e.getKey().set(FILE, e.getValue());
+            } catch (IllegalAccessException | IllegalArgumentException ex) {
+                HollowbellMod.LOG.warn("Not a value for {}: {}", e.getKey().getName(), e.getValue());
+            }
+        }
+        migrate(FILE); // (the same limits as reading the file)
+        save();
+    }
+
     /** written beside it first, then put in its place, so a crash halfway never leaves half a file */
     private static void write(String json) throws IOException {
         Path tmp = file().resolveSibling("hollowbell.json.tmp");
