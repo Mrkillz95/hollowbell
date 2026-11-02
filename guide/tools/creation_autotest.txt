@@ -88,7 +88,11 @@ wait 10
 mouse 2 2
 wait 20
 shot p3_s2_more_tab_chosen
+cwcommands
 press Create New World
+wait 60
+confirmyes
+wait 20
 inworld
 wait 100
 adminintro seen

@@ -189,7 +189,14 @@ public final class AutoTest implements ClientModInitializer {
                 } else GiantsGuideMod.LOG.warn("autotest: not on Create World for {}", s);
                 continue;
             }
+            // cwcommands: the new world allows commands (so the player is an operator in it, as "Allow Commands")
+            if (s.equals("cwcommands")) {
+                if (mc.screen instanceof net.minecraft.client.gui.screens.worldselection.CreateWorldScreen cw)
+                    cw.getUiState().setAllowCommands(true);
+                continue;
+            }
             if (s.startsWith("cwname ")) {
+
                 if (mc.screen instanceof net.minecraft.client.gui.screens.worldselection.CreateWorldScreen cw)
                     cw.getUiState().setName(s.substring(7).trim());
                 continue;
@@ -208,7 +215,20 @@ public final class AutoTest implements ClientModInitializer {
                 if (!net.jj.giants.client.admin.CreationScreen.testEdit()) GiantsGuideMod.LOG.warn("autotest: no picker");
                 continue;
             }
+            // confirmyes: an "are you sure" screen open (the experimental world settings warning): its first button
+            if (s.equals("confirmyes")) {
+                if (mc.screen instanceof net.minecraft.client.gui.screens.ConfirmScreen cs) {
+                    GiantsGuideMod.LOG.info("autotest: confirming {}", cs.getTitle().getString());
+                    for (var c : cs.children())
+                        if (c instanceof net.minecraft.client.gui.components.AbstractButton b) {
+                            b.onPress();
+                            break;
+                        }
+                } else GiantsGuideMod.LOG.info("autotest: nothing to confirm ({})", mc.screen);
+                continue;
+            }
             if (s.equals("back")) {
+
                 if (mc.screen != null) mc.screen.onClose();
                 continue;
             }

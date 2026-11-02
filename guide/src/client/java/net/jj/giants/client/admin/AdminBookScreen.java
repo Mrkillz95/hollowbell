@@ -374,6 +374,7 @@ public class AdminBookScreen extends Screen {
             // (no server yet: everything goes into the new world; the search takes the room)
             scopeButton.visible = false;
             search.setWidth(Math.max(70, lw - modeW - 3));
+            modeButton.setX(lx + lw - modeW);
         }
 
         // the page's own button (reset this giant, or on Home every giant)
@@ -1076,7 +1077,7 @@ public class AdminBookScreen extends Screen {
         // (a moderator: no search, no modes, no saving scope; Live control only)
         search.visible = admin;
         modeButton.visible = admin;
-        scopeButton.visible = admin;
+        scopeButton.visible = admin && !creating();
         if (!q.isEmpty() && admin) searchRows(q);
         else if (pageKey.equals(HOME)) homeRows();
         else if (pageKey.equals(LIVE)) liveRows();

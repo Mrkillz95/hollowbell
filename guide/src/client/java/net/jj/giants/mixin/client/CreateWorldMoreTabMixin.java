@@ -1,12 +1,7 @@
 package net.jj.giants.mixin.client;
 
-import net.jj.giants.client.admin.CreationClient;
-import net.jj.giants.client.admin.CreationScreen;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import net.jj.giants.client.admin.GiantsButton;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
-import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,11 +15,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class CreateWorldMoreTabMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void giants$addButton(CreateWorldScreen screen, CallbackInfo ci) {
-        Button b = Button.builder(CreationClient.buttonLabel(screen),
-                        x -> Minecraft.getInstance().setScreen(new CreationScreen(screen)))
-                .width(210)
-                .build();
-        b.setTooltip(Tooltip.create(Component.translatable("admin.jj_giants.creation.button.tip")));
-        ((GridLayoutTabAccess) this).giants$layout().addChild(b, 3, 0);
+        ((GridLayoutTabAccess) this).giants$layout().addChild(new GiantsButton(screen), 3, 0);
     }
 }

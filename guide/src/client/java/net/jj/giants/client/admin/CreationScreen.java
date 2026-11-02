@@ -98,7 +98,7 @@ public class CreationScreen extends Screen {
 
     private void build() {
         items.clear();
-        int tw = pw - 24;
+        int tw = pw - 24 - 14;
         if (!anyGiant)
             items.add(new Item("note", Component.translatable("admin.jj_giants.creation.none"), List.of(), null, "",
                     14));
