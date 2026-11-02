@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.7.0 |
-| Pitchgut | 1.35.35 |
-| Furrowmaw | 1.17.32 |
-| Fire & Ice Cerberus | 2.18.32 |
-| Hollowbell | 1.12.34 |
-| Lantern Willow | 1.10.35 |
-| Wreckback | 1.2.40 |
-| The Swarmforge | 1.4.38 |
-| The Gloamwick | 1.2.19 |
+| Giants Guide | 1.8.0 |
+| Pitchgut | 1.35.36 |
+| Furrowmaw | 1.17.33 |
+| Fire & Ice Cerberus | 2.18.33 |
+| Hollowbell | 1.12.35 |
+| Lantern Willow | 1.10.36 |
+| Wreckback | 1.2.41 |
+| The Swarmforge | 1.4.39 |
+| The Gloamwick | 1.2.20 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.9.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.10.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.9.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.10.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -96,6 +96,26 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.7.0: a Giants… button on Create World's More tab picks a preset and changes any giant
   setting before the world is made (Edit settings… opens the admin book for the new world), the presets Close
   Quarters and Far Frontier, and `config/jj_giants_admin/new_world.txt` for dedicated servers.
+- New in the Guide 1.8.0: fifteen new presets that change how the giants behave (Pocket Giants, Titans, Gentle
+  Giants, Kaiju War, Night Terrors, Wild Sizes, Siege, One Life, Boss Rush, Nomads, Hardcore, Builder / Showcase,
+  Public Server Safe, Lite, Speedrun), each with its danger rating, and ten new settings on every giant's page.
+
+## New in 1.10.0
+
+- **Fifteen new presets** in the admin book and on Create World's Giants… button. Suggested: Pocket Giants, Titans,
+  Gentle Giants, Kaiju War, Night Terrors, Wild Sizes. All: Siege, One Life, Boss Rush, Nomads, Hardcore, Builder /
+  Showcase, Public Server Safe, Lite, Speedrun (plus Classic, Close Quarters and Far Frontier). Each shows a danger
+  rating from 1 Gentle to 5 Brutal, and they keep where the giants' grounds go.
+- **Ten new settings for every giant**: Size spread, How many come (up to 8 at once), Comes back after he falls,
+  Temper (peaceful, normal, hunter), Roaming (home, wander, stay), Seeks out other giants, Raids, Sleeps (usual, by
+  day, never), Strength at night and Loot. The Gloamwick also has Eclipse more often.
+- **Tiny giants**: every giant can now be as small as about 2 blocks tall.
+- **Each giant's own config command** (`/wreckback config temper hunter` and so on) takes the choice settings too.
+- **One Life**: once a giant's own one falls, his kind never comes back to that world.
+- Left as shipped, every new setting keeps the giants exactly as before. My Giant comes next.
+
+Inside: Pitchgut 1.35.36, Furrowmaw 1.17.33, Cerberus 2.18.33, Hollowbell 1.12.35, Lantern Willow 1.10.36,
+Wreckback 1.2.41, Swarmforge 1.4.39, Gloamwick 1.2.20, Giants Guide 1.8.0.
 
 ## New in 1.9.0
 
