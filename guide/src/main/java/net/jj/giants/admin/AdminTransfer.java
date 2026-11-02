@@ -45,7 +45,8 @@ public final class AdminTransfer {
      * @param lines       the preview, in plain words
      * @param creationOnly the changed settings that only take full effect in a new world or on new land
      */
-    public record Plan(Bundle bundle, List<Step> changes, List<String> lines, List<String> creationOnly) {}
+    public record Plan(Bundle bundle, List<Step> changes, List<String> lines, List<String> creationOnly,
+            List<String> skipped, List<String> locked) {}
 
     public record Step(String giant, String id, String name, @Nullable JsonElement old, @Nullable JsonElement now,
             String oldText, String nowText) {}
@@ -63,9 +64,12 @@ public final class AdminTransfer {
         return BUILT_IN.keySet();
     }
 
+    /** a built-in preset by its id, or a preset saved on this server by its name; null if there's none */
     public static @Nullable Bundle preset(String id) {
         String json = BUILT_IN.get(id.toLowerCase(java.util.Locale.ROOT));
-        return json == null ? null : read(json);
+        if (json != null) return read(json);
+        AdminPresets.Saved s = AdminPresets.find(id);
+        return s == null ? null : s.bundle();
     }
 
     /** a bundle from its JSON; null if it isn't one */
@@ -165,11 +169,12 @@ public final class AdminTransfer {
     public static Plan plan(MinecraftServer server, Bundle b) {
         AdminWorld w = AdminWorld.get(server);
         List<Step> steps = new ArrayList<>();
-        List<String> lines = new ArrayList<>(), skipped = new ArrayList<>(), creation = new ArrayList<>();
+        List<String> lines = new ArrayList<>(), skipped = new ArrayList<>(), creation = new ArrayList<>(),
+                locked = new ArrayList<>();
         // the all-giants ones
         Map<String, JsonElement> wantAll = b.values().getOrDefault(AdminCatalog.ALL, Map.of());
         for (AdminSetting s : AdminServer.shared(w))
-            consider(AdminCatalog.ALL, "All giants", s, wantAll, b.replace(), steps, creation);
+            consider(w, AdminCatalog.ALL, "All giants", s, wantAll, b.replace(), steps, creation, locked);
         for (String id : wantAll.keySet())
             if (AdminCatalog.shared(id) == null) skipped.add("all giants " + id);
         // each giant here that speaks the protocol
@@ -179,7 +184,8 @@ public final class AdminTransfer {
             if (r == null) continue;
             seen.add(g.key());
             Map<String, JsonElement> want = b.values().getOrDefault(g.key(), Map.of());
-            for (AdminSetting s : r.settings()) consider(g.key(), r.name(), s, want, b.replace(), steps, creation);
+            for (AdminSetting s : r.settings())
+                consider(w, g.key(), r.name(), s, want, b.replace(), steps, creation, locked);
             for (String id : want.keySet()) if (r.setting(id) == null) skipped.add(r.name() + " " + id);
         }
         for (String g : b.values().keySet())
@@ -187,15 +193,26 @@ public final class AdminTransfer {
         for (Step s : steps)
             lines.add("  " + (s.giant().equals(AdminCatalog.ALL) ? "All giants" : nameFor(server, s.giant())) + " "
                     + s.name() + ": " + s.oldText() + " → " + s.nowText());
-        String title = b.name().isEmpty() ? (b.id().equals("import") ? "The import" : b.id()) : b.name();
+        String title = title(b);
         if (steps.isEmpty()) lines.add(0, title + " changes nothing in this world.");
         else lines.add(0, title + " would change " + steps.size() + (steps.size() == 1 ? " setting:" : " settings:"));
         if (!creation.isEmpty())
             lines.add("World creation: these only take full effect in a new world or on land not made yet: "
                     + String.join(", ", creation) + ".");
+        if (!locked.isEmpty()) lines.add("Locked, so left as they are: " + String.join(", ", locked) + ".");
         if (!skipped.isEmpty()) lines.add("Left out (not here or not known): " + String.join(", ", skipped) + ".");
         if (!steps.isEmpty()) lines.add("/giants admin confirm to apply it (within five minutes).");
-        return new Plan(b, steps, lines, creation);
+        return new Plan(b, steps, lines, creation, skipped, locked);
+    }
+
+    /** what a bundle is called in a preview */
+    public static String title(Bundle b) {
+        if (!b.name().isEmpty()) return b.name();
+        return switch (b.id()) {
+            case "import", "export" -> "The import";
+            case "snapshot" -> "The snapshot";
+            default -> b.id();
+        };
     }
 
     private static String nameFor(MinecraftServer server, String key) {
@@ -203,9 +220,18 @@ public final class AdminTransfer {
         return g == null ? key : AdminServer.nameOf(g);
     }
 
-    private static void consider(String giant, String giantName, AdminSetting s, Map<String, JsonElement> want,
-            boolean replace, List<Step> steps, List<String> creation) {
+    private static void consider(AdminWorld w, String giant, String giantName, AdminSetting s,
+            Map<String, JsonElement> want, boolean replace, List<Step> steps, List<String> creation,
+            List<String> locked) {
         JsonElement old = s.set() ? s.value() : null;
+        AdminWorld.Lock lock = w.lock(giant, s.id());
+        if (lock != null) {
+            // (a locked one is never changed by a bundle; it is named only if the bundle would have changed it)
+            boolean wants = want.containsKey(s.id()) ? !AdminSetting.same(want.get(s.id()), s.value())
+                    : replace && old != null;
+            if (wants) locked.add(giantName + " " + s.name() + " (" + lock.who() + ")");
+            return;
+        }
         JsonElement now;
         if (want.containsKey(s.id())) {
             JsonElement v = want.get(s.id());
@@ -228,22 +254,74 @@ public final class AdminTransfer {
     /** does a plan: every change kept for the world, logged as one, and sent to the giants */
     public static int apply(MinecraftServer server, String who, Plan p) {
         AdminWorld w = AdminWorld.get(server);
+        // (locked since the preview: still left alone)
+        List<Step> steps = p.changes().stream().filter(s -> w.lock(s.giant(), s.id()) == null).toList();
+        if (steps.isEmpty()) return 0;
+        String id = p.bundle().id();
+        boolean imported = id.equals("import") || id.equals("export"), snap = id.equals("snapshot");
+        // a snapshot first (not before putting a snapshot back: that one is undone from the change log)
+        if (!snap) w.snapshot(who, imported ? "Before imported settings" : "Before the preset " + title(p.bundle()));
         Map<String, Map<String, JsonElement>> before = new LinkedHashMap<>();
-        for (Step s : p.changes()) before.computeIfAbsent(s.giant(), k -> new HashMap<>()).put(s.id(), s.old());
-        for (Step s : p.changes()) {
+        for (Step s : steps) before.computeIfAbsent(s.giant(), k -> new HashMap<>()).put(s.id(), s.old());
+        for (Step s : steps) {
             if (s.now() == null) w.remove(s.giant(), s.id());
             else w.put(s.giant(), s.id(), s.now());
         }
-        String what = p.bundle().id().equals("import") || p.bundle().id().equals("export") ? "import" : "preset:"
-                + p.bundle().id();
-        String name = p.bundle().name().isEmpty()
-                ? (what.equals("import") ? "imported settings" : p.bundle().id())
+        String what = imported ? "import" : snap ? "snapshot" : "preset:" + id;
+        String name = snap ? p.bundle().name()
+                : p.bundle().name().isEmpty() ? (imported ? "imported settings" : id)
                 : "preset " + p.bundle().name();
         w.log(new AdminWorld.Change(System.currentTimeMillis(), who, "everything", what, name, "",
-                p.changes().size() + (p.changes().size() == 1 ? " change" : " changes"),
-                AdminWorld.Change.undo(before)));
+                steps.size() + (steps.size() == 1 ? " change" : " changes"), AdminWorld.Change.undo(before)));
         AdminServer.push(server, w);
-        return p.changes().size();
+        return steps.size();
+    }
+
+    /** a world's values as a bundle that puts exactly them back (a snapshot) */
+    public static Bundle snapshotBundle(AdminWorld.Snapshot s) {
+        String when = new java.text.SimpleDateFormat("MMM d HH:mm", java.util.Locale.ROOT)
+                .format(new java.util.Date(s.time()));
+        return new Bundle("snapshot", "snapshot from " + when, s.why(), true, s.values());
+    }
+
+    // the danger rating if a plan were applied (the Presets page's preview)
+
+    /** the rating now, and as it would be with the plan applied */
+    public static AdminInsight.Danger[] dangerBeforeAfter(MinecraftServer server, Plan p) {
+        AdminWorld w = AdminWorld.get(server);
+        Map<String, Map<String, JsonElement>> after = new HashMap<>();
+        for (Step s : p.changes())
+            after.computeIfAbsent(s.giant(), k -> new HashMap<>()).put(s.id(), s.now());
+        List<AdminInsight.View> now = new ArrayList<>(), then = new ArrayList<>();
+        for (Giant g : AdminServer.giants()) {
+            AdminJson.Report r = AdminServer.report(server, g);
+            if (r == null) continue;
+            now.add(AdminInsight.view(r));
+            Map<String, JsonElement> ch = after.getOrDefault(g.key(), Map.of());
+            List<AdminSetting> list = new ArrayList<>();
+            for (AdminSetting s : r.settings()) {
+                if (!ch.containsKey(s.id())) {
+                    list.add(s);
+                    continue;
+                }
+                JsonElement v = ch.get(s.id());
+                list.add(new AdminSetting(s.giant(), s.id(), s.cat(), s.type(), s.min(), s.max(), s.step(),
+                        s.options(), s.def(), v == null ? s.def() : v, s.jar(), v != null, s.when(), s.name(),
+                        s.what(), s.key(), s.group()));
+            }
+            then.add(AdminInsight.view(new AdminJson.Report(r.giant(), r.name(), r.version(), r.uses(), r.all(),
+                    list)));
+        }
+        Map<String, Double> allNow = new HashMap<>(), allThen = new HashMap<>();
+        Map<String, JsonElement> chAll = after.getOrDefault(AdminCatalog.ALL, Map.of());
+        for (AdminSetting s : AdminServer.shared(w)) {
+            allNow.put(s.id(), s.value().getAsDouble());
+            if (chAll.containsKey(s.id())) {
+                JsonElement v = chAll.get(s.id());
+                allThen.put(s.id(), v == null ? s.def().getAsDouble() : v.getAsDouble());
+            } else allThen.put(s.id(), s.value().getAsDouble());
+        }
+        return new AdminInsight.Danger[] {AdminInsight.danger(now, allNow), AdminInsight.danger(then, allThen)};
     }
 
     // waiting for /giants admin confirm: one plan per person, for five minutes

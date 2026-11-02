@@ -291,4 +291,130 @@ shot ab_s3_allworlds_all
 close
 adminscope world
 close
+# Part 2B: Live control, Presets, Changes, locks and moderators (scale 2, then 3)
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd giants admin lock wreckback healthMultiplier
+cmd giants admin lock all damage
+cmd giants admin savepreset Weekend Fun
+cmd wreckback summon 0.1
+cmd cerberus summon calm 0.1
+cmd gloamwick summon 0.15
+cmd hollowbell summon 0.1
+wait 60
+adminbook live
+wait 60
+mouse 2 2
+wait 25
+shot ab2_s2_live
+adminbook live 400
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_live_end
+adminbook presets
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_presets
+adminbook presets 400
+wait 30
+mouse 2 2
+wait 25
+shot ab2_s2_presets_end
+adminreq {"do":"preset","name":"classic"}
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_preview_classic
+close
+adminbook presets
+wait 30
+adminreq {"do":"import","text":"{\"admin\":1,\"replace\":false,\"giants\":{\"wreckback\":{\"healthMultiplier\":3,\"homeRadius\":900},\"pitchgut\":{\"damageMultiplier\":2}},\"all\":{\"all.health\":2}}"}
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_preview_import
+close
+adminbook changes
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_changes
+adminbook changes 3000
+wait 30
+mouse 2 2
+wait 25
+shot ab2_s2_changes_end
+adminbook home 900
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_home_mods
+adminmode advanced
+adminbook wreckback
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_locked
+adminbook all
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_all_locked
+adminintro 4
+adminbook home
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s2_intro_5
+close
+adminintro seen
+adminbook changes
+wait 30
+adminreq {"do":"undo","i":0,"time":0}
+wait 30
+mouse 2 2
+wait 25
+shot ab2_s2_undo_refused
+close
+guiscale 3
+wait 10
+adminmode simple
+adminbook live
+wait 60
+mouse 2 2
+wait 25
+shot ab2_s3_live
+adminbook presets
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s3_presets
+adminreq {"do":"preset","name":"classic"}
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s3_preview_classic
+close
+adminbook changes
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s3_changes
+adminbook home 900
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s3_home_mods
+adminmode advanced
+adminbook wreckback
+wait 40
+mouse 2 2
+wait 25
+shot ab2_s3_locked
+close
 quit

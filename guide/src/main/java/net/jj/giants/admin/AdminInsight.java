@@ -385,8 +385,9 @@ public final class AdminInsight {
         for (int i = log.size() - 1; i >= 0; i--) {
             AdminWorld.Change c = log.get(i);
             if (c.undo().isEmpty()) continue;
-            if (c.id().startsWith("preset:") || c.id().equals("import")) {
+            if (c.id().startsWith("preset:") || c.id().equals("import") || c.id().equals("snapshot")) {
                 String name = c.id().equals("import") ? "Imported settings"
+                        : c.id().equals("snapshot") ? "Restored snapshot"
                         : c.name().toLowerCase(Locale.ROOT).startsWith("preset ") ? c.name().substring(7) : c.name();
                 return after ? name + ", changed" : name;
             }

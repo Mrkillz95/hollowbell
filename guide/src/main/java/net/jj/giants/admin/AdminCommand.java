@@ -68,15 +68,77 @@ public final class AdminCommand {
                                         .executes(c -> say(c, AdminServer.log(
                                                 server(c), IntegerArgumentType.getInteger(c, "count"))))))
                         .then(Commands.literal("preset")
-                                .then(Commands.argument("name", StringArgumentType.word())
-                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(
-                                                AdminTransfer.presets(), b))
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(presetNames(), b))
                                         .executes(AdminCommand::preset)))
+                        .then(Commands.literal("savepreset")
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .executes(c -> say(c, AdminPresets.save(server(c), who(c), whoId(c),
+                                                StringArgumentType.getString(c, "name"))))))
+                        .then(Commands.literal("deletepreset")
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .suggests((c, b) -> {
+                                            List<String> out = new ArrayList<>();
+                                            for (AdminPresets.Saved s : AdminPresets.list()) out.add(s.name());
+                                            return SharedSuggestionProvider.suggest(out, b);
+                                        })
+                                        .executes(c -> say(c, AdminPresets.delete(who(c), whoId(c),
+                                                StringArgumentType.getString(c, "name"))))))
                         .then(Commands.literal("export").executes(AdminCommand::export))
                         .then(Commands.literal("import")
                                 .then(Commands.argument("text", StringArgumentType.greedyString())
                                         .executes(AdminCommand::importText)))
-                        .then(Commands.literal("confirm").executes(AdminCommand::confirm)))
+                        .then(Commands.literal("confirm").executes(c -> say(c,
+                                confirm(server(c), holder(c), who(c)))))
+                        // Part 2B: locks, undo, snapshots, moderators, settings sync
+                        .then(Commands.literal("lock")
+                                .then(giant("giant", false)
+                                        .then(setting().executes(c -> say(c, AdminServer.lock(server(c), who(c),
+                                                whoId(c), word(c, "giant"), word(c, "setting")))))))
+                        .then(Commands.literal("unlock")
+                                .then(giant("giant", false)
+                                        .then(setting().executes(c -> say(c, AdminServer.unlock(server(c), who(c),
+                                                word(c, "giant"), word(c, "setting")))))))
+                        .then(Commands.literal("locks").executes(c -> say(c, AdminServer.locks(server(c)))))
+                        .then(Commands.literal("undo")
+                                .executes(c -> undo(c, 1))
+                                .then(Commands.argument("count", IntegerArgumentType.integer(1, AdminWorld.MOST_LOG))
+                                        .executes(c -> undo(c, IntegerArgumentType.getInteger(c, "count")))))
+                        .then(Commands.literal("snapshot")
+                                .executes(AdminCommand::snapshots)
+                                .then(Commands.literal("restore")
+                                        .then(Commands.argument("number", IntegerArgumentType.integer(1,
+                                                        AdminWorld.MOST_SNAPSHOTS))
+                                                .executes(AdminCommand::restore))))
+                        .then(Commands.literal("moderator")
+                                .then(Commands.literal("add")
+                                        .then(Commands.argument("player", StringArgumentType.word())
+                                                .suggests((c, b) -> SharedSuggestionProvider.suggest(
+                                                        c.getSource().getOnlinePlayerNames(), b))
+                                                .executes(c -> say(c, AdminRoles.set(server(c), who(c),
+                                                        word(c, "player"), true)))))
+                                .then(Commands.literal("remove")
+                                        .then(Commands.argument("player", StringArgumentType.word())
+                                                .suggests((c, b) -> {
+                                                    List<String> out = new ArrayList<>();
+                                                    for (AdminWorld.Mod m : AdminWorld.get(server(c)).mods())
+                                                        out.add(m.name());
+                                                    return SharedSuggestionProvider.suggest(out, b);
+                                                })
+                                                .executes(c -> say(c, AdminRoles.set(server(c), who(c),
+                                                        word(c, "player"), false))))))
+                        .then(Commands.literal("moderators").executes(c -> say(c, AdminRoles.list(server(c)))))
+                        .then(Commands.literal("sync")
+                                .executes(c -> say(c, AdminServer.Result.said(AdminSync.status())))
+                                .then(Commands.literal("status")
+                                        .executes(c -> say(c, AdminServer.Result.said(AdminSync.status()))))
+                                .then(Commands.literal("now").executes(c -> {
+                                    AdminSync.Outcome o = AdminSync.run(server(c), true);
+                                    return say(c, new AdminServer.Result(o.ran(), o.lines(), o.ran()
+                                            ? List.of(who(c) + " applied the settings sync file ("
+                                                    + o.applied() + " server defaults).")
+                                            : List.of()));
+                                }))))
                 .then(Commands.literal("adminbook")
                         .requires(s -> s.hasPermission(OPS))
                         .executes(c -> {
@@ -84,7 +146,69 @@ public final class AdminCommand {
                             AdminBookItem.give(p);
                             c.getSource().sendSuccess(() -> Component.literal("Here is the Giants Admin Book."), false);
                             return 1;
-                        })));
+                        })
+                        .then(Commands.argument("player", StringArgumentType.word())
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(
+                                        c.getSource().getOnlinePlayerNames(), b))
+                                .executes(c -> {
+                                    ServerPlayer p = AdminRoles.online(server(c), word(c, "player"));
+                                    if (p == null)
+                                        return say(c, AdminServer.Result.fail("Pick a player who is online."));
+                                    AdminBookItem.give(p);
+                                    String n = p.getGameProfile().getName();
+                                    boolean opens = AdminBook.allowed(p);
+                                    return say(c, AdminServer.Result.said(List.of("Gave " + n
+                                            + " a Giants Admin Book." + (opens ? "" : " It only opens for admins and"
+                                                    + " moderators: /giants admin moderator add " + n + "."))));
+                                }))));
+    }
+
+    private static List<String> presetNames() {
+        List<String> out = new ArrayList<>(AdminTransfer.presets());
+        for (AdminPresets.Saved s : AdminPresets.list()) out.add(s.name());
+        return out;
+    }
+
+    /** the player's UUID ("" for the console) */
+    private static String whoId(CommandContext<CommandSourceStack> c) {
+        return c.getSource().getPlayer() != null ? c.getSource().getPlayer().getStringUUID() : "";
+    }
+
+    /** /giants admin undo [n]: the last change, or the last n as one */
+    private static int undo(CommandContext<CommandSourceStack> c, int n) {
+        List<AdminWorld.Change> log = AdminWorld.get(server(c)).log();
+        if (log.isEmpty()) return say(c, AdminServer.Result.fail("No changes yet in this world."));
+        int i = Math.max(0, log.size() - n);
+        return say(c, n == 1
+                ? AdminUndo.undo(server(c), who(c), i, log.get(i).time())
+                : AdminUndo.undoBackTo(server(c), who(c), i, log.get(i).time()));
+    }
+
+    /** /giants admin snapshot: the snapshots kept, newest first, numbered for restore */
+    private static int snapshots(CommandContext<CommandSourceStack> c) {
+        List<AdminWorld.Snapshot> all = AdminWorld.get(server(c)).snapshots();
+        if (all.isEmpty())
+            return say(c, AdminServer.Result.said(List.of("No snapshots yet. One is kept before every preset, import"
+                    + " and \"everything back to the defaults\".")));
+        List<String> lines = new ArrayList<>(List.of("Snapshots (newest first; /giants admin snapshot restore <n>):"));
+        java.text.SimpleDateFormat when = new java.text.SimpleDateFormat("MMM d HH:mm", java.util.Locale.ROOT);
+        for (int k = all.size() - 1, n = 1; k >= 0; k--, n++) {
+            AdminWorld.Snapshot s = all.get(k);
+            lines.add("  " + n + ". " + when.format(new java.util.Date(s.time())) + " " + s.why() + " (" + s.who()
+                    + ", " + s.count() + " set)");
+        }
+        return say(c, AdminServer.Result.said(lines));
+    }
+
+    private static int restore(CommandContext<CommandSourceStack> c) {
+        List<AdminWorld.Snapshot> all = AdminWorld.get(server(c)).snapshots();
+        int n = IntegerArgumentType.getInteger(c, "number"), k = all.size() - n;
+        if (k < 0) return say(c, AdminServer.Result.fail("There's no snapshot " + n + ". /giants admin snapshot"
+                + " lists them."));
+        AdminTransfer.Plan p = AdminUndo.restorePlan(server(c), k, all.get(k).time());
+        if (p == null) return say(c, AdminServer.Result.fail("That snapshot isn't kept any more."));
+        if (!p.changes().isEmpty()) AdminTransfer.hold(holder(c), p);
+        return say(c, AdminServer.Result.said(p.lines()));
     }
 
     private static final List<String> HELP = List.of(
@@ -94,7 +218,11 @@ public final class AdminCommand {
             "/giants admin reset <giant|all|everything> [setting]: back to the server defaults.",
             "/giants admin list <giant|all> [category]: every setting there is.",
             "/giants admin log [count]: the recent changes.",
-            "/giants admin preset <name>, export, import <text>, then confirm.");
+            "/giants admin preset <name>, export, import <text>, then confirm; savepreset <name>, deletepreset <name>.",
+            "/giants admin lock|unlock <giant|all> <setting>, locks: keep a setting as it is.",
+            "/giants admin undo [count]; snapshot [restore <n>]: put changes back.",
+            "/giants admin moderator add|remove <player>, moderators: Live control only.",
+            "/giants admin sync [now|status]: config/jj_giants_admin/sync.txt as the server defaults.");
 
     /**
      * /giants admin set ... [world|allworlds] (ADMIN_BRIDGE.md, "Command scope"): the last word of the value says where
@@ -226,19 +354,26 @@ public final class AdminCommand {
         return say(c, AdminServer.Result.said(p.lines()));
     }
 
-    private static int confirm(CommandContext<CommandSourceStack> c) {
-        AdminTransfer.Plan p = AdminTransfer.take(holder(c));
+    /** /giants admin confirm, and the book's Apply: the preset, import or snapshot this player previewed last */
+    static AdminServer.Result confirm(MinecraftServer server, String holder, String who) {
+        AdminTransfer.Plan p = AdminTransfer.take(holder);
         if (p == null)
-            return say(c, AdminServer.Result.fail("Nothing to confirm. Pick a preset or import settings first."));
-        int n = AdminTransfer.apply(server(c), who(c), p);
-        String title = p.bundle().name().isEmpty() ? "The settings" : p.bundle().name();
+            return AdminServer.Result.fail("Nothing to confirm. Pick a preset, an import or a snapshot first (a"
+                    + " preview is kept five minutes).");
+        int n = AdminTransfer.apply(server, who, p);
+        boolean snap = p.bundle().id().equals("snapshot");
+        String title = snap ? "The " + p.bundle().name() : p.bundle().name().isEmpty() ? "The settings"
+                : p.bundle().name();
         List<String> lines = new ArrayList<>(List.of(title + ": " + n + (n == 1 ? " setting" : " settings")
-                + " changed for this world."));
+                + " changed for this world." + (snap || n == 0 ? "" : " A snapshot of how it was is on the Changes"
+                        + " page.")));
         if (!p.creationOnly().isEmpty())
             lines.add("World creation: " + String.join(", ", p.creationOnly())
                     + " only take full effect in a new world or on land not made yet.");
-        return say(c, new AdminServer.Result(true, lines, List.of(who(c) + " applied " + (p.bundle().name().isEmpty()
-                ? "imported settings" : "the preset " + p.bundle().name()) + " (" + n + " changes).")));
+        String what = snap ? "put back the " + p.bundle().name()
+                : p.bundle().name().isEmpty() ? "applied imported settings" : "applied the preset " + p.bundle().name();
+        return new AdminServer.Result(true, lines, n == 0 ? List.of() : List.of(who + " " + what + " (" + n
+                + " changes)."));
     }
 
     private static int export(CommandContext<CommandSourceStack> c) {

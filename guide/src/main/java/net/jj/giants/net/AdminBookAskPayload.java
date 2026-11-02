@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
  * changes) or says it was closed ("close"). Only a request: the server checks the player is an operator first.
  */
 public record AdminBookAskPayload(String what) implements CustomPacketPayload {
-    public static final String ALL = "", CLOSE = "close";
+    public static final String ALL = "", CLOSE = "close", LIVE = "live", LIVE_OFF = "live_off";
     public static final Type<AdminBookAskPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath("jj_giants", "admin_ask"));
     public static final StreamCodec<FriendlyByteBuf, AdminBookAskPayload> CODEC =

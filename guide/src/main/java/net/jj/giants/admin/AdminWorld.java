@@ -57,8 +57,36 @@ public final class AdminWorld extends SavedData {
         }
     }
 
+    /** how many snapshots are kept */
+    public static final int MOST_SNAPSHOTS = 10;
+
+    /**
+     * Every value the world had at one moment, taken before a preset, an import or "everything back to the defaults"
+     * (Part 2B), so it can be put back in one go.
+     *
+     * @param why    what was about to happen ("Before the preset Classic")
+     * @param values giant key ("all" too) to id to value
+     */
+    public record Snapshot(long time, String who, String why, Map<String, Map<String, JsonElement>> values) {
+        public int count() {
+            int n = 0;
+            for (Map<String, JsonElement> m : values.values()) n += m.size();
+            return n;
+        }
+    }
+
+    /** a setting locked by an admin: presets, imports and everyone else leave it alone (Part 2B) */
+    public record Lock(String who, String whoId, long time) {}
+
+    /** a player an admin made a moderator: Live control only */
+    public record Mod(java.util.UUID id, String name) {}
+
     private final Map<String, Map<String, JsonElement>> giants = new LinkedHashMap<>();
     private final List<Change> log = new ArrayList<>();
+    private final List<Snapshot> snapshots = new ArrayList<>();
+    /** "giant/id" to who locked it */
+    private final Map<String, Lock> locks = new LinkedHashMap<>();
+    private final List<Mod> mods = new ArrayList<>();
 
     private static final Factory<AdminWorld> FACTORY = new Factory<>(AdminWorld::new, AdminWorld::read, null);
 
@@ -100,6 +128,33 @@ public final class AdminWorld extends SavedData {
                     c.getString("Undo")));
         }
         while (w.log.size() > MOST_LOG) w.log.remove(0);
+        ListTag sl = tag.getList("Snapshots", Tag.TAG_COMPOUND);
+        for (int i = 0; i < sl.size(); i++) {
+            CompoundTag c = sl.getCompound(i);
+            Map<String, Map<String, JsonElement>> values = new LinkedHashMap<>();
+            try {
+                var o = JsonParser.parseString(c.getString("Values")).getAsJsonObject();
+                for (var gv : o.entrySet()) {
+                    Map<String, JsonElement> m = new LinkedHashMap<>();
+                    for (var e : gv.getValue().getAsJsonObject().entrySet()) m.put(e.getKey(), e.getValue());
+                    values.put(gv.getKey(), m);
+                }
+            } catch (RuntimeException e) {
+                continue; // (one that can't be read is left out)
+            }
+            w.snapshots.add(new Snapshot(c.getLong("Time"), c.getString("Who"), c.getString("Why"), values));
+        }
+        while (w.snapshots.size() > MOST_SNAPSHOTS) w.snapshots.remove(0);
+        CompoundTag lk = tag.getCompound("Locks");
+        for (String k : lk.getAllKeys()) {
+            CompoundTag c = lk.getCompound(k);
+            w.locks.put(k, new Lock(c.getString("Who"), c.getString("WhoId"), c.getLong("Time")));
+        }
+        ListTag ml = tag.getList("Mods", Tag.TAG_COMPOUND);
+        for (int i = 0; i < ml.size(); i++) {
+            CompoundTag c = ml.getCompound(i);
+            if (c.hasUUID("Id")) w.mods.add(new Mod(c.getUUID("Id"), c.getString("Name")));
+        }
         return w;
     }
 
@@ -126,8 +181,111 @@ public final class AdminWorld extends SavedData {
             l.add(t);
         }
         tag.put("Log", l);
+        ListTag sl = new ListTag();
+        for (Snapshot s : snapshots) {
+            CompoundTag t = new CompoundTag();
+            t.putLong("Time", s.time());
+            t.putString("Who", s.who());
+            t.putString("Why", s.why());
+            t.putString("Values", Change.undo(s.values()));
+            sl.add(t);
+        }
+        tag.put("Snapshots", sl);
+        CompoundTag lk = new CompoundTag();
+        for (var e : locks.entrySet()) {
+            CompoundTag t = new CompoundTag();
+            t.putString("Who", e.getValue().who());
+            t.putString("WhoId", e.getValue().whoId());
+            t.putLong("Time", e.getValue().time());
+            lk.put(e.getKey(), t);
+        }
+        tag.put("Locks", lk);
+        ListTag ml = new ListTag();
+        for (Mod m : mods) {
+            CompoundTag t = new CompoundTag();
+            t.putUUID("Id", m.id());
+            t.putString("Name", m.name());
+            ml.add(t);
+        }
+        tag.put("Mods", ml);
         tag.putInt("Version", AdminJson.VERSION);
         return tag;
+    }
+
+    /** (the tests) no snapshots, locks or moderators */
+    public void forgetExtras() {
+        snapshots.clear();
+        locks.clear();
+        mods.clear();
+        setDirty();
+    }
+
+    // snapshots (Part 2B)
+
+    /** keeps every value the world has now (the newest last; the oldest goes past MOST_SNAPSHOTS) */
+    public Snapshot snapshot(String who, String why) {
+        Map<String, Map<String, JsonElement>> v = new LinkedHashMap<>();
+        for (var e : giants.entrySet()) v.put(e.getKey(), new LinkedHashMap<>(e.getValue()));
+        Snapshot s = new Snapshot(System.currentTimeMillis(), who, why, v);
+        snapshots.add(s);
+        while (snapshots.size() > MOST_SNAPSHOTS) snapshots.remove(0);
+        AdminBook.changed("snapshots");
+        setDirty();
+        return s;
+    }
+
+    /** the snapshots kept, oldest first */
+    public List<Snapshot> snapshots() {
+        return List.copyOf(snapshots);
+    }
+
+    // locks (Part 2B)
+
+    public static String lockKey(String giant, String id) {
+        return giant + "/" + id;
+    }
+
+    public @org.jetbrains.annotations.Nullable Lock lock(String giant, String id) {
+        return locks.get(lockKey(giant, id));
+    }
+
+    public Map<String, Lock> locks() {
+        return Map.copyOf(locks);
+    }
+
+    public void lock(String giant, String id, Lock l) {
+        locks.put(lockKey(giant, id), l);
+        setDirty();
+    }
+
+    public boolean unlock(String giant, String id) {
+        if (locks.remove(lockKey(giant, id)) == null) return false;
+        setDirty();
+        return true;
+    }
+
+    // moderators (Part 2B)
+
+    public List<Mod> mods() {
+        return List.copyOf(mods);
+    }
+
+    public boolean isMod(java.util.UUID id) {
+        for (Mod m : mods) if (m.id().equals(id)) return true;
+        return false;
+    }
+
+    public boolean addMod(java.util.UUID id, String name) {
+        if (isMod(id)) return false;
+        mods.add(new Mod(id, name));
+        setDirty();
+        return true;
+    }
+
+    public boolean removeMod(java.util.UUID id) {
+        if (!mods.removeIf(m -> m.id().equals(id))) return false;
+        setDirty();
+        return true;
     }
 
     /** this world's own values for one giant (or "all"): id to value; empty if none */

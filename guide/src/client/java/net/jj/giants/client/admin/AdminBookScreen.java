@@ -59,6 +59,12 @@ public class AdminBookScreen extends Screen {
     /** most lines a search shows */
     private static final int MOST_FOUND = 80;
     public static final String HOME = "home";
+    /** Part 2B's pages (moderators only ever see LIVE) */
+    public static final String LIVE = "live", PRESETS = "presets", CHANGES = "changes";
+
+    private static boolean ownPage(String key) {
+        return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES);
+    }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
 
@@ -147,6 +153,15 @@ public class AdminBookScreen extends Screen {
         }
     }
 
+    /** (the picture-taking) a request as the book sends it */
+    public static boolean testRequest(String json) {
+        try {
+            return AdminBookClient.request(com.google.gson.JsonParser.parseString(json).getAsJsonObject());
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     /** (the picture-taking) presses the open question's first button ("Change it", "Next") */
     public static boolean testPress() {
         if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b) || b.modal == null)
@@ -208,6 +223,7 @@ public class AdminBookScreen extends Screen {
 
     private String giantName(String key) {
         if (key.equals(AdminCatalog.ALL)) return tr("all").getString();
+        if (ownPage(key)) return tr(key).getString();
         AdminBookClient.Page p = AdminBookClient.page(key);
         if (p != null && !p.name().isEmpty()) return p.name();
         JsonObject h = AdminBookClient.home();
@@ -222,7 +238,10 @@ public class AdminBookScreen extends Screen {
 
     /** Home, All giants, then each giant the server has */
     private List<String> navKeys() {
-        List<String> out = new ArrayList<>(List.of(HOME, AdminCatalog.ALL));
+        // (a moderator has Live control only; before the server says who you are, only Home, asking)
+        if (AdminBookClient.role().equals("moderator")) return List.of(LIVE);
+        if (!AdminBookClient.admin()) return List.of(HOME);
+        List<String> out = new ArrayList<>(List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -258,7 +277,10 @@ public class AdminBookScreen extends Screen {
             startAllWorlds = false;
         }
         pageKey = keptPage;
+        if (pageKey.equals(LIVE)) AdminBookClient.watchLive(true);
         seenVersion = AdminBookClient.version();
+        seenLive = AdminBookClient.liveVersion();
+        seenPreview = AdminBookClient.previewVersion();
         seenSaid = AdminBookClient.saidAt();
 
         pw = Math.min(width - 8, 720);
@@ -476,12 +498,21 @@ public class AdminBookScreen extends Screen {
                 // a range: the low end on the left, the high end on the right
                 add(c.get(0), 18 + c.get(1).getWidth() + 2, dy, true);
                 add(c.get(1), 18, dy, true);
-            } else for (AbstractWidget w : c) add(w, 18, dy, true);
+            } else for (AbstractWidget w : c) add(w, 18 + lockW(), dy, true);
             reset = add(resetButton(List.of(s)), 0, dy, true);
+            if (lockW() > 0) lock = add(lockButton(s), 18, dy, true);
+            if (lockedForMe(s))
+                for (Placed p : ws)
+                    if (p.w() != lock) {
+                        p.w().active = false;
+                        p.w().setTooltip(Tooltip.create(tr("lock.locked.tip", lockedBy(s))));
+                    }
         }
 
+        @Nullable Button lock;
+
         int textW() {
-            return lw - controlW() - 22;
+            return lw - controlW() - 22 - lockW();
         }
 
         @Override
@@ -602,6 +633,8 @@ public class AdminBookScreen extends Screen {
             t.addAll(font.split(Component.literal(s.whenNote()).withStyle(s.creationOnly() ? ChatFormatting.GOLD
                     : ChatFormatting.AQUA), 260));
         if (!editable(s)) t.addAll(font.split(tr("tip.world_only").withStyle(ChatFormatting.RED), 260));
+        if (lockedBy(s) != null)
+            t.addAll(font.split(tr("lock.locked.tip", lockedBy(s)).withStyle(ChatFormatting.GOLD), 260));
         t.add(Component.literal(s.id()).withStyle(ChatFormatting.DARK_GRAY).getVisualOrderText());
         return t;
     }
@@ -967,12 +1000,13 @@ public class AdminBookScreen extends Screen {
             List<AdminSetting> ss = r instanceof SetRow sr ? List.of(sr.s) : r instanceof MoveRow mr ? mr.parts : null;
             if (ss == null) continue;
             for (Placed p : r.ws) {
+                if (p.w() instanceof LockButton) continue;
                 AdminSetting s = p.w() == r.reset ? null : r instanceof MoveRow mr ? mr.partOf(p.w()) : ((SetRow) r).s;
                 if (s == null) {
                     // the ↺
                     boolean any = false;
                     for (AdminSetting x : ss) any |= changed(x);
-                    boolean can = ss.stream().allMatch(this::editable);
+                    boolean can = ss.stream().allMatch(this::editable) && ss.stream().noneMatch(this::lockedForMe);
                     p.w().active = any && can;
                     continue;
                 }
@@ -998,8 +1032,16 @@ public class AdminBookScreen extends Screen {
         rows.clear();
         tiles.clear();
         String q = keptQuery.strip().toLowerCase(Locale.ROOT);
-        if (!q.isEmpty()) searchRows(q);
+        boolean admin = AdminBookClient.admin();
+        // (a moderator: no search, no modes, no saving scope; Live control only)
+        search.visible = admin;
+        modeButton.visible = admin;
+        scopeButton.visible = admin;
+        if (!q.isEmpty() && admin) searchRows(q);
         else if (pageKey.equals(HOME)) homeRows();
+        else if (pageKey.equals(LIVE)) liveRows();
+        else if (pageKey.equals(PRESETS)) presetRows();
+        else if (pageKey.equals(CHANGES)) changeRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1016,6 +1058,7 @@ public class AdminBookScreen extends Screen {
         headButton.visible = false;
         if (searching) return;
         Component label;
+        if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES)) return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
             headButton.active = AdminBookClient.home() != null && anySet();
@@ -1216,7 +1259,7 @@ public class AdminBookScreen extends Screen {
             rows.add(new Note(tr("home.last", AdminBookClient.AdminJsonBridge.str(last, "who"),
                     AdminBookClient.AdminJsonBridge.str(last, "text"), when), GREY));
         } else rows.add(new Note(tr("home.no_changes"), GREY));
-        rows.add(new Note(tr("home.soon"), DIM));
+        moderatorRows(h);
     }
 
     /** where Home's giant tiles are (for clicks) */
@@ -1241,8 +1284,14 @@ public class AdminBookScreen extends Screen {
 
     /** a giant's picture (the book, or the Guide for "all giants"), size x size */
     private void icon(GuiGraphics g, String key, int x, int y, int size) {
-        if (key.equals(HOME) || key.equals(AdminCatalog.ALL)) {
-            ItemStack st = new ItemStack(key.equals(HOME) ? AdminBookItem.BOOK : GiantsGuideMod.GUIDE);
+        if (ownPage(key) || key.equals(AdminCatalog.ALL)) {
+            ItemStack st = new ItemStack(switch (key) {
+                case HOME -> AdminBookItem.BOOK;
+                case LIVE -> net.minecraft.world.item.Items.SPYGLASS;
+                case PRESETS -> net.minecraft.world.item.Items.ENCHANTED_BOOK;
+                case CHANGES -> net.minecraft.world.item.Items.WRITABLE_BOOK;
+                default -> GiantsGuideMod.GUIDE;
+            });
             g.pose().pushPose();
             g.pose().translate(x, y, 0);
             g.pose().scale(size / 16f, size / 16f, 1);
@@ -1274,6 +1323,8 @@ public class AdminBookScreen extends Screen {
 
     private void go(String key) {
         if (key.equals(pageKey) && keptQuery.isBlank()) return;
+        // (the server sends Live control once a second only while it is looked at)
+        if (key.equals(LIVE) != pageKey.equals(LIVE)) AdminBookClient.watchLive(key.equals(LIVE));
         pageKey = key;
         keptPage = key;
         keptQuery = "";
@@ -1309,12 +1360,32 @@ public class AdminBookScreen extends Screen {
                 AdminSetting s = p == null ? null : p.setting(k[1]);
                 return s == null || AdminSetting.same(allWorlds ? s.def() : s.value(), e.getValue().v());
             });
+            // (a moderator's book: Live control is its only page)
+            if (!navKeys().contains(pageKey)) go(navKeys().get(0));
             rebuild();
+        }
+        // the Live control page, once a second while it is open (not while something is held or asked)
+        if (AdminBookClient.liveVersion() != seenLive && !mouseDown && !typing()) {
+            seenLive = AdminBookClient.liveVersion();
+            if (pageKey.equals(LIVE) && keptQuery.isBlank()) rebuild();
+        }
+        // a preview from the server (a preset, an import, a snapshot): asked about over the page
+        if (AdminBookClient.previewVersion() != seenPreview) {
+            seenPreview = AdminBookClient.previewVersion();
+            JsonObject pv = AdminBookClient.preview();
+            if (pv != null) {
+                modal = new Preview(pv);
+                place();
+            }
         }
     }
 
+    private int seenLive = -1, seenPreview = -1;
+
     private boolean typing() {
-        for (Row r : rows) for (Placed p : r.ws) if (p.w() instanceof NumBox b && b.isFocused()) return true;
+        for (Row r : rows)
+            for (Placed p : r.ws)
+                if (p.w() instanceof EditBox b && b.isFocused()) return true;
         return false;
     }
 
@@ -1359,6 +1430,8 @@ public class AdminBookScreen extends Screen {
     public void render(GuiGraphics g, int mx, int my, float partial) {
         // (under a question nothing else is hovered)
         boolean held = modal != null;
+        lastMx = mx;
+        lastMy = my;
         super.render(g, held ? -1000 : mx, held ? -1000 : my, partial);
         if (modal != null) modal.render(g, mx, my, partial);
     }
@@ -1424,6 +1497,15 @@ public class AdminBookScreen extends Screen {
         } else if (pageKey.equals(HOME)) {
             title = tr("home");
             sub = tr("home.sub");
+        } else if (pageKey.equals(LIVE)) {
+            title = tr("live");
+            sub = tr("live.sub", liveCount());
+        } else if (pageKey.equals(PRESETS)) {
+            title = tr("presets");
+            sub = tr("presets.sub");
+        } else if (pageKey.equals(CHANGES)) {
+            title = tr("changes");
+            sub = tr("changes.sub");
         } else {
             title = Component.literal(giantName(pageKey));
             AdminBookClient.Page p = AdminBookClient.page(pageKey);
@@ -1438,8 +1520,9 @@ public class AdminBookScreen extends Screen {
             tx += 23;
         }
         g.drawString(font, cut(title.getString(), right - tx), tx, headY + 2, GOLD, false);
-        Component line = allWorlds ? tr("scope.all.banner") : sub;
-        g.drawString(font, cut(line.getString(), right - tx), tx, headY + 12, allWorlds ? ORANGE : GREY, false);
+        boolean banner = allWorlds && (!q.isEmpty() || pageKey.equals(HOME) || !ownPage(pageKey));
+        Component line = banner ? tr("scope.all.banner") : sub;
+        g.drawString(font, cut(line.getString(), right - tx), tx, headY + 12, banner ? ORANGE : GREY, false);
         if (allWorlds && mx >= tx && mx < right && my >= headY + 10 && my < headY + 21)
             setTooltipForNextRenderPass(font.split(tr("scope.all.tip"), 260));
     }
@@ -1586,6 +1669,7 @@ public class AdminBookScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (modal instanceof SizeAsk sa && sa.sliding) return sa.slider.mouseDragged(mx, my, button, dx, dy);
         if (modal != null) return true;
         if (dragging) {
             dragTo(my);
@@ -1598,6 +1682,10 @@ public class AdminBookScreen extends Screen {
     public boolean mouseReleased(double mx, double my, int button) {
         mouseDown = false;
         dragging = false;
+        if (modal instanceof SizeAsk sa && sa.sliding) {
+            sa.sliding = false;
+            sa.slider.onRelease(mx, my);
+        }
         if (modal != null) return true;
         return super.mouseReleased(mx, my, button);
     }
@@ -1635,6 +1723,888 @@ public class AdminBookScreen extends Screen {
         return super.keyPressed(key, scan, mods);
     }
 
+    // Part 2B: Live control
+
+    private static String str(JsonObject o, String k) {
+        return AdminBookClient.AdminJsonBridge.str(o, k);
+    }
+
+    private static double dbl(JsonObject o, String k, double or) {
+        try {
+            return o.has(k) ? o.get(k).getAsDouble() : or;
+        } catch (RuntimeException e) {
+            return or;
+        }
+    }
+
+    private static boolean bool(JsonObject o, String k) {
+        try {
+            return o.has(k) && o.get(k).getAsBoolean();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private static List<JsonObject> objects(@Nullable JsonObject o, String k) {
+        List<JsonObject> out = new ArrayList<>();
+        if (o != null && o.get(k) instanceof JsonArray a)
+            for (JsonElement e : a) if (e.isJsonObject()) out.add(e.getAsJsonObject());
+        return out;
+    }
+
+    private static List<String> strings(@Nullable JsonObject o, String k) {
+        List<String> out = new ArrayList<>();
+        if (o != null && o.get(k) instanceof JsonArray a)
+            for (JsonElement e : a)
+                try {
+                    out.add(e.getAsString());
+                } catch (RuntimeException bad) {
+                    // left out
+                }
+        return out;
+    }
+
+    private int liveCount() {
+        int n = 0;
+        for (JsonObject g : objects(AdminBookClient.live(), "giants")) n += objects(g, "rows").size();
+        return n;
+    }
+
+    private static String dimName(String dim) {
+        return switch (dim) {
+            case "minecraft:overworld" -> "Overworld";
+            case "minecraft:the_nether" -> "Nether";
+            case "minecraft:the_end" -> "End";
+            default -> dim.contains(":") ? dim.substring(dim.indexOf(':') + 1) : dim;
+        };
+    }
+
+    /** what the summon bar has picked (kept while the game runs) */
+    private static String summonKind = "";
+    private static double summonSize = 1;
+
+    /** the Live control page: a summon bar (admins), then every giant of every kind, each with its buttons */
+    private void liveRows() {
+        JsonObject live = AdminBookClient.live();
+        if (live == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        List<JsonObject> kinds = objects(live, "giants");
+        List<JsonObject> speaking = kinds.stream().filter(k -> bool(k, "speaks")).toList();
+        if (AdminBookClient.admin() && !speaking.isEmpty()) summonRow(speaking);
+        List<String> none = new ArrayList<>(), old = new ArrayList<>();
+        for (JsonObject k : kinds) {
+            String name = str(k, "name");
+            if (!bool(k, "speaks")) {
+                old.add(name);
+                continue;
+            }
+            List<JsonObject> list = objects(k, "rows");
+            if (list.isEmpty()) {
+                none.add(name);
+                continue;
+            }
+            rows.add(new Head(Component.literal(name + "  (" + list.size() + ")"), null, str(k, "key")));
+            for (int i = 0; i < list.size(); i++) rows.add(new LiveRow(k, list.get(i), i, list.size()));
+        }
+        if (liveCount() == 0) rows.add(new Note(tr("live.empty"), GREY));
+        if (!none.isEmpty()) rows.add(new Note(tr("live.none", String.join(", ", none)), DIM));
+        if (!old.isEmpty()) rows.add(new Note(tr("live.old", String.join(", ", old)), DIM));
+        if (AdminBookClient.role().equals("moderator")) rows.add(new Note(tr("live.moderator"), DIM));
+    }
+
+    /** Summon here: which giant, what size, at your feet (admins only; his own summon command, run as you) */
+    private void summonRow(List<JsonObject> kinds) {
+        JsonObject pick = kinds.get(0);
+        for (JsonObject k : kinds) if (str(k, "key").equals(summonKind)) pick = k;
+        summonKind = str(pick, "key");
+        JsonObject kind = pick;
+        List<String> sz = strings(kind, "size");
+        double lo = sz.size() == 2 ? Double.parseDouble(sz.get(0)) : 0.1, hi = sz.size() == 2
+                ? Double.parseDouble(sz.get(1)) : 2;
+        summonSize = Mth.clamp(summonSize, lo, hi);
+        Block b = new Block(24, (g, x, y, w, mx, my) -> {
+            g.fill(x - 2, y, x + w, y + 22, 0x20FFFFFF);
+            g.drawString(font, tr("live.summon"), x + 2, y + 7, KEY, false);
+        });
+        int lx0 = font.width(tr("live.summon")) + 8;
+        int kindW = Mth.clamp(lw / 4, 70, 110);
+        Button kindB = Button.builder(Component.literal(str(kind, "name")), x -> {
+                    int i = 0;
+                    for (int k = 0; k < kinds.size(); k++) if (str(kinds.get(k), "key").equals(summonKind)) i = k;
+                    summonKind = str(kinds.get((i + 1) % kinds.size()), "key");
+                    summonSize = 1;
+                    build();
+                })
+                .bounds(0, 0, kindW, 16)
+                .build();
+        kindB.setTooltip(Tooltip.create(tr("live.summon.kind.tip")));
+        b.add(kindB, lx0, 3, false);
+        Component go = tr("live.summon.go");
+        int goW = font.width(go) + 14;
+        int sliderW = Mth.clamp(lw - lx0 - kindW - goW - 10, 50, 140);
+        AbstractSliderButton size = new AbstractSliderButton(0, 0, sliderW, 16, Component.empty(),
+                (summonSize - lo) / Math.max(1e-6, hi - lo)) {
+            {
+                updateMessage();
+            }
+
+            double now() {
+                double v = lo + value * (hi - lo);
+                return Math.round(v * 20) / 20.0 < lo ? lo : Math.min(hi, Math.round(v * 20) / 20.0);
+            }
+
+            @Override
+            protected void updateMessage() {
+                setMessage(tr("live.summon.size", AdminSetting.plain(now())));
+            }
+
+            @Override
+            protected void applyValue() {
+                summonSize = now();
+            }
+        };
+        size.setTooltip(Tooltip.create(tr("live.summon.size.tip", AdminSetting.plain(lo), AdminSetting.plain(hi))));
+        b.add(size, lx0 + kindW + 4, 3, false);
+        Button goB = Button.builder(go, x -> {
+                    JsonObject o = new JsonObject();
+                    o.addProperty("do", "summon");
+                    o.addProperty("giant", summonKind);
+                    o.addProperty("size", AdminSetting.plain(summonSize));
+                    if (AdminBookClient.request(o)) say(tr("sent"), GREY);
+                })
+                .bounds(0, 0, goW, 16)
+                .build();
+        goB.setTooltip(Tooltip.create(tr("live.summon.tip")));
+        b.add(goB, lx0 + kindW + 4 + sliderW + 4, 3, false);
+        rows.add(b);
+    }
+
+    /** an action on one giant, by his id */
+    private void liveAct(String giant, String id, String act, String value) {
+        JsonObject o = new JsonObject();
+        o.addProperty("do", "live");
+        o.addProperty("giant", giant);
+        o.addProperty("id", id);
+        o.addProperty("act", act);
+        o.addProperty("value", value);
+        if (AdminBookClient.request(o)) say(tr("sent"), GREY);
+        else say(tr("no_server"), WARN);
+    }
+
+    private static final List<String> HERE_ONLY = List.of("heal", "size", "sleep", "wake", "calm", "forgive");
+
+    /** one giant: who and where he is, how he is, and a button for each thing that can be done to him */
+    private final class LiveRow extends Row {
+        final JsonObject kind, r;
+        final String key, id, state, label;
+
+        LiveRow(JsonObject kind, JsonObject r, int i, int of) {
+            this.kind = kind;
+            this.r = r;
+            key = str(kind, "key");
+            id = str(r, "id");
+            state = str(r, "state");
+            String own = str(r, "name");
+            label = !own.isEmpty() ? own : str(kind, "name") + (of > 1 ? " " + (i + 1) : "");
+            List<String> does = strings(kind, "does");
+            boolean here = state.equals("here"), asleep = bool(r, "asleep");
+            List<Object[]> bs = new ArrayList<>();
+            bs.add(new Object[] {"tp", ""});
+            bs.add(new Object[] {"heal", ""});
+            bs.add(new Object[] {"size", ""});
+            bs.add(new Object[] {asleep ? "wake" : "sleep", ""});
+            bs.add(new Object[] {"calm", ""});
+            bs.add(new Object[] {"forgive", ""});
+            bs.add(new Object[] {"owner", ""});
+            bs.add(new Object[] {"home", ""});
+            bs.add(new Object[] {"remove", ""});
+            bs.add(new Object[] {"kill", ""});
+            int bx = 30, by = 26;
+            h = 46;
+            for (Object[] o : bs) {
+                String act = (String) o[0];
+                Component c = tr("live.act." + act);
+                int w = font.width(c) + 10;
+                if (bx > 30 && bx + w > lw) {
+                    bx = 30;
+                    by += 18;
+                    h += 18;
+                }
+                Button b = Button.builder(c, x -> press(act)).bounds(0, 0, w, 16).build();
+                boolean can = does.contains(act) && (here || !HERE_ONLY.contains(act));
+                b.active = can;
+                b.setTooltip(Tooltip.create(!does.contains(act) ? tr("live.cant", str(kind, "name"))
+                        : !can ? tr("live.away_only") : tr("live.act." + act + ".tip")));
+                add(b, bx, by, false);
+                bx += w + 3;
+            }
+        }
+
+        void press(String act) {
+            String name = label;
+            switch (act) {
+                case "size" -> {
+                    List<String> sz = strings(kind, "size");
+                    double lo = sz.size() == 2 ? Double.parseDouble(sz.get(0)) : 0.1,
+                            hi = sz.size() == 2 ? Double.parseDouble(sz.get(1)) : 2;
+                    modal = new SizeAsk(name, lo, hi, dbl(r, "size", 1), v -> liveAct(key, id, "size",
+                            AdminSetting.plain(v)));
+                    place();
+                }
+                case "owner" -> {
+                    modal = new PickPlayer(tr("live.owner.title", name), tr("live.owner.body"),
+                            objects(AdminBookClient.live(), "players"),
+                            p -> liveAct(key, id, "owner", str(p, "id")));
+                    place();
+                }
+                case "remove", "kill" -> confirm(tr("live." + act + ".title", name), tr("live." + act + ".body",
+                        name), tr("live.act." + act), () -> liveAct(key, id, act, ""));
+                default -> liveAct(key, id, act, "");
+            }
+        }
+
+        @Override
+        void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
+            g.fill(x - 2, y + 1, x + w, y + h - 2, 0x14FFFFFF);
+            icon(g, key, x + 2, y + 4, 20);
+            int tx = x + 30;
+            // line 1: his name, then what he is up to
+            int nx = g.drawString(font, cut(label, w / 3), tx, y + 4, KEY, false) + 6;
+            List<Object[]> tags = new ArrayList<>();
+            String mood = str(r, "mood");
+            if (!mood.isEmpty()) tags.add(new Object[] {Component.translatableWithFallback(
+                    "admin.jj_giants.book.live.mood." + mood,
+                    Character.toUpperCase(mood.charAt(0)) + mood.substring(1)).getString(),
+                    mood.equals("hunting") ? WARN : mood.equals("guardian") ? KEY : GOOD});
+            if (bool(r, "own")) tags.add(new Object[] {tr("live.own").getString(), BLUE});
+            if (state.equals("away")) tags.add(new Object[] {tr("live.state.away").getString(), ORANGE});
+            if (state.equals("unloaded")) tags.add(new Object[] {tr("live.state.unloaded").getString(), DIM});
+            if (bool(r, "asleep")) tags.add(new Object[] {tr("live.asleep").getString(), BLUE});
+            if (bool(r, "fighting")) tags.add(new Object[] {tr("live.fighting").getString(), WARN});
+            // (the health on the right of line 1)
+            int barW = Mth.clamp(w / 6, 40, 90), barX = x + w - barW - 2;
+            boolean hp = r.has("health") && r.has("max");
+            String hpText = hp ? Math.round(dbl(r, "health", 0)) + " / " + Math.round(dbl(r, "max", 0)) : "";
+            int hpTextX = barX - font.width(hpText) - 4;
+            for (Object[] t : tags) {
+                String s = (String) t[0];
+                int tw = font.width(s) + 6;
+                if (nx + tw > (hp ? hpTextX - 4 : x + w)) break;
+                g.fill(nx, y + 3, nx + tw, y + 13, 0x30000000);
+                g.renderOutline(nx, y + 3, tw, 10, ((int) t[1] & 0x00FFFFFF) | 0x80000000);
+                g.drawString(font, s, nx + 3, y + 4, (int) t[1], false);
+                nx += tw + 3;
+            }
+            if (hp) {
+                double f = Mth.clamp(dbl(r, "health", 0) / Math.max(1, dbl(r, "max", 1)), 0, 1);
+                g.fill(barX, y + 5, barX + barW, y + 11, 0x60000000);
+                g.fill(barX, y + 5, barX + (int) Math.round(barW * f), y + 11,
+                        f > 0.5 ? 0xFF60C060 : f > 0.25 ? 0xFFE0C050 : 0xFFE04040);
+                g.renderOutline(barX - 1, y + 4, barW + 2, 8, 0x60FFFFFF);
+                g.drawString(font, hpText, hpTextX, y + 4, TEXT, false);
+            }
+            // line 2: where, size, owner
+            StringBuilder l2 = new StringBuilder();
+            l2.append(Math.round(dbl(r, "x", 0)));
+            if (r.has("y")) l2.append(", ").append(Math.round(dbl(r, "y", 0)));
+            l2.append(", ").append(Math.round(dbl(r, "z", 0))).append(" · ").append(dimName(str(r, "dim")));
+            if (r.has("size")) l2.append(" · ").append(tr("live.size", AdminSetting.plain(dbl(r, "size", 1)))
+                    .getString());
+            String owner = str(r, "owner");
+            l2.append(" · ").append(owner.isEmpty() ? tr("live.no_owner").getString()
+                    : tr("live.owner", owner).getString());
+            g.drawString(font, cut(l2.toString(), w - 32), tx, y + 15, GREY, false);
+            if (mx >= x && mx < x + w && my >= Math.max(y, ly0) && my < Math.min(y + 25, ly1)) {
+                List<FormattedCharSequence> t = new ArrayList<>();
+                t.add(Component.literal(label).withStyle(ChatFormatting.YELLOW).getVisualOrderText());
+                t.addAll(font.split(Component.literal(l2.toString()), 260));
+                t.addAll(font.split(tr("live.state." + state + ".tip").withStyle(ChatFormatting.GRAY), 260));
+                setTooltipForNextRenderPass(t);
+            }
+        }
+    }
+
+    /** a size for one giant: a slider in his range */
+    private final class SizeAsk extends Modal {
+        final Component title;
+        final AbstractSliderButton slider;
+        double value;
+
+        SizeAsk(String name, double lo, double hi, double now, Consumer<Double> go) {
+            title = tr("live.size.title", name);
+            value = Mth.clamp(now, lo, hi);
+            slider = new AbstractSliderButton(0, 0, 160, 16, Component.empty(), (value - lo) / Math.max(1e-6, hi - lo)) {
+                {
+                    updateMessage();
+                }
+
+                @Override
+                protected void updateMessage() {
+                    setMessage(Component.literal(AdminSetting.plain(cur())));
+                }
+
+                double cur() {
+                    return Mth.clamp(Math.round((lo + this.value * (hi - lo)) * 100) / 100.0, lo, hi);
+                }
+
+                @Override
+                protected void applyValue() {
+                    SizeAsk.this.value = cur();
+                }
+            };
+            button(tr("live.size.yes"), () -> {
+                closeModal();
+                go.accept(value);
+            });
+            button(tr("cancel"), this::cancel);
+            layout(buttonsW());
+        }
+
+        @Override
+        Component title() {
+            return title;
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            return font.split(tr("live.size.body"), Math.min(pw - 40, 300) - 16);
+        }
+
+        @Override
+        void layout(int buttonsW) {
+            super.layout(buttonsW);
+            mh += 22;
+            my0 = (height - mh) / 2;
+            for (Button b : buttons) b.setY(my0 + mh - 24);
+            slider.setX(mx0 + 8);
+            slider.setY(my0 + mh - 46);
+            slider.setWidth(mw - 16);
+        }
+
+        @Override
+        void extra(GuiGraphics g) {
+            slider.render(g, lastMx, lastMy, 0);
+        }
+
+        @Override
+        boolean mouseClicked(double mx, double my, int b) {
+            if (slider.mouseClicked(mx, my, b)) {
+                sliding = true;
+                return true;
+            }
+            return super.mouseClicked(mx, my, b);
+        }
+
+        boolean sliding;
+
+        @Override
+        void cancel() {
+            closeModal();
+        }
+    }
+
+    private int lastMx, lastMy;
+
+    /** pick one of the players online */
+    private final class PickPlayer extends Modal {
+        final Component title, body;
+
+        PickPlayer(Component title, Component body, List<JsonObject> players, Consumer<JsonObject> go) {
+            this.title = title;
+            this.body = players.isEmpty() ? tr("live.owner.nobody") : body;
+            for (JsonObject p : players.subList(0, Math.min(8, players.size())))
+                button(Component.literal(str(p, "name")), () -> {
+                    closeModal();
+                    go.accept(p);
+                });
+            button(tr("cancel"), this::cancel);
+            layout(buttonsW());
+        }
+
+        @Override
+        void layout(int buttonsW) {
+            super.layout(buttonsW);
+            // (the names wrap onto more lines when they don't fit on one)
+            int x = mx0 + 8, y = my0 + mh - 24, rowsN = 1;
+            for (Button b : buttons) {
+                if (x > mx0 + 8 && x + b.getWidth() > mx0 + mw - 8) {
+                    x = mx0 + 8;
+                    rowsN++;
+                }
+                x += b.getWidth() + 4;
+            }
+            mh += (rowsN - 1) * 20;
+            my0 = (height - mh) / 2;
+            x = mx0 + 8;
+            y = my0 + mh - 24 - (rowsN - 1) * 20;
+            for (Button b : buttons) {
+                if (x > mx0 + 8 && x + b.getWidth() > mx0 + mw - 8) {
+                    x = mx0 + 8;
+                    y += 20;
+                }
+                b.setX(x);
+                b.setY(y);
+                x += b.getWidth() + 4;
+            }
+        }
+
+        @Override
+        Component title() {
+            return title;
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            return font.split(body, Math.min(pw - 40, 300) - 16);
+        }
+
+        @Override
+        void cancel() {
+            closeModal();
+        }
+    }
+
+    // Part 2B: the Changes page
+
+    private static String when(long t) {
+        return new java.text.SimpleDateFormat("MMM d HH:mm", Locale.ROOT).format(new java.util.Date(t));
+    }
+
+    private static long lng(JsonObject o, String k) {
+        try {
+            return o.has(k) ? o.get(k).getAsLong() : 0;
+        } catch (RuntimeException e) {
+            return 0;
+        }
+    }
+
+    private void request(String what, Object... kv) {
+        JsonObject o = new JsonObject();
+        o.addProperty("do", what);
+        for (int i = 0; i < kv.length; i += 2) {
+            Object v = kv[i + 1];
+            if (v instanceof Number n) o.addProperty((String) kv[i], n);
+            else o.addProperty((String) kv[i], String.valueOf(v));
+        }
+        if (AdminBookClient.request(o)) say(tr("sent"), GREY);
+        else say(tr("no_server"), WARN);
+    }
+
+    /** a line of words on the left, buttons on the right */
+    private final class LineRow extends Row {
+        final Component main, sub;
+        final int mainColour;
+        final List<FormattedCharSequence> tip;
+
+        LineRow(Component main, int mainColour, Component sub, List<Object[]> buttons) {
+            this.main = main;
+            this.sub = sub;
+            this.mainColour = mainColour;
+            h = sub.getString().isEmpty() ? 18 : 26;
+            int dx = 0;
+            for (int i = buttons.size() - 1; i >= 0; i--) {
+                Object[] b = buttons.get(i);
+                Component c = (Component) b[0];
+                Button bt = Button.builder(c, x -> ((Runnable) b[1]).run())
+                        .bounds(0, 0, font.width(c) + 12, 16)
+                        .build();
+                if (b.length > 2 && b[2] != null) bt.setTooltip(Tooltip.create((Component) b[2]));
+                if (b.length > 3) bt.active = (boolean) b[3];
+                add(bt, dx, (h - 16) / 2, true);
+                dx += bt.getWidth() + 3;
+            }
+            textW = lw - dx - 6;
+            List<FormattedCharSequence> t = new ArrayList<>(font.split(main, 280));
+            if (!sub.getString().isEmpty()) t.addAll(font.split(sub.copy().withStyle(ChatFormatting.GRAY), 280));
+            tip = t;
+        }
+
+        int textW;
+
+        @Override
+        void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
+            String m = cut(main.getString(), textW);
+            g.drawString(font, m, x, y + (h == 18 ? 5 : 3), mainColour, false);
+            if (!sub.getString().isEmpty()) g.drawString(font, cut(sub.getString(), textW), x, y + 14, GREY, false);
+            g.fill(x, y + h - 1, x + w, y + h, 0x18FFFFFF);
+            boolean cutOff = !m.equals(main.getString()) || font.width(sub) > textW;
+            if (cutOff && mx >= x && mx < x + textW && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
+                setTooltipForNextRenderPass(tip);
+        }
+    }
+
+    /** the change log (newest first) with undo, the snapshots, and the locked settings */
+    private void changeRows() {
+        JsonObject c = AdminBookClient.changes();
+        if (c == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        List<JsonObject> log = objects(c, "log");
+        rows.add(new Head(tr("changes.log"), tr("changes.log.note"), null));
+        if (log.isEmpty()) rows.add(new Note(tr("home.no_changes"), GREY));
+        int newer = 0;
+        for (JsonObject e : log) {
+            int i = (int) dbl(e, "i", -1), count = newer + 1;
+            long t = lng(e, "time");
+            boolean can = bool(e, "undo");
+            String text = str(e, "text");
+            List<Object[]> bs = new ArrayList<>();
+            bs.add(new Object[] {tr("changes.undo"), (Runnable) () -> request("undo", "i", i, "time", t),
+                can ? tr("changes.undo.tip") : tr("changes.cant"), can});
+            bs.add(new Object[] {tr("changes.back"), (Runnable) () -> confirm(tr("changes.back.title"),
+                    tr("changes.back.body", count, when(t)), tr("changes.back.yes"),
+                    () -> request("undoto", "i", i, "time", t)), tr("changes.back.tip", count), true});
+            rows.add(new LineRow(Component.literal(text), TEXT,
+                    Component.literal(when(t) + " · " + str(e, "who")), bs));
+            newer++;
+        }
+        rows.add(new Head(tr("changes.snapshots"), tr("changes.snapshots.note"), null));
+        List<JsonObject> snaps = objects(c, "snapshots");
+        if (snaps.isEmpty()) rows.add(new Note(tr("changes.snapshots.none"), GREY));
+        for (JsonObject s : snaps) {
+            int i = (int) dbl(s, "i", -1);
+            long t = lng(s, "time");
+            rows.add(new LineRow(Component.literal(str(s, "why")), TEXT,
+                    tr("changes.snapshot.sub", when(t), str(s, "who"), (int) dbl(s, "count", 0)),
+                    List.<Object[]>of(new Object[] {tr("changes.restore"),
+                        (Runnable) () -> request("restore", "i", i, "time", t), tr("changes.restore.tip")})));
+        }
+        rows.add(new Head(tr("changes.locks"), tr("changes.locks.note"), null));
+        List<JsonObject> locks = objects(c, "locks");
+        if (locks.isEmpty()) rows.add(new Note(tr("changes.locks.none"), GREY));
+        for (JsonObject l : locks) {
+            String giant = str(l, "giant"), id = str(l, "id");
+            rows.add(new LineRow(Component.literal(str(l, "gname") + " " + str(l, "name")), GOLD,
+                    tr("changes.lock.sub", str(l, "by"), when(lng(l, "time"))),
+                    List.<Object[]>of(new Object[] {tr("lock.unlock"),
+                        (Runnable) () -> request("unlock", "giant", giant, "id", id), tr("lock.unlock.tip")})));
+        }
+    }
+
+    // Part 2B: the Presets page
+
+    private static String presetName = "", importText = "";
+
+    /** the names of the presets still to come (ADMIN_BOOK.md's picker layout), shown greyed */
+    private static final List<String> SUGGESTED = List.of("My Giant", "Pocket Giants", "Titans", "Gentle Giants",
+            "Kaiju War", "Night Terrors", "Wild Sizes");
+
+    private void presetRows() {
+        JsonObject p = AdminBookClient.presets();
+        if (p == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        rows.add(new Block(16, (g, x, y, w, mx, my) -> {
+            int nx = g.drawString(font, tr("home.preset"), x, y + 3, GREY, false);
+            g.drawString(font, Component.literal(str(p, "current")), nx + 4, y + 3, KEY, false);
+        }));
+        // Classic first, marked as the default
+        for (JsonObject b : objects(p, "builtin")) {
+            String id = str(b, "id");
+            Component name = Component.literal(str(b, "name")).append(bool(b, "default")
+                    ? tr("presets.default").withStyle(st -> st.withColor(GOOD)) : Component.empty());
+            rows.add(new LineRow(name, KEY, Component.literal(str(b, "about")), List.<Object[]>of(
+                    new Object[] {tr("presets.preview"), (Runnable) () -> request("preset", "name", id),
+                        tr("presets.preview.tip")})));
+        }
+        // the suggested ones still to come: greyed, nothing to press
+        rows.add(new Head(tr("presets.suggested"), tr("presets.suggested.note"), null));
+        List<String> chips = SUGGESTED;
+        int[] layout = chipRows(chips);
+        rows.add(new Block(layout[0] * 16 + 2, (g, x, y, w, mx, my) -> {
+            int cx = x, cy = y + 1;
+            for (String s : chips) {
+                int cw = font.width(s) + 10;
+                if (cx > x && cx + cw > x + w) {
+                    cx = x;
+                    cy += 16;
+                }
+                g.fill(cx, cy, cx + cw, cy + 13, 0x14FFFFFF);
+                g.renderOutline(cx, cy, cw, 13, 0x30FFFFFF);
+                g.drawString(font, s, cx + 5, cy + 3, DIM, false);
+                if (mx >= cx && mx < cx + cw && my >= cy && my < cy + 13 && my >= ly0 && my < ly1)
+                    setTooltipForNextRenderPass(font.split(tr("presets.soon.tip"), 220));
+                cx += cw + 4;
+            }
+        }));
+        // saved on this server
+        rows.add(new Head(tr("presets.saved"), tr("presets.saved.note"), null));
+        List<JsonObject> saved = objects(p, "saved");
+        if (saved.isEmpty()) rows.add(new Note(tr("presets.saved.none"), GREY));
+        for (JsonObject s : saved) {
+            String name = str(s, "name");
+            boolean mine = bool(s, "mine");
+            List<Object[]> bs = new ArrayList<>();
+            bs.add(new Object[] {tr("presets.preview"), (Runnable) () -> request("preset", "name", name),
+                tr("presets.preview.tip")});
+            bs.add(new Object[] {tr("presets.delete"), (Runnable) () -> confirm(tr("presets.delete.title", name),
+                    tr("presets.delete.body", name), tr("presets.delete"),
+                    () -> request("deletepreset", "name", name)),
+                mine ? tr("presets.delete.tip") : tr("presets.delete.not_mine", str(s, "by")), mine});
+            rows.add(new LineRow(Component.literal(name), KEY, tr("presets.saved.sub", str(s, "by"),
+                    (int) dbl(s, "count", 0), when(lng(s, "time"))), bs));
+        }
+        // save this world's settings
+        Block save = new Block(22, (g, x, y, w, mx, my) -> {});
+        Component sv = tr("presets.save");
+        int svW = font.width(sv) + 14;
+        EditBox nameBox = new EditBox(font, 0, 0, Math.max(60, lw - svW - 4), 16, tr("presets.save.hint"));
+        nameBox.setMaxLength(32);
+        nameBox.setHint(tr("presets.save.hint").withStyle(ChatFormatting.DARK_GRAY));
+        nameBox.setValue(presetName);
+        nameBox.setResponder(t -> presetName = t);
+        save.add(nameBox, 0, 3, false);
+        Button svB = Button.builder(sv, x -> {
+                    if (presetName.isBlank()) {
+                        say(tr("presets.save.empty"), WARN);
+                        return;
+                    }
+                    request("savepreset", "name", presetName.strip());
+                    presetName = "";
+                })
+                .bounds(0, 0, svW, 16)
+                .build();
+        svB.setTooltip(Tooltip.create(tr("presets.save.tip")));
+        save.add(svB, 0, 3, true);
+        rows.add(new Head(tr("presets.save.head"), null, null));
+        rows.add(save);
+        // export and import
+        rows.add(new Head(tr("presets.transfer"), tr("presets.transfer.note"), null));
+        Block ex = new Block(22, (g, x, y, w, mx, my) -> {});
+        Component exC = tr("presets.export");
+        Button exB = Button.builder(exC, x -> request("export")).bounds(0, 0, font.width(exC) + 14, 16).build();
+        exB.setTooltip(Tooltip.create(tr("presets.export.tip")));
+        ex.add(exB, 0, 3, false);
+        rows.add(ex);
+        Block im = new Block(22, (g, x, y, w, mx, my) -> {});
+        Component imC = tr("presets.import");
+        int imW = font.width(imC) + 14;
+        EditBox paste = new EditBox(font, 0, 0, Math.max(60, lw - imW - 4), 16, tr("presets.import.hint"));
+        paste.setMaxLength(net.jj.giants.net.AdminBookChangePayload.MOST);
+        paste.setHint(tr("presets.import.hint").withStyle(ChatFormatting.DARK_GRAY));
+        paste.setValue(importText);
+        paste.setResponder(t -> importText = t);
+        im.add(paste, 0, 3, false);
+        Button imB = Button.builder(imC, x -> {
+                    if (importText.isBlank()) {
+                        say(tr("presets.import.empty"), WARN);
+                        return;
+                    }
+                    request("import", "text", importText.strip());
+                })
+                .bounds(0, 0, imW, 16)
+                .build();
+        imB.setTooltip(Tooltip.create(tr("presets.import.tip")));
+        im.add(imB, 0, 3, true);
+        rows.add(im);
+    }
+
+    /** how many lines a row of chips takes */
+    private int[] chipRows(List<String> chips) {
+        int x = 0, n = 1;
+        for (String s : chips) {
+            int cw = font.width(s) + 10;
+            if (x > 0 && x + cw > lw) {
+                x = 0;
+                n++;
+            }
+            x += cw + 4;
+        }
+        return new int[] {n};
+    }
+
+    /** a preset's, an import's or a snapshot's changes, and the rating before and after: Apply or Cancel */
+    private final class Preview extends Modal {
+        final JsonObject p;
+        List<FormattedCharSequence> lines;
+
+        Preview(JsonObject p) {
+            this.p = p;
+            int n = (int) dbl(p, "count", 0);
+            if (n > 0) button(tr("preview.apply", n), () -> {
+                closeModal();
+                AdminBookClient.clearPreview();
+                request("apply");
+            });
+            button(tr(n > 0 ? "cancel" : "preview.ok"), this::cancel);
+            layout(buttonsW());
+        }
+
+        @Override
+        int modalW() {
+            return Math.min(pw - 24, 380);
+        }
+
+        @Override
+        Component title() {
+            return Component.literal(str(p, "title"));
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            int w = modalW() - 16;
+            List<FormattedCharSequence> out = new ArrayList<>();
+            String about = str(p, "about");
+            if (!about.isEmpty()) out.addAll(font.split(Component.literal(about).withStyle(ChatFormatting.GRAY), w));
+            int n = (int) dbl(p, "count", 0);
+            out.addAll(font.split(n == 0 ? tr("preview.nothing") : tr("preview.changes", n), w));
+            List<JsonObject> ch = objects(p, "changes");
+            // (as many as fit; the rest counted)
+            int room = Math.max(3, (height - 120) / 10 - out.size() - 6);
+            for (int i = 0; i < ch.size(); i++) {
+                if (i >= room && ch.size() - i > 1) {
+                    out.add(tr("preview.more", ch.size() - i).withStyle(ChatFormatting.GRAY).getVisualOrderText());
+                    break;
+                }
+                JsonObject c = ch.get(i);
+                MutableComponent l = Component.literal("  " + str(c, "gname") + " " + str(c, "name") + ": ")
+                        .withStyle(ChatFormatting.WHITE)
+                        .append(Component.literal(str(c, "old")).withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(" → ").withStyle(ChatFormatting.DARK_GRAY))
+                        .append(Component.literal(str(c, "now")).withStyle(ChatFormatting.YELLOW));
+                if (bool(c, "creation")) l.append(tr("preview.creation").withStyle(st -> st.withColor(ORANGE)));
+                out.add(cut(l, w));
+            }
+            List<String> locked = strings(p, "locked"), skipped = strings(p, "skipped"),
+                    creation = strings(p, "creation");
+            if (!creation.isEmpty())
+                out.addAll(font.split(tr("preview.creation.note").withStyle(st -> st.withColor(ORANGE)), w));
+            if (!locked.isEmpty())
+                out.addAll(font.split(tr("preview.locked", String.join(", ", locked))
+                        .withStyle(st -> st.withColor(GOLD)), w));
+            if (!skipped.isEmpty())
+                out.addAll(font.split(tr("preview.skipped", skipped.size()).withStyle(ChatFormatting.GRAY), w));
+            JsonObject b = p.get("before") instanceof JsonObject x ? x : new JsonObject(),
+                    a = p.get("after") instanceof JsonObject x ? x : new JsonObject();
+            int lb = (int) dbl(b, "level", 3), la = (int) dbl(a, "level", 3);
+            out.add(FormattedCharSequence.EMPTY);
+            out.add(tr("preview.danger", lb + " " + str(b, "label"), la + " " + str(a, "label"))
+                    .withStyle(st -> st.withColor(la > lb ? WARN : la < lb ? GOOD : TEXT)).getVisualOrderText());
+            return out;
+        }
+
+        private FormattedCharSequence cut(MutableComponent c, int w) {
+            if (font.width(c) <= w) return c.getVisualOrderText();
+            return Component.literal(AdminBookScreen.this.cut(c.getString(), w)).withStyle(ChatFormatting.WHITE)
+                    .getVisualOrderText();
+        }
+
+        @Override
+        void cancel() {
+            AdminBookClient.clearPreview();
+            closeModal();
+        }
+
+        @Override
+        boolean keyPressed(int key) {
+            if (key == 257 || key == 335) buttons.get(0).onPress();
+            return true;
+        }
+    }
+
+    // Part 2B: locks on the setting rows
+
+    /** a small padlock button: closed and gold when the setting is locked */
+    private final class LockButton extends Button {
+        private static final String[] SHUT = {".###.", "#...#", "#...#", "#####", "##.##", "##.##", "#####"},
+                OPEN = {".###.", "#...#", "#....", "#####", "##.##", "##.##", "#####"};
+        final boolean locked;
+
+        LockButton(boolean locked, Runnable r) {
+            super(0, 0, 16, 16, Component.empty(), b -> r.run(), DEFAULT_NARRATION);
+            this.locked = locked;
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics g, int mx, int my, float partial) {
+            super.renderWidget(g, mx, my, partial);
+            int c = !active ? 0xFF606060 : locked ? GOLD : isHoveredOrFocused() ? 0xFFFFFFA0 : 0xFFB0B0B0;
+            String[] px = locked ? SHUT : OPEN;
+            int x0 = getX() + 5, y0 = getY() + 4;
+            for (int r = 0; r < px.length; r++)
+                for (int k = 0; k < px[r].length(); k++)
+                    if (px[r].charAt(k) == '#') g.fill(x0 + k, y0 + r, x0 + k + 1, y0 + r + 1, c);
+        }
+    }
+
+    /** room for the padlock on a setting's line (admins) */
+    private int lockW() {
+        return AdminBookClient.admin() ? 18 : 0;
+    }
+
+    /** who locked this setting (null: nobody) */
+    private @Nullable String lockedBy(AdminSetting s) {
+        AdminBookClient.Page p = AdminBookClient.page(s.giant());
+        return p == null ? null : p.lockedBy(s.id());
+    }
+
+    /** locked by someone else: its controls can't be used */
+    private boolean lockedForMe(AdminSetting s) {
+        String by = lockedBy(s);
+        return by != null && !by.equals(AdminBookClient.myName());
+    }
+
+    private Button lockButton(AdminSetting s) {
+        String by = lockedBy(s);
+        LockButton b = new LockButton(by != null, () -> {
+            if (by != null)
+                confirm(tr("lock.unlock.title", name(s)), tr("lock.unlock.body", name(s), by), tr("lock.unlock"),
+                        () -> request("unlock", "giant", s.giant(), "id", s.id()));
+            else
+                confirm(tr("lock.title", name(s)), tr("lock.body", name(s), show(s, s.value())), tr("lock.yes"),
+                        () -> request("lock", "giant", s.giant(), "id", s.id()));
+        });
+        b.setTooltip(Tooltip.create(by != null ? tr("lock.locked.tip", by) : tr("lock.tip")));
+        return b;
+    }
+
+    // Part 2B: moderators, on Home
+
+    private void moderatorRows(JsonObject h) {
+        rows.add(new Head(tr("mods"), tr("mods.note"), null));
+        List<JsonObject> mods = objects(h, "mods");
+        if (mods.isEmpty()) rows.add(new Note(tr("mods.none"), GREY));
+        for (JsonObject m : mods) {
+            String id = str(m, "id");
+            rows.add(new LineRow(Component.literal(str(m, "name")), TEXT,
+                    bool(m, "online") ? tr("mods.online") : tr("mods.offline"),
+                    List.<Object[]>of(new Object[] {tr("mods.remove"), (Runnable) () -> confirm(
+                            tr("mods.remove.title", str(m, "name")), tr("mods.remove.body", str(m, "name")),
+                            tr("mods.remove"), () -> request("mod", "player", id, "on", "false")),
+                        tr("mods.remove.tip")})));
+        }
+        List<JsonObject> can = objects(h, "players").stream()
+                .filter(p -> !bool(p, "admin") && !bool(p, "mod")).toList();
+        if (can.isEmpty()) {
+            rows.add(new Note(tr("mods.nobody"), DIM));
+            return;
+        }
+        Block b = new Block(22, (g, x, y, w, mx, my) -> g.drawString(font, tr("mods.make"), x, y + 6, GREY, false));
+        int bx = font.width(tr("mods.make")) + 6, by = 2;
+        for (JsonObject p : can) {
+            Component c = Component.literal("+ " + str(p, "name"));
+            int bw = font.width(c) + 12;
+            if (bx > 0 && bx + bw > lw) {
+                bx = 0;
+                by += 20;
+                b.h += 20;
+            }
+            Button bt = Button.builder(c, x -> confirm(tr("mods.add.title", str(p, "name")),
+                            tr("mods.add.body", str(p, "name")), tr("mods.add.yes"),
+                            () -> request("mod", "player", str(p, "id"), "on", "true")))
+                    .bounds(0, 0, bw, 16)
+                    .build();
+            bt.setTooltip(Tooltip.create(tr("mods.add.tip")));
+            b.add(bt, bx, by, false);
+            bx += bw + 4;
+        }
+        rows.add(b);
+    }
+
     // the walkthrough and questions
 
     private void openIntro(int page) {
@@ -1664,8 +2634,12 @@ public class AdminBookScreen extends Screen {
 
         abstract void cancel();
 
+        int modalW() {
+            return Math.min(pw - 40, 300);
+        }
+
         void layout(int buttonsW) {
-            mw = Math.min(pw - 40, 300);
+            mw = modalW();
             List<FormattedCharSequence> b = body();
             mh = 30 + b.size() * 10 + 28;
             mx0 = (width - mw) / 2;
@@ -1759,7 +2733,7 @@ public class AdminBookScreen extends Screen {
 
     /** the new admin's walkthrough: a few short pages, skippable, once per player (and from the ? button) */
     private final class Intro extends Modal {
-        static final int PAGES = 4;
+        static final int PAGES = 5;
         int page;
 
         Intro(int page) {

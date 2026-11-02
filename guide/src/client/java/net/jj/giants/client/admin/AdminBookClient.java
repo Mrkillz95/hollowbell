@@ -30,7 +30,13 @@ public final class AdminBookClient {
     private AdminBookClient() {}
 
     /** one page of settings (the all-giants ones, or one giant's) */
-    public record Page(String giant, String name, List<AdminSetting> settings, List<String> uses) {
+    public record Page(String giant, String name, List<AdminSetting> settings, List<String> uses,
+            Map<String, String> locks) {
+        /** who locked this setting, or null */
+        public @Nullable String lockedBy(String id) {
+            return locks.get(id);
+        }
+
         public @Nullable AdminSetting setting(String id) {
             for (AdminSetting s : settings) if (s.id().equals(id)) return s;
             return null;
@@ -39,6 +45,12 @@ public final class AdminBookClient {
 
     private static @Nullable JsonObject home;
     private static final Map<String, Page> pages = new LinkedHashMap<>();
+    // Part 2B: who this player is to the book, and the Live control, Changes and Presets pages
+    private static String role = "";
+    private static String myName = "", myId = "";
+    private static @Nullable JsonObject live, changes, presets, preview;
+    /** goes up with every Live control page (once a second while it is looked at) */
+    private static int liveVersion, previewVersion;
     /** the server's last word on a change */
     private static List<String> said = List.of();
     private static boolean saidOk;
@@ -63,7 +75,63 @@ public final class AdminBookClient {
         home = null;
         pages.clear();
         said = List.of();
+        role = "";
+        live = changes = presets = preview = null;
         version++;
+        liveVersion++;
+    }
+
+    /** "admin", "moderator", or "" before the server has said */
+    public static String role() {
+        return role;
+    }
+
+    public static boolean admin() {
+        return role.equals("admin");
+    }
+
+    static String myName() {
+        return myName;
+    }
+
+    public static @Nullable JsonObject live() {
+        return live;
+    }
+
+    public static @Nullable JsonObject changes() {
+        return changes;
+    }
+
+    public static @Nullable JsonObject presets() {
+        return presets;
+    }
+
+    static @Nullable JsonObject preview() {
+        return preview;
+    }
+
+    static void clearPreview() {
+        preview = null;
+    }
+
+    public static int liveVersion() {
+        return liveVersion;
+    }
+
+    static int previewVersion() {
+        return previewVersion;
+    }
+
+    /** the Live control page is being looked at (the server sends it once a second) or not */
+    static void watchLive(boolean on) {
+        if (Minecraft.getInstance().getConnection() != null && ClientPlayNetworking.canSend(AdminBookAskPayload.TYPE))
+            ClientPlayNetworking.send(new AdminBookAskPayload(on ? AdminBookAskPayload.LIVE
+                    : AdminBookAskPayload.LIVE_OFF));
+    }
+
+    /** any other request (Part 2B): {"do":...} as ADMIN_BRIDGE.md §15 lists them */
+    static boolean request(JsonObject o) {
+        return send(o);
     }
 
     /** opens the book's screen and asks for every page */
@@ -127,7 +195,11 @@ public final class AdminBookClient {
                         }
                 List<String> uses = new ArrayList<>();
                 if (o.get("uses") instanceof JsonArray a) for (JsonElement e : a) uses.add(e.getAsString());
-                pages.put(giant, new Page(giant, AdminJsonBridge.str(o, "name"), List.copyOf(list), List.copyOf(uses)));
+                Map<String, String> locks = new LinkedHashMap<>();
+                if (o.get("locks") instanceof JsonObject lk)
+                    for (var e : lk.entrySet()) locks.put(e.getKey(), e.getValue().getAsString());
+                pages.put(giant, new Page(giant, AdminJsonBridge.str(o, "name"), List.copyOf(list), List.copyOf(uses),
+                        Map.copyOf(locks)));
             }
             case AdminBookStatePayload.SAID -> {
                 List<String> lines = new ArrayList<>();
@@ -135,6 +207,33 @@ public final class AdminBookClient {
                 said = lines;
                 saidOk = o.has("ok") && o.get("ok").getAsBoolean();
                 saidAt = Util.getMillis();
+            }
+            case AdminBookStatePayload.ROLE -> {
+                role = AdminJsonBridge.str(o, "role");
+                myName = AdminJsonBridge.str(o, "name");
+                myId = AdminJsonBridge.str(o, "id");
+            }
+            case AdminBookStatePayload.LIVE -> {
+                live = o;
+                liveVersion++;
+                return;
+            }
+            case AdminBookStatePayload.CHANGES -> changes = o;
+            case AdminBookStatePayload.PRESETS -> presets = o;
+            case AdminBookStatePayload.PREVIEW -> {
+                preview = o;
+                previewVersion++;
+                return;
+            }
+            case AdminBookStatePayload.EXPORT -> {
+                String text = AdminJsonBridge.str(o, "text");
+                try {
+                    Minecraft.getInstance().keyboardHandler.setClipboard(text);
+                } catch (RuntimeException e) {
+                    // (no clipboard here: the server log has it too)
+                }
+                lastExport = text;
+                return;
             }
             case AdminBookStatePayload.DENIED -> {
                 // (no longer an operator, or never was: the book shows nothing)
@@ -151,6 +250,9 @@ public final class AdminBookClient {
         }
         version++;
     }
+
+    /** the last settings string the server sent to copy */
+    static String lastExport = "";
 
     public static @Nullable JsonObject home() {
         return home;

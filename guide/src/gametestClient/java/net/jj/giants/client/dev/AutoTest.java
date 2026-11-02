@@ -246,6 +246,12 @@ public final class AutoTest implements ClientModInitializer {
                 if (!AdminBookScreen.testChange(a[0], a[1], a[2])) GiantsGuideMod.LOG.warn("autotest: can't set {}", s);
                 continue;
             }
+            // adminreq {JSON}: a request as the open book sends it (a preset preview, an undo...)
+            if (s.startsWith("adminreq ")) {
+                if (!AdminBookScreen.testRequest(s.substring(9).trim()))
+                    GiantsGuideMod.LOG.warn("autotest: can't send {}", s);
+                continue;
+            }
             if (s.equals("adminpress")) {
                 if (!AdminBookScreen.testPress()) GiantsGuideMod.LOG.warn("autotest: nothing to press");
                 continue;

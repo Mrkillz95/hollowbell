@@ -47,6 +47,9 @@ public final class AdminServer {
         ServerWorldEvents.LOAD.register(early, (server, level) -> {
             if (level.dimension() == Level.OVERWORLD) push(server, AdminWorld.get(level));
         });
+        ServerLifecycleEvents.SERVER_STARTING.register(s -> AdminPresets.forget());
+        // the settings sync file (config/jj_giants_admin/sync.txt) as the server defaults, when it changed (Part 2B)
+        ServerLifecycleEvents.SERVER_STARTED.register(AdminSync::onStart);
         ServerLifecycleEvents.SERVER_STARTED.register(AdminServer::logStart);
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> AdminTransfer.forget());
     }
@@ -225,6 +228,22 @@ public final class AdminServer {
         return (s.giant().equals(AdminCatalog.ALL) ? "x" : "") + AdminSetting.text(v);
     }
 
+    /** the id as a command takes it ("health" for all.health) */
+    static String commandId(AdminSetting s) {
+        return s.giant().equals(AdminCatalog.ALL) && s.id().startsWith("all.") ? s.id().substring(4) : s.id();
+    }
+
+    /**
+     * Why whoever this is can't change a locked setting (Part 2B, locks): only the admin who locked it may, until it is
+     * unlocked. Null when it isn't locked, or it is theirs.
+     */
+    static @Nullable String lockedFor(AdminWorld w, String giant, String name, AdminSetting s, String who) {
+        AdminWorld.Lock l = w.lock(giant, s.id());
+        if (l == null || l.who().equals(who)) return null;
+        return name + ": " + s.name() + " is locked by " + l.who() + ". /giants admin unlock " + giant + " "
+                + commandId(s) + " first.";
+    }
+
     /** /giants admin set: one setting to a value, for this world */
     public static Result set(MinecraftServer server, String who, String which, String id, String text) {
         Found f = setting(server, target(server, which), id);
@@ -237,6 +256,8 @@ public final class AdminServer {
             return Result.fail(e.getMessage());
         }
         AdminWorld w = AdminWorld.get(server);
+        String locked = lockedFor(w, key(f), f.name(), s, who);
+        if (locked != null) return Result.fail(locked);
         JsonElement was = s.value();
         w.put(key(f), s.id(), v);
         w.log(new AdminWorld.Change(System.currentTimeMillis(), who, key(f), s.id(), s.name(), shown(s, was),
@@ -274,18 +295,10 @@ public final class AdminServer {
         } catch (AdminSetting.BadValue e) {
             return Result.fail(e.getMessage());
         }
-        com.google.gson.JsonObject arg = new com.google.gson.JsonObject();
-        arg.addProperty("admin", AdminJson.VERSION);
-        arg.addProperty("id", s.id());
-        arg.add("value", v);
-        List<String> r = call(server, f.giant(), DEFAULT, arg.toString());
-        if (r == null || r.isEmpty())
-            return Result.fail(f.name() + ": this version can't change its server default from here. Its own command"
-                    + " with allworlds does.");
-        if (!r.get(0).equals("ok"))
-            return Result.fail(String.join(" ", r).contains("world only")
-                    ? f.name() + ": " + s.name() + " is only kept for each world; it has no server default."
-                    : f.name() + ": his mod didn't take " + shown(s, v) + " for " + s.name() + ".");
+        String locked = lockedFor(AdminWorld.get(server), f.giant().key(), f.name(), s, who);
+        if (locked != null) return Result.fail(locked);
+        String why = writeDefault(server, f.giant(), f.name(), s, v);
+        if (why != null) return Result.fail(why);
         AdminWorld w = AdminWorld.get(server);
         w.log(new AdminWorld.Change(System.currentTimeMillis(), who, f.giant().key(), s.id(),
                 s.name() + " (server default)", shown(s, s.def()), shown(s, v), ""));
@@ -298,6 +311,26 @@ public final class AdminServer {
         if (!s.whenNote().isEmpty()) lines.add(s.whenNote());
         return new Result(true, lines, List.of(who + " set " + f.name() + " " + s.name() + " to " + shown(s, v)
                 + " for all worlds (server default)."));
+    }
+
+    /**
+     * A giant's server default (his config file) to a checked value, through his bridge (admindefault); null when it
+     * took it, else why not. Nothing is logged or told here (setDefault and the settings sync do that).
+     */
+    static @Nullable String writeDefault(MinecraftServer server, Giant g, String name, AdminSetting s, JsonElement v) {
+        com.google.gson.JsonObject arg = new com.google.gson.JsonObject();
+        arg.addProperty("admin", AdminJson.VERSION);
+        arg.addProperty("id", s.id());
+        arg.add("value", v);
+        List<String> r = call(server, g, DEFAULT, arg.toString());
+        if (r == null || r.isEmpty())
+            return name + ": this version can't change its server default from here. Its own command with allworlds"
+                    + " does.";
+        if (!r.get(0).equals("ok"))
+            return String.join(" ", r).contains("world only")
+                    ? name + ": " + s.name() + " is only kept for each world; it has no server default."
+                    : name + ": his mod didn't take " + shown(s, v) + " for " + s.name() + ".";
+        return null;
     }
 
     /**
@@ -406,32 +439,50 @@ public final class AdminServer {
         long now = System.currentTimeMillis();
         if (which.equalsIgnoreCase("everything")) {
             Map<String, Map<String, JsonElement>> before = new LinkedHashMap<>();
-            int n = 0;
+            int n = 0, kept = 0;
             for (String g : w.giantsWithValues()) {
-                before.put(g, w.values(g));
-                n += w.clear(g);
+                Map<String, JsonElement> m = new LinkedHashMap<>();
+                for (var e : w.values(g).entrySet())
+                    if (w.lock(g, e.getKey()) == null) m.put(e.getKey(), e.getValue());
+                    else kept++;
+                if (!m.isEmpty()) before.put(g, m);
+                n += m.size();
             }
-            if (n == 0) return Result.said(List.of("Nothing was set for this world."));
+            if (n == 0)
+                return Result.said(List.of(kept > 0 ? "Only locked settings are set for this world; they stay."
+                        : "Nothing was set for this world."));
+            // (a snapshot first, so it can all be put back in one go)
+            w.snapshot(who, "Before every setting went back to the server defaults");
+            for (var e : before.entrySet()) for (String i : e.getValue().keySet()) w.remove(e.getKey(), i);
             w.log(new AdminWorld.Change(now, who, "everything", "*", "every setting", n + " set", "-",
                     AdminWorld.Change.undo(before)));
             push(server, w);
-            return new Result(true,
-                    List.of("Every giant's settings for this world are back to the server defaults (" + n + ")."),
-                    List.of(who + " put every giant's settings back to the server defaults."));
+            List<String> lines = new ArrayList<>(
+                    List.of("Every giant's settings for this world are back to the server defaults (" + n + ")."));
+            if (kept > 0) lines.add(kept + (kept == 1 ? " locked setting stays" : " locked settings stay") + ".");
+            return new Result(true, lines, List.of(who + " put every giant's settings back to the server defaults."));
         }
         Found t = target(server, which);
         if (t.why() != null && !(t.giant() != null && id == null)) return Result.fail(t.why());
         String k = t.giant() == null ? AdminCatalog.ALL : t.giant().key();
         if (id == null) {
-            Map<String, JsonElement> before = w.values(k);
-            int n = w.clear(k);
-            if (n == 0) return Result.said(List.of(t.name() + ": nothing was set for this world."));
+            Map<String, JsonElement> before = new LinkedHashMap<>();
+            int kept = 0;
+            for (var e : w.values(k).entrySet())
+                if (w.lock(k, e.getKey()) == null) before.put(e.getKey(), e.getValue());
+                else kept++;
+            int n = before.size();
+            if (n == 0)
+                return Result.said(List.of(t.name() + (kept > 0 ? ": only locked settings are set; they stay."
+                        : ": nothing was set for this world.")));
+            for (String i : before.keySet()) w.remove(k, i);
             w.log(new AdminWorld.Change(now, who, k, "*", "every setting", n + " set", "-",
                     AdminWorld.Change.undo(Map.of(k, before))));
             push(server, w);
             String line = t.giant() == null
                     ? "All giants: the shared multipliers are back to x1."
                     : t.name() + ": " + n + (n == 1 ? " setting" : " settings") + " back to the server defaults.";
+            if (kept > 0) line += " " + kept + (kept == 1 ? " locked one stays." : " locked ones stay.");
             String told = t.giant() == null
                     ? who + " put the all-giants multipliers back to x1."
                     : who + " put " + t.name() + "'s settings back to the server defaults.";
@@ -440,6 +491,8 @@ public final class AdminServer {
         Found f = setting(server, t, id);
         if (f.why() != null) return Result.fail(f.why());
         AdminSetting s = f.s();
+        String locked = lockedFor(w, k, f.name(), s, who);
+        if (locked != null) return Result.fail(locked);
         if (!w.remove(k, s.id()))
             return Result.said(List.of(f.name() + ": " + s.name() + " is already the server default, "
                     + shown(s, s.def()) + "."));
@@ -450,6 +503,87 @@ public final class AdminServer {
         return new Result(true,
                 List.of(f.name() + ": " + s.name() + " back to the server default, " + shown(s, s.def()) + "."),
                 List.of(who + " put " + f.name() + " " + s.name() + " back to " + shown(s, s.def()) + "."));
+    }
+
+    // locks (Part 2B)
+
+    /**
+     * /giants admin lock: the setting keeps the value it has now for this world (made the world's own if it wasn't),
+     * and nothing but its locker changes it: not presets, imports, snapshots, undo or other admins, until an admin
+     * unlocks it.
+     */
+    public static Result lock(MinecraftServer server, String who, String whoId, String which, String id) {
+        Found f = setting(server, target(server, which), id);
+        if (f.why() != null) return Result.fail(f.why());
+        AdminSetting s = f.s();
+        String k = key(f);
+        AdminWorld w = AdminWorld.get(server);
+        AdminWorld.Lock l = w.lock(k, s.id());
+        if (l != null) return Result.said(List.of(f.name() + ": " + s.name() + " is already locked by " + l.who() + "."));
+        // (pinned: kept for the world, so a change to the server default can't move it either)
+        if (!s.set()) w.put(k, s.id(), s.value());
+        w.lock(k, s.id(), new AdminWorld.Lock(who, whoId, System.currentTimeMillis()));
+        w.log(new AdminWorld.Change(System.currentTimeMillis(), who, k, "lock:" + s.id(), s.name(), "",
+                "at " + shown(s, s.value()), ""));
+        if (!s.set()) {
+            if (f.giant() == null) push(server, w);
+            else push(server, w, f.giant());
+        }
+        return new Result(true,
+                List.of(f.name() + ": " + s.name() + " is locked at " + shown(s, s.value()) + " for this world."
+                        + " Presets, imports and other admins leave it alone until it is unlocked."),
+                List.of(who + " locked " + f.name() + " " + s.name() + " (at " + shown(s, s.value()) + ")."));
+    }
+
+    /** /giants admin unlock: any admin may; the value stays as the world's own */
+    public static Result unlock(MinecraftServer server, String who, String which, String id) {
+        Found f = setting(server, target(server, which), id);
+        if (f.why() != null) return Result.fail(f.why());
+        AdminSetting s = f.s();
+        String k = key(f);
+        AdminWorld w = AdminWorld.get(server);
+        AdminWorld.Lock l = w.lock(k, s.id());
+        if (l == null) return Result.said(List.of(f.name() + ": " + s.name() + " isn't locked."));
+        w.unlock(k, s.id());
+        w.log(new AdminWorld.Change(System.currentTimeMillis(), who, k, "unlock:" + s.id(), s.name(), "", "", ""));
+        return new Result(true,
+                List.of(f.name() + ": " + s.name() + " is unlocked (it was locked by " + l.who() + "). It keeps "
+                        + shown(s, s.value()) + " for this world."),
+                List.of(who + " unlocked " + f.name() + " " + s.name() + "."));
+    }
+
+    /** /giants admin locks: every locked setting */
+    public static Result locks(MinecraftServer server) {
+        AdminWorld w = AdminWorld.get(server);
+        if (w.locks().isEmpty()) return Result.said(List.of("No settings are locked in this world."));
+        List<String> lines = new ArrayList<>(List.of("Locked settings:"));
+        java.text.SimpleDateFormat when = new java.text.SimpleDateFormat("MMM d HH:mm", Locale.ROOT);
+        for (var e : w.locks().entrySet()) {
+            String[] gi = e.getKey().split("/", 2);
+            lines.add("  " + giantWord(gi[0]) + " " + settingName(server, gi[0], gi[1]) + ": by "
+                    + e.getValue().who() + ", " + when.format(new java.util.Date(e.getValue().time())));
+        }
+        return Result.said(lines);
+    }
+
+    /** a setting's plain name from its giant's list (the id if he isn't here) */
+    static String settingName(MinecraftServer server, String giant, String id) {
+        if (giant.equals(AdminCatalog.ALL)) {
+            AdminSetting s = AdminCatalog.shared(id);
+            return s == null ? id : s.name();
+        }
+        Giant g = giant(giant);
+        AdminJson.Report r = g == null ? null : report(server, g);
+        AdminSetting s = r == null ? null : r.setting(id);
+        return s == null ? id : s.name();
+    }
+
+    /** a giant's key as people say it: "Wreckback", "All giants" */
+    static String giantWord(String key) {
+        return key.equals(AdminCatalog.ALL) ? "All giants"
+                : key.equals("everything") ? "Every giant"
+                : giant(key) != null ? nameOf(giant(key))
+                : key.isEmpty() ? key : Character.toUpperCase(key.charAt(0)) + key.substring(1);
     }
 
     /** /giants admin log: the last changes, oldest first */
@@ -466,13 +600,14 @@ public final class AdminServer {
 
     /** one change in plain words: "Wreckback Health multiplier 1 -> 2" */
     public static String changeText(AdminWorld.Change c) {
-        String g = c.giant().equals(AdminCatalog.ALL) ? "All giants"
-                : c.giant().equals("everything") ? "Every giant"
-                : giant(c.giant()) != null ? nameOf(giant(c.giant()))
-                : Character.toUpperCase(c.giant().charAt(0)) + c.giant().substring(1);
+        String g = giantWord(c.giant());
         if (c.id().equals("*")) return g + ": " + c.name() + " back to the defaults (" + c.old() + ")";
-        if (c.id().startsWith("preset:") || c.id().startsWith("import"))
+        if (c.id().startsWith("preset:") || c.id().startsWith("import") || c.id().equals("snapshot")
+                || c.id().equals("undo") || c.id().equals("sync"))
             return g + ": " + c.name() + " (" + c.now() + ")";
+        if (c.id().startsWith("lock:")) return g + " " + c.name() + " locked " + c.now();
+        if (c.id().startsWith("unlock:")) return g + " " + c.name() + " unlocked";
+        if (c.id().startsWith("mod:")) return c.name();
         return g + " " + c.name() + " " + c.old() + " → " + c.now();
     }
 

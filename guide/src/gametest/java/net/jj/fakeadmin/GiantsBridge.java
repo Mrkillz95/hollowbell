@@ -32,6 +32,8 @@ public final class GiantsBridge {
         defaults = new JsonObject();
         knowsDefault = true;
         sets = 0;
+        standing.clear();
+        acts.clear();
     }
 
     private static final String[][] OWN = {
@@ -103,10 +105,55 @@ public final class GiantsBridge {
                 defaults.add(id, o.get("value"));
                 out.add("ok");
             }
+            case "live" -> {
+                out.add("{\"live\":1,\"giant\":\"fakeadmin\",\"name\":\"Fakeadmin\",\"moods\":[\"calm\",\"hunting\"],"
+                        + "\"size\":[0.1,2],\"does\":[\"tp\",\"heal\",\"size\",\"sleep\",\"wake\",\"calm\",\"forgive\","
+                        + "\"owner\",\"home\",\"remove\",\"kill\"]}");
+                for (JsonObject g : standing.values()) out.add(g.toString());
+            }
+            case "liveact" -> {
+                JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
+                if (o.get("live").getAsInt() != 1) return null;
+                String id = o.get("id").getAsString(), what = o.get("do").getAsString();
+                acts.add(what + " " + id + " " + o.get("value").getAsString() + " by " + o.get("by").getAsString());
+                JsonObject g = standing.get(id);
+                if (g == null) return List.of("no", "He isn't there any more.");
+                switch (what) {
+                    case "heal" -> g.addProperty("health", g.get("max").getAsDouble());
+                    case "size" -> g.addProperty("size", Double.parseDouble(o.get("value").getAsString()));
+                    case "remove", "kill" -> standing.remove(id);
+                    case "calm" -> g.addProperty("mood", "calm");
+                    default -> {}
+                }
+                return List.of("ok", "Fakeadmin: " + what + " done.");
+            }
             default -> {
                 return null;
             }
         }
         return out;
+    }
+
+    /** his standing ones for the live control (id to its line), and what liveact was asked */
+    public static final java.util.Map<String, JsonObject> standing = new java.util.LinkedHashMap<>();
+    public static final List<String> acts = new ArrayList<>();
+
+    /** one standing for the live control */
+    public static String stand(String mood, double health) {
+        String id = java.util.UUID.randomUUID().toString();
+        JsonObject g = new JsonObject();
+        g.addProperty("id", id);
+        g.addProperty("state", "here");
+        g.addProperty("dim", "minecraft:overworld");
+        g.addProperty("x", 10.5);
+        g.addProperty("y", 64);
+        g.addProperty("z", -3);
+        g.addProperty("health", health);
+        g.addProperty("max", 100);
+        g.addProperty("size", 1);
+        g.addProperty("mood", mood);
+        g.addProperty("asleep", false);
+        standing.put(id, g);
+        return id;
     }
 }
