@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.4.16 |
-| Pitchgut | 1.35.31 |
-| Furrowmaw | 1.17.28 |
-| Fire & Ice Cerberus | 2.18.28 |
-| Hollowbell | 1.12.30 |
-| Lantern Willow | 1.10.31 |
-| Wreckback | 1.2.36 |
-| The Swarmforge | 1.4.34 |
-| The Gloamwick | 1.2.15 |
+| Giants Guide | 1.4.17 |
+| Pitchgut | 1.35.32 |
+| Furrowmaw | 1.17.29 |
+| Fire & Ice Cerberus | 2.18.29 |
+| Hollowbell | 1.12.31 |
+| Lantern Willow | 1.10.32 |
+| Wreckback | 1.2.37 |
+| The Swarmforge | 1.4.35 |
+| The Gloamwick | 1.2.16 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.7), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.6.8), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.6.7.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.6.8.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -83,6 +83,46 @@ A book about every giant you have. Right-click it to open it.
   crouch.
 - New in the Guide 1.4.16: the Drawing setting (in Detail on Giants Performance): Fast to start with, Classic for
   the old drawing.
+- New in the Guide 1.4.17: the new healing rule for every giant, and the right number of Cerberus pelts.
+
+## New in 1.6.8
+
+- **Healing is the same for every giant now.** A giant heals only while he's asleep, or once he's been out of a
+  fight for five minutes (nothing has hurt him, he has hurt nothing and he isn't after anything). Then he gets back
+  2% of his health a minute in his own ground and 1% anywhere else. Resting after backing down from a fight with
+  another giant doesn't heal him any more, and Wreckback no longer heals faster in deep water. Settings in each
+  giant's file: `passiveHeal`, `healHomePerMinute`, `healAwayPerMinute` and `healPauseMinutes`.
+- **Every giant's book needs something from him**, and every book shows up in your recipe book once you pick up
+  something of his that goes in it. New recipes (each is the giant's thing on top of a book, with his other thing on
+  both sides of the book and under it):
+  - Pitchgut: one of his eyes on top, Pitchgut flesh round the book (simpler: no nether star, horn or goo).
+  - Wreckback: a barnacle block on top, Shell Plates round the book. He drops three more plates (27 to 33).
+  - Cerberus: a blaze rod on top, Cerberus Pelts round the book. He drops three more pelts (29 to 35).
+  - The Swarmforge: a redstone block on top, Forge Plates round the book. He drops three more plates (27).
+  - Furrowmaw, Hollowbell, the Lantern Willow and the Gloamwick keep their books as they were.
+- **Every finder is a compass and easy everyday things**, and shows up in your recipe book as soon as you pick up a
+  compass or one of its other items. Each one is the middle item over a compass, with the side item on both sides
+  of each (a 3 by 2 grid):
+  - Pitchgut: a spider eye, with rotten flesh.
+  - Furrowmaw: a bone, with coarse dirt.
+  - Cerberus: a snowball, with coal or charcoal.
+  - Hollowbell: an amethyst shard, with glass.
+  - The Lantern Willow: a torch, with any kind of log.
+  - Wreckback: string, with dried kelp.
+  - The Swarmforge: redstone, with copper ingots.
+  - The Gloamwick: an ink sac, with torches.
+- **Furrowmaw's Hold still really holds.** He fights only what comes into his reach and never crawls, burrows or
+  charges after anything. When his book can't give an order, it tells you why.
+- **Furrowmaw no longer climbs up onto himself.** When he lies still, any part of him with nothing under it comes
+  down onto the ground, and his feet only stand on real ground.
+- **The Lantern Willow's** honey drips stay on the honey in his mouth as his lip moves, and the drool falls from
+  them. When he sleeps, real eyelids slide shut over his eyes.
+- **The Gloamwick at small sizes:** his flames, smoke and embers stay where they belong as he moves, and his shake,
+  Candlefall and sparks are sized to him.
+- The Giants Guide (1.4.17) has the new healing rule for every giant and the right number of Cerberus pelts.
+
+Inside: Pitchgut 1.35.32, Furrowmaw 1.17.29, Cerberus 2.18.29, Hollowbell 1.12.31, Lantern Willow 1.10.32,
+Wreckback 1.2.37, Swarmforge 1.4.35, Gloamwick 1.2.16.
 
 ## New in 1.6.7
 
