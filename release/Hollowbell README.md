@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.31
+# Hollowbell (Java mod), version 1.12.32
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,20 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Operators can change his settings for just this world when the Giants Guide is installed (it's in the
+  all-in-one jar): `/giants admin list hollowbell` shows every one (spawning, stats, behaviour, each of his moves on or
+  off with its wait and wind cost, healing, taming, effects and server load), `/giants admin set hollowbell <setting>
+  <value>` changes one, and `get`, `reset` and `log` show them, put them back and list who changed what. Settings
+  marked "only affects new spawns" take hold the next time he comes; "only affects new land" ones only on land not
+  made yet. His settings file stays the server default for every other world.
+- Every command that changes one of his settings (`/hollowbell damage`, `/hollowbell heavydelay`, `/hollowbell config`,
+  `/giants health` and the rest) takes `world` or `allworlds` at the end. Nothing said means this world, and the
+  reply says which. Without the Giants Guide, nothing said still changes the server default, as before, and the
+  reply says so. His book's operator switches (Break blocks and Harvest) follow the same rule.
+- His stinger shots are called Stinger instead of showing a code.
+
+### 1.12.31
 
 - New healing rule, the same for every giant: he heals while he sleeps, and once he's been out of a fight for five
   minutes (nothing has hurt him, he has hurt nothing and he is hunting nothing): 2% of his health a minute over the
