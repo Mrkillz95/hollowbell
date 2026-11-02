@@ -1,0 +1,116 @@
+# Part 3 pictures: the Create World screen's Giants… with the eight giants loaded (ADMIN_BRIDGE.md §18.6-18.7).
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+# "menu": starts at the title screen instead of a world of its own. Scale 3 first (nothing changed yet), then
+# scale 2 picks Far Frontier, edits a setting and makes the world; in it, the book's Home and Changes.
+menu
+wait 60
+guiscale 3
+wait 5
+createworld
+wait 80
+cwname Giants P3
+cwtab 2
+wait 10
+mouse 2 2
+wait 20
+shot p3_s3_more_tab
+press Giants
+wait 20
+mouse 2 2
+wait 20
+shot p3_s3_picker
+pick far_frontier
+wait 10
+mouse 2 2
+wait 20
+shot p3_s3_picker_far
+edit
+wait 30
+mouse 2 2
+wait 20
+shot p3_s3_edit_home
+showpage wreckback 0 ground
+wait 20
+mouse 2 2
+wait 20
+shot p3_s3_edit_search_ground
+back
+wait 10
+pick classic
+back
+wait 20
+guiscale 2
+wait 10
+cwtab 2
+wait 10
+mouse 2 2
+wait 20
+shot p3_s2_more_tab
+press Giants
+wait 20
+mouse 2 2
+wait 20
+shot p3_s2_picker
+pick far_frontier
+wait 10
+mouse 2 2
+wait 20
+shot p3_s2_picker_far
+edit
+wait 30
+mouse 2 2
+wait 20
+shot p3_s2_edit_home
+showpage presets
+wait 20
+mouse 2 2
+wait 20
+shot p3_s2_edit_presets
+showpage wreckback 0 ground
+wait 20
+mouse 2 2
+wait 20
+shot p3_s2_edit_search_ground
+adminset wreckback groundGap 300
+wait 20
+mouse 2 2
+wait 20
+shot p3_s2_edit_changed
+back
+wait 20
+mouse 2 2
+wait 20
+shot p3_s2_picker_changed
+back
+wait 20
+cwtab 2
+wait 10
+mouse 2 2
+wait 20
+shot p3_s2_more_tab_chosen
+press Create New World
+inworld
+wait 100
+adminintro seen
+adminmode simple
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p3_s2_world_home
+adminbook changes
+wait 60
+mouse 2 2
+wait 25
+shot p3_s2_world_changes
+adminbook home 0 ground
+wait 60
+mouse 2 2
+wait 25
+shot p3_s2_world_search_ground
+close
+cmd giants admin log
+cmd giants admin get wreckback groundNearest
+cmd giants admin get wreckback groundGap
+wait 20
+quit

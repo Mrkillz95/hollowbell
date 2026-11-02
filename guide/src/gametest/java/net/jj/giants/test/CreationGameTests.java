@@ -163,8 +163,12 @@ public class CreationGameTests implements FabricGameTest {
         h.assertTrue(w.values("fakeadmin").get("power").getAsInt() == 8
                 && w.values("fakeadmin").get("landSize").getAsInt() == 650
                 && w.values("all").get("all.health").getAsDouble() == 2, "values " + w.values("fakeadmin"));
-        h.assertTrue(w.log().size() == logBefore + 1, "not one log entry");
+        // (the log keeps the last 100: count the entries made since)
         AdminWorld.Change c = w.log().get(w.log().size() - 1);
+        AdminWorld.Change before = w.log().size() > 1 ? w.log().get(w.log().size() - 2) : null;
+        h.assertTrue(logBefore == 0 || before != null && !before.id().equals(AdminCreation.LOG_ID)
+                || w.log().size() == logBefore + 1, "not one log entry");
+
         h.assertTrue(c.id().equals(AdminCreation.LOG_ID) && c.who().equals("Alex")
                 && AdminServer.changeText(c).equals("Set at world creation: Far Frontier, changed (3 changes)"),
                 "log says " + AdminServer.changeText(c));
@@ -214,10 +218,11 @@ public class CreationGameTests implements FabricGameTest {
                 "Set at world creation: Far Frontier"), "Far Frontier by name");
         // rubbish: nothing, no log entry
         for (String g : w.giantsWithValues()) w.clear(g);
-        int logged = w.log().size();
+        AdminWorld.Change lastBefore = w.log().get(w.log().size() - 1);
         Files.writeString(AdminCreation.file(), "make them all purple\n");
         h.assertTrue(AdminCreation.atLoad(s, s.overworld(), null, folder) == 0 && w.giantsWithValues().isEmpty()
-                && w.log().size() == logged, "rubbish changed something");
+                && w.log().get(w.log().size() - 1) == lastBefore, "rubbish changed something");
+
         // not a dedicated server (single player): the file isn't read
         Files.writeString(AdminCreation.file(), text + "\n");
         AdminCreation.testDedicated = false;
