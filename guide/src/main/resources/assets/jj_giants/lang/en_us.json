@@ -1185,6 +1185,7 @@
   "key.jj_giants.performance": "Giants Performance",
   "key.categories.jj_giants": "Giants",
   "perf.jj_giants.preset": "Preset: %s",
+  "perf.jj_giants.sent": "Sent to the server.",
   "perf.jj_giants.preset.tip": "Click for the next preset (◀ and ▶ go either way). Each says what it turns down.",
   "perf.jj_giants.save_as": "Save as…",
   "perf.jj_giants.rename": "Rename…",
