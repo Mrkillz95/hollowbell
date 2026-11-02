@@ -226,4 +226,64 @@ public class ScopeGameTests implements FabricGameTest {
         realGiant(h, "hollowbell", "Hollowbell", "hollowbell.json", "hollowbell");
         h.succeed();
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40)
+    public void pitchgutScopesForRealWhenHeIsHere(GameTestHelper h) {
+        if (!Giants.loaded(Giants.byKey("pitchgut"))) {
+            h.succeed();
+            return;
+        }
+        realGiant(h, "pitchgut", "Pitchgut", "mountain_breathes.json", "pitchgut");
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40)
+    public void furrowmawScopesForRealWhenHeIsHere(GameTestHelper h) {
+        if (!Giants.loaded(Giants.byKey("furrowmaw"))) {
+            h.succeed();
+            return;
+        }
+        realGiant(h, "furrowmaw", "Furrowmaw", "furrowmaw.json", "furrowmaw");
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40)
+    public void cerberusScopesForRealWhenHeIsHere(GameTestHelper h) {
+        if (!Giants.loaded(Giants.byKey("cerberus"))) {
+            h.succeed();
+            return;
+        }
+        realGiant(h, "cerberus", "Cerberus", "fire_ice_cerberus.json", "cerberus");
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40)
+    public void lanternwillowScopesForRealWhenHeIsHere(GameTestHelper h) {
+        if (!Giants.loaded(Giants.byKey("lanternwillow"))) {
+            h.succeed();
+            return;
+        }
+        realGiant(h, "lanternwillow", "Lantern Willow", "lanternwillow.json", "lanternwillow");
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40)
+    public void swarmforgeScopesForRealWhenHeIsHere(GameTestHelper h) {
+        if (!Giants.loaded(Giants.byKey("swarmforge"))) {
+            h.succeed();
+            return;
+        }
+        realGiant(h, "swarmforge", "Swarmforge", "swarmforge.json", "swarmforge");
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40)
+    public void gloamwickScopesForRealWhenHeIsHere(GameTestHelper h) {
+        if (!Giants.loaded(Giants.byKey("gloamwick"))) {
+            h.succeed();
+            return;
+        }
+        realGiant(h, "gloamwick", "Gloamwick", "gloamwick.json", "gloamwick");
+        h.succeed();
+    }
 }
