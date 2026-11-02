@@ -10,9 +10,14 @@ import java.util.Map;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.jj.giants.admin.AdminBook;
 import net.jj.giants.admin.AdminCatalog;
+import net.jj.giants.admin.AdminDraft;
 import net.jj.giants.admin.AdminJson;
+import net.jj.giants.admin.AdminPresets;
+import net.jj.giants.admin.AdminServer;
 import net.jj.giants.admin.AdminSetting;
+import net.jj.giants.admin.AdminTransfer;
 import net.jj.giants.net.AdminBookAskPayload;
 import net.jj.giants.net.AdminBookChangePayload;
 import net.jj.giants.net.AdminBookOpenPayload;
@@ -68,7 +73,10 @@ public final class AdminBookClient {
                 open();
             }
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> forget());
+        ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> {
+            if (local == null) forget();
+        });
+
     }
 
     private static void forget() {
@@ -136,20 +144,137 @@ public final class AdminBookClient {
 
     /** opens the book's screen and asks for every page */
     public static void open() {
+        endLocal();
         Minecraft.getInstance().setScreen(new AdminBookScreen());
         ask();
     }
 
     public static void ask() {
+        if (local != null) {
+            refreshLocal();
+            return;
+        }
         if (ClientPlayNetworking.canSend(AdminBookAskPayload.TYPE))
             ClientPlayNetworking.send(new AdminBookAskPayload(AdminBookAskPayload.ALL));
     }
 
     /** the screen closed: the server stops sending fresh pages */
     static void closed() {
+        if (local != null) return;
         if (Minecraft.getInstance().getConnection() != null && ClientPlayNetworking.canSend(AdminBookAskPayload.TYPE))
             ClientPlayNetworking.send(new AdminBookAskPayload(AdminBookAskPayload.CLOSE));
     }
+
+    // Part 3: the book over the Create World screen's draft (ADMIN_BRIDGE.md §18.6): no server, the pages are made
+    // here from the draft and every request is answered here, with the same checks and words
+
+    private static @Nullable AdminDraft local;
+
+    /** the book is showing a new world's draft, not a world */
+    public static boolean creating() {
+        return local != null;
+    }
+
+    public static @Nullable AdminDraft draft() {
+        return local;
+    }
+
+    /** opens the book over a draft; closing it goes back to the parent screen */
+    public static void openLocal(AdminDraft d, net.minecraft.client.gui.screens.Screen parent) {
+        startLocal(d);
+        Minecraft.getInstance().setScreen(new AdminBookScreen(parent));
+    }
+
+    /** the draft's pages in place of a server's (no screen opened) */
+    public static void startLocal(AdminDraft d) {
+        forget();
+        local = d;
+        role = "admin";
+        Minecraft mc = Minecraft.getInstance();
+        myName = mc.getUser() != null ? mc.getUser().getName() : "";
+        myId = "";
+        refreshLocal();
+    }
+
+    /** back to the network (the book in a world) */
+    public static void endLocal() {
+        if (local == null) return;
+        local = null;
+        forget();
+    }
+
+    /** every page again from the draft */
+    static void refreshLocal() {
+        AdminDraft d = local;
+        if (d == null) return;
+        JsonObject h = AdminBook.homeJson(d, d.label());
+        h.addProperty("creation", true);
+        home = h;
+        told(new AdminBookStatePayload(AdminBookStatePayload.ROLE, roleJson()));
+        JsonObject all = AdminBook.pageJson(d, AdminCatalog.ALL);
+        if (all != null) told(new AdminBookStatePayload(AdminBookStatePayload.PAGE, all.toString()));
+        for (net.jj.giants.Giant g : AdminServer.giants()) {
+            JsonObject pg = AdminBook.pageJson(d, g.key());
+            if (pg != null) told(new AdminBookStatePayload(AdminBookStatePayload.PAGE, pg.toString()));
+        }
+        told(new AdminBookStatePayload(AdminBookStatePayload.PRESETS,
+                AdminBook.presetsJson(d, "", d.label()).toString()));
+        version++;
+    }
+
+    private static String roleJson() {
+        JsonObject o = new JsonObject();
+        o.addProperty("role", "admin");
+        o.addProperty("name", myName);
+        o.addProperty("id", myId);
+        return o.toString();
+    }
+
+    /** a request answered from the draft: the same checks and words as the server's */
+    private static void answerLocal(AdminDraft d, JsonObject o) {
+        String what = AdminJsonBridge.str(o, "do");
+        String giant = AdminJsonBridge.str(o, "giant"), id = AdminJsonBridge.str(o, "id");
+        AdminServer.Result r = switch (what) {
+            case "set" -> d.set(giant, id, AdminJsonBridge.str(o, "value"));
+            case "reset" -> d.reset(giant, id.isEmpty() ? null : id);
+            case "preset", "import" -> {
+                AdminTransfer.Bundle b = what.equals("preset")
+                        ? AdminTransfer.preset(AdminJsonBridge.str(o, "name"))
+                        : AdminTransfer.decode(AdminJsonBridge.str(o, "text"));
+                if (b == null)
+                    yield AdminServer.Result.fail(what.equals("preset")
+                            ? "No preset called " + AdminJsonBridge.str(o, "name") + "."
+                            : "That isn't a settings string: it starts with " + AdminTransfer.PREFIX + ".");
+                AdminTransfer.Plan pl = d.plan(b, what);
+                preview = AdminBook.previewJson(d, pl, what);
+                previewVersion++;
+                yield null;
+            }
+            case "apply" -> d.apply();
+            case "export" -> {
+                String text = AdminTransfer.encode(d.bundle());
+                try {
+                    Minecraft.getInstance().keyboardHandler.setClipboard(text);
+                } catch (RuntimeException e) {
+                    // (no clipboard here)
+                }
+                lastExport = text;
+                yield new AdminServer.Result(true, List.of("Copied the new world's settings (" + text.length()
+                        + " characters)."), List.of());
+            }
+            case "savepreset" -> AdminPresets.save(d.world(), myName.isEmpty() ? "Player" : myName, myId,
+                    AdminJsonBridge.str(o, "name"));
+            case "deletepreset" -> AdminPresets.delete(myName, myId, AdminJsonBridge.str(o, "name"));
+            default -> AdminServer.Result.fail("That can only be done in a world (there is none yet).");
+        };
+        refreshLocal();
+        if (r != null) {
+            said = r.lines();
+            saidOk = r.ok();
+            saidAt = Util.getMillis();
+        }
+    }
+
 
     /** asks the server to change a setting (it checks this player may, and answers) */
     static boolean set(String giant, String id, String value, boolean allWorlds) {
@@ -173,6 +298,10 @@ public final class AdminBookClient {
     }
 
     private static boolean send(JsonObject o) {
+        if (local != null) {
+            answerLocal(local, o);
+            return true;
+        }
         if (!ClientPlayNetworking.canSend(AdminBookChangePayload.TYPE)) return false;
         ClientPlayNetworking.send(new AdminBookChangePayload(o.toString()));
         return true;

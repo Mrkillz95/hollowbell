@@ -107,6 +107,31 @@ public class AdminBookScreen extends Screen {
 
     public AdminBookScreen() {
         super(Component.translatable("admin.jj_giants.book.title"));
+        parent = null;
+    }
+
+    /**
+     * (Part 3) the book over the Create World screen's draft (AdminBookClient's local mode): the same pages, search and
+     * markers, no Live control, Changes, locks or "all worlds", no "only new land" question; closing goes back to the
+     * parent screen
+     */
+    public AdminBookScreen(net.minecraft.client.gui.screens.Screen parent) {
+        super(Component.translatable("admin.jj_giants.book.creation_title"));
+        this.parent = parent;
+    }
+
+    private final net.minecraft.client.gui.screens.@Nullable Screen parent;
+
+    /** showing a new world's draft */
+    private boolean creating() {
+        return parent != null && AdminBookClient.creating();
+    }
+
+    @Override
+    public void onClose() {
+        if (parent != null) {
+            minecraft.setScreen(parent);
+        } else super.onClose();
     }
 
     /** open next time on this page, scrolled this far, with this search (the picture-taking uses this) */
@@ -241,7 +266,8 @@ public class AdminBookScreen extends Screen {
         // (a moderator has Live control only; before the server says who you are, only Home, asking)
         if (AdminBookClient.role().equals("moderator")) return List.of(LIVE);
         if (!AdminBookClient.admin()) return List.of(HOME);
-        List<String> out = new ArrayList<>(List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL));
+        List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL)
+                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -277,6 +303,10 @@ public class AdminBookScreen extends Screen {
             startAllWorlds = false;
         }
         pageKey = keptPage;
+        if (creating()) {
+            allWorlds = false;
+            if (pageKey.equals(LIVE) || pageKey.equals(CHANGES)) pageKey = HOME;
+        }
         if (pageKey.equals(LIVE)) AdminBookClient.watchLive(true);
         seenVersion = AdminBookClient.version();
         seenLive = AdminBookClient.liveVersion();
@@ -340,6 +370,11 @@ public class AdminBookScreen extends Screen {
                 .bounds(lx + lw - scopeW, toolY, scopeW, 16)
                 .build());
         scopeButton.setTooltip(Tooltip.create(tr(allWorlds ? "scope.all.tip" : "scope.world.tip")));
+        if (creating()) {
+            // (no server yet: everything goes into the new world; the search takes the room)
+            scopeButton.visible = false;
+            search.setWidth(Math.max(70, lw - modeW - 3));
+        }
 
         // the page's own button (reset this giant, or on Home every giant)
         headButton = addRenderableWidget(Button.builder(Component.empty(), b -> headAction())
@@ -366,7 +401,7 @@ public class AdminBookScreen extends Screen {
         if (startIntro >= 0) {
             openIntro(startIntro);
             startIntro = -1;
-        } else if (!AdminPrefs.seenIntro() && modal == null) openIntro(0);
+        } else if (!creating() && !AdminPrefs.seenIntro() && modal == null) openIntro(0);
         if (startConfirm != null) {
             AdminBookClient.Page p = AdminBookClient.page(startConfirm[0]);
             AdminSetting s = p == null ? null : p.setting(startConfirm[1]);
@@ -877,6 +912,11 @@ public class AdminBookScreen extends Screen {
 
     /** "Only affects new land": are you sure? (cancel puts the control back) */
     private void askCreation(AdminSetting s, JsonElement v, Runnable go) {
+        // (a new world's draft: there is no land yet, nothing to warn about)
+        if (creating()) {
+            go.run();
+            return;
+        }
         boolean land = s.when().equals(AdminSetting.NEW_LAND);
         confirm(tr(land ? "creation.land.title" : "creation.world.title"),
                 tr(land ? "creation.land.body" : "creation.world.body", name(s), show(s, v),
@@ -1258,7 +1298,11 @@ public class AdminBookScreen extends Screen {
                     .format(new java.util.Date(last.get("time").getAsLong()));
             rows.add(new Note(tr("home.last", AdminBookClient.AdminJsonBridge.str(last, "who"),
                     AdminBookClient.AdminJsonBridge.str(last, "text"), when), GREY));
-        } else rows.add(new Note(tr("home.no_changes"), GREY));
+        } else if (!creating()) rows.add(new Note(tr("home.no_changes"), GREY));
+        if (creating()) {
+            rows.add(new Note(tr("creation.home.note"), GREY));
+            return;
+        }
         moderatorRows(h);
     }
 
@@ -1503,7 +1547,8 @@ public class AdminBookScreen extends Screen {
             sub = foundTotal > MOST_FOUND ? tr("search.sub.more", foundTotal, MOST_FOUND) : tr("search.sub", foundTotal);
         } else if (pageKey.equals(HOME)) {
             title = tr("home");
-            sub = tr("home.sub");
+            sub = creating() ? tr("creation.home.sub") : tr("home.sub");
+
         } else if (pageKey.equals(LIVE)) {
             title = tr("live");
             sub = tr("live.sub", liveCount());
@@ -2310,14 +2355,7 @@ public class AdminBookScreen extends Screen {
             g.drawString(font, Component.literal(str(p, "current")), nx + 4, y + 3, KEY, false);
         }));
         // Classic first, marked as the default
-        for (JsonObject b : objects(p, "builtin")) {
-            String id = str(b, "id");
-            Component name = Component.literal(str(b, "name")).append(bool(b, "default")
-                    ? tr("presets.default").withStyle(st -> st.withColor(GOOD)) : Component.empty());
-            rows.add(new LineRow(name, KEY, Component.literal(str(b, "about")), List.<Object[]>of(
-                    new Object[] {tr("presets.preview"), (Runnable) () -> request("preset", "name", id),
-                        tr("presets.preview.tip")})));
-        }
+        for (JsonObject b : objects(p, "builtin")) if (bool(b, "default")) builtInRow(b);
         // the suggested ones still to come: greyed, nothing to press
         rows.add(new Head(tr("presets.suggested"), tr("presets.suggested.note"), null));
         List<String> chips = SUGGESTED;
@@ -2338,6 +2376,12 @@ public class AdminBookScreen extends Screen {
                 cx += cw + 4;
             }
         }));
+        // (Part 3) every other built-in preset, nothing hidden
+        List<JsonObject> others = objects(p, "builtin").stream().filter(b -> !bool(b, "default")).toList();
+        if (!others.isEmpty()) {
+            rows.add(new Head(tr("presets.all"), tr("presets.all.note"), null));
+            for (JsonObject b : others) builtInRow(b);
+        }
         // saved on this server
         rows.add(new Head(tr("presets.saved"), tr("presets.saved.note"), null));
         List<JsonObject> saved = objects(p, "saved");
@@ -2410,7 +2454,27 @@ public class AdminBookScreen extends Screen {
         rows.add(im);
     }
 
+    /** a built-in preset's line: its name (Default), its danger once applied, the creation marker; Preview */
+    private void builtInRow(JsonObject b) {
+        String id = str(b, "id");
+        rows.add(new LineRow(presetTitle(b), KEY, Component.literal(str(b, "about")), List.<Object[]>of(
+                new Object[] {tr("presets.preview"), (Runnable) () -> request("preset", "name", id),
+                    tr("presets.preview.tip")})));
+    }
+
+    /** a preset's name with its marks: Default, the danger rating, "World creation only" */
+    static MutableComponent presetTitle(JsonObject b) {
+        MutableComponent name = Component.literal(str(b, "name"));
+        if (bool(b, "default")) name.append(tr("presets.default").withStyle(st -> st.withColor(GOOD)));
+        int level = (int) dbl(b, "level", 0);
+        if (level > 0) name.append(tr("presets.danger", level, str(b, "label")).withStyle(st -> st.withColor(
+                level >= 4 ? WARN : level <= 2 ? GOOD : GREY)));
+        if (bool(b, "creation")) name.append(tr("presets.creation").withStyle(st -> st.withColor(ORANGE)));
+        return name;
+    }
+
     /** how many lines a row of chips takes */
+
     private int[] chipRows(List<String> chips) {
         int x = 0, n = 1;
         for (String s : chips) {
@@ -2542,7 +2606,7 @@ public class AdminBookScreen extends Screen {
 
     /** room for the padlock on a setting's line (admins) */
     private int lockW() {
-        return AdminBookClient.admin() ? 18 : 0;
+        return AdminBookClient.admin() && !creating() ? 18 : 0;
     }
 
     /** who locked this setting (null: nobody) */

@@ -291,6 +291,11 @@ public final class AdminBook {
 
     /** a plan as the Presets page shows it: each change, what only reaches new land, locks, the rating before/after */
     public static JsonObject previewJson(MinecraftServer server, AdminTransfer.Plan pl, String kind) {
+        return previewJson(AdminView.of(server), pl, kind);
+    }
+
+    /** the same from any view (the Create World screen's draft too) */
+    public static JsonObject previewJson(AdminView view, AdminTransfer.Plan pl, String kind) {
         JsonObject o = new JsonObject();
         o.addProperty("kind", kind);
         o.addProperty("title", AdminTransfer.title(pl.bundle()));
@@ -305,7 +310,7 @@ public final class AdminBook {
             j.addProperty("old", s.oldText());
             j.addProperty("now", s.nowText());
             AdminSetting set = AdminServer.giant(s.giant()) == null ? null
-                    : settingOf(server, s.giant(), s.id());
+                    : settingOf(view, s.giant(), s.id());
             j.addProperty("creation", set != null && set.creationOnly());
             ch.add(j);
         }
@@ -313,7 +318,7 @@ public final class AdminBook {
         o.add("creation", strings(pl.creationOnly()));
         o.add("locked", strings(pl.locked()));
         o.add("skipped", strings(pl.skipped()));
-        AdminInsight.Danger[] d = AdminTransfer.dangerBeforeAfter(server, pl);
+        AdminInsight.Danger[] d = AdminTransfer.dangerBeforeAfter(view, pl);
         for (int i = 0; i < 2; i++) {
             JsonObject dj = new JsonObject();
             dj.addProperty("level", d[i].level());
@@ -324,9 +329,9 @@ public final class AdminBook {
         return o;
     }
 
-    private static @Nullable AdminSetting settingOf(MinecraftServer server, String giant, String id) {
+    private static @Nullable AdminSetting settingOf(AdminView view, String giant, String id) {
         Giant g = AdminServer.giant(giant);
-        AdminJson.Report r = g == null ? null : AdminServer.report(server, g);
+        AdminJson.Report r = g == null ? null : view.report(g);
         return r == null ? null : r.setting(id);
     }
 
@@ -514,13 +519,47 @@ public final class AdminBook {
      */
     public static AdminBookStatePayload home(MinecraftServer server) {
         AdminWorld w = AdminWorld.get(server);
+        JsonObject o = homeJson(AdminView.of(server),
+                AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty()));
+        List<AdminWorld.Change> log = w.log();
+        if (!log.isEmpty()) {
+            AdminWorld.Change c = log.get(log.size() - 1);
+            JsonObject last = new JsonObject();
+            last.addProperty("time", c.time());
+            last.addProperty("who", c.who());
+            last.addProperty("text", AdminServer.changeText(c));
+            o.add("last", last);
+        }
+        o.addProperty("changes", log.size());
+        o.add("mods", AdminRoles.json(server));
+        // (the players online, for making one a moderator)
+        JsonArray players = new JsonArray();
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            JsonObject pj = new JsonObject();
+            pj.addProperty("id", p.getStringUUID());
+            pj.addProperty("name", p.getGameProfile().getName());
+            pj.addProperty("admin", p.hasPermissions(AdminCommand.OPS));
+            pj.addProperty("mod", w.isMod(p.getUUID()));
+            players.add(pj);
+        }
+        o.add("players", players);
+        o.addProperty("locks", w.locks().size());
+        return new AdminBookStatePayload(AdminBookStatePayload.HOME, o.toString());
+    }
+
+    /**
+     * Home's part that needs no server (the Create World screen's draft has it too): the preset, the giants (each
+     * with how many settings are set), the danger rating and the clashes.
+     */
+    public static JsonObject homeJson(AdminView view, String presetName) {
+        AdminWorld w = view.world();
         JsonObject o = new JsonObject();
         o.addProperty("op", true);
-        o.addProperty("preset", AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty()));
+        o.addProperty("preset", presetName);
         List<AdminInsight.View> views = new ArrayList<>();
         JsonArray giants = new JsonArray();
         for (Giant g : AdminServer.giants()) {
-            AdminJson.Report r = AdminServer.report(server, g);
+            AdminJson.Report r = view.report(g);
             JsonObject j = new JsonObject();
             j.addProperty("key", g.key());
             j.addProperty("name", r != null ? r.name() : AdminServer.nameOf(g));
@@ -552,43 +591,32 @@ public final class AdminBook {
             warn.add(wj);
         }
         o.add("warnings", warn);
-        List<AdminWorld.Change> log = w.log();
-        if (!log.isEmpty()) {
-            AdminWorld.Change c = log.get(log.size() - 1);
-            JsonObject last = new JsonObject();
-            last.addProperty("time", c.time());
-            last.addProperty("who", c.who());
-            last.addProperty("text", AdminServer.changeText(c));
-            o.add("last", last);
-        }
-        o.addProperty("changes", log.size());
-        o.add("mods", AdminRoles.json(server));
-        // (the players online, for making one a moderator)
-        JsonArray players = new JsonArray();
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            JsonObject pj = new JsonObject();
-            pj.addProperty("id", p.getStringUUID());
-            pj.addProperty("name", p.getGameProfile().getName());
-            pj.addProperty("admin", p.hasPermissions(AdminCommand.OPS));
-            pj.addProperty("mod", w.isMod(p.getUUID()));
-            players.add(pj);
-        }
-        o.add("players", players);
-        o.addProperty("locks", w.locks().size());
-        return new AdminBookStatePayload(AdminBookStatePayload.HOME, o.toString());
+        return o;
     }
 
     /** one page: the all-giants settings, or one giant's (null for a giant that has none), with its locks */
     public static @Nullable AdminBookStatePayload page(MinecraftServer server, String key) {
+        JsonObject o = pageJson(AdminView.of(server), key);
+        if (o == null) return null;
+        JsonObject locks = new JsonObject();
+        for (var e : AdminWorld.get(server).locks().entrySet())
+            if (e.getKey().startsWith(key + "/")) locks.addProperty(e.getKey().substring(key.length() + 1),
+                    e.getValue().who());
+        o.add("locks", locks);
+        return new AdminBookStatePayload(AdminBookStatePayload.PAGE, o.toString());
+    }
+
+    /** a page's settings from any view (no locks: the draft has none) */
+    public static @Nullable JsonObject pageJson(AdminView view, String key) {
         List<AdminSetting> list;
         String name;
         AdminJson.Report r = null;
         if (key.equals(AdminCatalog.ALL)) {
-            list = AdminServer.shared(AdminWorld.get(server));
+            list = AdminServer.shared(view.world());
             name = "All giants";
         } else {
             Giant g = AdminServer.giant(key);
-            r = g == null ? null : AdminServer.report(server, g);
+            r = g == null ? null : view.report(g);
             if (r == null) return null;
             list = r.settings();
             name = r.name();
@@ -604,12 +632,8 @@ public final class AdminBook {
             for (String u : r.uses()) uses.add(u);
             o.add("uses", uses);
         }
-        JsonObject locks = new JsonObject();
-        for (var e : AdminWorld.get(server).locks().entrySet())
-            if (e.getKey().startsWith(key + "/")) locks.addProperty(e.getKey().substring(key.length() + 1),
-                    e.getValue().who());
-        o.add("locks", locks);
-        return new AdminBookStatePayload(AdminBookStatePayload.PAGE, o.toString());
+        o.add("locks", new JsonObject());
+        return o;
     }
 
     /** the Changes page: the log (newest first, with what can be undone), the snapshots and the locks */
@@ -661,6 +685,17 @@ public final class AdminBook {
 
     /** the Presets page for this player: the built-in ones (Classic first, the default) and the saved ones */
     public static AdminBookStatePayload presets(MinecraftServer server, ServerPlayer p) {
+        AdminWorld w = AdminWorld.get(server);
+        return new AdminBookStatePayload(AdminBookStatePayload.PRESETS, presetsJson(AdminView.of(server),
+                p.getStringUUID(), AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty())).toString());
+    }
+
+    /**
+     * The Presets page (and the Create World picker): the built-in ones (Classic first, the default; then every other
+     * built-in under "All presets", Part 3), each with its danger rating once applied and whether it is creation-only
+     * (worked out now from the giants' own markers), and the saved ones.
+     */
+    public static JsonObject presetsJson(AdminView view, String myId, String current) {
         JsonObject o = new JsonObject();
         JsonArray built = new JsonArray();
         for (String id : AdminTransfer.presets()) {
@@ -671,6 +706,8 @@ public final class AdminBook {
             j.addProperty("name", b.name());
             j.addProperty("about", b.about());
             j.addProperty("default", id.equals("classic"));
+            j.addProperty("group", id.equals("classic") ? "default" : "all");
+            addRating(j, view, b);
             built.add(j);
         }
         o.add("builtin", built);
@@ -679,18 +716,37 @@ public final class AdminBook {
             JsonObject j = new JsonObject();
             j.addProperty("name", s.name());
             j.addProperty("by", s.by());
-            j.addProperty("mine", s.byId().equals(p.getStringUUID()));
+            j.addProperty("mine", s.byId().equals(myId));
             j.addProperty("time", s.time());
             int n = 0;
             for (Map<String, JsonElement> m : s.bundle().values().values()) n += m.size();
             j.addProperty("count", n);
+            addRating(j, view, s.bundle());
             saved.add(j);
         }
         o.add("saved", saved);
-        AdminWorld w = AdminWorld.get(server);
-        o.addProperty("current", AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty()));
-        return new AdminBookStatePayload(AdminBookStatePayload.PRESETS, o.toString());
+        o.addProperty("current", current);
+        return o;
     }
+
+    /**
+     * a preset's danger rating as a world with nothing set would have it once applied (so the same preset always reads
+     * the same), and whether it changes anything that only takes full effect in a new world
+     */
+    private static void addRating(JsonObject j, AdminView view, AdminTransfer.Bundle b) {
+        try {
+            AdminView blank = AdminDraft.blankLike(view);
+            AdminTransfer.Plan pl = AdminTransfer.plan(blank, b);
+            AdminInsight.Danger d = AdminTransfer.dangerBeforeAfter(blank, pl)[1];
+            j.addProperty("level", d.level());
+            j.addProperty("label", d.label());
+            j.addProperty("creation", !pl.creationOnly().isEmpty());
+            j.addProperty("changes", pl.changes().size());
+        } catch (RuntimeException e) {
+            GiantsGuideMod.LOG.debug("no rating for preset {}: {}", b.name(), e.toString());
+        }
+    }
+
 
     /** (for the tests) a value as the book sends it */
     public static String setJson(String giant, String id, @Nullable JsonElement value, String text, boolean allWorlds) {

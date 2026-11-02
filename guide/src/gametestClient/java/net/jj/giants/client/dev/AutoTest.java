@@ -51,6 +51,8 @@ public final class AutoTest implements ClientModInitializer {
     private static List<String> script;
     private static int line, wait, joined;
     private static boolean asked;
+    /** (Part 3) "menu": the script starts at the title screen (no world made for it) until "inworld" */
+    private static boolean menu, toWorld;
 
     @Override
     public void onInitializeClient() {
@@ -64,11 +66,26 @@ public final class AutoTest implements ClientModInitializer {
             GiantsGuideMod.LOG.error("autotest: cannot read {}", f, e);
             return;
         }
+        menu = script.stream().anyMatch(l -> l.trim().equals("menu"));
+        asked = menu;
         ClientTickEvents.END_CLIENT_TICK.register(AutoTest::tick);
     }
 
     private static void tick(Minecraft mc) {
         mc.options.pauseOnLostFocus = false;
+        if (menu && !toWorld) {
+            if (mc.screen instanceof AccessibilityOnboardingScreen) {
+                mc.setScreen(new TitleScreen());
+                return;
+            }
+            if (mc.screen == null) return;
+            if (wait > 0) {
+                wait--;
+                return;
+            }
+            runLines(mc);
+            return;
+        }
         if (mc.level == null) {
             if (mc.screen instanceof AccessibilityOnboardingScreen) {
                 mc.setScreen(new TitleScreen());
@@ -131,9 +148,79 @@ public final class AutoTest implements ClientModInitializer {
             wait--;
             return;
         }
+        runLines(mc);
+    }
+
+    /** the first button on the open screen whose words start so */
+    private static boolean press(Minecraft mc, String text) {
+        if (mc.screen == null) return false;
+        for (var c : mc.screen.children())
+            if (c instanceof net.minecraft.client.gui.components.AbstractButton b && b.visible
+                    && b.getMessage().getString().startsWith(text)) {
+                b.onPress();
+                return true;
+            }
+        return false;
+    }
+
+    private static void runLines(Minecraft mc) {
         while (line < script.size()) {
             String s = script.get(line++).trim();
-            if (s.isEmpty() || s.startsWith("#") || s.startsWith("join ")) continue;
+            if (s.isEmpty() || s.startsWith("#") || s.startsWith("join ") || s.equals("menu")) continue;
+            // (Part 3, menu scripts) the title screen's way into a new world
+            if (s.equals("inworld")) {
+                toWorld = true;
+                return;
+            }
+            if (s.equals("createworld")) {
+                net.minecraft.client.gui.screens.worldselection.CreateWorldScreen.openFresh(mc, mc.screen);
+                return;
+            }
+            if (s.startsWith("cwtab ")) {
+                if (mc.screen instanceof net.minecraft.client.gui.screens.worldselection.CreateWorldScreen cw) {
+                    try {
+                        java.lang.reflect.Field f = cw.getClass().getDeclaredField("tabNavigationBar");
+                        f.setAccessible(true);
+                        ((net.minecraft.client.gui.components.tabs.TabNavigationBar) f.get(cw))
+                                .selectTab(Integer.parseInt(s.substring(6).trim()), false);
+                    } catch (ReflectiveOperationException e) {
+                        GiantsGuideMod.LOG.warn("autotest: no tab bar: {}", e.toString());
+                    }
+                } else GiantsGuideMod.LOG.warn("autotest: not on Create World for {}", s);
+                continue;
+            }
+            if (s.startsWith("cwname ")) {
+                if (mc.screen instanceof net.minecraft.client.gui.screens.worldselection.CreateWorldScreen cw)
+                    cw.getUiState().setName(s.substring(7).trim());
+                continue;
+            }
+            if (s.startsWith("press ")) {
+                if (!press(mc, s.substring(6).trim()))
+                    GiantsGuideMod.LOG.warn("autotest: no button {} on {}", s.substring(6).trim(), mc.screen);
+                return;
+            }
+            if (s.startsWith("pick ")) {
+                if (!net.jj.giants.client.admin.CreationScreen.testPick(s.substring(5).trim()))
+                    GiantsGuideMod.LOG.warn("autotest: can't pick {}", s);
+                continue;
+            }
+            if (s.equals("edit")) {
+                if (!net.jj.giants.client.admin.CreationScreen.testEdit()) GiantsGuideMod.LOG.warn("autotest: no picker");
+                continue;
+            }
+            if (s.equals("back")) {
+                if (mc.screen != null) mc.screen.onClose();
+                continue;
+            }
+            // showpage PAGE [SCROLL] [SEARCH]: the open book (a draft's too) turned to that page
+            if (s.startsWith("showpage ")) {
+                String[] a = s.substring(9).trim().split(" +", 3);
+                AdminBookScreen.showAt(a[0], a.length > 1 ? Double.parseDouble(a[1]) : 0, a.length > 2 ? a[2] : "");
+                if (mc.screen != null) mc.screen.init(mc, mc.getWindow().getGuiScaledWidth(),
+                        mc.getWindow().getGuiScaledHeight());
+                continue;
+            }
+
             // chat /...: typed the way a player types it (on a real server: as that player, with their own rights)
             if (s.startsWith("chat /")) {
                 GiantsGuideMod.LOG.info("autotest chat: {}", s.substring(5));

@@ -45,7 +45,11 @@ public final class AdminServer {
         ResourceLocation early = ResourceLocation.fromNamespaceAndPath(GiantsGuideMod.ID, "admin_first");
         ServerWorldEvents.LOAD.addPhaseOrdering(early, Event.DEFAULT_PHASE);
         ServerWorldEvents.LOAD.register(early, (server, level) -> {
-            if (level.dimension() == Level.OVERWORLD) push(server, AdminWorld.get(level));
+            if (level.dimension() == Level.OVERWORLD) {
+                // (a brand-new world: the Create World choice or new_world.txt goes in first, Part 3)
+                AdminCreation.atLoad(server, level);
+                push(server, AdminWorld.get(level));
+            }
         });
         ServerLifecycleEvents.SERVER_STARTING.register(s -> AdminPresets.forget());
         // the settings sync file (config/jj_giants_admin/sync.txt) as the server defaults, when it changed (Part 2B)
@@ -162,11 +166,11 @@ public final class AdminServer {
      * @param announce what to tell the other operators online (empty: nothing changed)
      */
     public record Result(boolean ok, List<String> lines, List<String> announce) {
-        static Result fail(String line) {
+        public static Result fail(String line) {
             return new Result(false, List.of(line), List.of());
         }
 
-        static Result said(List<String> lines) {
+        public static Result said(List<String> lines) {
             return new Result(true, lines, List.of());
         }
     }
@@ -602,6 +606,9 @@ public final class AdminServer {
     public static String changeText(AdminWorld.Change c) {
         String g = giantWord(c.giant());
         if (c.id().equals("*")) return g + ": " + c.name() + " back to the defaults (" + c.old() + ")";
+        if (c.id().equals(AdminCreation.LOG_ID))
+            return c.name() + ": " + (c.old().isEmpty() ? "" : c.old() + " ") + "(" + c.now() + ")";
+
         if (c.id().startsWith("preset:") || c.id().startsWith("import") || c.id().equals("snapshot")
                 || c.id().equals("undo") || c.id().equals("sync"))
             return g + ": " + c.name() + " (" + c.now() + ")";

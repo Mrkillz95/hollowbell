@@ -385,6 +385,12 @@ public final class AdminInsight {
         for (int i = log.size() - 1; i >= 0; i--) {
             AdminWorld.Change c = log.get(i);
             if (c.undo().isEmpty()) continue;
+            // (Part 3) the world's settings from the Create World screen or new_world.txt: the preset chosen there
+            if (c.id().equals(AdminCreation.LOG_ID)) {
+                String name = c.old().isEmpty() ? "Custom" : c.old();
+                return after && !name.endsWith(", changed") ? name + ", changed" : name;
+            }
+
             if (c.id().startsWith("preset:") || c.id().equals("import") || c.id().equals("snapshot")) {
                 String name = c.id().equals("import") ? "Imported settings"
                         : c.id().equals("snapshot") ? "Restored snapshot"

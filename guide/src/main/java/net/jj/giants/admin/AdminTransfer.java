@@ -51,22 +51,54 @@ public final class AdminTransfer {
     public record Step(String giant, String id, String name, @Nullable JsonElement old, @Nullable JsonElement now,
             String oldText, String nowText) {}
 
-    // the built-in presets (Part 3 adds the rest: see ADMIN_BRIDGE.md)
+    // the built-in presets (Part 3 adds Close Quarters and Far Frontier; Part 4 the rest: see ADMIN_BRIDGE.md)
     private static final Map<String, String> BUILT_IN = new LinkedHashMap<>();
+
+    /** the giants a built-in preset names (every one the Guide knows, installed or not) */
+    private static final String[] EVERY_GIANT = {"pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow",
+        "wreckback", "swarmforge", "gloamwick"};
+
+    /** a preset that sets the same values for every giant ("replace": false: it changes only what it names) */
+    private static String forEveryGiant(String id, String name, String about, String values) {
+        StringBuilder g = new StringBuilder();
+        for (String k : EVERY_GIANT) g.append(g.length() == 0 ? "" : ",").append('"').append(k).append("\":")
+                .append(values);
+        return "{\"admin\":1,\"preset\":\"" + id + "\",\"name\":\"" + name + "\",\"about\":\"" + about
+                + "\",\"replace\":false,\"giants\":{" + g + "}}";
+    }
 
     static {
         BUILT_IN.put("classic", "{\"admin\":1,\"preset\":\"classic\",\"name\":\"Classic\",\"about\":\"Every giant as"
                 + " the server's config files have him: every setting this world changed goes back.\","
                 + "\"replace\":true}");
+        // Part 3: where the giants' grounds go (ADMIN_BRIDGE.md 18.9)
+        BUILT_IN.put("close_quarters", forEveryGiant("close_quarters", "Close Quarters",
+                "Every giant's ground begins 500 to 1,500 blocks from spawn, packed close together (smaller grounds,"
+                        + " 50 blocks apart). Best for a new world: land already made stays as it is.",
+                "{\"groundNearest\":500,\"groundFarthest\":1500,\"groundGap\":50,\"homeRadius\":500}"));
+        BUILT_IN.put("far_frontier", forEveryGiant("far_frontier", "Far Frontier",
+                "Every giant's ground is far out: it begins 5,000 to 20,000 blocks from spawn. Best for a new world:"
+                        + " land already made stays as it is.",
+                "{\"groundNearest\":5000,\"groundFarthest\":20000}"));
     }
 
     public static Set<String> presets() {
         return BUILT_IN.keySet();
     }
 
+    /** a built-in preset by its id or its name ("Far Frontier"); null if there's none */
+    public static @Nullable String builtInId(String idOrName) {
+        String t = idOrName.trim().toLowerCase(java.util.Locale.ROOT);
+        if (BUILT_IN.containsKey(t)) return t;
+        String asId = t.replace(' ', '_');
+        return BUILT_IN.containsKey(asId) ? asId : null;
+    }
+
     /** a built-in preset by its id, or a preset saved on this server by its name; null if there's none */
     public static @Nullable Bundle preset(String id) {
-        String json = BUILT_IN.get(id.toLowerCase(java.util.Locale.ROOT));
+        String b = builtInId(id);
+        String json = b == null ? null : BUILT_IN.get(b);
+
         if (json != null) return read(json);
         AdminPresets.Saved s = AdminPresets.find(id);
         return s == null ? null : s.bundle();
@@ -167,7 +199,12 @@ public final class AdminTransfer {
 
     /** what a bundle would change in this world, without changing anything */
     public static Plan plan(MinecraftServer server, Bundle b) {
-        AdminWorld w = AdminWorld.get(server);
+        return plan(AdminView.of(server), b);
+    }
+
+    /** the same for any view: a running world, or the Create World screen's draft (Part 3) */
+    public static Plan plan(AdminView view, Bundle b) {
+        AdminWorld w = view.world();
         List<Step> steps = new ArrayList<>();
         List<String> lines = new ArrayList<>(), skipped = new ArrayList<>(), creation = new ArrayList<>(),
                 locked = new ArrayList<>();
@@ -180,7 +217,7 @@ public final class AdminTransfer {
         // each giant here that speaks the protocol
         Set<String> seen = new LinkedHashSet<>();
         for (Giant g : AdminServer.giants()) {
-            AdminJson.Report r = AdminServer.report(server, g);
+            AdminJson.Report r = view.report(g);
             if (r == null) continue;
             seen.add(g.key());
             Map<String, JsonElement> want = b.values().getOrDefault(g.key(), Map.of());
@@ -191,7 +228,7 @@ public final class AdminTransfer {
         for (String g : b.values().keySet())
             if (!g.equals(AdminCatalog.ALL) && !seen.contains(g)) skipped.add(g + " (not here)");
         for (Step s : steps)
-            lines.add("  " + (s.giant().equals(AdminCatalog.ALL) ? "All giants" : nameFor(server, s.giant())) + " "
+            lines.add("  " + (s.giant().equals(AdminCatalog.ALL) ? "All giants" : nameFor(s.giant())) + " "
                     + s.name() + ": " + s.oldText() + " → " + s.nowText());
         String title = title(b);
         if (steps.isEmpty()) lines.add(0, title + " changes nothing in this world.");
@@ -215,7 +252,7 @@ public final class AdminTransfer {
         };
     }
 
-    private static String nameFor(MinecraftServer server, String key) {
+    private static String nameFor(String key) {
         Giant g = AdminServer.giant(key);
         return g == null ? key : AdminServer.nameOf(g);
     }
@@ -288,13 +325,17 @@ public final class AdminTransfer {
 
     /** the rating now, and as it would be with the plan applied */
     public static AdminInsight.Danger[] dangerBeforeAfter(MinecraftServer server, Plan p) {
-        AdminWorld w = AdminWorld.get(server);
+        return dangerBeforeAfter(AdminView.of(server), p);
+    }
+
+    public static AdminInsight.Danger[] dangerBeforeAfter(AdminView view, Plan p) {
+        AdminWorld w = view.world();
         Map<String, Map<String, JsonElement>> after = new HashMap<>();
         for (Step s : p.changes())
             after.computeIfAbsent(s.giant(), k -> new HashMap<>()).put(s.id(), s.now());
         List<AdminInsight.View> now = new ArrayList<>(), then = new ArrayList<>();
         for (Giant g : AdminServer.giants()) {
-            AdminJson.Report r = AdminServer.report(server, g);
+            AdminJson.Report r = view.report(g);
             if (r == null) continue;
             now.add(AdminInsight.view(r));
             Map<String, JsonElement> ch = after.getOrDefault(g.key(), Map.of());

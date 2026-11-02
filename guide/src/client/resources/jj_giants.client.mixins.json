@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.giants.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CreateWorldMoreTabMixin",
+    "CreateWorldScreenMixin",
+    "GridLayoutTabAccess"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

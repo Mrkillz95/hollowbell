@@ -17,6 +17,12 @@
       "net.jj.giants.client.GuideClient"
     ]
   },
+  "mixins": [
+    {
+      "config": "jj_giants.client.mixins.json",
+      "environment": "client"
+    }
+  ],
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.1",

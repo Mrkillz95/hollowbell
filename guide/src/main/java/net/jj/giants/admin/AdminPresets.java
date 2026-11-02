@@ -123,6 +123,11 @@ public final class AdminPresets {
 
     /** /giants admin savepreset, the book's "Save as preset": this world's settings now, under a name */
     public static AdminServer.Result save(MinecraftServer server, String who, String whoId, String name) {
+        return save(AdminWorld.get(server), who, whoId, name);
+    }
+
+    /** the same from any world's values (the Create World screen's draft too) */
+    public static AdminServer.Result save(AdminWorld w, String who, String whoId, String name) {
         String n = name == null ? "" : name.trim();
         if (!NAME.matcher(n).matches())
             return AdminServer.Result.fail("A preset's name is 1 to 32 letters, numbers, spaces, ' - or _.");
@@ -137,8 +142,8 @@ public final class AdminPresets {
                     + ").");
         if (old == null && all.size() >= MOST)
             return AdminServer.Result.fail("This server already keeps " + MOST + " presets. Delete one first.");
-        AdminWorld w = AdminWorld.get(server);
         Map<String, Map<String, JsonElement>> v = new LinkedHashMap<>();
+
         int count = 0;
         for (String g : w.giantsWithValues()) {
             v.put(g, w.values(g));
