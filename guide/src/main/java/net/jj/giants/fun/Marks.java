@@ -347,6 +347,7 @@ public final class Marks {
             List<String> r = AdminServer.call(server, g, AdminLive.ACT, o.toString());
             if (r == null || r.isEmpty() || !r.get(0).equals("ok")) said.add(r != null && r.size() > 1 ? r.get(1)
                     : AdminServer.nameOf(g) + ": his size couldn't be changed.");
+            else net.jj.giants.systems.Systems.resized(server, e.getStringUUID(), AdminSetting.plain(t.size));
         }
         FunWorld w = FunWorld.get(server);
         String id = e.getStringUUID();

@@ -173,6 +173,18 @@ public final class Systems {
      * A giant fell (the game's own death, or his own death ending: called from the Guide's Slayers catch). His remains,
      * what he swallowed, the win for whoever brought him down; his record is dropped.
      */
+    /**
+     * (1.13.0) an admin changed this giant's size (Live control's Size, a giant tag's size): Growth keeps it and grows
+     * on from there (ADMIN_BRIDGE.md 24.9)
+     */
+    public static void resized(MinecraftServer server, String id, String value) {
+        try {
+            Look.rebase(server, id, Double.parseDouble(value.trim()));
+        } catch (RuntimeException bad) {
+            // (not a number: his mod refused it anyway)
+        }
+    }
+
     public static void fell(LivingEntity e) {
         if (!(e.level() instanceof ServerLevel sl)) return;
         if (!fallen.add(e.getStringUUID())) return;

@@ -124,6 +124,8 @@ public final class AdminLive {
         if (r == null || r.isEmpty()) return AdminServer.Result.fail(name + ": his mod didn't answer.");
         String line = r.size() > 1 ? r.get(1) : "";
         if (!r.get(0).equals("ok")) return AdminServer.Result.fail(line.isEmpty() ? name + ": he can't." : line);
+        // (1.13.0) Growth keeps the size an admin gave him
+        if (a.equals("size")) net.jj.giants.systems.Systems.resized(server, id, value == null ? "" : value);
         String who = p.getGameProfile().getName();
         return new AdminServer.Result(true, List.of(line),
                 a.equals("tp") ? List.of() : List.of(who + " " + told(a, name) + " (Live control)."));

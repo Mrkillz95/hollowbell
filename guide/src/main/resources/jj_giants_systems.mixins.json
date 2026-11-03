@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "GriefMixin",
-    "PlayerDeathMixin"
+    "PlayerDeathMixin",
+    "GriefDropsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -713,4 +713,136 @@ public class SystemsGameTests implements FabricGameTest {
             done(h);
         });
     }
+
+    // (1.13.0) the integration decisions (ADMIN_BRIDGE.md 24.9)
+
+    /** while grief healing is on, what a giant breaks drops nothing (it grows back); off, it drops as always */
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p13_grief_drops", timeoutTicks = 200)
+    public void whileGriefHealsWhatAGiantBreaksDropsNothing(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = FunGameTests.spot(h, 31);
+        ServerLevel l = h.getLevel();
+        BlockPos a = at.offset(3, 0, 3), b = at.offset(12, 0, 3), c = at.offset(24, 0, 3), d = at.offset(36, 0, 3);
+        h.runAfterDelay(2, () -> {
+            sweep(h);
+            for (BlockPos x : List.of(a, b, c, d)) l.setBlock(x, Blocks.OAK_PLANKS.defaultBlockState(), 3);
+            l.setBlock(a.above(), Blocks.TORCH.defaultBlockState(), 3);
+            set(h, s, "griefHeal", "slow");
+            Grief.tick(s);
+            Stats.current = "fakesys";
+            try {
+                // broken (and the torch on it popped off), and blown up
+                l.destroyBlock(a, true);
+                l.explode(null, b.getX() + 0.5, b.getY() + 0.5, b.getZ() + 0.5, 2.5f,
+                        net.minecraft.world.level.Level.ExplosionInteraction.BLOCK);
+            } finally {
+                Stats.current = null;
+            }
+            h.assertTrue(l.getBlockState(a).isAir() && l.getBlockState(b).isAir(), "broken");
+            h.assertTrue(l.getEntitiesOfClass(ItemEntity.class, new AABB(a).inflate(6)).isEmpty()
+                    && l.getEntitiesOfClass(ItemEntity.class, new AABB(b).inflate(6)).isEmpty(),
+                    "nothing dropped while grief heals");
+            h.assertTrue(Grief.waiting() >= 3, "they wait to grow back: " + Grief.waiting());
+            // broken by anybody else: drops as always
+            l.destroyBlock(c, true);
+            h.assertTrue(!l.getEntitiesOfClass(ItemEntity.class, new AABB(c).inflate(2)).isEmpty(),
+                    "a player's break still drops");
+            // grief healing off: a giant's break drops as always
+            set(h, s, "griefHeal", "off");
+            Grief.tick(s);
+            Stats.current = "fakesys";
+            try {
+                l.destroyBlock(d, true);
+            } finally {
+                Stats.current = null;
+            }
+            h.assertTrue(!l.getEntitiesOfClass(ItemEntity.class, new AABB(d).inflate(2)).isEmpty(), "off: it drops");
+            for (ItemEntity it : l.getEntitiesOfClass(ItemEntity.class, new AABB(at).inflate(60))) it.discard();
+            FunGameTests.unspot(h, at);
+            done(h);
+        });
+    }
+
+    /** an admin's resize (Live control's Size) sticks under Growth, which grows him on from there */
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p13_growth_size", timeoutTicks = 200)
+    public void anAdminsSizeSticksAndGrowthGoesOnFromIt(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = FunGameTests.spot(h, 32);
+        IronGolem g = golem(h, at, 0, 0);
+        ServerPlayer op = PlayersGameTests.join(h, "resizer", false);
+        h.runAfterDelay(3, () -> {
+            sweep(h);
+            set(h, s, "growth", "on");
+            set(h, s, "growthPerDay", "0");
+            set(h, s, "growthPerWin", "0.5");
+            set(h, s, "growthMost", "3");
+            Look.lookForTests(s);
+            SystemsData.G rec = SystemsData.get(s).s.giants.get(g.getStringUUID());
+            h.assertTrue(rec != null && rec.start == 1, "followed from size 1");
+            rec.wins = 1;
+            for (int i = 0; i < 3; i++) Look.lookForTests(s);
+            h.assertTrue(GiantsBridge.get(g, "size", "1").equals("1.5"), "grown to 1.5");
+            // the admin makes him 0.8: it stays 0.8
+            AdminServer.Result r = net.jj.giants.admin.AdminLive.act(s, op, "fakesys", g.getStringUUID(), "size", "0.8");
+            h.assertTrue(r.ok(), "resized: " + r.lines());
+            for (int i = 0; i < 6; i++) Look.lookForTests(s);
+            h.assertTrue(GiantsBridge.get(g, "size", "").equals("0.8"), "the admin's size sticks: "
+                    + GiantsBridge.get(g, "size", ""));
+            h.assertTrue(rec.start == 0.8, "his new start: " + rec.start);
+            // and he grows on from it
+            rec.wins++;
+            for (int i = 0; i < 3; i++) Look.lookForTests(s);
+            h.assertTrue(GiantsBridge.get(g, "size", "").equals("1.2"), "grown on from 0.8: "
+                    + GiantsBridge.get(g, "size", ""));
+            // a Titan resized keeps the admin's size too
+            set(h, s, "growthTitan", "1");
+            rec.lastFight = s.overworld().getGameTime() - 25000;
+            rec.born = rec.lastFight;
+            rec.growFrom = 0;
+            for (int i = 0; i < 3; i++) Look.lookForTests(s);
+            h.assertTrue(rec.titan && GiantsBridge.get(g, "size", "").equals("2.4"), "a Titan: x3 of 0.8: "
+                    + GiantsBridge.get(g, "size", ""));
+            r = net.jj.giants.admin.AdminLive.act(s, op, "fakesys", g.getStringUUID(), "size", "1");
+            for (int i = 0; i < 3; i++) Look.lookForTests(s);
+            h.assertTrue(r.ok() && GiantsBridge.get(g, "size", "").equals("1"), "the Titan stays at 1: "
+                    + GiantsBridge.get(g, "size", ""));
+            done(h, op);
+        });
+    }
+
+    /**
+     * Herds with Follow me (JJ's answers) and giants in each other's grounds (answers 2): a giant following his owner
+     * is never pulled back to the herd; a leader who follows his owner (or came in another giant's ground) leads the
+     * herd there, the wild ones walk to him
+     */
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p13_herd_follow", timeoutTicks = 200)
+    public void aLeaderOnTheMoveLeadsTheHerdAndAFollowerIsntPulled(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = FunGameTests.spot(h, 33);
+        IronGolem lead = golem(h, at, 0, 0), wild = golem(h, at, 10, 0), mine = golem(h, at, 5, 5);
+        lead.addTag(GiantsBridge.TAG + ".own");
+        ServerPlayer owner = PlayersGameTests.join(h, "herdowner", false);
+        ServerPlayer other = PlayersGameTests.join(h, "follower", false);
+        h.runAfterDelay(3, () -> {
+            sweep(h);
+            set(h, s, "herd", "on");
+            set(h, s, "herdRange", "32");
+            // the leader is owned and follows his owner 55 blocks off; one of the herd follows another player
+            GiantsBridge.put(lead, "owner", owner.getStringUUID());
+            GiantsBridge.put(mine, "owner", other.getStringUUID());
+            lead.teleportTo(at.getX() + 55.5, at.getY(), at.getZ() + 0.5);
+            Look.lookForTests(s);
+            String goes = GiantsBridge.get(wild, "goes", "");
+            h.assertTrue(!goes.isEmpty(), "the wild one walks to where the leader went: " + GiantsBridge.calls);
+            String[] xz = goes.split(",");
+            double dx = Double.parseDouble(xz[0]) - lead.getX(), dz = Double.parseDouble(xz[1]) - lead.getZ();
+            h.assertTrue(Math.hypot(dx, dz) <= 26, "near the leader: " + goes);
+            h.assertTrue(GiantsBridge.get(mine, "goes", "").isEmpty(), "the one following his own owner isn't pulled");
+            h.assertTrue(GiantsBridge.get(lead, "goes", "").isEmpty(), "the leader goes his own way");
+            done(h, owner, other);
+        });
+    }
 }
