@@ -78,6 +78,9 @@ public final class GiantsBridge {
         // (Part 6) the admin book's respawn timers: when the world's own one comes back, and setting that (GiantsRespawn)
         if (action.equals("respawn")) return GiantsRespawn.describe(server, arg);
         if (action.equals("respawnact")) return GiantsRespawn.act(server, arg);
+        // (Part 7, ADMIN_BRIDGE.md 23.2) the Guide's fun and world tools
+        if (action.equals("fun")) return GiantsFun.describe(server, arg);
+        if (action.equals("funact")) return GiantsFun.act(server, arg);
         // the Giants Guide's Controls tab: the triple crouch to sit, on or off (on your own game, server null)
         if ("controlget".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlGet(arg);
         if ("controlset".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlSet(arg);
@@ -467,8 +470,18 @@ public final class GiantsBridge {
         ServerPlayer p = null;
         int radius = 64, depth = Painter.DEPTH;
         boolean full = true, sawPlayer = false;
+        Integer atX = null, atZ = null;
         for (String x : w) {
-            if (x.equalsIgnoreCase("biome")) full = false;
+            // (Part 7) "at=x,z": the circle's middle in place of the player's feet (the Guide's biome brush)
+            if (x.toLowerCase(Locale.ROOT).startsWith("at=")) {
+                try {
+                    String[] xz = x.substring(3).split(",");
+                    atX = Integer.parseInt(xz[0].trim());
+                    atZ = Integer.parseInt(xz[1].trim());
+                } catch (RuntimeException e) {
+                    atX = atZ = null;
+                }
+            } else if (x.equalsIgnoreCase("biome")) full = false;
             else if (x.equalsIgnoreCase("full")) full = true;
             else if (x.startsWith("depth=")) {
                 try {
@@ -491,9 +504,9 @@ public final class GiantsBridge {
             return;
         }
         depth = Mth.clamp(depth, Painter.MIN_DEPTH, Painter.MAX_DEPTH);
-        int n = Painter.start(p, radius, full, depth);
+        int n = atX == null ? Painter.start(p, radius, full, depth) : Painter.start(p, radius, full, depth, atX, atZ);
         out.add(WHO + "painting the Bell Hollows " + Mth.clamp(radius, 16, 512) + " blocks round "
-                + p.getGameProfile().getName()
+                + (atX == null ? p.getGameProfile().getName() : atX + " " + atZ)
                 + (full ? " (land and biome, " + depth + " blocks deep)" : " (biome only)") + ", " + n
                 + " chunks. It can't be undone.");
     }

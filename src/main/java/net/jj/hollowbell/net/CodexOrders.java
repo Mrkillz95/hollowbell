@@ -212,7 +212,8 @@ public final class CodexOrders {
         if (which <= 0 || which >= Moves.NAMES.length) return;
         // (1.11.0, ADMIN_BRIDGE 20.17) bookOrders noattacks: every move pressed on his crown is an attack (even grab
         // and harvest: his strands squeeze what they hold), so each is refused here, on the server, like the book's
-        if (!net.jj.hollowbell.GiantsPlayers.attackOrders()) {
+        // (Part 7) an admin playing as him isn't held to the players' switch
+        if (!net.jj.hollowbell.GiantsPlayers.attackOrders() && !net.jj.hollowbell.GiantsFun.playing(p)) {
             net.jj.hollowbell.GiantsPlayers.say(p, "attacks_off");
             return;
         }

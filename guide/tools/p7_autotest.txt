@@ -1,0 +1,162 @@
+# Part 7 pictures (ADMIN_BRIDGE.md 23): the admin book's Fun and World tools pages and their questions, then the
+# tools in action on a flat world: a named giant's boss bar, watching, playing as a giant, an arena, a staged fight in
+# it, a den, a painted biome, a giant settled in the sky.
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd tp @s 0 -60 0 0 10
+wait 20
+# giants for the pages: a named one and a tagged one
+cmd wreckback summon calm 0.08
+wait 10
+cmd tp @s 30 -60 0 0 10
+cmd cerberus summon calm 0.08
+wait 40
+cmd giants admin name wreckback Grukk
+cmd giants admin title wreckback Terror of the Bay
+cmd giants admin namecolour wreckback gold
+cmd giants admin tag give "Event boss" cerberus
+cmd giants admin tag make "Pocket menace"
+cmd giants admin tag set "Pocket menace" damage 2.5
+cmd giants admin tag set "Pocket menace" title Small but Angry
+wait 20
+# the Fun page, top to bottom
+adminbook fun 0
+wait 60
+mouse 2 2
+wait 25
+shot p7_fun_0
+adminbook fun 260
+wait 30
+mouse 2 2
+wait 25
+shot p7_fun_1
+adminbook fun 520
+wait 30
+mouse 2 2
+wait 25
+shot p7_fun_2
+# its questions
+adminbook fun 0
+wait 40
+funask name
+wait 15
+mouse 2 2
+wait 10
+shot p7_fun_name
+close
+adminbook fun 0
+wait 40
+funask loot
+wait 15
+mouse 2 2
+wait 10
+shot p7_fun_loot
+close
+adminbook fun 0
+wait 40
+funask tagedit
+wait 15
+mouse 2 2
+wait 10
+shot p7_fun_tagedit
+close
+# the World tools page
+adminbook world 0
+wait 60
+mouse 2 2
+wait 25
+shot p7_world_0
+adminbook world 300
+wait 30
+mouse 2 2
+wait 25
+shot p7_world_1
+close
+# GUI scale 3 (a narrow book)
+guiscale 3
+adminbook fun 0
+wait 50
+mouse 2 2
+wait 20
+shot p7_fun_scale3
+close
+guiscale 2
+wait 10
+# the named one's boss bar
+cmd tp @s 0 -58 -12 0 10
+wait 60
+shot p7_bar_name
+# watching him (a hidden camera that keeps up with him)
+cmd giants admin spectate wreckback
+wait 80
+shot p7_watch
+cmd giants admin spectate stop
+wait 30
+# playing as the Cerberus
+cmd giants admin playas cerberus
+wait 100
+shot p7_playas
+cmd giants admin playas stop
+wait 40
+# an arena, then a fight staged in it
+cmd tp @s 300 -60 0 0 10
+wait 60
+cmd giants admin build arena small
+wait 500
+cmd tp @s 300 -20 -70 0 30
+wait 80
+shot p7_arena
+cmd tp @s 300 -60 0 0 0
+wait 10
+cmd giants admin fight pitchgut cerberus here 0.12
+wait 60
+cmd tp @s 300 -35 -55 0 25
+wait 120
+shot p7_fight
+wait 160
+shot p7_fight2
+# a den for the Gloamwick
+cmd tp @s 600 -60 0 0 10
+wait 60
+cmd giants admin build den gloamwick 0.15
+wait 400
+cmd tp @s 600 -40 -36 0 30
+wait 80
+shot p7_den_gloamwick
+# a den for the Cerberus
+cmd tp @s 800 -60 0 0 10
+wait 60
+cmd giants admin build den cerberus 0.12
+wait 400
+cmd tp @s 800 -40 -36 0 30
+wait 80
+shot p7_den_cerberus
+# a painted biome (the Lantern Willow's), seen from above
+cmd tp @s 1000 -60 0 0 10
+wait 60
+cmd giants admin paint lanternwillow 40 full
+wait 300
+cmd tp @s 1000 -25 -70 0 25
+wait 80
+shot p7_paint
+# a Hollowbell settled in the sky
+cmd tp @s 1200 -60 0 0 10
+wait 40
+cmd hollowbell summon calm 0.1
+wait 60
+cmd giants admin settle hollowbell sky
+wait 60
+cmd gamemode spectator
+cmd tp @s 1200 -5 -40 0 -10
+wait 60
+shot p7_settle_sky
+cmd gamemode creative
+quit

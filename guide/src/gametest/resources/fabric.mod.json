@@ -20,7 +20,9 @@
       "net.jj.giants.test.PlayersGameTests",
       "net.jj.giants.test.PlayersGiantsGameTests",
       "net.jj.giants.test.ToolsGameTests",
-      "net.jj.giants.test.ToolsGiantsGameTests"
+      "net.jj.giants.test.ToolsGiantsGameTests",
+      "net.jj.giants.test.FunGameTests",
+      "net.jj.giants.test.FunGiantsGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"

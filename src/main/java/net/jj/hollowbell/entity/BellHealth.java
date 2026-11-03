@@ -526,6 +526,8 @@ final class BellHealth {
                     hb.caught = null;
                     // (Part 4) times the world's loot setting
                     loot = net.jj.hollowbell.GiantsBehave.loot(loot, hb.getRandom());
+                    // (Part 7) an admin's loot in place of his own: none of his (no cache either)
+                    if (net.jj.hollowbell.GiantsFun.noDrops(hb)) loot = List.of();
                     if (!loot.isEmpty()) {
                         boolean grief =
                                 BellConfig.V.griefing && sl.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);

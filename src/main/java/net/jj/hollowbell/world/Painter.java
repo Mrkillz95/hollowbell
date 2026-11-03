@@ -78,6 +78,11 @@ public final class Painter {
         return startAt(p.serverLevel(), p.getUUID(), p.getX(), p.getZ(), radius, full, depth);
     }
 
+    /** (Part 7) the same round a spot of the player's world (the Guide's biome brush): x, z the circle's middle */
+    public static int start(ServerPlayer p, int radius, boolean full, int depth, int cx, int cz) {
+        return startAt(p.serverLevel(), p.getUUID(), cx + 0.5, cz + 0.5, radius, full, depth);
+    }
+
     /** starts painting round a spot; who (may be null) is told how it goes */
     public static int startAt(ServerLevel level, @Nullable UUID who, double atX, double atZ, int radius, boolean full) {
         return startAt(level, who, atX, atZ, radius, full, DEPTH);

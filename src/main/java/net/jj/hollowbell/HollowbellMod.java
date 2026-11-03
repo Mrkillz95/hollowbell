@@ -186,6 +186,8 @@ public class HollowbellMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(BookRule::serverTick);
         // (Part 5) standing on him turned off: set down beside him
         ServerTickEvents.END_SERVER_TICK.register(GiantsPlayers::tick);
+        // (Part 7) who is playing as him
+        ServerTickEvents.END_SERVER_TICK.register(GiantsFun::tick);
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BookRule.leaving(handler.player));
         ServerTickEvents.END_SERVER_TICK.register(Away::tick);
         ServerTickEvents.END_SERVER_TICK.register(WorldOne::serverTick);
@@ -234,6 +236,7 @@ public class HollowbellMod implements ModInitializer {
             // the world's admin settings go with it: the next world starts from the config file
             GiantsAdmin.clear();
             GiantsPlayers.forget();
+            GiantsFun.forget();
             net.jj.hollowbell.world.MyGiant.forget();
             CodexOrders.forgetEverything();
             NoWait.forget();

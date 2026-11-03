@@ -68,7 +68,8 @@ public class AdminBookScreen extends Screen {
 
     private static boolean ownPage(String key) {
         return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES)
-                || key.equals(PLAYERS) || key.equals(TOOLS);
+                || key.equals(PLAYERS) || key.equals(TOOLS)
+                || key.equals(FUN) || key.equals(WORLD);
     }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
@@ -310,7 +311,7 @@ public class AdminBookScreen extends Screen {
         if (AdminBookClient.role().equals("moderator")) return List.of(LIVE);
         if (!AdminBookClient.admin()) return List.of(HOME);
         List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS)
-                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS));
+                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS, FUN, WORLD));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -352,9 +353,11 @@ public class AdminBookScreen extends Screen {
         loadTabs();
         if (creating()) {
             allWorlds = false;
-            if (pageKey.equals(LIVE) || pageKey.equals(CHANGES) || pageKey.equals(TOOLS)) pageKey = HOME;
+            if (pageKey.equals(LIVE) || pageKey.equals(CHANGES) || pageKey.equals(TOOLS) || pageKey.equals(FUN)
+                    || pageKey.equals(WORLD))
+                pageKey = HOME;
         }
-        if (pageKey.equals(LIVE)) AdminBookClient.watchLive(true);
+        if (livePage(pageKey)) AdminBookClient.watchLive(true);
         if (pageKey.equals(TOOLS)) AdminBookClient.watchTools(true);
         seenVersion = AdminBookClient.version();
         seenLive = AdminBookClient.liveVersion();
@@ -1257,6 +1260,8 @@ public class AdminBookScreen extends Screen {
         else if (pageKey.equals(CHANGES)) changeRows();
         else if (pageKey.equals(PLAYERS)) playersRows();
         else if (pageKey.equals(TOOLS)) toolsRows();
+        else if (pageKey.equals(FUN)) funRows();
+        else if (pageKey.equals(WORLD)) worldRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1274,7 +1279,7 @@ public class AdminBookScreen extends Screen {
         if (searching) return;
         Component label;
         if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS)
-                || pageKey.equals(TOOLS))
+                || pageKey.equals(TOOLS) || pageKey.equals(FUN) || pageKey.equals(WORLD))
             return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
@@ -1742,7 +1747,7 @@ public class AdminBookScreen extends Screen {
     private void go(String key) {
         if (key.equals(pageKey) && keptQuery.isBlank()) return;
         // (the server sends Live control once a second only while it is looked at)
-        if (key.equals(LIVE) != pageKey.equals(LIVE)) AdminBookClient.watchLive(key.equals(LIVE));
+        if (livePage(key) != livePage(pageKey)) AdminBookClient.watchLive(livePage(key));
         // (Part 6) the Server tools page comes every two seconds only while it is looked at
         if (key.equals(TOOLS) != pageKey.equals(TOOLS)) AdminBookClient.watchTools(key.equals(TOOLS));
         pageKey = key;
@@ -1831,7 +1836,7 @@ public class AdminBookScreen extends Screen {
         // the Live control page, once a second while it is open (not while something is held or asked)
         if (AdminBookClient.liveVersion() != seenLive && !mouseDown && !typing()) {
             seenLive = AdminBookClient.liveVersion();
-            if (pageKey.equals(LIVE) && keptQuery.isBlank()) rebuild();
+            if (livePage(pageKey) && keptQuery.isBlank()) rebuild();
         }
         // a preview from the server (a preset, an import, a snapshot): asked about over the page
         if (AdminBookClient.previewVersion() != seenPreview) {
@@ -1867,6 +1872,7 @@ public class AdminBookScreen extends Screen {
             case CHANGES -> AdminBookClient.changes() != null;
             case PLAYERS -> AdminBookClient.players() != null && AdminBookClient.page(AdminCatalog.ALL) != null;
             case TOOLS -> AdminBookClient.tools() != null;
+            case FUN, WORLD -> AdminBookClient.fun() != null && AdminBookClient.live() != null;
             default -> AdminBookClient.home() != null
                     && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
         };
@@ -2134,6 +2140,10 @@ public class AdminBookScreen extends Screen {
             title = tt("name", "Server tools");
             sub = tt("sub", "Pause, events, schedules, areas, the map, stats, alerts and respawn timers.");
             pic = "tools";
+        } else if (pageKey.equals(FUN) || pageKey.equals(WORLD)) {
+            title = tr(pageKey);
+            sub = tr(pageKey + ".sub");
+            pic = pageKey;
         } else {
             title = Component.literal(giantName(pageKey));
             AdminBookClient.Page p = AdminBookClient.page(pageKey);
@@ -2368,7 +2378,7 @@ public class AdminBookScreen extends Screen {
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
         if (modal instanceof SizeAsk sa && sa.sliding) return sa.slider.mouseDragged(mx, my, button, dx, dy);
-        if (modal != null) return true;
+        if (modal != null) return modal.dragged(mx, my, button, dx, dy) || true;
         if (dragging) {
             dragTo(my);
             return true;
@@ -2384,7 +2394,10 @@ public class AdminBookScreen extends Screen {
             sa.sliding = false;
             sa.slider.onRelease(mx, my);
         }
-        if (modal != null) return true;
+        if (modal != null) {
+            modal.released(mx, my);
+            return true;
+        }
         return super.mouseReleased(mx, my, button);
     }
 
@@ -2406,6 +2419,13 @@ public class AdminBookScreen extends Screen {
             return true;
         }
         return super.mouseScrolled(mx, my, sx, sy);
+    }
+
+    @Override
+    public boolean charTyped(char c, int mods) {
+        // (Part 7) a question with boxes to type in
+        if (modal != null) return modal.charTyped(c, mods);
+        return super.charTyped(c, mods);
     }
 
     @Override
@@ -2898,12 +2918,18 @@ public class AdminBookScreen extends Screen {
         final Component main, sub;
         final int mainColour;
         final List<FormattedCharSequence> tip;
+        /** (Part 7) the grey line wrapped onto as many lines as it needs instead of cut off */
+        final @Nullable List<FormattedCharSequence> subLines;
 
         LineRow(Component main, int mainColour, Component sub, List<Object[]> buttons) {
+            this(main, mainColour, sub, buttons, false);
+        }
+
+        LineRow(Component main, int mainColour, Component sub, List<Object[]> buttons, boolean wrap) {
             this.main = main;
             this.sub = sub;
             this.mainColour = mainColour;
-            h = sub.getString().isEmpty() ? 18 : 26;
+            List<Button> bts = new ArrayList<>();
             int dx = 0;
             for (int i = buttons.size() - 1; i >= 0; i--) {
                 Object[] b = buttons.get(i);
@@ -2913,10 +2939,17 @@ public class AdminBookScreen extends Screen {
                         .build();
                 if (b.length > 2 && b[2] != null) bt.setTooltip(Tooltip.create((Component) b[2]));
                 if (b.length > 3) bt.active = (boolean) b[3];
-                add(bt, dx, (h - 16) / 2, true);
+                bts.add(bt);
                 dx += bt.getWidth() + 3;
             }
             textW = lw - dx - 6;
+            subLines = wrap && !sub.getString().isEmpty() ? font.split(sub, Math.max(40, textW)) : null;
+            h = sub.getString().isEmpty() ? 18 : subLines != null ? 16 + 10 * subLines.size() : 26;
+            int at = 0;
+            for (Button bt : bts) {
+                add(bt, at, (h - 16) / 2, true);
+                at += bt.getWidth() + 3;
+            }
             List<FormattedCharSequence> t = new ArrayList<>(font.split(main, 280));
             if (!sub.getString().isEmpty()) t.addAll(font.split(sub.copy().withStyle(ChatFormatting.GRAY), 280));
             tip = t;
@@ -2928,9 +2961,13 @@ public class AdminBookScreen extends Screen {
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
             String m = cut(main.getString(), textW);
             g.drawString(font, m, x, y + (h == 18 ? 5 : 3), mainColour, false);
-            if (!sub.getString().isEmpty()) g.drawString(font, cut(sub.getString(), textW), x, y + 14, GREY, false);
+            if (subLines != null) {
+                for (int i = 0; i < subLines.size(); i++)
+                    g.drawString(font, subLines.get(i), x, y + 14 + 10 * i, GREY, false);
+            } else if (!sub.getString().isEmpty()) g.drawString(font, cut(sub.getString(), textW), x, y + 14, GREY,
+                    false);
             AdminStyle.dots(g, x, y + h - 1, w);
-            boolean cutOff = !m.equals(main.getString()) || font.width(sub) > textW;
+            boolean cutOff = !m.equals(main.getString()) || (subLines == null && font.width(sub) > textW);
             if (cutOff && mx >= x && mx < x + textW && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
                 setTooltipForNextRenderPass(tip);
         }
@@ -4554,6 +4591,17 @@ public class AdminBookScreen extends Screen {
             return true;
         }
 
+        /** (Part 7) typing, dragging a slider, letting go */
+        boolean charTyped(char c, int mods) {
+            return true;
+        }
+
+        boolean dragged(double mx, double my, int button, double dx, double dy) {
+            return false;
+        }
+
+        void released(double mx, double my) {}
+
         /** the wheel over a long body */
         void scrolled(double sy) {
             bodyScroll -= (int) Math.signum(sy) * 3;
@@ -4659,6 +4707,950 @@ public class AdminBookScreen extends Screen {
                 setup();
             }
             return true;
+        }
+    }
+
+    // (Part 7, ADMIN_BRIDGE.md 23.4) the Fun and World tools pages
+
+    public static final String FUN = "fun", WORLD = "world";
+
+    /** pages that show the giants from Live control (the server sends it once a second while one is open) */
+    private static boolean livePage(String key) {
+        return key.equals(LIVE) || key.equals(FUN) || key.equals(WORLD);
+    }
+
+    /** (the picture-taking) a Fun page question open: "name" or "loot" (the first giant's), "tagedit" (the first tag) */
+    public static boolean testFunAsk(String what) {
+        if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b)) return false;
+        if (what.equals("tagedit")) {
+            List<JsonObject> tags = objects(AdminBookClient.fun(), "tags");
+            if (tags.isEmpty()) return false;
+            b.openTagEdit(tags.get(0));
+            return true;
+        }
+        List<JsonObject[]> gs = b.funGiants(true);
+        if (gs.isEmpty()) return false;
+        FunRow r = b.new FunRow(gs.get(0)[0], gs.get(0)[1]);
+        for (Placed p : r.ws) b.removeWidget(p.w());
+        r.press(what);
+        return true;
+    }
+
+    /** what the fight pickers, the build and mixing have picked (kept while the game runs) */
+    private static String fightA = "", fightB = "", denKind = "", settleId = "", settleWhere = "here";
+    private static double fightSizeA = 0.5, fightSizeB = 0.5, denSize = 0.5;
+    private static boolean fightLook;
+    private static String arenaSize = "medium";
+
+    /** each giant from Live control: {kind, row}, standing ones first */
+    private List<JsonObject[]> funGiants(boolean standingOnly) {
+        List<JsonObject[]> out = new ArrayList<>();
+        for (JsonObject k : objects(AdminBookClient.live(), "giants")) {
+            if (!bool(k, "speaks")) continue;
+            List<JsonObject> rs = objects(k, "rows");
+            for (int i = 0; i < rs.size(); i++) {
+                JsonObject r = rs.get(i).deepCopy();
+                if (standingOnly && !str(r, "state").equals("here")) continue;
+                r.addProperty("label", !str(r, "name").isEmpty() ? str(r, "name")
+                        : str(k, "name") + (rs.size() > 1 ? " " + (i + 1) : ""));
+                out.add(new JsonObject[] {k, r});
+            }
+        }
+        return out;
+    }
+
+    private @Nullable JsonObject funMark(String id) {
+        JsonObject f = AdminBookClient.fun();
+        return f != null && f.get("marks") instanceof JsonObject m && m.get(id) instanceof JsonObject j ? j : null;
+    }
+
+    private List<String> funDoes(String kind) {
+        for (JsonObject k : objects(AdminBookClient.fun(), "kinds")) if (str(k, "key").equals(kind)) return strings(k,
+                "does");
+        return List.of();
+    }
+
+    private List<String> funPlaces(String kind) {
+        JsonObject f = AdminBookClient.fun();
+        return f != null && f.get("places") instanceof JsonObject p ? strings(p, kind) : List.of();
+    }
+
+    private void funRequest(String what, JsonObject o) {
+        o.addProperty("do", what);
+        if (AdminBookClient.request(o)) say(tr("sent"), GREY);
+        else say(tr("no_server"), WARN);
+    }
+
+    private static JsonObject giantJson(String kind, String id) {
+        JsonObject o = new JsonObject();
+        o.addProperty("giant", kind);
+        o.addProperty("id", id);
+        return o;
+    }
+
+    /** the Fun page: you, each giant, a fight, the tags */
+    private void funRows() {
+        JsonObject f = AdminBookClient.fun();
+        if (f == null || AdminBookClient.live() == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        rows.add(new Note(tr("fun.note"), GREY));
+        // you: watching or playing
+        JsonObject me = f.get("me") instanceof JsonObject m ? m : new JsonObject();
+        if (me.get("watching") instanceof JsonObject w || me.get("playing") instanceof JsonObject) {
+            rows.add(new Head(tr("fun.you"), null, null).pic("watch"));
+            if (me.get("watching") instanceof JsonObject w)
+                rows.add(new LineRow(tr("fun.you.watching", str(w, "label")), KEY,
+                        tr(str(w, "mode").equals("eyes") ? "fun.you.eyes" : "fun.you.free"),
+                        List.<Object[]>of(new Object[] {tr("fun.watch.stop"), (Runnable) () -> funRequest(
+                                "spectatestop", new JsonObject()), tr("fun.watch.stop.tip")}), true));
+            if (me.get("playing") instanceof JsonObject pl)
+                rows.add(new LineRow(tr("fun.you.playing", str(pl, "label")), KEY, tr("fun.you.playing.sub"),
+                        List.<Object[]>of(new Object[] {tr("fun.play.stop"), (Runnable) () -> funRequest(
+                                "playasstop", new JsonObject()), tr("fun.play.stop.tip")}), true));
+        }
+        // each giant
+        List<JsonObject[]> all = funGiants(false);
+        Head each = new Head(tr("fun.each"), tr("fun.each.note"), null).folding(FUN + "/each", "live", all.size());
+        rows.add(each);
+        if (!each.shut()) {
+            if (all.isEmpty()) rows.add(new Note(tr("live.empty"), GREY));
+            for (JsonObject[] g : all) rows.add(new FunRow(g[0], g[1]));
+        }
+        // stage a fight
+        Head fight = new Head(tr("fun.fight"), tr("fun.fight.note"), null).folding(FUN + "/fight", "fight", -1);
+        rows.add(fight);
+        if (!fight.shut()) fightRows();
+        // giant tags
+        List<JsonObject> tags = objects(f, "tags");
+        Head th = new Head(tr("fun.tags"), tr("fun.tags.note"), null).folding(FUN + "/tags", "tag", tags.size());
+        rows.add(th);
+        if (!th.shut()) {
+            for (JsonObject t : tags) {
+                String name = str(t, "name");
+                rows.add(new LineRow(Component.literal(name), KEY, Component.literal(tagWords(t)), List.<Object[]>of(
+                        new Object[] {tr("fun.tags.edit"), (Runnable) () -> openTagEdit(t), tr("fun.tags.edit.tip")},
+                        new Object[] {tr("fun.tags.delete"), (Runnable) () -> confirm(tr("fun.tags.delete.title", name),
+                                tr("fun.tags.delete.body", name, (int) dbl(t, "wearing", 0)), tr("fun.tags.delete"),
+                                () -> {
+                                    JsonObject o = new JsonObject();
+                                    o.addProperty("name", name);
+                                    funRequest("tagdelete", o);
+                                }), tr("fun.tags.delete.tip")}), true));
+            }
+            rows.add(new LineRow(Component.empty(), TEXT, Component.empty(), List.<Object[]>of(new Object[] {
+                tr("fun.tags.new"), (Runnable) () -> openTagEdit(null), tr("fun.tags.new.tip")})));
+        }
+    }
+
+    private String tagWords(JsonObject t) {
+        List<String> w = new ArrayList<>();
+        w.add(tr("fun.tags.stats", AdminSetting.plain(dbl(t, "health", 1)), AdminSetting.plain(dbl(t, "damage", 1)),
+                AdminSetting.plain(dbl(t, "speed", 1))).getString());
+        if (dbl(t, "size", 0) > 0) w.add(tr("fun.tags.size", AdminSetting.plain(dbl(t, "size", 0))).getString());
+        if (!str(t, "title").isEmpty()) w.add("\"" + str(t, "title") + "\"");
+        if (bool(t, "glow")) w.add(tr("fun.tags.glow").getString());
+        if (t.get("loot") instanceof JsonObject) w.add(str(t, "lootWords"));
+        int wearing = (int) dbl(t, "wearing", 0);
+        w.add(tr(wearing == 0 ? "fun.tags.wearing.none" : wearing == 1 ? "fun.tags.wearing.one" : "fun.tags.wearing",
+                wearing).getString());
+        return String.join(" · ", w);
+    }
+
+    /** one giant on the Fun page: who he is, his tag and loot, and the things that can be done with him */
+    private final class FunRow extends Row {
+        final JsonObject kind, r;
+        final String key, id, label;
+        final boolean here;
+
+        FunRow(JsonObject kind, JsonObject r) {
+            this.kind = kind;
+            this.r = r;
+            key = str(kind, "key");
+            id = str(r, "id");
+            label = str(r, "label");
+            here = str(r, "state").equals("here");
+            List<String> does = funDoes(key);
+            List<Object[]> bs = new ArrayList<>();
+            bs.add(new Object[] {"watch", true});
+            bs.add(new Object[] {"eyes", true});
+            bs.add(new Object[] {"play", does.contains("playas")});
+            bs.add(new Object[] {"name", true});
+            bs.add(new Object[] {"tag", true});
+            bs.add(new Object[] {"loot", true});
+            int bx = 30, by = 26;
+            h = 46;
+            for (Object[] o : bs) {
+                String act = (String) o[0];
+                Component c = tr("fun.act." + act);
+                int w = font.width(c) + 10;
+                if (bx > 30 && bx + w > lw) {
+                    bx = 30;
+                    by += 18;
+                    h += 18;
+                }
+                Button b = Button.builder(c, x -> press(act)).bounds(0, 0, w, 16).build();
+                b.active = here && (boolean) o[1];
+                b.setTooltip(Tooltip.create(!here ? tr("fun.away") : !(boolean) o[1] ? tr("fun.cant", str(kind, "name"))
+                        : tr("fun.act." + act + ".tip")));
+                add(b, bx, by, false);
+                bx += w + 3;
+            }
+        }
+
+        void press(String act) {
+            switch (act) {
+                case "watch", "eyes" -> {
+                    JsonObject o = giantJson(key, id);
+                    o.addProperty("mode", act.equals("eyes") ? "eyes" : "free");
+                    funRequest("spectate", o);
+                }
+                case "play" -> funRequest("playas", giantJson(key, id));
+                case "name" -> openNameAsk(key, id, label);
+                case "tag" -> {
+                    List<Object[]> cs = new ArrayList<>();
+                    for (JsonObject t : objects(AdminBookClient.fun(), "tags")) {
+                        String n = str(t, "name");
+                        cs.add(new Object[] {Component.literal(n), (Runnable) () -> {
+                            JsonObject o = giantJson(key, id);
+                            o.addProperty("tag", n);
+                            funRequest("tag", o);
+                        }});
+                    }
+                    cs.add(new Object[] {tr("fun.tag.none"), (Runnable) () -> {
+                        JsonObject o = giantJson(key, id);
+                        o.addProperty("tag", "");
+                        funRequest("tag", o);
+                    }});
+                    modal = new Choices(tr("fun.tag.title", label), tr("fun.tag.body"), cs);
+                    place();
+                }
+                case "loot" -> {
+                    List<Object[]> cs = new ArrayList<>();
+                    for (String mode : List.of("add", "replace"))
+                        cs.add(new Object[] {tr("fun.loot." + mode), (Runnable) () -> {
+                            JsonObject o = giantJson(key, id);
+                            o.addProperty("mode", mode);
+                            o.addProperty("from", "chest");
+                            funRequest("loot", o);
+                        }});
+                    cs.add(new Object[] {tr("fun.loot.clear"), (Runnable) () -> {
+                        JsonObject o = giantJson(key, id);
+                        o.addProperty("mode", "clear");
+                        funRequest("loot", o);
+                    }});
+                    JsonObject m = funMark(id);
+                    modal = new Choices(tr("fun.loot.title", label), tr("fun.loot.body", m == null
+                            ? tr("fun.loot.own").getString() : str(m, "lootWords")), cs);
+                    place();
+                }
+                default -> {
+                }
+            }
+        }
+
+        @Override
+        void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
+            AdminStyle.card(g, x - 2, y + 1, w + 2, h - 3, false);
+            icon(g, key, x + 2, y + 4, 20);
+            int tx = x + 30;
+            int nx = g.drawString(font, cut(label, w / 2), tx, y + 4, KEY, false) + 6;
+            JsonObject m = funMark(id);
+            List<Object[]> tags = new ArrayList<>();
+            if (!here) tags.add(new Object[] {tr(str(r, "state").equals("away") ? "live.state.away"
+                    : "live.state.unloaded").getString(), ORANGE});
+            if (m != null && !str(m, "tag").isEmpty()) tags.add(new Object[] {str(m, "tag"), BLUE});
+            if (bool(r, "fighting")) tags.add(new Object[] {tr("live.fighting").getString(), WARN});
+            for (Object[] t : tags) {
+                String s = (String) t[0];
+                int tw = font.width(s) + 6;
+                if (nx + tw > x + w) break;
+                g.fill(nx, y + 3, nx + tw, y + 13, 0x30000000);
+                g.renderOutline(nx, y + 3, tw, 10, ((int) t[1] & 0x00FFFFFF) | 0x80000000);
+                g.drawString(font, s, nx + 3, y + 4, (int) t[1], false);
+                nx += tw + 3;
+            }
+            StringBuilder l2 = new StringBuilder();
+            if (r.has("size")) l2.append(tr("live.size", AdminSetting.plain(dbl(r, "size", 1))).getString());
+            l2.append(l2.length() > 0 ? " · " : "").append(dimName(str(r, "dim")));
+            if (m != null && m.get("loot") instanceof JsonObject) l2.append(" · ").append(str(m, "lootWords"));
+            g.drawString(font, cut(l2.toString(), w - 32), tx, y + 15, GREY, false);
+        }
+    }
+
+    /** the fight: A and B each a fresh one of a kind (and a size) or one out there; the spot; go */
+    private void fightRows() {
+        List<JsonObject> kinds = objects(AdminBookClient.live(), "giants").stream().filter(k -> bool(k, "speaks"))
+                .toList();
+        if (kinds.isEmpty()) {
+            rows.add(new Note(tr("live.empty"), GREY));
+            return;
+        }
+        // the choices: each kind fresh, then each one standing out there
+        List<String[]> opts = new ArrayList<>();
+        for (JsonObject k : kinds) opts.add(new String[] {str(k, "key"), tr("fun.fight.fresh", str(k, "name"))
+                .getString(), "", str(k, "key")});
+        for (JsonObject[] g : funGiants(true)) opts.add(new String[] {"id:" + str(g[1], "id"), str(g[1], "label"),
+            str(g[1], "id"), str(g[0], "key")});
+        if (fightA.isEmpty() || opts.stream().noneMatch(o -> o[0].equals(fightA))) fightA = opts.get(0)[0];
+        if (fightB.isEmpty() || opts.stream().noneMatch(o -> o[0].equals(fightB)))
+            fightB = opts.get(Math.min(1, opts.size() - 1))[0];
+        for (int side = 0; side < 2; side++) {
+            boolean a = side == 0;
+            String now = a ? fightA : fightB;
+            String[] pick = opts.stream().filter(o -> o[0].equals(now)).findFirst().orElse(opts.get(0));
+            Component lab = tr(a ? "fun.fight.a" : "fun.fight.b");
+            Block b = new Block(22, (g, x, y, w, mx, my) -> g.drawString(font, lab, x + 2, y + 7, KEY, false));
+            int x0 = font.width(lab) + 8;
+            int kw = Mth.clamp(lw / 3, 90, 150);
+            Button kb = Button.builder(Component.literal(cut(pick[1], kw - 10)), x -> {
+                        int i = 0;
+                        for (int k = 0; k < opts.size(); k++) if (opts.get(k)[0].equals(now)) i = k;
+                        String next = opts.get((i + 1) % opts.size())[0];
+                        if (a) fightA = next;
+                        else fightB = next;
+                        build();
+                    })
+                    .bounds(0, 0, kw, 16)
+                    .build();
+            kb.setTooltip(Tooltip.create(tr("fun.fight.pick.tip")));
+            b.add(kb, x0, 3, false);
+            if (pick[2].isEmpty()) {
+                JsonObject k = kinds.stream().filter(q -> str(q, "key").equals(pick[3])).findFirst().orElse(kinds.get(0));
+                List<String> sz = strings(k, "size");
+                double lo = sz.size() == 2 ? Double.parseDouble(sz.get(0)) : 0.1,
+                        hi = Math.min(2, sz.size() == 2 ? Double.parseDouble(sz.get(1)) : 2);
+                double cur = Mth.clamp(a ? fightSizeA : fightSizeB, lo, hi);
+                AbstractSliderButton s = new AbstractSliderButton(0, 0, Mth.clamp(lw - x0 - kw - 8, 60, 150), 16,
+                        Component.empty(), (cur - lo) / Math.max(1e-6, hi - lo)) {
+                    {
+                        updateMessage();
+                    }
+
+                    double v() {
+                        double v = lo + value * (hi - lo);
+                        return Mth.clamp(Math.round(v * 20) / 20.0, lo, hi);
+                    }
+
+                    @Override
+                    protected void updateMessage() {
+                        setMessage(tr("live.summon.size", AdminSetting.plain(v())));
+                    }
+
+                    @Override
+                    protected void applyValue() {
+                        if (a) fightSizeA = v();
+                        else fightSizeB = v();
+                    }
+                };
+                s.setTooltip(Tooltip.create(tr("fun.fight.size.tip")));
+                b.add(s, x0 + kw + 4, 3, false);
+            }
+            rows.add(b);
+        }
+        rows.add(new LineRow(tr(fightLook ? "fun.fight.look" : "fun.fight.here"), TEXT, tr("fun.fight.spot.sub"),
+                List.<Object[]>of(new Object[] {tr("fun.fight.spot"), (Runnable) () -> {
+                    fightLook = !fightLook;
+                    build();
+                }, tr("fun.fight.spot.tip")}, new Object[] {tr("fun.fight.go"), (Runnable) () -> {
+                    JsonObject o = new JsonObject();
+                    o.add("a", fightSide(fightA, fightSizeA));
+                    o.add("b", fightSide(fightB, fightSizeB));
+                    o.addProperty("spot", fightLook ? "look" : "here");
+                    funRequest("fight", o);
+                }, tr("fun.fight.go.tip"), !fightA.equals(fightB) || !fightA.startsWith("id:")}), true));
+    }
+
+    private static JsonObject fightSide(String pick, double size) {
+        JsonObject o = new JsonObject();
+        if (pick.startsWith("id:")) o.addProperty("id", pick.substring(3));
+        else {
+            o.addProperty("kind", pick);
+            o.addProperty("size", size);
+        }
+        return o;
+    }
+
+    /** the World tools page: the biome brush, building, mixing */
+    private void worldRows() {
+        JsonObject f = AdminBookClient.fun();
+        if (f == null || AdminBookClient.live() == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        rows.add(new Note(tr("world.note"), GREY));
+        List<JsonObject> kinds = objects(f, "kinds");
+        // the brush
+        Head bh = new Head(tr("world.brush"), tr("world.brush.note"), null).folding(WORLD + "/brush", "brush", -1);
+        rows.add(bh);
+        JsonObject br = f.get("brush") instanceof JsonObject b ? b : new JsonObject();
+        String bg = str(br, "giant").isEmpty() ? "erase" : str(br, "giant");
+        int radius = (int) dbl(br, "radius", 32);
+        String bmode = str(br, "mode").isEmpty() ? "biome" : str(br, "mode");
+        if (!bh.shut()) {
+            List<String> choices = new ArrayList<>();
+            choices.add("erase");
+            for (JsonObject k : kinds) choices.add(str(k, "key"));
+            Block b = new Block(22, (g, x, y, w, mx, my) -> g.drawString(font, tr("world.brush.what"), x + 2, y + 7,
+                    KEY, false));
+            int x0 = font.width(tr("world.brush.what")) + 8;
+            int kw = Mth.clamp(lw / 4, 80, 120);
+            Button which = Button.builder(bg.equals("erase") ? tr("world.brush.erase") : Component.literal(giantName(
+                    bg)), x -> {
+                        int i = Math.max(0, choices.indexOf(bg));
+                        sendBrush(choices.get((i + 1) % choices.size()), radius, bmode);
+                    })
+                    .bounds(0, 0, kw, 16)
+                    .build();
+            which.setTooltip(Tooltip.create(tr("world.brush.what.tip")));
+            b.add(which, x0, 3, false);
+            int sw = Mth.clamp(lw - x0 - kw - 100, 60, 150);
+            AbstractSliderButton rs = new AbstractSliderButton(0, 0, sw, 16, Component.empty(),
+                    (radius - 16) / 240.0) {
+                {
+                    updateMessage();
+                }
+
+                int v() {
+                    return (int) Math.round((16 + value * 240) / 4) * 4;
+                }
+
+                @Override
+                protected void updateMessage() {
+                    setMessage(tr("world.brush.radius", Mth.clamp(v(), 16, 256)));
+                }
+
+                @Override
+                protected void applyValue() {
+                }
+
+                @Override
+                public void onRelease(double mx, double my) {
+                    super.onRelease(mx, my);
+                    sendBrush(bg, Mth.clamp(v(), 16, 256), bmode);
+                }
+            };
+            rs.setTooltip(Tooltip.create(tr("world.brush.radius.tip")));
+            b.add(rs, x0 + kw + 4, 3, false);
+            Button mode = Button.builder(tr(bmode.equals("full") ? "world.brush.full" : "world.brush.biome"), x -> {
+                        if (bmode.equals("full")) sendBrush(bg, radius, "biome");
+                        else confirm(tr("world.brush.full.title"), tr("world.brush.full.body"), tr("world.brush.full"),
+                                () -> sendBrush(bg, radius, "full"));
+                    })
+                    .bounds(0, 0, 90, 16)
+                    .build();
+            mode.active = !bg.equals("erase");
+            mode.setTooltip(Tooltip.create(tr("world.brush.mode.tip")));
+            b.add(mode, 0, 3, true);
+            rows.add(b);
+            rows.add(new LineRow(tr("world.brush.now", bg.equals("erase") ? tr("world.brush.erase").getString()
+                    : giantName(bg), radius), TEXT, tr(Boolean.TRUE.equals(bool(f, "erasing")) ? "world.brush.erasing"
+                    : "world.brush.sub"), List.<Object[]>of(
+                    new Object[] {tr("world.brush.get"), (Runnable) () -> funRequest("brushget", new JsonObject()),
+                        tr("world.brush.get.tip")},
+                    new Object[] {tr("world.brush.paint"), (Runnable) () -> {
+                        JsonObject o = new JsonObject();
+                        o.addProperty("spot", "here");
+                        funRequest("paintat", o);
+                    }, tr("world.brush.paint.tip"), !bg.equals("erase")},
+                    new Object[] {tr("world.brush.eraseat"), (Runnable) () -> {
+                        JsonObject o = new JsonObject();
+                        o.addProperty("spot", "here");
+                        funRequest("eraseat", o);
+                    }, tr("world.brush.eraseat.tip")}), true));
+        }
+        // building
+        List<JsonObject> builds = objects(f, "builds");
+        Head bu = new Head(tr("world.build"), tr("world.build.note"), null).folding(WORLD + "/build", "build",
+                builds.size());
+        rows.add(bu);
+        if (!bu.shut()) {
+            rows.add(new LineRow(tr("world.build.arena", tr("world.build.size." + arenaSize)), TEXT,
+                    tr("world.build.arena.sub"), List.<Object[]>of(
+                    new Object[] {tr("world.build.size." + arenaSize), (Runnable) () -> {
+                        List<String> s = List.of("small", "medium", "large");
+                        arenaSize = s.get((s.indexOf(arenaSize) + 1) % 3);
+                        build();
+                    }, tr("world.build.size.tip")},
+                    new Object[] {tr("world.build.go"), (Runnable) () -> confirm(tr("world.build.arena.title"),
+                            tr("world.build.arena.body"), tr("world.build.go"), () -> {
+                                JsonObject o = new JsonObject();
+                                o.addProperty("kind", "arena");
+                                o.addProperty("style", arenaSize);
+                                funRequest("build", o);
+                            }), tr("world.build.go.tip")}), true));
+            List<String> ks = new ArrayList<>();
+            for (JsonObject k : kinds) ks.add(str(k, "key"));
+            if (!ks.isEmpty()) {
+                if (!ks.contains(denKind)) denKind = ks.get(0);
+                Block b = new Block(22, (g, x, y, w, mx, my) -> g.drawString(font, tr("world.build.den"), x + 2, y + 7,
+                        TEXT, false));
+                int x0 = font.width(tr("world.build.den")) + 8, kw = Mth.clamp(lw / 4, 80, 120);
+                Button kb = Button.builder(Component.literal(giantName(denKind)), x -> {
+                            denKind = ks.get((ks.indexOf(denKind) + 1) % ks.size());
+                            build();
+                        })
+                        .bounds(0, 0, kw, 16)
+                        .build();
+                kb.setTooltip(Tooltip.create(tr("world.build.den.kind.tip")));
+                b.add(kb, x0, 3, false);
+                AbstractSliderButton ds = new AbstractSliderButton(0, 0, Mth.clamp(lw - x0 - kw - 90, 60, 140), 16,
+                        Component.empty(), (denSize - 0.05) / 1.95) {
+                    {
+                        updateMessage();
+                    }
+
+                    double v() {
+                        return Mth.clamp(Math.round((0.05 + value * 1.95) * 20) / 20.0, 0.05, 2);
+                    }
+
+                    @Override
+                    protected void updateMessage() {
+                        setMessage(tr("live.summon.size", AdminSetting.plain(v())));
+                    }
+
+                    @Override
+                    protected void applyValue() {
+                        denSize = v();
+                    }
+                };
+                ds.setTooltip(Tooltip.create(tr("world.build.den.size.tip")));
+                b.add(ds, x0 + kw + 4, 3, false);
+                Button go = Button.builder(tr("world.build.go"), x -> confirm(tr("world.build.den.title", giantName(
+                        denKind)), tr("world.build.den.body"), tr("world.build.go"), () -> {
+                            JsonObject o = new JsonObject();
+                            o.addProperty("kind", "den");
+                            o.addProperty("style", denKind);
+                            o.addProperty("size", denSize);
+                            funRequest("build", o);
+                        }))
+                        .bounds(0, 0, font.width(tr("world.build.go")) + 12, 16)
+                        .build();
+                go.setTooltip(Tooltip.create(tr("world.build.den.tip")));
+                b.add(go, 0, 3, true);
+                rows.add(b);
+            }
+            if (builds.isEmpty()) rows.add(new Note(tr("world.build.none"), GREY));
+            for (JsonObject bj : builds) {
+                int n = (int) dbl(bj, "n", 0);
+                String st = str(bj, "state");
+                String what = str(bj, "kind").equals("arena") ? tr("world.build.arena.named", tr("world.build.size."
+                        + str(bj, "style"))).getString() : tr("world.build.den.named", giantName(str(bj, "giant")))
+                        .getString();
+                int done = (int) dbl(bj, "done", 0), total = Math.max(1, (int) dbl(bj, "total", 1));
+                String sub = (int) dbl(bj, "x", 0) + " " + (int) dbl(bj, "y", 0) + " " + (int) dbl(bj, "z", 0) + " · "
+                        + dimName(str(bj, "dim")) + " · " + tr("world.build.state." + st.replace(' ', '_'),
+                                done * 100 / total).getString() + (bool(bj, "undo") ? "" : " · "
+                                + tr("world.build.noundo").getString());
+                List<Object[]> bs = new ArrayList<>();
+                bs.add(new Object[] {tr("world.build.goto"), (Runnable) () -> request("buildgo", "n", n),
+                    tr("world.build.goto.tip")});
+                if (st.equals("building")) bs.add(new Object[] {tr("world.build.stop"), (Runnable) () -> funRequest(
+                        "buildstop", new JsonObject()), tr("world.build.stop.tip")});
+                else bs.add(new Object[] {tr("world.build.down"), (Runnable) () -> confirm(tr("world.build.down.title",
+                        n), tr("world.build.down.body"), tr("world.build.down"), () -> request("takedown", "n", n)),
+                    tr("world.build.down.tip"), bool(bj, "undo") && !st.equals("taking down")});
+                rows.add(new LineRow(Component.literal(n + ". " + what), KEY, Component.literal(sub), bs, true));
+            }
+        }
+        // mixing
+        List<JsonObject[]> standing = funGiants(true);
+        Head mh = new Head(tr("world.mix"), tr("world.mix.note"), null).folding(WORLD + "/mix", "mix", -1);
+        rows.add(mh);
+        if (mh.shut()) return;
+        if (standing.isEmpty()) {
+            rows.add(new Note(tr("live.empty"), GREY));
+            return;
+        }
+        JsonObject[] who = standing.get(0);
+        for (JsonObject[] g : standing) if (str(g[1], "id").equals(settleId)) who = g;
+        settleId = str(who[1], "id");
+        String kind = str(who[0], "key");
+        List<String> places = funPlaces(kind);
+        List<String> wheres = new ArrayList<>(List.of("here", "look", "sea", "cave", "sky"));
+        for (JsonObject k : kinds) if (!str(k, "key").equals(kind)) wheres.add("ground:" + str(k, "key"));
+        if (!wheres.contains(settleWhere)) settleWhere = "here";
+        JsonObject[] cur = who;
+        Block b = new Block(22, (g, x, y, w, mx, my) -> g.drawString(font, tr("world.mix.who"), x + 2, y + 7, KEY,
+                false));
+        int x0 = font.width(tr("world.mix.who")) + 8, kw = Mth.clamp(lw / 3, 90, 150);
+        Button wb = Button.builder(Component.literal(cut(str(who[1], "label"), kw - 10)), x -> {
+                    int i = 0;
+                    for (int k = 0; k < standing.size(); k++) if (standing.get(k) == cur) i = k;
+                    settleId = str(standing.get((i + 1) % standing.size())[1], "id");
+                    build();
+                })
+                .bounds(0, 0, kw, 16)
+                .build();
+        wb.setTooltip(Tooltip.create(tr("world.mix.who.tip")));
+        b.add(wb, x0, 3, false);
+        String wl = whereWords(settleWhere);
+        Button whereB = Button.builder(Component.literal(cut(wl, 150)), x -> {
+                    settleWhere = wheres.get((wheres.indexOf(settleWhere) + 1) % wheres.size());
+                    build();
+                })
+                .bounds(0, 0, Math.min(160, font.width(wl) + 14), 16)
+                .build();
+        whereB.setTooltip(Tooltip.create(tr("world.mix.where.tip")));
+        b.add(whereB, x0 + kw + 4, 3, false);
+        rows.add(b);
+        String need = switch (settleWhere) {
+            case "sea" -> "sea";
+            case "cave" -> "cave";
+            case "sky" -> "sky";
+            default -> "";
+        };
+        boolean can = need.isEmpty() || places.contains(need);
+        rows.add(new LineRow(tr("world.mix.places", str(who[0], "name"), places.isEmpty() ? "-" : String.join(", ",
+                places.stream().map(p -> tr("world.mix.place." + p).getString()).toList())), can ? TEXT : WARN,
+                can ? tr("world.mix.sub") : tr("world.mix.cant", str(who[0], "name"), whereWords(settleWhere)),
+                List.<Object[]>of(new Object[] {tr("world.mix.go"), (Runnable) () -> {
+                    JsonObject o = giantJson(kind, settleId);
+                    String w = settleWhere.startsWith("ground:") ? "ground" : settleWhere;
+                    o.addProperty("where", w);
+                    if (w.equals("ground")) o.addProperty("ground", settleWhere.substring(7));
+                    funRequest("settle", o);
+                }, tr("world.mix.go.tip"), can}), true));
+    }
+
+    private String whereWords(String w) {
+        return w.startsWith("ground:") ? tr("world.mix.where.ground", giantName(w.substring(7))).getString()
+                : tr("world.mix.where." + w).getString();
+    }
+
+    private void sendBrush(String giant, int radius, String mode) {
+        JsonObject o = new JsonObject();
+        o.addProperty("giant", giant);
+        o.addProperty("radius", radius);
+        o.addProperty("mode", mode);
+        funRequest("brush", o);
+    }
+
+    // the questions
+
+    /** name, title, colour and whether it shows over his head */
+    private void openNameAsk(String kind, String id, String label) {
+        JsonObject m = funMark(id);
+        Form fm = new Form(tr("fun.name.title", label), tr("fun.name.body"));
+        EditBox name = fm.box(tr("fun.name.name"), m == null ? "" : str(m, "name"), 32);
+        EditBox title = fm.box(tr("fun.name.titleField"), m == null ? "" : str(m, "title"), 32);
+        String[] colour = {m == null || str(m, "colour").isEmpty() ? "white" : str(m, "colour")};
+        boolean[] shown = {m != null && bool(m, "shown")};
+        fm.cycle(tr("fun.name.colour"), () -> tr("fun.colour." + colour[0]), () -> {
+            List<String> cs = List.of("white", "gold", "red", "purple", "aqua", "green", "yellow");
+            colour[0] = cs.get((cs.indexOf(colour[0]) + 1) % cs.size());
+        });
+        fm.cycle(tr("fun.name.shown"), () -> tr(shown[0] ? "fun.name.shown.on" : "fun.name.shown.off"),
+                () -> shown[0] = !shown[0]);
+        fm.button(tr("fun.name.save"), () -> {
+            closeModal();
+            JsonObject o = giantJson(kind, id);
+            o.addProperty("name", name.getValue());
+            o.addProperty("title", title.getValue());
+            o.addProperty("colour", colour[0]);
+            o.addProperty("shown", String.valueOf(shown[0]));
+            funRequest("name", o);
+        });
+        fm.button(tr("fun.name.clear"), () -> {
+            closeModal();
+            JsonObject o = giantJson(kind, id);
+            o.addProperty("name", "");
+            o.addProperty("title", "");
+            o.addProperty("colour", "white");
+            o.addProperty("shown", "false");
+            funRequest("name", o);
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
+    }
+
+    /** a tag's form: new (t null) or changing one */
+    private void openTagEdit(@Nullable JsonObject t) {
+        Form fm = new Form(t == null ? tr("fun.tagedit.new") : tr("fun.tagedit.title", str(t, "name")),
+                tr("fun.tagedit.body"));
+        EditBox name = fm.box(tr("fun.tagedit.name"), t == null ? "" : str(t, "name"), 24);
+        double[] health = {t == null ? 1 : dbl(t, "health", 1)}, damage = {t == null ? 1 : dbl(t, "damage", 1)},
+                speed = {t == null ? 1 : dbl(t, "speed", 1)}, size = {t == null ? 0 : dbl(t, "size", 0)};
+        fm.slider(tr("fun.tagedit.health"), 0.1, 10, 0.1, health, false);
+        fm.slider(tr("fun.tagedit.damage"), 0.1, 10, 0.1, damage, false);
+        fm.slider(tr("fun.tagedit.speed"), 0.25, 4, 0.05, speed, false);
+        fm.slider(tr("fun.tagedit.size"), 0, 2, 0.05, size, true);
+        EditBox title = fm.box(tr("fun.tagedit.titleField"), t == null ? "" : str(t, "title"), 32);
+        String[] colour = {t == null || str(t, "colour").isEmpty() ? "white" : str(t, "colour")};
+        boolean[] glow = {t != null && bool(t, "glow")};
+        fm.cycle(tr("fun.name.colour"), () -> tr("fun.colour." + colour[0]), () -> {
+            List<String> cs = List.of("white", "gold", "red", "purple", "aqua", "green", "yellow");
+            colour[0] = cs.get((cs.indexOf(colour[0]) + 1) % cs.size());
+        });
+        fm.cycle(tr("fun.tagedit.glow"), () -> tr(glow[0] ? "fun.name.shown.on" : "fun.name.shown.off"),
+                () -> glow[0] = !glow[0]);
+        boolean hasLoot = t != null && t.get("loot") instanceof JsonObject;
+        List<String> lootChoices = hasLoot ? List.of("keep", "none", "add", "replace") : List.of("none", "add",
+                "replace");
+        String[] loot = {lootChoices.get(0)};
+        fm.cycle(tr("fun.tagedit.loot"), () -> tr("fun.tagedit.loot." + loot[0], hasLoot ? str(t, "lootWords") : ""),
+                () -> loot[0] = lootChoices.get((lootChoices.indexOf(loot[0]) + 1) % lootChoices.size()));
+        fm.button(tr("fun.tagedit.save"), () -> {
+            closeModal();
+            JsonObject tag = new JsonObject();
+            tag.addProperty("name", name.getValue().strip());
+            tag.addProperty("health", health[0]);
+            tag.addProperty("damage", damage[0]);
+            tag.addProperty("speed", speed[0]);
+            tag.addProperty("size", size[0]);
+            tag.addProperty("title", title.getValue());
+            tag.addProperty("colour", colour[0]);
+            tag.addProperty("glow", glow[0]);
+            JsonObject o = new JsonObject();
+            o.add("tag", tag);
+            o.addProperty("old", t == null ? "" : str(t, "name"));
+            o.addProperty("lootFrom", loot[0].equals("add") || loot[0].equals("replace") ? "chest" : loot[0]);
+            o.addProperty("lootMode", loot[0].equals("replace") ? "replace" : "add");
+            funRequest("tagsave", o);
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
+    }
+
+    /** a few choices as buttons (wrapping onto more lines), and Cancel */
+    private final class Choices extends Modal {
+        final Component title, body;
+
+        Choices(Component title, Component body, List<Object[]> choices) {
+            this.title = title;
+            this.body = body;
+            for (Object[] c : choices) button((Component) c[0], () -> {
+                closeModal();
+                ((Runnable) c[1]).run();
+            });
+            button(tr("cancel"), this::cancel);
+            layout(buttonsW());
+        }
+
+        @Override
+        void layout(int buttonsW) {
+            super.layout(buttonsW);
+            int x = mx0 + 8, rowsN = 1;
+            for (Button b : buttons) {
+                if (x > mx0 + 8 && x + b.getWidth() > mx0 + mw - 8) {
+                    x = mx0 + 8;
+                    rowsN++;
+                }
+                x += b.getWidth() + 4;
+            }
+            mh += (rowsN - 1) * 20;
+            my0 = (height - mh) / 2;
+            x = mx0 + 8;
+            int y = my0 + mh - 24 - (rowsN - 1) * 20;
+            for (Button b : buttons) {
+                if (x > mx0 + 8 && x + b.getWidth() > mx0 + mw - 8) {
+                    x = mx0 + 8;
+                    y += 20;
+                }
+                b.setX(x);
+                b.setY(y);
+                x += b.getWidth() + 4;
+            }
+        }
+
+        @Override
+        int modalW() {
+            return Math.min(pw - 40, 340);
+        }
+
+        @Override
+        Component title() {
+            return title;
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            return font.split(body, modalW() - 16);
+        }
+
+        @Override
+        void cancel() {
+            closeModal();
+        }
+    }
+
+    /** a question with fields: words to type, sliders and choices, each on its own line with its name */
+    private final class Form extends Modal {
+        final Component title, note;
+        final List<Component> labels = new ArrayList<>();
+        final List<AbstractWidget> fields = new ArrayList<>();
+        final List<Runnable> refresh = new ArrayList<>();
+        @Nullable EditBox typing;
+        @Nullable AbstractSliderButton sliding;
+        int labelW;
+
+        Form(Component title, Component note) {
+            this.title = title;
+            this.note = note;
+        }
+
+        EditBox box(Component label, String value, int most) {
+            EditBox b = new EditBox(font, 0, 0, 100, 16, label);
+            b.setMaxLength(most);
+            b.setValue(value);
+            field(label, b);
+            if (typing == null) {
+                typing = b;
+                b.setFocused(true);
+            }
+            return b;
+        }
+
+        void cycle(Component label, java.util.function.Supplier<Component> now, Runnable next) {
+            Button[] b = new Button[1];
+            b[0] = Button.builder(now.get(), x -> {
+                next.run();
+                x.setMessage(now.get());
+            }).bounds(0, 0, 100, 16).build();
+            field(label, b[0]);
+        }
+
+        void slider(Component label, double lo, double hi, double step, double[] v, boolean zeroLeaves) {
+            AbstractSliderButton s = new AbstractSliderButton(0, 0, 100, 16, Component.empty(),
+                    (Mth.clamp(v[0], lo, hi) - lo) / (hi - lo)) {
+                {
+                    updateMessage();
+                }
+
+                double cur() {
+                    return Mth.clamp(Math.round((lo + value * (hi - lo)) / step) * step, lo, hi);
+                }
+
+                @Override
+                protected void updateMessage() {
+                    double c = cur();
+                    setMessage(zeroLeaves && c <= 0 ? tr("fun.tagedit.size.leave") : Component.literal(
+                            (zeroLeaves ? "" : "x") + AdminSetting.plain(Math.round(c * 100) / 100.0)));
+                }
+
+                @Override
+                protected void applyValue() {
+                    v[0] = Math.round(cur() * 100) / 100.0;
+                }
+            };
+            field(label, s);
+        }
+
+        private void field(Component label, AbstractWidget w) {
+            labels.add(label);
+            fields.add(w);
+        }
+
+        void done() {
+            labelW = 0;
+            for (Component c : labels) labelW = Math.max(labelW, font.width(c) + 8);
+            layout(buttonsW());
+        }
+
+        @Override
+        int modalW() {
+            return Math.min(pw - 40, 360);
+        }
+
+        @Override
+        void layout(int buttonsW) {
+            super.layout(buttonsW);
+            mh += fields.size() * 20 + 4;
+            my0 = (height - mh) / 2;
+            int y = my0 + 26 + Math.min(body().size(), bodyRoom()) * 10 + 4;
+            for (AbstractWidget w : fields) {
+                w.setX(mx0 + 8 + labelW);
+                w.setY(y);
+                w.setWidth(mw - 16 - labelW);
+                y += 20;
+            }
+            int x = mx0 + mw - 8 - buttonsW;
+            for (Button b : buttons) {
+                b.setX(x);
+                b.setY(my0 + mh - 24);
+                x += b.getWidth() + 4;
+            }
+        }
+
+        @Override
+        void extra(GuiGraphics g) {
+            for (int i = 0; i < fields.size(); i++) {
+                AbstractWidget w = fields.get(i);
+                g.drawString(font, labels.get(i), mx0 + 8, w.getY() + 4, TEXT, false);
+                w.render(g, lastMx, lastMy, 0);
+            }
+        }
+
+        @Override
+        boolean mouseClicked(double mx, double my, int b) {
+            for (AbstractWidget w : fields)
+                if (w.isMouseOver(mx, my)) {
+                    if (typing != null) typing.setFocused(false);
+                    typing = w instanceof EditBox e ? e : typing;
+                    if (typing != null) typing.setFocused(w == typing);
+                    if (w instanceof AbstractSliderButton s) sliding = s;
+                    w.mouseClicked(mx, my, b);
+                    return true;
+                }
+            return super.mouseClicked(mx, my, b);
+        }
+
+        @Override
+        boolean dragged(double mx, double my, int b, double dx, double dy) {
+            return sliding != null && sliding.mouseDragged(mx, my, b, dx, dy);
+        }
+
+        @Override
+        void released(double mx, double my) {
+            if (sliding != null) sliding.onRelease(mx, my);
+            sliding = null;
+        }
+
+        @Override
+        boolean keyPressed(int key) {
+            if (key == 258) {
+                // Tab: the next box
+                List<EditBox> boxes = fields.stream().filter(w -> w instanceof EditBox).map(w -> (EditBox) w).toList();
+                if (!boxes.isEmpty()) {
+                    int i = typing == null ? -1 : boxes.indexOf(typing);
+                    if (typing != null) typing.setFocused(false);
+                    typing = boxes.get((i + 1) % boxes.size());
+                    typing.setFocused(true);
+                }
+                return true;
+            }
+            if (key == 257 || key == 335) {
+                buttons.get(0).onPress();
+                return true;
+            }
+            if (typing != null) typing.keyPressed(key, 0, 0);
+            return true;
+        }
+
+        @Override
+        boolean charTyped(char c, int mods) {
+            if (typing != null) typing.charTyped(c, mods);
+            return true;
+        }
+
+        @Override
+        Component title() {
+            return title;
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            return font.split(note, modalW() - 16);
+        }
+
+        @Override
+        void cancel() {
+            closeModal();
         }
     }
 }

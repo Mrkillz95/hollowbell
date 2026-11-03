@@ -238,6 +238,11 @@ public final class AdminBook {
             AdminServer.Result pr = net.jj.giants.players.PlayersAdmin.request(server, who, what, o);
             return pr == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : pr;
         }
+        // (Part 7) the Fun and World tools pages' requests
+        if (net.jj.giants.fun.Fun.DOS.contains(what)) {
+            AdminServer.Result fr = net.jj.giants.fun.Fun.request(server, p, who, what, o);
+            return fr == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : fr;
+        }
         return switch (what) {
             case "set", "reset" -> settingRequest(server, who, what, o);
             // (Part 2C) one shared setting for every giant at once
@@ -466,6 +471,8 @@ public final class AdminBook {
             if (r != Role.ADMIN) continue;
             for (AdminBookStatePayload pg : pages) sender.accept(p, pg);
             if (presets) sender.accept(p, presets(server, p));
+            // (Part 7) the Fun and World tools pages (each admin's own: what they watch, play, their brush)
+            if (every || what.contains(net.jj.giants.fun.Fun.PAGE)) sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
         }
     }
 
@@ -502,6 +509,7 @@ public final class AdminBook {
             sender.accept(p, presets(server, p));
             sender.accept(p, net.jj.giants.players.PlayersAdmin.page(server));
             sender.accept(p, net.jj.giants.tools.ToolsAdmin.page(server));
+            sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
         }
         if (r != Role.NONE) sender.accept(p, live(server));
     }

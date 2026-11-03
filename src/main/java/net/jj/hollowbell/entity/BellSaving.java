@@ -223,7 +223,7 @@ final class BellSaving {
         // one saved with no base health (from an egg): his most health for his size, keeping how hurt he was
         if (hb.hp >= 0f && hb.baseMax <= 0f) {
             float ratio = hb.healthMax() > 0 ? hb.hp / hb.healthMax() : 1f;
-            hb.baseMax = Math.max(40f, BellConfig.V.health * HollowbellEntity.healthTimes() * hb.bellScale());
+            hb.baseMax = hb.baseMaxFor(hb.bellScale());
             hb.healthMult = HollowbellEntity.healthTimes();
             hb.setMax(hb.baseMax, Mth.clamp(ratio, 0f, 1f));
         }
