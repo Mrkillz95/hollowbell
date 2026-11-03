@@ -93,11 +93,12 @@ final class BellHolds {
                 mv.grabbed = mv.target;
                 mv.grabSeat = seat(mv.grabbed, tip);
                 h.sound(tip, ModSounds.GRAB, 2.5f, 0.8f);
-                if (mv.grabbed instanceof ServerPlayer sp)
-                    sp.displayClientMessage(
-                            Component.translatable(
-                                    mv.gentle ? "message.hollowbell.lifting_you" : "message.hollowbell.grabbed"),
-                            true);
+                // (a grab is one of his moves; a gentle lift is the ride the book asked for, always said)
+                if (mv.grabbed instanceof ServerPlayer sp) {
+                    if (mv.gentle)
+                        sp.displayClientMessage(Component.translatable("message.hollowbell.lifting_you"), true);
+                    else net.jj.hollowbell.GiantsPlayers.moveLine(sp, Component.translatable("message.hollowbell.grabbed"), true);
+                }
             } else if (mv.treeAt != null) {
                 BlockPos base = mv.treeAt;
                 int wood = Block.getId(mv.level().getBlockState(base));
@@ -174,7 +175,8 @@ final class BellHolds {
             in.pod = mv.grabPod;
             mv.inside.add(in);
             if (mv.grabbed instanceof ServerPlayer sp) {
-                sp.displayClientMessage(
+                net.jj.hollowbell.GiantsPlayers.moveLine(
+                        sp,
                         Component.translatable(in.pod >= 0 ? "message.hollowbell.in_pod" : "message.hollowbell.inside"),
                         false);
                 Adv.grant(sp, "inside");
@@ -578,7 +580,7 @@ final class BellHolds {
         h.sound(h.strandTipWorld(strand), ModSounds.STRAND, 2f, 1.1f);
         if (mv.strandHits >= 4f) {
             if (by instanceof ServerPlayer sp)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.strand_let_go"), true);
+                net.jj.hollowbell.GiantsPlayers.moveLine(sp, Component.translatable("message.hollowbell.strand_let_go"), true);
             letGoOfGrab(true);
             mv.end();
         }
@@ -589,7 +591,7 @@ final class BellHolds {
         mv.armHits += 1f + amount / 10f;
         if (mv.armHits >= 4f) {
             if (by instanceof ServerPlayer sp)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.arm_let_go"), true);
+                net.jj.hollowbell.GiantsPlayers.moveLine(sp, Component.translatable("message.hollowbell.arm_let_go"), true);
             letGoOfWrap();
             mv.end();
         }
@@ -601,7 +603,7 @@ final class BellHolds {
             dropSeat(mv.grabSeat);
             h.floatDown(e);
             if (e instanceof ServerPlayer sp && fall)
-                sp.displayClientMessage(Component.translatable("message.hollowbell.dropped"), true);
+                net.jj.hollowbell.GiantsPlayers.moveLine(sp, Component.translatable("message.hollowbell.dropped"), true);
         }
         if (mv.grabbedTree != null) dropTree(mv.grabbedTree);
         mv.grabbed = null;
@@ -749,7 +751,7 @@ final class BellHolds {
                     outOfHim(in.e, in.pod);
                     h.floatDown(in.e);
                     if (in.e instanceof ServerPlayer sp)
-                        sp.displayClientMessage(Component.translatable("message.hollowbell.spat_out"), true);
+                        net.jj.hollowbell.GiantsPlayers.moveLine(sp, Component.translatable("message.hollowbell.spat_out"), true);
                     it.remove();
                     continue;
                 }
@@ -800,7 +802,7 @@ final class BellHolds {
                 if (in.pod >= 0) outOfHim(p, in.pod);
                 h.floatDown(p);
                 if (p instanceof ServerPlayer sp)
-                    sp.displayClientMessage(Component.translatable("message.hollowbell.spat_out"), true);
+                    net.jj.hollowbell.GiantsPlayers.moveLine(sp, Component.translatable("message.hollowbell.spat_out"), true);
                 it.remove();
             }
         }

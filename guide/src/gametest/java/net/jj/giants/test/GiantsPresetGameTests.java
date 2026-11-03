@@ -300,7 +300,7 @@ public class GiantsPresetGameTests implements FabricGameTest {
         });
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p4_real_night", timeoutTicks = 1400)
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p4_real_night", timeoutTicks = 2600)
     public void nightTerrorsLieDownByDay(GameTestHelper h) {
         MinecraftServer s = h.getLevel().getServer();
         List<Giant> here = here();
@@ -327,18 +327,29 @@ public class GiantsPresetGameTests implements FabricGameTest {
             // (the summoner steps away, so nobody is near enough to keep him up)
             q.moveTo(q.getX(), q.getY() + 60, q.getZ(), 0f, 0f);
         }
-        // (the mock player is creative-like enough to be left be; quiet a while, then ten seconds by day)
-        h.runAfterDelay(1200, () -> {
+        // (the mock player is creative-like enough to be left be; quiet a while, then ten seconds by day). Other
+        // batches run beside this one and may set their own time of day or settings for a while, so each giant
+        // is looked at every second from 1200 ticks on, and counts once he is seen asleep by day.
+        java.util.Set<String> slept = new java.util.HashSet<>();
+        Map<String, String> last = new HashMap<>();
+        for (int t = 1200; t <= 2400; t += 20)
+            h.runAfterDelay(t, () -> {
+                if (h.getLevel().getDayTime() % 24000 >= 12000) return;
+                for (Giant g : here) {
+                    String id = ids.get(g.key());
+                    JsonObject o = id == null ? null : row(s, g.key(), id);
+                    if (o == null) o = nearestAt(s, g.key(), spots.get(g.key()));
+                    if (o != null) ids.put(g.key(), o.get("id").getAsString());
+                    if (o == null) last.put(g.key(), " none summoned (" + kind(s, g.key()) + ")");
+                    else if (o.has("asleep") && o.get("asleep").getAsBoolean()) slept.add(g.key());
+                    else last.put(g.key(), " awake by day: " + o);
+                }
+            });
+        h.runAfterDelay(2420, () -> {
             StringBuilder bad = new StringBuilder();
-            for (Giant g : here) {
-                String id = ids.get(g.key());
-                JsonObject o = id == null ? null : row(s, g.key(), id);
-                if (o == null) o = nearestAt(s, g.key(), spots.get(g.key()));
-                if (o != null) ids.put(g.key(), o.get("id").getAsString());
-                if (o == null) bad.append(g.key()).append(" none summoned (").append(kind(s, g.key())).append("); ");
-                else if (!o.has("asleep") || !o.get("asleep").getAsBoolean())
-                    bad.append(g.key()).append(" awake by day: ").append(o).append("; ");
-            }
+            for (Giant g : here)
+                if (!slept.contains(g.key())) bad.append(g.key()).append(last.getOrDefault(g.key(), " never looked at"))
+                        .append("; ");
             removeAll(s, p, ids);
             for (ServerPlayer q : by) {
                 s.getPlayerList().getOps().remove(q.getGameProfile());

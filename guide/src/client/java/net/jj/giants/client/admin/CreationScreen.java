@@ -32,7 +32,7 @@ public class CreationScreen extends Screen {
             DIM = AdminBookScreen.DIM, KEY = AdminBookScreen.KEY, TITLE = AdminBookScreen.TITLE,
             PANEL = AdminBookScreen.PANEL, EDGE = AdminBookScreen.EDGE;
     /** the suggested presets still to come, greyed: My Giant (Part 5) */
-    private static final List<String> SUGGESTED = List.of("My Giant");
+    private static final List<String> SUGGESTED = List.of();
 
     private final Screen parent;
     private final AdminDraft draft;

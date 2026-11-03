@@ -567,8 +567,8 @@ public final class BellMoves {
         h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ev, 4f, 1f);
         for (ServerPlayer p : level().players())
             if (p.distanceToSqr(h) < Mth.square(200 * s + 80))
-                p.displayClientMessage(
-                        Component.translatable("warn.hollowbell." + name).withStyle(ChatFormatting.RED), true);
+                net.jj.hollowbell.GiantsPlayers.moveLine(
+                        p, Component.translatable("warn.hollowbell." + name).withStyle(ChatFormatting.RED), true);
     }
 
     /** ends whatever move he's in the middle of, straight away (he eases back to rest by himself) */
@@ -862,7 +862,7 @@ public final class BellMoves {
                 p.onUpdateAbilities();
             }
             p.setDeltaMovement(p.getDeltaMovement().x, -1.6, p.getDeltaMovement().z);
-            p.displayClientMessage(Component.translatable("message.hollowbell.knocked_down"), true);
+            net.jj.hollowbell.GiantsPlayers.moveLine(p, Component.translatable("message.hollowbell.knocked_down"), true);
         }
     }
 

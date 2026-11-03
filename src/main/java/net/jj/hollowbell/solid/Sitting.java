@@ -107,6 +107,11 @@ public final class Sitting {
         if (s.level() != p.level() || s.isRemoved() || h.sitDying())
             return Result.NOT_ON_HIM;
         if (!h.sitAllowed(p)) return Result.NOT_ALLOWED;
+        // (Part 5) sitting on giants turned off in this world
+        if (!net.jj.hollowbell.GiantsPlayers.sit()) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "sit_off");
+            return Result.NOT_ALLOWED;
+        }
         Solid.Anchor a = fromGame != null ? theirSpot(h, p, fromGame) : null;
         if (a == null) a = spotUnder(h, p);
         if (a == null) return Result.NOT_ON_HIM;
@@ -274,6 +279,12 @@ public final class Sitting {
                 standUp(s, p);
                 if (pl instanceof ServerPlayer sp)
                     sp.displayClientMessage(Component.translatable("message." + modId + ".sit.off_list"), true);
+                return;
+            }
+            // (Part 5) sitting turned off while they sat: up, safely
+            if (!net.jj.hollowbell.GiantsPlayers.sit()) {
+                standUp(s, p);
+                net.jj.hollowbell.GiantsPlayers.say(pl, "sit_off");
                 return;
             }
         }

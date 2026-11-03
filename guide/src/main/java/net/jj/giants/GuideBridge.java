@@ -25,6 +25,8 @@ public final class GuideBridge {
         if (server == null || action == null || arg == null) return null;
         return switch (action) {
             case "adminworld" -> AdminServer.fromGiant(server, arg);
+            // (Part 5) a giant tells what came of a My Giant pick (ADMIN_BRIDGE.md 20.5)
+            case "mygiantdone" -> net.jj.giants.players.Players.pickDone(server, arg);
             default -> null;
         };
     }

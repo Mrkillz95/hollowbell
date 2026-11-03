@@ -115,7 +115,9 @@ public final class FightMusic {
     }
 
     public static void tick(Minecraft mc) {
-        boolean on = BellConfig.V.fightMusic && GiantsPerf.f("detail.music") > 0f;
+        // (Part 5) the server's Fight music choice: usual (the player's own), on or off
+        boolean on = net.jj.hollowbell.GiantsPlayers.music(
+                BellConfig.V.fightMusic && GiantsPerf.f("detail.music") > 0f);
         double d = on ? nearest(mc) : -1;
         if (d >= 0) {
             lastNear = d;

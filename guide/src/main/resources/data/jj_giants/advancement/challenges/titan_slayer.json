@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:netherite_sword"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.titan_slayer",
+      "fallback": "Titan Slayer"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.titan_slayer.what",
+      "fallback": "Slay a giant while the world is on Titans"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -80,6 +80,8 @@ public class CodexItem extends Item {
         if (!(player.level() instanceof ServerLevel sl) || target instanceof HollowbellEntity)
             return InteractionResult.PASS;
         ServerPlayer sp = (ServerPlayer) player;
+        // (Part 5) the Guide's switches and rules: as the book's "go after what I look at"
+        if (CodexOrders.refused(sp, CodexPayload.ATTACK_THAT)) return InteractionResult.FAIL;
         if (!BookRule.get(sp.server).works(sp, stack)) {
             BookRule.get(sp.server).sayQuiet(sp);
             return InteractionResult.FAIL;

@@ -172,7 +172,15 @@ public final class NoWait {
      */
     static final int TRIP_WAIT = 1200;
 
+    /** (Part 5) what to do if a player's trip gives up waiting for its land */
+    private static final Map<UUID, Runnable> GIVE_UP = new HashMap<>();
+
+    public static void onGiveUp(UUID player, Runnable r) {
+        GIVE_UP.put(player, r);
+    }
+
     public static void go(ServerPlayer p, ServerLevel l, int x, int z, Function<ServerPlayer, Component> arrive) {
+        GIVE_UP.remove(p.getUUID());
         ask(l, x, z, 2);
         TRIPS.put(p.getUUID(), new Trip(l.dimension(), x, z, arrive, System.currentTimeMillis() + TRIP_WAIT * 50L));
     }
@@ -298,7 +306,9 @@ public final class NoWait {
                 continue;
             }
             it.remove();
+            Runnable gaveUp = GIVE_UP.remove(e.getKey());
             if (!ready) {
+                if (gaveUp != null) gaveUp.run();
                 // a minute and the land still isn't there (a very busy server): you stay where you are. Going anyway
                 // put you in land that wasn't made, and the server stopped and waited for it while you stood there
                 p.displayClientMessage(Component.translatable("command.hollowbell.tp_not_ready"), false);
@@ -311,6 +321,7 @@ public final class NoWait {
     }
 
     public static void forget() {
+        GIVE_UP.clear();
         TRIPS.clear();
         HOLDS.clear();
         SETTLES.clear();

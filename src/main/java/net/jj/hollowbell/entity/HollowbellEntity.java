@@ -1144,7 +1144,7 @@ public class HollowbellEntity extends Monster implements SitHost {
             sound(position(), SoundEvents.ANVIL_LAND, 3f, 0.4f);
             for (ServerPlayer p : level() instanceof ServerLevel sl ? sl.players() : List.<ServerPlayer>of())
                 if (p.distanceToSqr(this) < Mth.square(120 * bellScale() + 60))
-                    p.displayClientMessage(Component.translatable("message.hollowbell.sunk"), true);
+                    net.jj.hollowbell.GiantsPlayers.moveLine(p, Component.translatable("message.hollowbell.sunk"), true);
         } else if (sunk > 0.5f && popped < need && now >= sunkUntil) entityData.set(DATA_SUNK, 0f);
     }
 
@@ -1552,7 +1552,8 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     private void barsTick() {
         if (tickCount % 10 != 0) return;
-        if (!BellConfig.V.bossBar) {
+        // (Part 5) the Guide's Boss bars switch: usual (his own setting), on or off
+        if (!net.jj.hollowbell.GiantsPlayers.bossBar(BellConfig.V.bossBar)) {
             clearBars();
             return;
         }

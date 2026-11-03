@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:poppy"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.kind_hearted",
+      "fallback": "Kind Hearted"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.kind_hearted.what",
+      "fallback": "Own a giant while the world is on Gentle Giants"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

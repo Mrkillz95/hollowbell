@@ -58,6 +58,8 @@ final class BellTargets {
         if (e instanceof Player p) {
             // (on peaceful nobody is hunted, flung or poisoned)
             if (p.isCreative() || p.isSpectator() || hb.level().getDifficulty() == Difficulty.PEACEFUL) return true;
+            // (Part 5) an admin's rule: the giants leave this player alone
+            if (net.jj.hollowbell.GiantsPlayers.ignored(p)) return true;
             if (hb.mood.turnedOn(p.getUUID()) || hb.mood.hunting(p.getUUID())) return false;
             Player holder = bookHolder();
             if (holder == null) return false;
@@ -523,7 +525,8 @@ final class BellTargets {
         boolean tell = Meeting.claimMeetingLine(hb.getUUID(), other.getUUID(), now);
         for (ServerPlayer p : sl.players()) {
             double dMe = p.distanceToSqr(hb), dThem = p.distanceToSqr(other);
-            if (tell && (dMe < 256 * 256 || dThem < 256 * 256))
+            // (Part 5) meeting news can be turned off for players
+            if (tell && net.jj.hollowbell.GiantsPlayers.chatMeetings() && (dMe < 256 * 256 || dThem < 256 * 256))
                 p.sendSystemMessage(Component.translatable(
                         "message.hollowbell.giants_fight", Meeting.name(Meeting.ME, true), Meeting.name(them, false)));
             // (the advancement for seeing it)
@@ -551,7 +554,8 @@ final class BellTargets {
         hb.metLately.put(from.getUUID(), now + BellConfig.V.meetCooldown * 1200L);
         String them = Meeting.kindOf(from);
         for (ServerPlayer p : sl.players())
-            if (p.distanceToSqr(hb) < 256 * 256 || p.distanceToSqr(from) < 256 * 256)
+            if (net.jj.hollowbell.GiantsPlayers.chatMeetings()
+                    && (p.distanceToSqr(hb) < 256 * 256 || p.distanceToSqr(from) < 256 * 256))
                 p.sendSystemMessage(Component.translatable(
                         "message.hollowbell.giant_yields", Meeting.name(Meeting.ME, true), Meeting.name(them, true)));
         HollowbellMod.LOG.info("A Hollowbell backs down from {}", Meeting.name(them, false));

@@ -6,6 +6,8 @@ import net.jj.giants.Giant;
 import net.jj.giants.Giants;
 import net.jj.giants.GiantsGuideMod;
 import net.jj.giants.client.perf.PerfClient;
+import net.jj.giants.client.players.PlayersClient;
+import net.jj.giants.client.players.WorldPages;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -77,29 +79,36 @@ public class GuideScreen extends Screen {
     }
 
     private boolean together() {
-        return pick >= giants.size();
+        return pick == giants.size();
+    }
+
+    /** (Part 5) the last entry: This world (the rules, the vote, the leaderboards, My Giant's pick) */
+    private boolean world() {
+        return pick > giants.size();
     }
 
     private @Nullable Giant giant() {
-        return together() ? null : giants.get(pick);
+        return together() || world() ? null : giants.get(pick);
     }
 
     private String[] pages() {
-        return together() ? TOGETHER_PAGES : Giants.pages(giant());
+        return world() ? WorldPages.PAGES : together() ? TOGETHER_PAGES : Giants.pages(giant());
     }
 
     private int entries() {
-        return giants.isEmpty() ? 0 : giants.size() + 1;
+        return giants.isEmpty() ? 0 : giants.size() + 2;
     }
 
     @Override
     protected void init() {
         giants = Giants.installed();
-        pick = pickKey.equals("together") ? giants.size() : 0;
+        pick = pickKey.equals("together") ? giants.size() : pickKey.equals("world") ? giants.size() + 1 : 0;
         for (int i = 0; i < giants.size(); i++) if (giants.get(i).key().equals(pickKey)) pick = i;
         if (giants.isEmpty()) pick = 0;
-        else pickKey = together() ? "together" : giants.get(pick).key();
+        else pickKey = world() ? "world" : together() ? "together" : giants.get(pick).key();
         tab = Mth.clamp(tab, 0, pages().length - 1);
+        // (Part 5) the This world pages come from the server: asked for each time they're opened
+        if (world()) PlayersClient.ask("world");
 
         pw = Math.min(width - 8, 480);
         ph = Math.min(height - 8, 300);
@@ -173,6 +182,8 @@ public class GuideScreen extends Screen {
         blocks.clear();
         if (giants.isEmpty()) {
             para(Component.translatable("guide.jj_giants.none"), TEXT, 0);
+        } else if (world()) {
+            worldPage(WorldPages.PAGES[tab]);
         } else if (together()) {
             lines("guide.jj_giants.together." + TOGETHER_PAGES[tab] + ".");
         } else {
@@ -577,9 +588,13 @@ public class GuideScreen extends Screen {
                         64,
                         64);
                 name = Component.translatable(gi.nameKey());
-            } else {
+            } else if (i == giants.size()) {
                 g.renderItem(new ItemStack(GiantsGuideMod.GUIDE), x + 2 + (pic - 16) / 2, y + 2 + (pic - 16) / 2);
                 name = Component.translatable("guide.jj_giants.together");
+            } else {
+                g.renderItem(new ItemStack(net.minecraft.world.item.Items.COMPASS), x + 2 + (pic - 16) / 2,
+                        y + 2 + (pic - 16) / 2);
+                name = Component.translatable("guide.jj_giants.world");
             }
             List<FormattedCharSequence> ls = font.split(name, lw - pic - 8);
             int ty = y + (rowH - 2 - Math.min(2, ls.size()) * 9) / 2;
@@ -590,8 +605,15 @@ public class GuideScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float partial) {
+        // (Part 5) the server's This world pages came in (or changed): lay the page out again
+        if (world() && PlayersClient.version() != shownWorld) {
+            keptScroll = scroll;
+            layout();
+            scroll = Mth.clamp(keptScroll, 0, Math.max(0, contentH - ch));
+        }
+        hits.clear();
         // the live news came in (or changed): lay the page out again where it is
-        if (!together() && !giants.isEmpty() && Giants.pages(giant())[tab].equals("where")) {
+        if (!together() && !world() && !giants.isEmpty() && Giants.pages(giant())[tab].equals("where")) {
             Live.News n = Live.news(giant().key());
             if (n != shownNews) {
                 boolean atEnd = contentH > ch && scroll >= contentH - ch - 1;
@@ -630,7 +652,7 @@ public class GuideScreen extends Screen {
             if (i < entries() && my - y0 - i * rowH < rowH - 2) {
                 if (i != pick) {
                     pick = i;
-                    pickKey = together() ? "together" : giants.get(i).key();
+                    pickKey = world() ? "world" : together() ? "together" : giants.get(i).key();
                     tab = Mth.clamp(tab, 0, pages().length - 1);
                     scroll = 0;
                     rebuild();
@@ -638,6 +660,16 @@ public class GuideScreen extends Screen {
                 return true;
             }
         }
+        // (Part 5) a button drawn in the page (a vote, Pick your giant)
+        if (button == 0 && inContent((int) mx, (int) my))
+            for (Hit h : hits)
+                if (mx >= h.x() && mx < h.x() + h.w() && my >= h.y() && my < h.y() + h.h()) {
+                    net.minecraft.client.Minecraft.getInstance().getSoundManager().play(
+                            net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                                    net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1f));
+                    h.go().run();
+                    return true;
+                }
         if (button == 0 && contentH > ch && mx >= rx + rw - 5 && mx < rx + rw && my >= cy && my < cy + ch) {
             dragging = true;
             dragTo(my);
@@ -688,5 +720,87 @@ public class GuideScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    // (Part 5) This world: the pages the server sends (ADMIN_BRIDGE.md 20.14), drawn with the page's own blocks
+
+    private int shownWorld = -1;
+
+    /** a button drawn in the page this frame: where, and what it does */
+    private record Hit(int x, int y, int w, int h, Runnable go) {}
+
+    private final List<Hit> hits = new ArrayList<>();
+
+    /** a row of buttons in the page (each: its words, what it does, picked or not) */
+    private void buttons(List<Object[]> bs) {
+        blocks.add(new Block() {
+            public int height() {
+                return 20;
+            }
+
+            public void draw(GuiGraphics g, int x, int y, int mx, int my) {
+                int bx = x;
+                for (Object[] b : bs) {
+                    Component c = (Component) b[0];
+                    boolean on = b.length > 2 && (boolean) b[2];
+                    int w = font.width(c) + 12;
+                    if (bx + w > x + cw && bx > x) break;
+                    boolean over = mx >= bx && mx < bx + w && my >= y && my < y + 16 && my >= cy && my < cy + ch;
+                    g.fill(bx, y, bx + w, y + 16, on ? 0xFF5A4520 : over ? 0xFF4A4038 : 0xFF2A2420);
+                    g.renderOutline(bx, y, w, 16, on ? GOLD : EDGE);
+                    g.drawString(font, c, bx + 6, y + 4, on ? KEY : TEXT, false);
+                    if (y >= cy - 16 && y < cy + ch) hits.add(new Hit(bx, Math.max(y, cy), w, 16, (Runnable) b[1]));
+                    bx += w + 4;
+                }
+            }
+        });
+    }
+
+    private void worldPage(String page) {
+        shownWorld = PlayersClient.version();
+        com.google.gson.JsonObject w = PlayersClient.world();
+        for (String s : PlayersClient.said())
+            para(Component.literal(s), PlayersClient.saidOk() ? 0xFF80E080 : 0xFFFF8080, 0);
+        if (w == null) {
+            para(Component.translatable("guide.jj_giants.world.asking"), GREY, 0);
+            return;
+        }
+        if (w.has("canPick") && w.get("canPick").getAsBoolean()) {
+            heading(Component.translatable("guide.jj_giants.world.pick"), GOLD);
+            para(Component.translatable("guide.jj_giants.world.pick.note"), TEXT, 0);
+            buttons(List.<Object[]>of(new Object[] {Component.translatable("guide.jj_giants.world.pick.button"),
+                (Runnable) () -> PlayersClient.ask("pick")}));
+            gap(4);
+        }
+        WorldPages.Out out = new WorldPages.Out() {
+            public void heading(Component c) {
+                GuideScreen.this.heading(c, GOLD);
+            }
+
+            public void para(Component c, int colour) {
+                GuideScreen.this.para(c, colour, 0);
+            }
+
+            public void bullet(Component c) {
+                GuideScreen.this.bullet(c);
+            }
+
+            public void row(Component left, Component right, int colour) {
+                GuideScreen.this.row(left, right, Math.min(cw / 2, 120), colour);
+            }
+
+            public void buttons(List<Object[]> bs) {
+                GuideScreen.this.buttons(bs);
+            }
+
+            public void gap(int h) {
+                GuideScreen.this.gap(h);
+            }
+        };
+        switch (page) {
+            case "rules" -> WorldPages.rules(w, out);
+            case "votes" -> WorldPages.votes(w, out);
+            default -> WorldPages.top(w, out);
+        }
     }
 }

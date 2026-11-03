@@ -34,7 +34,8 @@ public class GiantsGuideMod implements ModInitializer {
         GuideConfig.load();
         Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(ID, "giants_guide"), GUIDE);
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(e -> e.accept(GUIDE));
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> FirstJoin.onJoin(handler.getPlayer()));
+        // (Part 5) joining: the starting kit, My Giant's pick, fight music, the challenges (Players)
+        net.jj.giants.players.Players.register();
         CommandRegistrationCallback.EVENT.register((d, reg, env) ->
                 d.register(Commands.literal("giantsguide").executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();

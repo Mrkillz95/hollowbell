@@ -40,13 +40,17 @@ public final class FirstJoin extends SavedData {
         return given.contains(id);
     }
 
-    /** a player joined: the first time ever in this world (and with the setting on), they get one guide */
+    /** (Part 5) this player has had their starting kit in this world */
+    public void mark(UUID id) {
+        if (given.add(id)) setDirty();
+    }
+
+    /**
+     * a player joined: the first time ever in this world they get the starting kit (Part 5: the Guide when the world's
+     * "The Guide on first join" is on, giveOnFirstJoin by default, and whatever else the kit holds); true if it was
+     * given now
+     */
     public static boolean onJoin(ServerPlayer player) {
-        if (!GuideConfig.V.giveOnFirstJoin) return false;
-        FirstJoin f = get(player.server);
-        if (!f.given.add(player.getUUID())) return false;
-        f.setDirty();
-        GiantsGuideMod.give(player);
-        return true;
+        return net.jj.giants.players.Players.kit(player);
     }
 }

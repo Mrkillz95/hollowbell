@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.giants.Giant;
+import net.jj.giants.admin.AdminCatalog;
 import net.jj.giants.admin.AdminBook;
 import net.jj.giants.admin.AdminDraft;
 import net.jj.giants.admin.AdminInsight;
@@ -33,6 +34,7 @@ public class PresetGameTests implements FabricGameTest {
 
     static {
         RATED.put("classic", 3);
+        RATED.put("my_giant", 3);
         RATED.put("pocket_giants", 2);
         RATED.put("titans", 5);
         RATED.put("gentle_giants", 1);
@@ -136,7 +138,8 @@ public class PresetGameTests implements FabricGameTest {
         List<AdminInsight.View> vs = new ArrayList<>();
         for (Giant g : AdminServer.giants()) vs.add(AdminInsight.view(d.report(g)));
         Map<String, Double> all = new HashMap<>();
-        for (AdminSetting s : AdminServer.shared(d.world())) all.put(s.id(), s.value().getAsDouble());
+        for (AdminSetting s : AdminServer.shared(d.world()))
+            if (!AdminCatalog.player(s)) all.put(s.id(), s.value().getAsDouble());
         return AdminInsight.warnings(vs, all);
     }
 
@@ -145,7 +148,7 @@ public class PresetGameTests implements FabricGameTest {
         AdminServer.useGiants(net.jj.giants.Giants.ALL);
         List<String> ids = new ArrayList<>(AdminTransfer.presets());
         h.assertTrue(ids.equals(new ArrayList<>(RATED.keySet())), "the presets and their order: " + ids);
-        h.assertTrue(AdminTransfer.SUGGESTED.equals(List.of("pocket_giants", "titans", "gentle_giants", "kaiju_war",
+        h.assertTrue(AdminTransfer.SUGGESTED.equals(List.of("my_giant", "pocket_giants", "titans", "gentle_giants", "kaiju_war",
                 "night_terrors", "wild_sizes")), "the suggested group");
         for (String id : ids) {
             AdminTransfer.Bundle b = AdminTransfer.preset(id);
@@ -156,7 +159,7 @@ public class PresetGameTests implements FabricGameTest {
                     : AdminTransfer.SUGGESTED.contains(id) ? group.equals("suggested") : group.equals("all"),
                     id + " group " + group);
             boolean retune = !List.of("classic", "close_quarters", "far_frontier").contains(id);
-            h.assertTrue(!retune || b.replace() && b.keep().equals(List.of("worldgen")),
+            h.assertTrue(!retune || b.replace() && b.keep().equals(List.of("worldgen", "players")),
                     id + ": a re-tune preset replaces and keeps the grounds");
             // (by name too, as the command takes it)
             h.assertTrue(AdminTransfer.builtInId(b.name()) != null || id.equals("builder_showcase"), id + " by name");
@@ -167,7 +170,7 @@ public class PresetGameTests implements FabricGameTest {
         for (JsonElement e : page.getAsJsonArray("builtin"))
             if (e.getAsJsonObject().get("group").getAsString().equals("suggested")) suggested++;
         AdminServer.useGiants(null);
-        h.assertTrue(suggested == 6, "six suggested on the page: " + suggested);
+        h.assertTrue(suggested == 7, "seven suggested on the page (My Giant too): " + suggested);
         h.succeed();
     }
 
@@ -195,6 +198,9 @@ public class PresetGameTests implements FabricGameTest {
             for (var g : b.values().entrySet())
                 for (var v : g.getValue().entrySet()) {
                     JsonElement now = d.world().values(g.getKey()).get(v.getKey());
+                    // (Part 5: a player setting named at its default stays the default)
+                    if (now == null && AdminCatalog.player(v.getKey())
+                            && AdminSetting.same(v.getValue(), AdminCatalog.shared(v.getKey()).def())) continue;
                     if (now == null || !AdminSetting.same(now, v.getValue()))
                         bad.append(id).append(" ").append(g.getKey()).append(" ").append(v.getKey())
                                 .append(" not taken; ");
@@ -235,7 +241,7 @@ public class PresetGameTests implements FabricGameTest {
         // the field survives writing and reading
         AdminTransfer.Bundle b = AdminTransfer.read(AdminTransfer.write(AdminTransfer.preset("nomads")));
         AdminServer.useGiants(null);
-        h.assertTrue(b.keep().equals(List.of("worldgen")) && b.replace(), "keep written and read");
+        h.assertTrue(b.keep().equals(List.of("worldgen", "players")) && b.replace(), "keep written and read");
         h.succeed();
     }
 

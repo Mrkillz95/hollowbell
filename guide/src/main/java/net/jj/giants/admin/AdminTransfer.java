@@ -73,7 +73,7 @@ public final class AdminTransfer {
     }
 
     /** (Part 4) the Suggested group (ADMIN_BOOK.md, the preset picker's layout); My Giant comes in Part 5 */
-    public static final List<String> SUGGESTED = List.of("pocket_giants", "titans", "gentle_giants", "kaiju_war",
+    public static final List<String> SUGGESTED = List.of("my_giant", "pocket_giants", "titans", "gentle_giants", "kaiju_war",
             "night_terrors", "wild_sizes");
 
     /** a Part 4 re-tune preset: a replace that keeps where the grounds go (ADMIN_BRIDGE.md 19.8) */
@@ -87,7 +87,17 @@ public final class AdminTransfer {
             g.append(g.length() == 0 ? "" : ",").append('"').append(k).append("\":{").append(v).append('}');
         }
         return "{\"admin\":1,\"preset\":\"" + id + "\",\"name\":\"" + name + "\",\"about\":\"" + about
-                + "\",\"replace\":true,\"keep\":[\"worldgen\"],\"all\":{" + all + "},\"giants\":{" + g + "}}";
+                + "\",\"replace\":true,\"keep\":[\"worldgen\",\"players\"],\"all\":{" + myGiant(id, all)
+                + "},\"giants\":{" + g + "}}";
+    }
+
+    /**
+     * (Part 5, ADMIN_BRIDGE.md 20.1) presets keep the player settings, and name My Giant: on for My Giant, off for
+     * every other one
+     */
+    private static String myGiant(String id, String all) {
+        String mine = "\"all.myGiant\":" + id.equals("my_giant");
+        return all.isEmpty() ? mine : all + "," + mine;
     }
 
     /** each giant's size for about two blocks tall (his height at size 1: ADMIN_BRIDGE.md 19.2) */
@@ -111,8 +121,14 @@ public final class AdminTransfer {
 
     static {
         BUILT_IN.put("classic", "{\"admin\":1,\"preset\":\"classic\",\"name\":\"Classic\",\"about\":\"Every giant as"
-                + " the server's config files have him: every setting this world changed goes back.\","
-                + "\"replace\":true}");
+                + " the server's config files have him: every giant setting this world changed goes back (the"
+                + " player settings stay).\","
+                + "\"replace\":true,\"keep\":[\"players\"],\"all\":{\"all.myGiant\":false}}");
+        // Part 5: My Giant (ADMIN_BRIDGE.md 20.7)
+        BUILT_IN.put("my_giant", retune("my_giant", "My Giant",
+                "Each player picks a giant the first time they join: they are taken to his ground with his book and"
+                        + " finder, and one of him comes to them as their own.",
+                "", "", Map.of()));
         // Part 3: where the giants' grounds go (ADMIN_BRIDGE.md 18.9)
         BUILT_IN.put("close_quarters", forEveryGiant("close_quarters", "Close Quarters",
                 "Every giant's ground begins 500 to 1,500 blocks from spawn, packed close together (smaller grounds,"
@@ -188,8 +204,10 @@ public final class AdminTransfer {
                         + " and smaller Swarmforge armies.",
                 "", "\"worldScale\":0.5,\"maxInWorld\":1", LITE_OWN));
         BUILT_IN.put("speedrun", retune("speedrun", "Speedrun",
-                "Weaker giants for quick fights: half the health, softer hits, and orders cost half the wind.",
-                "\"all.health\":0.5,\"all.damage\":0.75,\"all.windCost\":0.5", "", Map.of()));
+                "Weaker giants for quick fights: half the health, softer hits, and orders cost half the wind. New"
+                        + " players start with every giant's finder.",
+                "\"all.health\":0.5,\"all.damage\":0.75,\"all.windCost\":0.5,\"all.kitFinders\":\"all\"", "",
+                Map.of()));
         // (Part 3's two last, after every re-tune one)
         BUILT_IN.put("close_quarters", BUILT_IN.remove("close_quarters"));
         BUILT_IN.put("far_frontier", BUILT_IN.remove("far_frontier"));
@@ -410,6 +428,9 @@ public final class AdminTransfer {
             }
         } else if (replace) now = null;
         else return;
+        // (Part 5) a player setting a preset names at its default (My Giant off) is the default, not a value of
+        // the world's own: nothing to change when the world has none
+        if (now != null && AdminCatalog.player(s) && AdminSetting.same(now, s.def())) now = null;
         if (old == null && now == null) return;
         if (old != null && now != null && AdminSetting.same(old, now)) return;
         String oldText = AdminServer.shown(s, old == null ? s.def() : old) + (old == null ? " (default)" : "");
@@ -486,6 +507,7 @@ public final class AdminTransfer {
         Map<String, Double> allNow = new HashMap<>(), allThen = new HashMap<>();
         Map<String, JsonElement> chAll = after.getOrDefault(AdminCatalog.ALL, Map.of());
         for (AdminSetting s : AdminServer.shared(w)) {
+            if (AdminCatalog.player(s)) continue; // (Part 5: not a multiplier)
             allNow.put(s.id(), s.value().getAsDouble());
             if (chAll.containsKey(s.id())) {
                 JsonElement v = chAll.get(s.id());

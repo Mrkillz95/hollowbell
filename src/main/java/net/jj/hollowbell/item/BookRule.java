@@ -105,6 +105,12 @@ public final class BookRule extends SavedData {
      * quiet (the Giants Guide's live control)
      */
     public void given(ServerPlayer p, ItemStack s) {
+        // (Part 5) an admin's rule: this player may not own giants, so the copy stays quiet
+        if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) {
+            giveId(s);
+            markQuiet(s, true);
+            return;
+        }
         hold(p, giveId(s));
         markQuiet(s, false);
     }
@@ -189,6 +195,8 @@ public final class BookRule extends SavedData {
     /** this copy, in this player's hands, gives orders */
     public boolean works(ServerPlayer p, ItemStack s) {
         if (!s.is(ModItems.CODEX)) return false;
+        // (Part 5) an admin's rule: this player may not own giants, so no copy works for them
+        if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) return false;
         // (a copy with no id yet is a new one an op or the creative menu gave: whoever has it holds the book now)
         if (idOf(s) == null) {
             hold(p, giveId(s));
@@ -204,6 +212,8 @@ public final class BookRule extends SavedData {
      * two can't both grab it.
      */
     public boolean mayTake(ServerPlayer p, ItemStack s) {
+        // (Part 5) an admin's rule: this player may not own giants
+        if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) return false;
         if (holder == null) {
             hold(p, giveId(s));
             markQuiet(s, false);
@@ -221,10 +231,19 @@ public final class BookRule extends SavedData {
         Long last = toldAt.get(p.getUUID());
         if (last != null && now - last < 40) return;
         toldAt.put(p.getUUID(), now);
+        if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "no_own");
+            return;
+        }
         p.displayClientMessage(Component.translatable("message.hollowbell.book_taken", holderName), true);
     }
 
     public void sayQuiet(ServerPlayer p) {
+        // (Part 5) quiet because an admin ruled they may not own giants: that's what they're told
+        if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "no_own");
+            return;
+        }
         p.displayClientMessage(Component.translatable("message.hollowbell.book_quiet", holderName), true);
     }
 
@@ -264,7 +283,15 @@ public final class BookRule extends SavedData {
     public void look(List<ServerPlayer> players) {
         if (!toBurn.isEmpty()) for (ServerPlayer p : players) burnUp(p);
         // new copies (an op's /give, the creative menu) make whoever has them the holder
-        for (ServerPlayer p : players) for (ItemStack s : booksOf(p)) if (idOf(s) == null) hold(p, giveId(s));
+        for (ServerPlayer p : players)
+            for (ItemStack s : booksOf(p))
+                if (idOf(s) == null) {
+                    UUID id = giveId(s);
+                    // (Part 5: one who may not own giants keeps a quiet copy)
+                    if (net.jj.hollowbell.GiantsPlayers.mayOwn(p)) hold(p, id);
+                }
+        // (Part 5) an admin ruled the holder may not own giants: the book is let go of
+        if (holder != null && !net.jj.hollowbell.GiantsPlayers.mayOwn(holder)) free();
         // the holder, on and seen without the working copy: it has left them
         for (ServerPlayer p : players) {
             if (!p.getUUID().equals(holder)) continue;
@@ -276,7 +303,7 @@ public final class BookRule extends SavedData {
         if (holder == null)
             for (ServerPlayer p : players) {
                 List<ItemStack> bs = booksOf(p);
-                if (bs.isEmpty()) continue;
+                if (bs.isEmpty() || !net.jj.hollowbell.GiantsPlayers.mayOwn(p)) continue;
                 hold(p, idOf(bs.get(0)));
                 break;
             }

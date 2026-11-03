@@ -18,6 +18,7 @@
     ]
   },
   "mixins": [
+    "jj_giants.mixins.json",
     {
       "config": "jj_giants.client.mixins.json",
       "environment": "client"
