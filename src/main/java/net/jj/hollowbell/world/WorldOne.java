@@ -652,6 +652,8 @@ public class WorldOne extends SavedData {
 
     /** where he is or comes up, or null while no spot is chosen */
     public int[] respawnWhere() {
+        // (JJ answers 2) waiting to come in another giant's ground: there
+        if (!alive && mixPick != null) return new int[] {mixPick.x(), mixPick.z()};
         return placed ? new int[] {x, z} : null;
     }
 
@@ -665,6 +667,8 @@ public class WorldOne extends SavedData {
     /** (the tests) put things as asked; the old {alive, fell, due} back */
     public long[] respawnTestState(boolean isAlive, boolean fallen, long due) {
         long[] was = {alive ? 1 : 0, fell ? 1 : 0, dueAt};
+        mixPick = null;
+        mixOwn = false;
         alive = isAlive;
         fell = fallen;
         dueAt = due;
@@ -1034,7 +1038,78 @@ public class WorldOne extends SavedData {
         // and the spawner never pushes anybody out to make room
         int max = BellConfig.V.maxInWorld;
         if (max > 0 && away.count() >= max) return;
+        // (JJ answers 2) not while giants may not be in this world; maybe in another giant's ground
+        if (net.jj.hollowbell.GiantsMix.held(level) || mixStep(level)) return;
         put(level);
+    }
+
+    // (JJ answers 2, #17) giants mixing: the world's own one may come in another giant's ground (GiantsMix)
+
+    /** the other giant's ground he comes in this time (null: none drawn yet, or his own) */
+    private net.jj.hollowbell.GiantsMix.Pick mixPick;
+    /** his own ground was drawn this time */
+    private boolean mixOwn;
+    private long mixSince;
+
+    /** the other giant whose ground he waits to come in (null: his own) */
+    public @org.jetbrains.annotations.Nullable String mixIn() {
+        return alive || mixPick == null ? null : mixPick.giant();
+    }
+
+    /**
+     * true: he came in another giant's ground now, or waits for someone to be there; false: he comes in his own as
+     * always. Drawn once each time he comes (again after a day with nobody there, or when that ground has no spot he
+     * can live on).
+     */
+    public boolean mixStep(ServerLevel level) {
+        if (!net.jj.hollowbell.GiantsMix.mix()) {
+            mixPick = null;
+            mixOwn = false;
+            return false;
+        }
+        long now = level.getGameTime();
+        if (!mixOwn && mixPick == null || mixPick != null && now - mixSince > net.jj.hollowbell.GiantsMix.WAIT) {
+            mixPick = net.jj.hollowbell.GiantsMix.choose(level.getServer(), level.random);
+            mixOwn = mixPick == null;
+            mixSince = now;
+        }
+        if (mixOwn) return false;
+        if (!net.jj.hollowbell.GiantsMix.ready(level, mixPick)) return true;
+        net.minecraft.core.BlockPos at = net.jj.hollowbell.GiantsMix.spot(level, mixPick, level.random);
+        if (at == null) {
+            // (nowhere there he can live: his own ground this time)
+            mixPick = null;
+            mixOwn = true;
+            return false;
+        }
+        String in = mixPick.giant();
+        HollowbellEntity e = mixPut(level, at);
+        if (e == null) return true;
+        mixPick = null;
+        mixOwn = false;
+        setDirty();
+        HollowbellMod.LOG.info("The world's Hollowbell came in the {}'s ground at {}, {}, {}", in, at.getX(), at.getY(), at.getZ());
+        return true;
+    }
+
+    /** the world's own one, put down at this spot in another giant's ground (loaded), at home there */
+    private @org.jetbrains.annotations.Nullable HollowbellEntity mixPut(ServerLevel level, net.minecraft.core.BlockPos at) {
+        HollowbellEntity e = ModEntities.HOLLOWBELL.create(level);
+        if (e == null) return null;
+        e.setBellScale(net.minecraft.util.Mth.clamp(net.jj.hollowbell.GiantsAdmin.sized(spawnScale(level)),
+                HollowbellEntity.MIN_SCALE, HollowbellEntity.MAX_SCALE));
+        e.setVariant(HollowbellEntity.CALM);
+        e.markWorldOne();
+        oneId = e.getUUID();
+        level.getChunkSource().addRegionTicket(TICKET, new net.minecraft.world.level.ChunkPos(at), 3, e.getId());
+        e.moveTo(at.getX() + 0.5, Math.max(at.getY(), level.getMinBuildHeight() + 1), at.getZ() + 0.5,
+                level.random.nextFloat() * 360f, 0f);
+        e.setHome(e.position());
+        level.addFreshEntityWithPassengers(e);
+        alive = true;
+        dueAt = -1;
+        drawnScale = Float.NaN;
+        return e;
     }
 
     /**
@@ -1205,6 +1280,8 @@ public class WorldOne extends SavedData {
         dueAt = -1;
         drawnScale = Float.NaN;
         setDirty();
+        mixPick = null;
+        mixOwn = false;
         HollowbellMod.LOG.info("The Hollowbell has come down at {}, {}, {}", x, y, z);
     }
 

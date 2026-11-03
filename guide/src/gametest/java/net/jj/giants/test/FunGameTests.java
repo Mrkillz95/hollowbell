@@ -471,7 +471,8 @@ public class FunGameTests implements FabricGameTest {
         MinecraftServer s = fresh(h);
         ServerPlayer mod = PlayersGameTests.join(h, "moddy", false);
         AdminWorld.get(s).addMod(mod.getUUID(), "moddy");
-        var r = AdminBook.request(s, mod, AdminBook.role(mod), "{\"do\":\"spectatestop\"}");
+        // (JJ answers 2: a moderator may Watch now; everything else here is still for admins)
+        var r = AdminBook.request(s, mod, AdminBook.role(mod), "{\"do\":\"playasstop\"}");
         h.assertTrue(!r.ok() && r.lines().get(0).contains("Only admins"), "a moderator: " + r.lines());
         ServerPlayer nobody = PlayersGameTests.join(h, "nobody", false);
         r = AdminBook.change(s, nobody, "{\"do\":\"brushget\"}");

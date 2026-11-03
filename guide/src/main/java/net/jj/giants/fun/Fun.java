@@ -202,7 +202,19 @@ public final class Fun {
         return o;
     }
 
-    // the book's requests (Admins only: AdminBook checked the role)
+    /** whom this player watches now ({giant, id, label, mode}), or null */
+    public static @Nullable JsonObject watchingJson(ServerPlayer p) {
+        Watch.Follow f = Watch.of(p);
+        if (f == null) return null;
+        JsonObject j = new JsonObject();
+        j.addProperty("giant", f.kind);
+        j.addProperty("id", f.giant.toString());
+        j.addProperty("label", f.label);
+        j.addProperty("mode", f.mode);
+        return j;
+    }
+
+    // the book's requests (Admins only: AdminBook checked the role; a moderator's Watch too, JJ answers 2)
 
     public static @Nullable AdminServer.Result request(MinecraftServer server, ServerPlayer p, String who, String what,
             JsonObject o) {

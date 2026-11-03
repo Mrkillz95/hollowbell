@@ -35,7 +35,7 @@ public final class RulesPage {
             return o;
         }
         AdminWorld w = AdminWorld.get(server);
-        String name = AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty());
+        String name = net.jj.giants.tools.Tools.presetName(server);
         o.addProperty("preset", name);
         o.addProperty("about", about(name));
         if (mode.equals("basic")) return o;
@@ -92,6 +92,10 @@ public final class RulesPage {
             if (v == null) v = s.def();
             if (!AdminSetting.same(v, s.jar())) out.add(s.name() + ": " + AdminSetting.text(v) + ".");
         }
+        // (JJ answers 2, #17) giants mixing
+        JsonElement mix = w.values(AdminCatalog.ALL).get("all.spawnMix");
+        if (mix != null && mix.isJsonPrimitive() && mix.getAsJsonPrimitive().isBoolean() && mix.getAsBoolean())
+            out.add("Giants may come on their own in each other's grounds.");
         // each giant's own: id -> (value text -> giant names)
         Map<String, Map<String, List<String>>> by = new LinkedHashMap<>();
         Map<String, AdminSetting> rows = new LinkedHashMap<>();

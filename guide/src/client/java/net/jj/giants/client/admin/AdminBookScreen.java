@@ -258,7 +258,7 @@ public class AdminBookScreen extends Screen {
 
     /** an all-giants multiplier, shown with an "x" (not the player settings, which are switches and choices) */
     private static boolean mult(AdminSetting s) {
-        return shared(s) && !AdminCatalog.plain(s);
+        return AdminCatalog.multiplier(s);
     }
 
     private static boolean move(AdminSetting s) {
@@ -516,6 +516,11 @@ public class AdminBookScreen extends Screen {
 
         /** (Part 2C) a click on the row itself (not its buttons); top: where the row is on the screen now */
         boolean click(double mx, double my, int top) {
+            return false;
+        }
+
+        /** (JJ answers 2, #14) the mouse wheel over the row itself: true if it used it (the page doesn't scroll) */
+        boolean scrolled(double mx, double my, int top, double sy) {
             return false;
         }
 
@@ -1613,9 +1618,20 @@ public class AdminBookScreen extends Screen {
         String label = AdminBookClient.AdminJsonBridge.str(d, "label");
         List<FormattedCharSequence> reason =
                 font.split(Component.literal(AdminBookClient.AdminJsonBridge.str(d, "reason")), lw - 8);
+        // (JJ answers 2, #11) an event or a schedule running: said beside the preset underneath it
+        String runs = "";
+        if (!creating() && h.get("tools") instanceof JsonObject tl) {
+            if (tl.get("event") instanceof JsonObject e) runs = tt("home.preset.event", "Event: %s", str(e, "name"))
+                    .getString();
+            else if (tl.get("schedule") instanceof JsonObject sc)
+                runs = tt("home.preset.schedule", "Schedule: %s", str(sc, "name")).getString();
+        }
+        String running = runs;
         rows.add(new Block(16, (g, x, y, w, mx, my) -> {
             int nx = g.drawString(font, tr("home.preset"), x, y + 3, GREY, false);
-            g.drawString(font, Component.literal(preset), nx + 4, y + 3, KEY, false);
+            int px = g.drawString(font, Component.literal(preset), nx + 4, y + 3, KEY, false);
+            if (!running.isEmpty()) g.drawString(font, cut("· " + running, Math.max(20, x + w - px - 6)), px + 4,
+                    y + 3, GREY, false);
             if (mx >= x && mx < x + w && my >= y && my < y + 14)
                 setTooltipForNextRenderPass(font.split(tr("home.preset.tip"), 260));
         }));
@@ -2394,6 +2410,11 @@ public class AdminBookScreen extends Screen {
             dragTo(my);
             return true;
         }
+        // (JJ answers 2, #14) the map dragged round
+        if (mapPress != null && button == 0) {
+            mapPress.drag(mx, my);
+            return true;
+        }
         return super.mouseDragged(mx, my, button, dx, dy);
     }
 
@@ -2401,6 +2422,12 @@ public class AdminBookScreen extends Screen {
     public boolean mouseReleased(double mx, double my, int button) {
         mouseDown = false;
         dragging = false;
+        if (mapPress != null && button == 0) {
+            MapPress mp = mapPress;
+            mapPress = null;
+            mp.release(mx, my);
+            return true;
+        }
         if (modal instanceof SizeAsk sa && sa.sliding) {
             sa.sliding = false;
             sa.slider.onRelease(mx, my);
@@ -2425,6 +2452,11 @@ public class AdminBookScreen extends Screen {
             return true;
         }
         if (mx >= lx - 5 && mx < lx + lw + 8 && my >= ly0 && my < ly1) {
+            // (JJ answers 2, #14) a row that takes the wheel itself (the map zooms)
+            for (Row r : List.copyOf(rows)) {
+                int top = ly0 + r.y - (int) scroll;
+                if (my >= top && my < top + r.h && r.scrolled(mx, my, top, sy)) return true;
+            }
             scroll -= sy * 24;
             place();
             return true;
@@ -2511,6 +2543,11 @@ public class AdminBookScreen extends Screen {
         };
     }
 
+    /** (JJ answers 2, #15) a moderator whom the admins let watch giants */
+    private static boolean moderatorWatch() {
+        return AdminBookClient.role().equals("moderator") && AdminBookClient.mayWatch();
+    }
+
     /** what the summon bar has picked (kept while the game runs) */
     private static String summonKind = "";
     private static double summonSize = 1;
@@ -2525,6 +2562,12 @@ public class AdminBookScreen extends Screen {
         List<JsonObject> kinds = objects(live, "giants");
         List<JsonObject> speaking = kinds.stream().filter(k -> bool(k, "speaks")).toList();
         if (AdminBookClient.admin() && !speaking.isEmpty()) summonRow(speaking);
+        // (JJ answers 2, #15) a moderator watching a giant: who, and Stop
+        JsonObject watching = AdminBookClient.watchingNow();
+        if (moderatorWatch() && watching != null)
+            rows.add(new LineRow(tt("live.watching", "Watching the %s", str(watching, "label")), KEY,
+                    Component.empty(), List.<Object[]>of(new Object[] {tt("live.watch.stop", "Stop watching"),
+                        (Runnable) () -> request("spectatestop")})));
         List<String> none = new ArrayList<>(), old = new ArrayList<>();
         for (JsonObject k : kinds) {
             String name = str(k, "name");
@@ -2653,11 +2696,13 @@ public class AdminBookScreen extends Screen {
             bs.add(new Object[] {"home", ""});
             bs.add(new Object[] {"remove", ""});
             bs.add(new Object[] {"kill", ""});
+            // (JJ answers 2, #15) moderators may watch him (admins have the Fun page's Watch)
+            if (moderatorWatch()) bs.add(new Object[] {"watch", ""});
             int bx = 30, by = 26;
             h = 46;
             for (Object[] o : bs) {
                 String act = (String) o[0];
-                Component c = tr("live.act." + act);
+                Component c = act.equals("watch") ? tt("live.watch", "Watch") : tr("live.act." + act);
                 int w = font.width(c) + 10;
                 if (bx > 30 && bx + w > lw) {
                     bx = 30;
@@ -2665,6 +2710,15 @@ public class AdminBookScreen extends Screen {
                     h += 18;
                 }
                 Button b = Button.builder(c, x -> press(act)).bounds(0, 0, w, 16).build();
+                if (act.equals("watch")) {
+                    b.active = here;
+                    b.setTooltip(Tooltip.create(here ? tt("live.watch.tip", "Watch him with a hidden camera that"
+                            + " follows him; Stop watching brings you back where you were.")
+                            : tr("live.away_only")));
+                    add(b, bx, by, false);
+                    bx += w + 3;
+                    continue;
+                }
                 boolean can = does.contains(act) && (here || !HERE_ONLY.contains(act));
                 b.active = can;
                 b.setTooltip(Tooltip.create(!does.contains(act) ? tr("live.cant", str(kind, "name"))
@@ -2691,6 +2745,7 @@ public class AdminBookScreen extends Screen {
                             p -> liveAct(key, id, "owner", str(p, "id")));
                     place();
                 }
+                case "watch" -> request("spectate", "giant", key, "id", id, "mode", "free");
                 case "remove", "kill" -> confirm(tr("live." + act + ".title", name), tr("live." + act + ".body",
                         name), tr("live.act." + act), () -> liveAct(key, id, act, ""));
                 default -> liveAct(key, id, act, "");
@@ -4052,7 +4107,8 @@ public class AdminBookScreen extends Screen {
         }
         int rx = 0;
         for (Object[] z : new Object[][] {
-            {tt("map.fit", "Fit"), (Runnable) () -> mapScale = -1, tt("map.fit.tip", "Everything on the map")},
+            {tt("map.fit", "Fit"), (Runnable) () -> mapScale = -1, tt("map.fit.tip2",
+                "The players online (and spawn in the Overworld)")},
             {tt("map.me", "Me"), (Runnable) () -> {
                 var me = net.minecraft.client.Minecraft.getInstance().player;
                 if (me == null) return;
@@ -4081,8 +4137,8 @@ public class AdminBookScreen extends Screen {
         // (the whole map in view under its bar, at every GUI scale; the notes under it scroll)
         int mh = Mth.clamp(Math.min((int) (lw * 0.62), ly1 - ly0 - 28), 60, 340);
         rows.add(new MapRow(t, mh));
-        rows.add(new Note(tt("map.note", "Click a giant to go to him, his ground's middle to go there; anywhere else"
-                + " moves the map there. Circles: the giants' grounds (their colours), areas (red: no giants, green:"
+        rows.add(new Note(tt("map.note2", "Drag the map to move it, the mouse wheel (or + and −) to zoom. Click a"
+                + " giant to go to him, his ground's middle to go there; anywhere else moves the map there. Circles: the giants' grounds (their colours), areas (red: no giants, green:"
                 + " safe). ★ spawn, ■ players; a faded giant is out of the world or not loaded, a red edge fighting, a blue one"
                 + " asleep."), GREY));
     }
@@ -4100,22 +4156,20 @@ public class AdminBookScreen extends Screen {
         MapRow(JsonObject t, int mh) {
             this.t = t;
             h = mh;
-            // fit: every thing in this dimension, with room round it
+            // fit (JJ answers 2, #14): the players online in this dimension and (in the Overworld) spawn, with room
+            // round them; far-away grounds and giants are found by dragging and zooming out. Nobody there: its giants
             if (mapScale < 0) {
                 double x0 = Double.MAX_VALUE, x1 = -Double.MAX_VALUE, z0 = Double.MAX_VALUE, z1 = -Double.MAX_VALUE;
                 List<double[]> pts = new ArrayList<>();
-                for (JsonObject g : objects(t, "giants"))
-                    if (str(g, "dim").equals(mapDim)) pts.add(new double[] {dbl(g, "x", 0), dbl(g, "z", 0), 16});
-                if (mapDim.equals("minecraft:overworld")) {
-                    for (JsonObject g : objects(t, "grounds"))
-                        pts.add(new double[] {dbl(g, "x", 0), dbl(g, "z", 0), dbl(g, "r", 0)});
-                    JsonObject sp = t.get("spawn") instanceof JsonObject s ? s : new JsonObject();
-                    pts.add(new double[] {dbl(sp, "x", 0), dbl(sp, "z", 0), Math.max(32, dbl(sp, "clear", 0))});
-                }
                 for (JsonObject p : objects(t, "players"))
-                    if (str(p, "dim").equals(mapDim)) pts.add(new double[] {dbl(p, "x", 0), dbl(p, "z", 0), 16});
-                for (JsonObject a : objects(t, "areas"))
-                    if (str(a, "dim").equals(mapDim)) pts.add(new double[] {dbl(a, "x", 0), dbl(a, "z", 0), dbl(a, "r", 0)});
+                    if (str(p, "dim").equals(mapDim)) pts.add(new double[] {dbl(p, "x", 0), dbl(p, "z", 0), 96});
+                if (mapDim.equals("minecraft:overworld")) {
+                    JsonObject sp = t.get("spawn") instanceof JsonObject s ? s : new JsonObject();
+                    pts.add(new double[] {dbl(sp, "x", 0), dbl(sp, "z", 0), Math.max(96, dbl(sp, "clear", 0))});
+                }
+                if (pts.isEmpty())
+                    for (JsonObject g : objects(t, "giants"))
+                        if (str(g, "dim").equals(mapDim)) pts.add(new double[] {dbl(g, "x", 0), dbl(g, "z", 0), 96});
                 for (double[] p : pts) {
                     x0 = Math.min(x0, p[0] - p[2]);
                     x1 = Math.max(x1, p[0] + p[2]);
@@ -4158,6 +4212,12 @@ public class AdminBookScreen extends Screen {
 
         @Override
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
+            // (JJ answers 2, #14) dragged or zoomed since this row was made (the page is made again every 2 s)
+            if (mapScale >= 0) {
+                scale = mapScale;
+                cx = mapCx;
+                cz = mapCz;
+            }
             spots.clear();
             drawnX = x;
             drawnW = w;
@@ -4282,6 +4342,33 @@ public class AdminBookScreen extends Screen {
         @Override
         boolean click(double mx, double my, int top) {
             if (mx < drawnX || mx >= drawnX + drawnW) return false;
+            // (JJ answers 2, #14) pressed: a drag moves the map; let go without moving: the old click
+            mapPress = new MapPress(this, mx, my, top);
+            return true;
+        }
+
+        /** the wheel: closer or further out, the spot under the mouse staying where it is */
+        @Override
+        boolean scrolled(double mx, double my, int top, double sy) {
+            if (mx < drawnX || mx >= drawnX + drawnW || sy == 0) return false;
+            zoomAt(mx, my, top, sy > 0 ? 1 / 1.25 : 1.25);
+            return true;
+        }
+
+        void zoomAt(double mx, double my, int top, double times) {
+            double ns = Mth.clamp(scale * times, 0.25, 512);
+            double ox = mx - (drawnX + drawnW / 2.0), oz = my - (top + h / 2.0);
+            double wx = cx + ox * scale, wz = cz + oz * scale;
+            scale = ns;
+            cx = wx - ox * ns;
+            cz = wz - oz * ns;
+            mapScale = scale;
+            mapCx = cx;
+            mapCz = cz;
+        }
+
+        /** a click that didn't drag: go to what's under it, else move the map there */
+        void clicked(double mx, double my, int top) {
             Spot best = null;
             double bd = Double.MAX_VALUE;
             for (Spot s : spots) {
@@ -4294,18 +4381,62 @@ public class AdminBookScreen extends Screen {
             }
             if (best != null) {
                 best.go().run();
-                return true;
+                return;
             }
             // anywhere else: the map moves there
             mapScale = scale;
             mapCx = cx + (mx - (drawnX + drawnW / 2.0)) * scale;
             mapCz = cz + (my - (top + h / 2.0)) * scale;
-            double sc = scroll;
-            build();
-            scroll = sc;
-            place();
-            return true;
+            cx = mapCx;
+            cz = mapCz;
         }
+    }
+
+    /** (JJ answers 2, #14) the map held down: dragged, it moves under the mouse; let go still, a click */
+    private static @Nullable MapPress mapPress;
+
+    private static final class MapPress {
+        final MapRow row;
+        final double x0, y0, cx0, cz0;
+        final int top;
+        boolean moved;
+
+        MapPress(MapRow row, double x, double y, int top) {
+            this.row = row;
+            this.top = top;
+            x0 = x;
+            y0 = y;
+            cx0 = row.cx;
+            cz0 = row.cz;
+        }
+
+        void drag(double mx, double my) {
+            if (!moved && Math.hypot(mx - x0, my - y0) < 3) return;
+            moved = true;
+            row.cx = cx0 - (mx - x0) * row.scale;
+            row.cz = cz0 - (my - y0) * row.scale;
+            mapScale = row.scale;
+            mapCx = row.cx;
+            mapCz = row.cz;
+        }
+
+        void release(double mx, double my) {
+            if (!moved) row.clicked(mx, my, top);
+        }
+    }
+
+    /** (the pictures) the map dragged by dx, dy screen pixels and zoomed by times about its middle */
+    public static void testMap(double dx, double dy, double times) {
+        if (net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen s)
+            for (Row r : s.rows)
+                if (r instanceof MapRow m) {
+                    m.zoomAt(m.drawnX + m.drawnW / 2.0, 0, -m.h / 2, times);
+                    m.cx -= dx * m.scale;
+                    m.cz -= dy * m.scale;
+                    mapScale = m.scale;
+                    mapCx = m.cx;
+                    mapCz = m.cz;
+                }
     }
 
     // stats
@@ -4413,6 +4544,11 @@ public class AdminBookScreen extends Screen {
                         case "off" -> tt("resp.off", "Doesn't come on his own (Comes on his own is off)");
                         default -> tt("resp.waiting", "Not counting yet (nobody has been in the world)");
                     };
+            // (JJ answers 2, #13 and #17) held back by a "no giants" world; coming in another giant's ground
+            if (speaks && !str(r, "held").isEmpty())
+                sub = sub.copy().append(tt("resp.held3", " · held (no giants)"));
+            else if (speaks && !str(r, "in").isEmpty())
+                sub = sub.copy().append(tt("resp.in2", " · in the %s's ground", giantName(str(r, "in"))));
             boolean can = speaks && (state.equals("due") || state.equals("gone") || state.equals("waiting"));
             int colour = state.equals("standing") ? GOOD : state.equals("due") ? KEY : DIM;
             String name = str(r, "name");
