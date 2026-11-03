@@ -255,13 +255,18 @@ public class AdminBookScreen extends Screen {
         return s.giant().equals(AdminCatalog.ALL);
     }
 
+    /** an all-giants multiplier, shown with an "x" (not the player settings, which are switches and choices) */
+    private static boolean mult(AdminSetting s) {
+        return shared(s) && !AdminCatalog.player(s);
+    }
+
     private static boolean move(AdminSetting s) {
         return s.id().startsWith("move.");
     }
 
     /** a value as the book shows it: on/off, x2 for multipliers, 0.5-1.5 for a range */
     static String show(AdminSetting s, JsonElement v) {
-        boolean times = shared(s) || s.id().endsWith(".cooldown") || s.id().endsWith(".wind");
+        boolean times = mult(s) || s.id().endsWith(".cooldown") || s.id().endsWith(".wind");
         return (times && s.type() != AdminSetting.Type.BOOL ? "x" : "") + AdminSetting.text(v);
     }
 
@@ -811,7 +816,7 @@ public class AdminBookScreen extends Screen {
         t.add(name(s).copy().withStyle(ChatFormatting.YELLOW).getVisualOrderText());
         if (!what(s).getString().isEmpty()) t.addAll(font.split(what(s), 260));
         t.addAll(font.split(tr("tip.takes", s.type() == AdminSetting.Type.BOOL ? tr("tip.onoff").getString()
-                : (shared(s) || move(s) && s.type() != AdminSetting.Type.BOOL ? "x" : "") + s.rangeText())
+                : (mult(s) || move(s) && s.type() != AdminSetting.Type.BOOL ? "x" : "") + s.rangeText())
                 .withStyle(ChatFormatting.GRAY), 260));
         t.addAll(font.split(tr("tip.values", show(s, s.value()), show(s, s.def()), show(s, s.jar()))
                 .withStyle(ChatFormatting.GRAY), 260));
@@ -1120,7 +1125,7 @@ public class AdminBookScreen extends Screen {
 
         @Override
         protected void updateMessage() {
-            boolean times = shared(s) || move(s);
+            boolean times = mult(s) || move(s);
             setMessage(Component.literal(prefix + (times ? "x" : "") + AdminSetting.plain(current())));
         }
 

@@ -1,0 +1,149 @@
+# Part 5 pictures again after the merge with Part 2C (1.11.0: the Players page in the redesigned book): My Giant's pick screen, the Guide's This world pages (Rules, Votes,
+# Leaderboards), a leaderboard sign at spawn and the admin book's Players page, at GUI scale 2 and 3.
+#   withslot.ps1 <guide> runAutotest -Pgiants -Pscript=tools/p5merged_autotest.txt   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+# a few numbers for the leaderboards: two tiny giants slain by the player
+cmd wreckback summon calm 0.02
+wait 20
+cmd damage @e[type=wreckback:wreckback,limit=1,sort=nearest] 1000000 minecraft:player_attack by @s
+wait 40
+cmd cerberus summon calm 0.02
+wait 20
+cmd damage @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] 1000000 minecraft:player_attack by @s
+wait 5
+cmd kill @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest]
+wait 200
+# the Titans preset, a few player settings, a vote
+cmd giants admin preset titans
+cmd giants admin confirm
+cmd giants admin set all ride off
+cmd giants admin set all kitFinders all
+cmd giants vote open 10 auto titans, gentle_giants, lite
+cmd giants vote 2
+wait 20
+# the Guide: This world
+guide world 0
+wait 40
+mouse 2 2
+wait 20
+shot p5m_rules
+guide world 1
+wait 40
+mouse 2 2
+wait 20
+shot p5m_votes
+guide world 2
+wait 40
+mouse 2 2
+wait 20
+shot p5m_leaderboards
+close
+# the admin book's Players page, top to bottom
+adminbook players 0
+wait 60
+mouse 2 2
+wait 25
+shot p5m_admin_players_0
+adminbook players 260
+wait 30
+mouse 2 2
+wait 25
+shot p5m_admin_players_1
+adminbook players 520
+wait 30
+mouse 2 2
+wait 25
+shot p5m_admin_players_2
+adminbook players 780
+wait 30
+mouse 2 2
+wait 25
+shot p5m_admin_players_3
+adminbook players 1040
+wait 30
+mouse 2 2
+wait 25
+shot p5m_admin_players_4
+adminbook players 1300
+wait 30
+mouse 2 2
+wait 25
+shot p5m_admin_players_5
+adminbook players 1700
+wait 30
+mouse 2 2
+wait 25
+shot p5m_admin_players_6
+close
+# My Giant: the preset (the giants as they come again), then the pick screen
+cmd giants admin preset my_giant
+cmd giants admin confirm
+wait 10
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p5m_pick
+pickchosen 5
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p5m_pick_chosen
+close
+# a leaderboard sign at spawn
+cmd tp @s ~ ~ ~ 0 0
+cmd setblock ~-1 ~1 ~3 minecraft:oak_sign[rotation=8]
+cmd setblock ~1 ~1 ~3 minecraft:oak_sign[rotation=8]
+cmd giants players board set slayers ~-1 ~1 ~3
+cmd giants players board set owners ~1 ~1 ~3
+wait 40
+gui off
+wait 10
+shot p5m_sign
+gui on
+# GUI scale 3
+guiscale 3
+wait 20
+guide world 0
+wait 40
+mouse 2 2
+wait 20
+shot p5m_rules_gui3
+guide world 1
+wait 40
+mouse 2 2
+wait 20
+shot p5m_votes_gui3
+guide world 2
+wait 40
+mouse 2 2
+wait 20
+shot p5m_leaderboards_gui3
+close
+adminbook players
+wait 60
+mouse 2 2
+wait 25
+shot p5m_admin_players_gui3
+adminbook players 600
+wait 30
+mouse 2 2
+wait 25
+shot p5m_admin_players_gui3_b
+close
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p5m_pick_gui3
+close
+quit
