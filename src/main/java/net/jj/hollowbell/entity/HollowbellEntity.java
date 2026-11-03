@@ -16,6 +16,7 @@ import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.item.BellArmorItem;
+import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
 import net.jj.hollowbell.rig.BellPieces;
@@ -230,6 +231,8 @@ public class HollowbellEntity extends Monster implements SitHost {
     boolean worldOne;
     /** (the world's own one, ADMIN_BRIDGE 19.4 worldCount) his companions came, and when the next may */
     boolean companionsCame;
+    /** (My Giant, BOOK_RULE.md) the player he came to and answers to; saved with him */
+    @Nullable UUID myOwner;
 
     long companionAt;
     /** (roam wander) the way he is travelling, degrees; NaN until he first picks a far spot */
@@ -1044,6 +1047,9 @@ public class HollowbellEntity extends Monster implements SitHost {
         // the world's own one keeps the world posted on where he is, for the finder
         if (worldOne && tickCount % 100 == 0 && level() instanceof ServerLevel sl)
             WorldOne.get(sl.getServer()).seen(this);
+        // (My Giant) his owner's entry keeps the id he goes by (back from out of the world he can have a new one)
+        if (myOwner != null && tickCount % 100 == 0 && level() instanceof ServerLevel sl)
+            BookRule.get(sl.getServer()).boundSeen(myOwner, getUUID());
         mood.tick();
         if (angerTicks > 0) angerTicks--;
         long now = level().getGameTime();
@@ -1752,7 +1758,11 @@ public class HollowbellEntity extends Monster implements SitHost {
             // the world's own one dying sets the next one going; another one only if the world has none and
             // isn't already counting down to one
             var w = WorldOne.get(sl.getServer());
-            if (worldOne && (w.isTheOne(getUUID()) || w.oneId() == null)) {
+            if (myOwner != null) {
+                // (My Giant) one who came to a picker: his owner's own book goes quiet; the main book isn't burned
+                // and the world's own one hasn't fallen
+                BookRule.get(sl.getServer()).boundFell(sl.getServer(), myOwner, getUUID());
+            } else if (worldOne && (w.isTheOne(getUUID()) || w.oneId() == null)) {
                 w.died(sl, this);
                 worldOne = false; // saved mid-fold he is nobody's any more, so a reload can't bring him back
             } else if (!worldOne && BellConfig.V.oneInTheWorld && !w.aliveNow() && w.dueIn(sl) < 0) {
@@ -2077,6 +2087,22 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     public boolean isWorldOne() {
         return worldOne;
+    }
+
+    // (My Giant) the one who came to a picker
+
+    public void setMyOwner(@Nullable UUID who) {
+        myOwner = who;
+    }
+
+    /** his owner, kept whether My Giant is on or not */
+    public @Nullable UUID myOwner() {
+        return myOwner;
+    }
+
+    /** the player he answers to alone: his owner while My Giant is on; null = the main book, as any other */
+    public @Nullable UUID boundOwner() {
+        return myOwner != null && net.jj.hollowbell.GiantsPlayers.myGiant() ? myOwner : null;
     }
     /** freshly made (summon, egg, the world's own), not read back from a save: only these count at the cap */
     public boolean freshSpawn() {

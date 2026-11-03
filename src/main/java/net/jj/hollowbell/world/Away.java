@@ -207,12 +207,17 @@ public final class Away extends SavedData {
 
     /** the nearest one out there in this dimension, from this spot */
     public @Nullable Rec nearest(ServerLevel l, Vec3 from) {
+        return nearest(l, from, r -> true);
+    }
+
+    /** the same, among those this filter lets through (My Giant: the ones that answer this player) */
+    public @Nullable Rec nearest(ServerLevel l, Vec3 from, java.util.function.Predicate<Rec> ok) {
         String dim = l.dimension().location().toString();
         long now = l.getGameTime();
         Rec best = null;
         double bd = Double.MAX_VALUE;
         for (Rec r : recs.values()) {
-            if (!r.dim.equals(dim)) continue;
+            if (!r.dim.equals(dim) || !ok.test(r)) continue;
             Vec3 s = r.spot(now);
             double d = Mth.square(s.x - from.x) + Mth.square(s.z - from.z);
             if (d < bd) {

@@ -24,7 +24,7 @@ public abstract class BookPickupMixin {
         if (!(player instanceof ServerPlayer sp) || !s.is(ModItems.CODEX)) return;
         BookRule r = BookRule.get(sp.server);
         if (r.mayTake(sp, s)) return;
-        r.refuse(sp);
+        r.refuse(sp, s);
         ci.cancel();
     }
 }

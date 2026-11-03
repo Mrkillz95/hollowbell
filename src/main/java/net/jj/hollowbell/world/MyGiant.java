@@ -12,6 +12,7 @@ import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.item.BookRule;
+import net.jj.hollowbell.item.CodexItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -93,13 +94,44 @@ public final class MyGiant {
             if (!GiantsPlayers.mayOwn(p)) line += " You may not own giants in this world.";
             else if (!GiantsPlayers.books()) line += " Giants' books are turned off in this world.";
         } else if (r.holder() != null && !r.holder().equals(p.getUUID())) {
-            outcome = "shared";
-            holder = r.holderName();
-            BellWorld ww = BellWorld.get(server);
-            ww.addFriend(r.holder(), p.getUUID());
-            ww.rememberName(p.getUUID(), p.getGameProfile().getName());
-            line = holder + " has the " + NAME + " book, so you share theirs: you're on " + holder
-                    + "'s safe list and he won't hurt you.";
+            // (1.11.0, My Giant on: BOOK_RULE.md's exception) their own book and their own one of him, while there's
+            // room under his Most at once; at the cap, or with nowhere to put him, they share as before
+            boolean full = false;
+            String me = p.getGameProfile().getName();
+            String own = null;
+            if (GiantsPlayers.myGiant()) {
+                int cap = BellConfig.V.maxInWorld;
+                if (r.own(p.getUUID()) != null) {
+                    // (picked again while their own book and giant still stand: kept; a lost book comes back)
+                    if (!r.carriesOwn(p)) put(p, r.ownCopy(p));
+                    own = "The " + NAME + " is yours: his book is in your pack.";
+                } else if (giant && (cap <= 0 || WorldOne.standing(server) < cap)) {
+                    HollowbellEntity e = WorldOne.companionNear(p.serverLevel(), p.position(),
+                            Math.max(12, 110 * BellConfig.V.worldScale), home, null);
+                    if (e != null) {
+                        e.setMyOwner(p.getUUID());
+                        put(p, r.makeOwn(p, e.getUUID()));
+                        own = "The " + NAME + " is yours: his book is in your pack, and he's coming to you.";
+                    }
+                } else full = giant;
+            }
+            if (own != null) {
+                outcome = "own";
+                holder = me;
+                spawned = true;
+                line = own;
+            } else {
+                outcome = "shared";
+                holder = r.holderName();
+                BellWorld ww = BellWorld.get(server);
+                ww.addFriend(r.holder(), p.getUUID());
+                ww.rememberName(p.getUUID(), me);
+                line = full
+                        ? "This world already has as many of the " + NAME + " as it allows, so you share " + holder
+                                + "'s: you're on " + holder + "'s safe list and he won't hurt you."
+                        : holder + " has the " + NAME + " book, so you share theirs: you're on " + holder
+                                + "'s safe list and he won't hurt you.";
+            }
         } else {
             if (r.holder() == null) giveBook(p);
             holder = p.getGameProfile().getName();
@@ -200,5 +232,32 @@ public final class MyGiant {
 
     public static void forget() {
         lastDone = "";
+    }
+
+    // (1.11.0) who answers whom (BOOK_RULE.md "Exception: My Giant gives every picker their own book")
+
+    /**
+     * The player this one answers to alone, while My Giant is on (null: he answers the main book, as any other). In
+     * the world: his own mark; out of it: the mark in his saved body; in land not loaded: the owners' entries.
+     */
+    public static @Nullable UUID ownerOf(MinecraftServer server, UUID id, @Nullable HollowbellEntity h) {
+        if (h != null) return h.boundOwner();
+        if (!GiantsPlayers.myGiant()) return null;
+        Away.Rec r = Away.get(server).get(id);
+        if (r != null && r.body != null && r.body.hasUUID("MyOwner")) return r.body.getUUID("MyOwner");
+        return BookRule.get(server).ownerOfGiant(id);
+    }
+
+    /**
+     * He answers this player's book: one bound to somebody answers his owner alone (their own book or the main one);
+     * every other one answers the main book only. With My Giant off: whoever carries the working book, as shipped.
+     */
+    public static boolean answers(ServerPlayer p, @Nullable UUID boundOwner) {
+        if (boundOwner != null) return boundOwner.equals(p.getUUID()) && CodexItem.carriedBy(p);
+        return CodexItem.carriedMainBy(p);
+    }
+
+    public static boolean answers(ServerPlayer p, HollowbellEntity h) {
+        return answers(p, h.boundOwner());
     }
 }

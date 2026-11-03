@@ -123,7 +123,7 @@ public final class GiantsLive {
             if (seen.contains(id)) continue;
             seen.add(id);
             j.addProperty("own", id.equals(one));
-            owner(j, book);
+            owner(j, book, server, id, o instanceof HollowbellEntity he ? he : null);
             if (n++ < MOST) out.add(j.toString());
         }
         // the world's own one, saved away with his chunk and written down nowhere else
@@ -135,13 +135,22 @@ public final class GiantsLive {
             j.addProperty("x", w1.where().getX() + 0.5);
             j.addProperty("z", w1.where().getZ() + 0.5);
             j.addProperty("own", true);
-            owner(j, book);
+            owner(j, book, server, one, null);
             out.add(j.toString());
         }
         return out;
     }
 
-    private static void owner(JsonObject j, BookRule book) {
+    private static void owner(
+            JsonObject j, BookRule book, MinecraftServer server, UUID id, @Nullable HollowbellEntity h) {
+        // (My Giant) one who came to a picker is theirs (so the Owners board counts him)
+        UUID bound = net.jj.hollowbell.world.MyGiant.ownerOf(server, id, h);
+        if (bound != null) {
+            BookRule.Own o = book.own(bound);
+            j.addProperty("owner", o != null ? o.name() : net.jj.hollowbell.world.BellWorld.get(server).nameOf(bound));
+            j.addProperty("ownerId", bound.toString());
+            return;
+        }
         if (book.holder() == null) return;
         j.addProperty("owner", book.holderName());
         j.addProperty("ownerId", book.holder().toString());

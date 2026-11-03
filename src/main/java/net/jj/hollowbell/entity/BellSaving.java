@@ -104,6 +104,7 @@ final class BellSaving {
             tag.putDouble("BoundZ", hb.boundZ);
             tag.putInt("BoundR", hb.boundR);
         }
+        if (hb.myOwner != null) tag.putUUID("MyOwner", hb.myOwner);
         hb.mood.save(tag);
     }
 
@@ -216,6 +217,7 @@ final class BellSaving {
             hb.boundZ = tag.getDouble("BoundZ");
             hb.boundR = tag.getInt("BoundR");
         } else hb.boundR = -1;
+        hb.myOwner = tag.hasUUID("MyOwner") ? tag.getUUID("MyOwner") : null;
         hb.mood.load(tag);
         hb.healthMult = tag.contains("BellHealthMult") ? tag.getFloat("BellHealthMult") : 1f;
         // one saved with no base health (from an egg): his most health for his size, keeping how hurt he was

@@ -56,13 +56,19 @@ public final class FarOrders {
 
     /** the nearest one in this dimension, at any distance: in the world, out of it, or in land not loaded */
     public static @Nullable Target nearest(ServerLevel l, Vec3 from) {
+        return nearest(l, from, t -> true);
+    }
+
+    /** the same, among those this filter lets through (My Giant: the ones that answer this player) */
+    public static @Nullable Target nearest(ServerLevel l, Vec3 from, java.util.function.Predicate<Target> ok) {
         Target best = null;
         double bd = Double.MAX_VALUE;
         for (HollowbellEntity h : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying())) {
             double d = Mth.square(h.getX() - from.x) + Mth.square(h.getZ() - from.z);
-            if (d < bd) {
+            Target c = new Target(Kind.LOADED, h.getUUID(), h.getX(), h.getZ(), h);
+            if (d < bd && ok.test(c)) {
                 bd = d;
-                best = new Target(Kind.LOADED, h.getUUID(), h.getX(), h.getZ(), h);
+                best = c;
             }
         }
         Away a = Away.get(l.getServer());
@@ -72,18 +78,20 @@ public final class FarOrders {
             if (!r.dim.equals(dim)) continue;
             Vec3 s = r.spot(now);
             double d = Mth.square(s.x - from.x) + Mth.square(s.z - from.z);
-            if (d < bd) {
+            Target c = new Target(Kind.AWAY, r.id, s.x, s.z, null);
+            if (d < bd && ok.test(c)) {
                 bd = d;
-                best = new Target(Kind.AWAY, r.id, s.x, s.z, null);
+                best = c;
             }
         }
         for (var e : a.parked().entrySet()) {
             var p = e.getValue();
             if (!p.dim().equals(dim) || l.getEntity(e.getKey()) != null || a.get(e.getKey()) != null) continue;
             double d = Mth.square(p.x() - from.x) + Mth.square(p.z() - from.z);
-            if (d < bd) {
+            Target c = new Target(Kind.PARKED, e.getKey(), p.x(), p.z(), null);
+            if (d < bd && ok.test(c)) {
                 bd = d;
-                best = new Target(Kind.PARKED, e.getKey(), p.x(), p.z(), null);
+                best = c;
             }
         }
         return best;

@@ -45,6 +45,21 @@ public class CodexItem extends Item {
         return false;
     }
 
+    /**
+     * (My Giant) carries the working main book, not only their own book: what every one of him not bound to somebody
+     * answers to. With My Giant off no own book works, so this is carriedBy as shipped.
+     */
+    public static boolean carriedMainBy(@Nullable Entity e) {
+        if (!(e instanceof ServerPlayer sp)) return carriedBy(e);
+        Inventory inv = sp.getInventory();
+        BookRule r = BookRule.get(sp.server);
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (s.is(ModItems.CODEX) && BookRule.ownerOf(s) == null && r.works(sp, s)) return true;
+        }
+        return false;
+    }
+
     /** has a copy, but not the working one: it says so instead of giving orders */
     public static boolean onlyQuiet(ServerPlayer p) {
         if (carriedBy(p)) return false;
@@ -66,7 +81,7 @@ public class CodexItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level lvl, Player player, InteractionHand hand) {
         ItemStack s = player.getItemInHand(hand);
         if (player instanceof ServerPlayer sp && !BookRule.get(sp.server).works(sp, s)) {
-            BookRule.get(sp.server).sayQuiet(sp);
+            BookRule.get(sp.server).sayQuiet(sp, s);
             return InteractionResultHolder.fail(s);
         }
         if (lvl.isClientSide && BookRule.quiet(s)) return InteractionResultHolder.fail(s);
@@ -83,7 +98,7 @@ public class CodexItem extends Item {
         // (Part 5) the Guide's switches and rules: as the book's "go after what I look at"
         if (CodexOrders.refused(sp, CodexPayload.ATTACK_THAT)) return InteractionResult.FAIL;
         if (!BookRule.get(sp.server).works(sp, stack)) {
-            BookRule.get(sp.server).sayQuiet(sp);
+            BookRule.get(sp.server).sayQuiet(sp, stack);
             return InteractionResult.FAIL;
         }
         // the same as "go after what I look at", with the book held right on it

@@ -54,7 +54,17 @@ public final class GiantsPlayers {
             if (v == null || !v.isJsonPrimitive()) continue;
             m.put(id, v.getAsString().toLowerCase(Locale.ROOT));
         }
+        // (1.11.0, BOOK_RULE.md) My Giant: read beside the switches, not one of the "uses"
+        JsonElement mg = all.get(MY_GIANT);
+        if (mg != null && mg.isJsonPrimitive()) m.put(MY_GIANT, mg.getAsString().toLowerCase(Locale.ROOT));
         switches = Map.copyOf(m);
+    }
+
+    /** the Guide's My Giant (all.myGiant, absent = off): every picker gets their own book and one of him */
+    public static final String MY_GIANT = "all.myGiant";
+
+    public static boolean myGiant() {
+        return "true".equals(switches.get(MY_GIANT));
     }
 
     /** the server stopped (and the tests): every switch on, no rules */

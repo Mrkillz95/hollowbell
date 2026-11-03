@@ -143,6 +143,14 @@ public final class BellCommand {
                                             ? Component.translatable("command.hollowbell.book_nobody")
                                             : Component.translatable("command.hollowbell.book_who", r.holderName()),
                                     false);
+                    // (My Giant) every picker's own book too
+                    List<String> own = r.ownNames();
+                    if (net.jj.hollowbell.GiantsPlayers.myGiant() && !own.isEmpty())
+                        c.getSource()
+                                .sendSuccess(
+                                        () -> Component.translatable(
+                                                "command.hollowbell.book_own", String.join(", ", own)),
+                                        false);
                     return r.holder() == null ? 0 : 1;
                 }))
                 .then(Commands.literal("free").requires(OP).executes(c -> {

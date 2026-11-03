@@ -20,6 +20,7 @@ import net.jj.hollowbell.item.FinderItem;
 import net.jj.hollowbell.world.Away;
 import net.jj.hollowbell.world.BellWorld;
 import net.jj.hollowbell.world.FarOrders;
+import net.jj.hollowbell.world.MyGiant;
 import net.jj.hollowbell.world.WorldOne;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -43,12 +44,17 @@ import org.jetbrains.annotations.Nullable;
 public final class CodexOrders {
     private CodexOrders() {}
 
-    /** the Hollowbell the book reaches: the nearest one, within the book's range */
+    /**
+     * the Hollowbell the book reaches: the nearest one, within the book's range, that answers this player (My Giant:
+     * one bound to somebody answers only them; with it off every one answers the working book, as shipped)
+     */
     public static @Nullable HollowbellEntity his(Player p) {
         HollowbellEntity best = null;
         double bd = Math.pow(BellConfig.V.bookRange, 2);
         if (!(p.level() instanceof ServerLevel sl)) return null;
+        ServerPlayer sp = p instanceof ServerPlayer x ? x : null;
         for (HollowbellEntity m : sl.getEntities(ModEntities.HOLLOWBELL, m -> !m.isDeadOrDying())) {
+            if (sp != null && !MyGiant.answers(sp, m)) continue;
             double d = m.distanceToSqr(p);
             if (d < bd) {
                 bd = d;
@@ -56,6 +62,11 @@ public final class CodexOrders {
             }
         }
         return best;
+    }
+
+    /** (My Giant) the far ones (in the world, out of it, in land not loaded) that answer this player's book */
+    private static java.util.function.Predicate<FarOrders.Target> answering(ServerPlayer p) {
+        return t -> MyGiant.answers(p, MyGiant.ownerOf(p.server, t.id(), t.entity()));
     }
 
     private static void say(ServerPlayer p, String key, Object... args) {
@@ -199,6 +210,12 @@ public final class CodexOrders {
     /** a move pressed while riding his crown: the same clock the book uses */
     public static void moveFromCrown(ServerPlayer p, HollowbellEntity m, int which) {
         if (which <= 0 || which >= Moves.NAMES.length) return;
+        // (1.11.0, ADMIN_BRIDGE 20.17) bookOrders noattacks: every move pressed on his crown is an attack (even grab
+        // and harvest: his strands squeeze what they hold), so each is refused here, on the server, like the book's
+        if (!net.jj.hollowbell.GiantsPlayers.attackOrders()) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "attacks_off");
+            return;
+        }
         if (!net.jj.hollowbell.GiantsAdmin.moveOn(which)) {
             say(p, "codex_move_off");
             return;
@@ -582,7 +599,7 @@ public final class CodexOrders {
         }
         ServerLevel sl = p.serverLevel();
         HollowbellEntity m = his(p);
-        var far = m == null ? FarOrders.nearest(sl, p.position()) : null;
+        var far = m == null ? FarOrders.nearest(sl, p.position(), answering(p)) : null;
         if (m == null && far != null && far.kind() == FarOrders.Kind.LOADED) m = far.entity();
         if (m == null && far == null) {
             say(p, "codex_none");
@@ -630,7 +647,7 @@ public final class CodexOrders {
     /** a movement order to one out of reach of the book: at any distance, the same as near */
     private static void farOrder(ServerPlayer p, CodexPayload pay) {
         ServerLevel sl = p.serverLevel();
-        var t = FarOrders.nearest(sl, p.position());
+        var t = FarOrders.nearest(sl, p.position(), answering(p));
         if (t == null) {
             say(p, "codex_none");
             return;
@@ -682,7 +699,8 @@ public final class CodexOrders {
     private static void awayOrder(ServerPlayer p, CodexPayload pay) {
         ServerLevel sl = (ServerLevel) p.level();
         Away a = Away.get(p.server);
-        Away.Rec r = a.nearest(sl, p.position());
+        Away.Rec r = a.nearest(sl, p.position(),
+                x -> MyGiant.answers(p, MyGiant.ownerOf(p.server, x.id, null)));
         if (r == null) {
             say(p, "codex_none");
             return;

@@ -42,6 +42,16 @@ public final class BookRule extends SavedData {
     /** books still to burn: the player whose Hollowbell was killed, and that book's id */
     private final Map<UUID, UUID> toBurn = new HashMap<>();
 
+    /**
+     * (1.11.0, My Giant: BOOK_RULE.md's exception) a picker's own book, outside the one-book rule: its id, their name,
+     * and the one of him bound to them (his id as last seen; null until he has come)
+     */
+    public record Own(UUID book, String name, @Nullable UUID giant) {}
+
+    private final Map<UUID, Own> own = new HashMap<>();
+    /** the mark in an own book: whose it is (and their name, for the line when somebody else tries to take it) */
+    private static final String OWNER = "HollowbellOwn", OWNER_NAME = "HollowbellOwnName";
+
     public static BookRule get(MinecraftServer server) {
         return server.overworld()
                 .getDataStorage()
@@ -62,6 +72,13 @@ public final class BookRule extends SavedData {
             CompoundTag c = burn.getCompound(i);
             if (c.hasUUID("Who") && c.hasUUID("Book")) r.toBurn.put(c.getUUID("Who"), c.getUUID("Book"));
         }
+        ListTag own = tag.getList("Own", Tag.TAG_COMPOUND);
+        for (int i = 0; i < own.size(); i++) {
+            CompoundTag c = own.getCompound(i);
+            if (c.hasUUID("Who") && c.hasUUID("Book"))
+                r.own.put(c.getUUID("Who"), new Own(c.getUUID("Book"), c.getString("Name"),
+                        c.hasUUID("Giant") ? c.getUUID("Giant") : null));
+        }
         return r;
     }
 
@@ -81,6 +98,18 @@ public final class BookRule extends SavedData {
                 burn.add(c);
             }
             tag.put("ToBurn", burn);
+        }
+        if (!own.isEmpty()) {
+            ListTag list = new ListTag();
+            for (Map.Entry<UUID, Own> e : own.entrySet()) {
+                CompoundTag c = new CompoundTag();
+                c.putUUID("Who", e.getKey());
+                c.putUUID("Book", e.getValue().book());
+                c.putString("Name", e.getValue().name());
+                if (e.getValue().giant() != null) c.putUUID("Giant", e.getValue().giant());
+                list.add(c);
+            }
+            tag.put("Own", list);
         }
         return tag;
     }
@@ -197,6 +226,8 @@ public final class BookRule extends SavedData {
         if (!s.is(ModItems.CODEX)) return false;
         // (Part 5) an admin's rule: this player may not own giants, so no copy works for them
         if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) return false;
+        // (My Giant) an own book: only its owner's, only while My Giant is on
+        if (ownerOf(s) != null) return ownWorks(p, s);
         // (a copy with no id yet is a new one an op or the creative menu gave: whoever has it holds the book now)
         if (idOf(s) == null) {
             hold(p, giveId(s));
@@ -214,6 +245,9 @@ public final class BookRule extends SavedData {
     public boolean mayTake(ServerPlayer p, ItemStack s) {
         // (Part 5) an admin's rule: this player may not own giants
         if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) return false;
+        // (My Giant) an own book: its owner may always take it, nobody else ever; the main holder slot is untouched
+        UUID mark = ownerOf(s);
+        if (mark != null) return mark.equals(p.getUUID());
         if (holder == null) {
             hold(p, giveId(s));
             markQuiet(s, false);
@@ -227,6 +261,11 @@ public final class BookRule extends SavedData {
 
     /** the plain line for a refusal (not more than once in two seconds, as a pickup is tried every tick) */
     public void refuse(ServerPlayer p) {
+        refuse(p, ItemStack.EMPTY);
+    }
+
+    /** the same, for this book: somebody else's own book says whose it is */
+    public void refuse(ServerPlayer p, ItemStack s) {
         long now = p.serverLevel().getGameTime();
         Long last = toldAt.get(p.getUUID());
         if (last != null && now - last < 40) return;
@@ -235,16 +274,153 @@ public final class BookRule extends SavedData {
             net.jj.hollowbell.GiantsPlayers.say(p, "no_own");
             return;
         }
+        UUID mark = ownerOf(s);
+        if (mark != null && !mark.equals(p.getUUID())) {
+            p.displayClientMessage(Component.translatable("message.hollowbell.own_book_theirs", ownerName(s)), true);
+            return;
+        }
         p.displayClientMessage(Component.translatable("message.hollowbell.book_taken", holderName), true);
     }
 
     public void sayQuiet(ServerPlayer p) {
+        List<ItemStack> bs = booksOf(p);
+        sayQuiet(p, bs.isEmpty() ? ItemStack.EMPTY : bs.get(0));
+    }
+
+    /** why this copy gives no orders */
+    public void sayQuiet(ServerPlayer p, ItemStack s) {
         // (Part 5) quiet because an admin ruled they may not own giants: that's what they're told
         if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) {
             net.jj.hollowbell.GiantsPlayers.say(p, "no_own");
             return;
         }
+        UUID mark = ownerOf(s);
+        if (mark != null) {
+            String key = !mark.equals(p.getUUID())
+                    ? "message.hollowbell.own_book_theirs"
+                    : !ownCurrent(mark, idOf(s)) ? "message.hollowbell.own_book_fell" : "message.hollowbell.own_book_off";
+            p.displayClientMessage(Component.translatable(key, ownerName(s)), true);
+            return;
+        }
         p.displayClientMessage(Component.translatable("message.hollowbell.book_quiet", holderName), true);
+    }
+
+    // (1.11.0) My Giant: own books (BOOK_RULE.md "Exception: My Giant gives every picker their own book")
+
+    /** whose own book this is (null: the main book, or any copy of it) */
+    public static @Nullable UUID ownerOf(ItemStack s) {
+        CustomData d = s.get(DataComponents.CUSTOM_DATA);
+        if (d == null) return null;
+        CompoundTag t = d.copyTag();
+        return t.hasUUID(OWNER) ? t.getUUID(OWNER) : null;
+    }
+
+    private static String ownerName(ItemStack s) {
+        CustomData d = s.get(DataComponents.CUSTOM_DATA);
+        return d == null ? "" : d.copyTag().getString(OWNER_NAME);
+    }
+
+    /** this own book is its owner's current one (they have an entry and the ids match) */
+    private boolean ownCurrent(UUID owner, @Nullable UUID id) {
+        Own o = own.get(owner);
+        return o != null && id != null && o.book().equals(id);
+    }
+
+    /** an own book that works: in its owner's hands, while My Giant is on and they may own giants */
+    public boolean ownWorks(ServerPlayer p, ItemStack s) {
+        UUID mark = ownerOf(s);
+        return mark != null
+                && mark.equals(p.getUUID())
+                && net.jj.hollowbell.GiantsPlayers.myGiant()
+                && net.jj.hollowbell.GiantsPlayers.mayOwn(p)
+                && ownCurrent(mark, idOf(s));
+    }
+
+    public @Nullable Own own(UUID who) {
+        return own.get(who);
+    }
+
+    /** every own book's owner, by name (for book who) */
+    public List<String> ownNames() {
+        List<String> out = new ArrayList<>();
+        for (Own o : own.values()) out.add(o.name());
+        out.sort(String.CASE_INSENSITIVE_ORDER);
+        return out;
+    }
+
+    /**
+     * (a My Giant pick) a fresh own book for this player, theirs alone: it never takes or frees the main holder slot.
+     * Their entry keeps the bound one's id (null until he has come).
+     */
+    public ItemStack makeOwn(ServerPlayer p, @Nullable UUID giant) {
+        ItemStack s = new ItemStack(ModItems.CODEX);
+        UUID id = UUID.randomUUID();
+        String name = p.getGameProfile().getName();
+        CustomData.update(DataComponents.CUSTOM_DATA, s, t -> {
+            t.putUUID(ID, id);
+            t.putUUID(OWNER, p.getUUID());
+            t.putString(OWNER_NAME, name);
+        });
+        own.put(p.getUUID(), new Own(id, name, giant));
+        setDirty();
+        return s;
+    }
+
+    /** another copy of their current own book (they lost theirs; it works only in their hands anyway) */
+    public @Nullable ItemStack ownCopy(ServerPlayer p) {
+        Own o = own.get(p.getUUID());
+        if (o == null) return null;
+        ItemStack s = new ItemStack(ModItems.CODEX);
+        CustomData.update(DataComponents.CUSTOM_DATA, s, t -> {
+            t.putUUID(ID, o.book());
+            t.putUUID(OWNER, p.getUUID());
+            t.putString(OWNER_NAME, o.name());
+        });
+        return s;
+    }
+
+    /** they carry their current own book (working or not) */
+    public boolean carriesOwn(ServerPlayer p) {
+        Own o = own.get(p.getUUID());
+        if (o == null) return false;
+        for (ItemStack s : booksOf(p)) if (p.getUUID().equals(ownerOf(s)) && o.book().equals(idOf(s))) return true;
+        return false;
+    }
+
+    /** the bound one was seen under this id (he can come back from out of the world under a new one) */
+    public void boundSeen(UUID owner, UUID giant) {
+        Own o = own.get(owner);
+        if (o == null || giant.equals(o.giant())) return;
+        own.put(owner, new Own(o.book(), o.name(), giant));
+        setDirty();
+    }
+
+    /** the owner of the one bound under this id, by the entries (for one not loaded) */
+    public @Nullable UUID ownerOfGiant(UUID giant) {
+        for (Map.Entry<UUID, Own> e : own.entrySet()) if (giant.equals(e.getValue().giant())) return e.getKey();
+        return null;
+    }
+
+    /**
+     * A bound one fell: his owner's own book goes quiet and their entry is dropped (the main book isn't touched).
+     * They are told if they are on.
+     */
+    public void boundFell(MinecraftServer server, UUID owner, UUID giant) {
+        Own o = own.get(owner);
+        if (o == null || (o.giant() != null && !o.giant().equals(giant))) return;
+        own.remove(owner);
+        setDirty();
+        ServerPlayer p = server.getPlayerList().getPlayer(owner);
+        if (p == null) return;
+        for (ItemStack s : booksOf(p)) if (owner.equals(ownerOf(s))) markQuiet(s, true);
+        p.sendSystemMessage(Component.translatable("message.hollowbell.own_book_fell"));
+    }
+
+    /** (the tests) every own book forgotten */
+    public void forgetOwn() {
+        if (own.isEmpty()) return;
+        own.clear();
+        setDirty();
     }
 
     /** a slot of a container that isn't the player's own pack (their ender chest is outside, like any chest) */
@@ -302,12 +478,16 @@ public final class BookRule extends SavedData {
         // nobody holds it (it left them, or a world from before this rule): the first seen with one has it
         if (holder == null)
             for (ServerPlayer p : players) {
-                List<ItemStack> bs = booksOf(p);
+                List<ItemStack> bs = new ArrayList<>(booksOf(p));
+                bs.removeIf(s -> ownerOf(s) != null); // (an own book never becomes the main one)
                 if (bs.isEmpty() || !net.jj.hollowbell.GiantsPlayers.mayOwn(p)) continue;
                 hold(p, idOf(bs.get(0)));
                 break;
             }
         for (ServerPlayer p : players)
-            for (ItemStack s : booksOf(p)) markQuiet(s, !(p.getUUID().equals(holder) && idOf(s).equals(bookId)));
+            for (ItemStack s : booksOf(p))
+                markQuiet(s, ownerOf(s) != null
+                        ? !ownWorks(p, s)
+                        : !(p.getUUID().equals(holder) && idOf(s).equals(bookId)));
     }
 }

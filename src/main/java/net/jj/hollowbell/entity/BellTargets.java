@@ -42,8 +42,15 @@ final class BellTargets {
         Player best = null;
         double bd = Double.MAX_VALUE;
         double r = BellConfig.V.bookRange;
+        // (My Giant) one who came to a picker: his owner, when they carry a working book in reach; else nobody
+        UUID owner = hb.boundOwner();
+        if (owner != null) {
+            Player p = hb.level().getPlayerByUUID(owner);
+            return p != null && !p.isRemoved() && p.distanceToSqr(hb) < r * r && CodexItem.carriedBy(p) ? p : null;
+        }
         for (Player p : hb.level().players()) {
-            if (!CodexItem.carriedBy(p)) continue;
+            // (every other one answers the main book only: an own book never reaches him)
+            if (!CodexItem.carriedMainBy(p)) continue;
             double d = p.distanceToSqr(hb);
             if (d < r * r && d < bd) {
                 bd = d;

@@ -28,7 +28,7 @@ public abstract class BookSlotMixin {
         if (!BookRule.outside((Slot) (Object) this, player)) return;
         BookRule r = BookRule.get(sp.server);
         if (r.mayTake(sp, s)) return;
-        r.refuse(sp);
+        r.refuse(sp, s);
         cir.setReturnValue(false);
     }
 }
