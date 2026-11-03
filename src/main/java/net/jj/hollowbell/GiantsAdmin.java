@@ -303,11 +303,10 @@ public final class GiantsAdmin {
                 "He travels to the nearest other giant and fights it, whatever kind (needs Fights other giants and"
                         + " Giant meetings).");
         choice("meetGiants", "behaviour", GiantsBehave.MEETS, LIVE, "Meeting other giants",
-                "What he does when he meets a giant of another kind and no player sent either of them. decide: as"
-                        + " always (he fights some kinds and keeps away from others). fight: fights every other kind."
-                        + " run_away: keeps away from every other kind, and backs down from a wild fight at its first"
-                        + " blow. ignore: neither fights nor keeps away. Orders, /giants meet and hitting back aren't"
-                        + " changed.");
+                // (21.1's line is past the 240 a line may be: the same, shorter)
+                "A giant of another kind, no player sending either. decide: as always (fights some kinds, keeps"
+                        + " away from others). fight: fights every kind. run_away: keeps away, backs down at a wild"
+                        + " fight's first blow. ignore: neither. Orders unchanged.");
         cfg("raidVillages", "behaviour", LIVE, "Raids",
                 "He heads for the nearest village or player and attacks: villagers, iron golems and players there are"
                         + " his targets.");

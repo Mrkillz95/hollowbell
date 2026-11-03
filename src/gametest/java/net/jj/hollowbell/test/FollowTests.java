@@ -158,7 +158,7 @@ public class FollowTests implements FabricGameTest {
         HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.CALM, 1508);
         ServerPlayer[] p = new ServerPlayer[1];
         int[][] land = new int[1][];
-        double[] from = new double[1];
+        double[] from = new double[2];
         h.runAfterDelay(10, () -> {
             land[0] = path(h, e, keep(e) + WALK + 40, 3);
             p[0] = owner(h, e);
@@ -166,18 +166,22 @@ public class FollowTests implements FabricGameTest {
             h.assertTrue(e.following(), "the book didn't make him follow");
             press(p[0], CodexPayload.FOLLOW);
             h.assertTrue(!e.following() && e.followingWho() == null, "pressed again, he still follows");
-            from[0] = e.getZ();
+            // (so his own wandering can't move him: roam stay never stops him following, the follow comes first)
+            h.assertTrue(java.util.List.of("ok").equals(net.jj.hollowbell.GiantsBridge.giants(h.getLevel().getServer(),
+                    "adminset", "{\"admin\":1,\"values\":{\"roam\":\"stay\"}}")), "roam stay");
+            from[0] = e.getX();
+            from[1] = e.getZ();
         });
         int end = 20 + walk(h, () -> p[0], 20);
         h.runAfterDelay(end + 200, () -> {
-            // (he may drift about on his own: what matters is he didn't come after them)
-            double came = e.getZ() - from[0];
+            double came = Math.hypot(e.getX() - from[0], e.getZ() - from[1]);
             boolean following = e.following();
+            net.jj.hollowbell.GiantsAdmin.clear();
             unpath(h, land[0]);
             drop(p[0]);
             release(h, e);
             h.assertFalse(following, "he took up following again");
-            h.assertTrue(came < 8, "he came after them anyway: " + (int) came + " blocks");
+            h.assertTrue(came < 8, "he moved anyway: " + (int) came + " blocks");
             h.succeed();
         });
     }
