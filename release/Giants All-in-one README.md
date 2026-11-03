@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.8.0 |
-| Pitchgut | 1.35.36 |
-| Furrowmaw | 1.17.33 |
-| Fire & Ice Cerberus | 2.18.33 |
-| Hollowbell | 1.12.35 |
-| Lantern Willow | 1.10.36 |
-| Wreckback | 1.2.41 |
-| The Swarmforge | 1.4.39 |
-| The Gloamwick | 1.2.20 |
+| Giants Guide | 1.9.0 |
+| Pitchgut | 1.35.37 |
+| Furrowmaw | 1.17.34 |
+| Fire & Ice Cerberus | 2.18.34 |
+| Hollowbell | 1.12.36 |
+| Lantern Willow | 1.10.37 |
+| Wreckback | 1.2.42 |
+| The Swarmforge | 1.4.40 |
+| The Gloamwick | 1.2.21 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.10.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.11.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.10.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.11.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -55,8 +55,9 @@ A book about every giant you have. Right-click it to open it.
 | Drops | his weapon, his armour and its two powers (R and Sneak + R), his ward, the rest of his loot and his book, with pictures of the real items and their recipes |
 | Commands | the commands anyone can use, and the ones that need cheats |
 
-- **Giants together** (the last one on the left): who fights whom and who keeps away when they meet, and every
-  `/giants` command.
+- **Giants together**: who fights whom and who keeps away when they meet, and every `/giants` command.
+- **This world** (the last one on the left): this world's rules (its preset, how dangerous the giants are and what's
+  different from Classic), votes on the next preset, and the leaderboards. With My Giant on, Pick your giant is here.
 - Scroll with the mouse wheel, the arrow keys or the bar on the right. Hold the mouse over an item to see its name.
 - It only shows the giants you have, so it works with any of them on their own too.
 - The "right now" part needs the guide on the server as well (it is, if the server has this jar). Otherwise it
@@ -99,6 +100,33 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.8.0: fifteen new presets that change how the giants behave (Pocket Giants, Titans, Gentle
   Giants, Kaiju War, Night Terrors, Wild Sizes, Siege, One Life, Boss Rush, Nomads, Hardcore, Builder / Showcase,
   Public Server Safe, Lite, Speedrun), each with its danger rating, and ten new settings on every giant's page.
+- New in the Guide 1.9.0: a new look for the admin book (its own texture, General and Special halves, sections,
+  set one value for every giant at once, See all changes, a big Giants button on Create World), the Players page
+  (My Giant with each player's own book, the player switches, each player's rules, votes, leaderboards and the
+  starting kit), the This world page, and the Giants: Challenges advancements.
+
+## New in 1.11.0
+
+- **My Giant**: each new player picks a giant on first join and gets their own book of him and their own one of
+  him, up to the world's limit (then they share the holder's book). Turn it on with the My Giant preset or the
+  admin book's new Players page.
+- **Players page** in the admin book: My Giant, the Rules page, votes, leaderboards (also on signs at spawn),
+  challenges, the starting kit, a switch for each thing players may do (sitting, riding, standing on giants, armour
+  powers, boss bars, fight music on or off for everyone, chat lines, books, finders, and "no attack orders", which
+  also stops attack moves while riding), and each player's rules (may own giants, ignored by giants, no kit). The
+  Swarmforge has his own Commander Mode switch.
+- **The Guide's This world page**: rules, votes and leaderboards for every player. New advancement tab: **Giants:
+  Challenges**.
+- **A new look for the admin book**: leather and parchment with its own item texture, contents with a ribbon, a
+  breadcrumb, General and Special halves on each giant's page, sections and folding groups, one value for every
+  giant at once on All giants (`/giants admin setall`), See all changes on preset previews, and a big Giants button
+  on Create World's first tab.
+- **Meeting other giants**, a new setting for every giant: decide (as always), fight, run away or ignore.
+- **Follow me** fixed on the Cerberus, Hollowbell, Wreckback, Lantern Willow and Gloamwick.
+- Left as shipped, nothing changes: My Giant is off and every player switch is on.
+
+Inside: Pitchgut 1.35.37, Furrowmaw 1.17.34, Cerberus 2.18.34, Hollowbell 1.12.36, Lantern Willow 1.10.37,
+Wreckback 1.2.42, Swarmforge 1.4.40, Gloamwick 1.2.21, Giants Guide 1.9.0.
 
 ## New in 1.10.0
 
