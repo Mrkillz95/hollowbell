@@ -58,7 +58,7 @@ public class SystemsGiantsGameTests implements FabricGameTest {
                 List<String> sp = AdminServer.call(s, g, "sysact", none.toString());
                 h.assertTrue(sp != null && sp.get(0).equals("ok"), key + ": spots " + sp);
                 JsonObject spots = net.jj.giants.admin.AdminJson.object(sp.get(1));
-                double reach = FunGiants.reach(key, FunGiants.sizeOf(e)) + 4;
+                double reach = 2 * FunGiants.reach(key, FunGiants.sizeOf(e)) + 4; // (a worm lies stretched out)
                 for (var x : spots.getAsJsonArray("spots")) {
                     JsonObject j = x.getAsJsonObject();
                     double d = Math.hypot(j.get("x").getAsDouble() - e.getX(), j.get("z").getAsDouble() - e.getZ());
