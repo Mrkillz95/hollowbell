@@ -53,6 +53,9 @@ public final class AdminBookClient {
     // Part 2B: who this player is to the book, and the Live control, Changes and Presets pages
     private static String role = "";
     private static String myName = "", myId = "";
+    /** (JJ answers 2, #15) may this player watch giants from Live control; whom they watch now (null: nobody) */
+    private static boolean mayWatch;
+    private static @Nullable JsonObject watchingNow;
     private static @Nullable JsonObject live, changes, presets, preview;
     /** (Part 5) the Players page: rules, picks, the vote, the leaderboards */
     private static @Nullable JsonObject players;
@@ -99,6 +102,16 @@ public final class AdminBookClient {
     /** "admin", "moderator", or "" before the server has said */
     public static String role() {
         return role;
+    }
+
+    /** (JJ answers 2, #15) a moderator (or admin) may watch giants from Live control */
+    public static boolean mayWatch() {
+        return mayWatch;
+    }
+
+    /** whom this player watches now, or null */
+    public static @Nullable JsonObject watchingNow() {
+        return watchingNow;
     }
 
     public static boolean admin() {
@@ -403,6 +416,8 @@ public final class AdminBookClient {
             case AdminBookStatePayload.ROLE -> {
                 role = AdminJsonBridge.str(o, "role");
                 myName = AdminJsonBridge.str(o, "name");
+                mayWatch = o.has("watch") && o.get("watch").getAsBoolean();
+                watchingNow = o.get("watching") instanceof JsonObject wj ? wj : null;
                 myId = AdminJsonBridge.str(o, "id");
             }
             case AdminBookStatePayload.LIVE -> {

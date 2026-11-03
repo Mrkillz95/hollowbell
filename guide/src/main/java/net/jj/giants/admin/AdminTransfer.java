@@ -164,8 +164,8 @@ public final class AdminTransfer {
                 "", "\"sleepSchedule\":\"day\",\"nightStrength\":2", Map.of("gloamwick", "\"eclipseOften\":true")));
         BUILT_IN.put("wild_sizes", retune("wild_sizes", "Wild Sizes",
                 "Every giant that comes on his own is a random size, from tiny to twice as big, with health and hits"
-                        + " to match.",
-                "", "\"spawnSize\":[0.1,2]", Map.of()));
+                        + " to match, and may turn up in another giant's ground.",
+                "\"all.spawnMix\":true", "\"spawnSize\":[0.1,2]", Map.of()));
         // All presets
         BUILT_IN.put("siege", retune("siege", "Siege",
                 "Giants head for villages and players and attack, breaking blocks, and come back a day after they"
@@ -181,8 +181,9 @@ public final class AdminTransfer {
                 "\"all.health\":0.6,\"all.damage\":1.25,\"all.cooldowns\":0.75",
                 "\"worldRespawnDays\":0,\"ownedRespawnDays\":0,\"lootMultiplier\":3", Map.of()));
         BUILT_IN.put("nomads", retune("nomads", "Nomads",
-                "Giants never stay home: they wander the whole world, so one may turn up anywhere.",
-                "", "\"roam\":\"wander\"", Map.of()));
+                "Giants never stay home: they wander the whole world, so one may turn up anywhere, even coming in"
+                        + " another giant's ground.",
+                "\"all.spawnMix\":true", "\"roam\":\"wander\"", Map.of()));
         BUILT_IN.put("hardcore", retune("hardcore", "Hardcore",
                 "Titans' strength, no healing on their own, no free hits for book holders, and orders cost twice the"
                         + " wind.",
@@ -430,7 +431,8 @@ public final class AdminTransfer {
         else return;
         // (Part 5) a player setting a preset names at its default (My Giant off) is the default, not a value of
         // the world's own: nothing to change when the world has none
-        if (now != null && AdminCatalog.player(s) && AdminSetting.same(now, s.def())) now = null;
+        if (now != null && s.giant().equals(AdminCatalog.ALL) && !AdminCatalog.multiplier(s)
+                && AdminSetting.same(now, s.def())) now = null;
         if (old == null && now == null) return;
         if (old != null && now != null && AdminSetting.same(old, now)) return;
         String oldText = AdminServer.shown(s, old == null ? s.def() : old) + (old == null ? " (default)" : "");
@@ -507,7 +509,7 @@ public final class AdminTransfer {
         Map<String, Double> allNow = new HashMap<>(), allThen = new HashMap<>();
         Map<String, JsonElement> chAll = after.getOrDefault(AdminCatalog.ALL, Map.of());
         for (AdminSetting s : AdminServer.shared(w)) {
-            if (AdminCatalog.player(s)) continue; // (Part 5: not a multiplier)
+            if (!AdminCatalog.multiplier(s)) continue; // (Part 5: not a multiplier)
             allNow.put(s.id(), s.value().getAsDouble());
             if (chAll.containsKey(s.id())) {
                 JsonElement v = chAll.get(s.id());

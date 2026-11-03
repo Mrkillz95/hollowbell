@@ -74,10 +74,14 @@ public final class Players {
             "lanternwillow", "lanternwillow:lanternwillow_codex", "wreckback", "wreckback:wreckback_codex",
             "swarmforge", "swarmforge:swarmforge_codex", "gloamwick", "gloamwick:gloamwick_codex");
 
-    /** how hard each one is to beat as shipped (the pick screen's danger, before the world's settings) */
+    /**
+     * how hard each one is to beat as shipped (the pick screen's danger, before the world's settings). JJ (Nov 3): the
+     * same for all eight, Normal, because the giants were balanced against each other (handoff DUELS.md); only the
+     * world's settings (sizes, health, damage, presets) move a giant's rating.
+     */
     public static final Map<String, Integer> BASE_DANGER = Map.of(
-            "pitchgut", 4, "furrowmaw", 3, "cerberus", 4, "hollowbell", 2, "lanternwillow", 3, "wreckback", 3,
-            "swarmforge", 4, "gloamwick", 5);
+            "pitchgut", 3, "furrowmaw", 3, "cerberus", 3, "hollowbell", 3, "lanternwillow", 3, "wreckback", 3,
+            "swarmforge", 3, "gloamwick", 3);
 
     /** how a page goes to a player: over the network, or (in the tests) to a catcher */
     public static BiConsumer<ServerPlayer, PlayersStatePayload> sender = (p, s) -> {
@@ -428,7 +432,7 @@ public final class Players {
     static Map<String, Double> allValues(MinecraftServer server) {
         Map<String, Double> all = new HashMap<>();
         for (AdminSetting s : AdminServer.shared(AdminWorld.get(server)))
-            if (!AdminCatalog.player(s)) all.put(s.id(), s.value().getAsDouble());
+            if (AdminCatalog.multiplier(s)) all.put(s.id(), s.value().getAsDouble());
         return all;
     }
 

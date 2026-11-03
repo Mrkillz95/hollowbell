@@ -24,6 +24,8 @@ public final class GiantsBridge {
     public static final List<String> asked = new ArrayList<>();
     public static String respawnState = "due";
     public static long respawnTicks = 48000;
+    /** (JJ answers 2) his respawn line's "held" (a dimension) and "in" (another giant's ground), "" for none */
+    public static String respawnHeld = "", respawnIn = "";
 
     public static void reset() {
         all = new JsonObject();
@@ -33,6 +35,8 @@ public final class GiantsBridge {
         asked.clear();
         respawnState = "due";
         respawnTicks = 48000;
+        respawnHeld = "";
+        respawnIn = "";
     }
 
     /** one of him standing (or out of the world) where the test says */
@@ -120,6 +124,8 @@ public final class GiantsBridge {
                 o.addProperty("again", true);
                 o.addProperty("state", respawnState);
                 if (respawnState.equals("due")) o.addProperty("ticks", respawnTicks);
+                if (!respawnHeld.isEmpty()) o.addProperty("held", respawnHeld);
+                if (!respawnIn.isEmpty()) o.addProperty("in", respawnIn);
                 o.addProperty("days", 2);
                 o.addProperty("ownedDays", 5);
                 out.add(o.toString());

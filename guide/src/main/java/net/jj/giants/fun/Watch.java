@@ -104,6 +104,13 @@ public final class Watch {
                 + AdminServer.nameOf(AdminServer.giant(kind)) + "."));
     }
 
+    /** an admin, or (JJ answers 2, #15) a moderator while Moderators may watch is on */
+    public static boolean mayWatch(MinecraftServer server, ServerPlayer p) {
+        if (Fun.admin(p)) return true;
+        return net.jj.giants.admin.AdminWorld.get(server).isMod(p.getUUID())
+                && net.jj.giants.admin.AdminBook.modWatch(server);
+    }
+
     /** back in their own game mode, where they were */
     public static AdminServer.Result stop(MinecraftServer server, ServerPlayer p) {
         following.remove(p.getUUID());
@@ -134,6 +141,13 @@ public final class Watch {
             Follow f = e.getValue();
             if (p == null) {
                 following.remove(e.getKey());
+                continue;
+            }
+            // (JJ answers 2, #15) a moderator watching when the admins turn it off (or no longer a moderator): back
+            if (server.getTickCount() % 20 == 0 && !Fun.admin(p) && !mayWatch(server, p)) {
+                stop(server, p);
+                p.displayClientMessage(Component.literal("Watching giants is for admins now: back where you were."),
+                        false);
                 continue;
             }
             LivingEntity g = FunGiants.find(server, f.giant);

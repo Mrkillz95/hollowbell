@@ -233,7 +233,7 @@ public final class AdminServer {
 
     /** a value the way a list shows it: x2 for the all-giants ones */
     static String shown(AdminSetting s, JsonElement v) {
-        return (s.giant().equals(AdminCatalog.ALL) && !AdminCatalog.player(s) ? "x" : "") + AdminSetting.text(v);
+        return (AdminCatalog.multiplier(s) ? "x" : "") + AdminSetting.text(v);
     }
 
     /** the id as a command takes it ("health" for all.health) */
@@ -301,8 +301,11 @@ public final class AdminServer {
                     : AdminCatalog.player(s)
                     ? "The player settings are only kept for each world: there's no server default to change. Leave"
                             + " out allworlds."
-                    : "The all-giants multipliers are only kept for each world: there's no server default to"
-                            + " change. Leave out allworlds.");
+                    : AdminCatalog.multiplier(s)
+                    ? "The all-giants multipliers are only kept for each world: there's no server default to"
+                            + " change. Leave out allworlds."
+                    : "The all-giants settings are only kept for each world: there's no server default to change."
+                            + " Leave out allworlds.");
         JsonElement v;
         try {
             v = s.parse(text);

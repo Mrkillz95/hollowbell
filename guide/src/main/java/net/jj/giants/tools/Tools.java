@@ -102,6 +102,38 @@ public final class Tools {
         return v.isJsonPrimitive() ? v.getAsString() : "";
     }
 
+    /**
+     * (JJ answers 2, #11) the preset as Home shows it. An event or a schedule changes settings only for a while, so
+     * while one runs the world still reads as the preset underneath it ("Classic", "Titans"): the values they hold, and
+     * the player and server settings, don't count as the world's own. Only a real change by an admin reads "Custom" or
+     * ", changed".
+     */
+    public static String presetName(MinecraftServer server) {
+        AdminWorld w = AdminWorld.get(server);
+        return net.jj.giants.admin.AdminInsight.presetName(w.log(), ownValues(server, w));
+    }
+
+    /** whether the world keeps a giant value of its own: not a player/server setting, nor one an event holds now */
+    public static boolean ownValues(MinecraftServer server, AdminWorld w) {
+        ToolsData d = ToolsData.get(server);
+        java.util.List<ToolsData.Put> held = new java.util.ArrayList<>();
+        if (d.s.event != null) held.addAll(d.s.event.puts);
+        if (d.s.schedule != null) held.addAll(d.s.schedule.puts);
+        for (String g : w.giantsWithValues())
+            for (var e : w.values(g).entrySet()) {
+                if (g.equals(AdminCatalog.ALL) && AdminCatalog.player(e.getKey())) continue;
+                boolean byTools = false;
+                for (ToolsData.Put p : held)
+                    if (p.giant.equals(g) && p.id.equals(e.getKey()) && p.now != null
+                            && AdminSetting.same(e.getValue(), com.google.gson.JsonParser.parseString(p.now))) {
+                        byTools = true;
+                        break;
+                    }
+                if (!byTools) return true;
+            }
+        return false;
+    }
+
     /** quiet mode: no chat about the giants for players, no chat lines for admins (the books and logs keep them) */
     public static boolean quiet(@Nullable MinecraftServer server) {
         return server != null && on(server, "quiet");

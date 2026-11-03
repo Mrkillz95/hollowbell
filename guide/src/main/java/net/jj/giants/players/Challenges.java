@@ -30,7 +30,7 @@ public final class Challenges {
     /** the preset the world is on now, by id ("" when Custom, Classic or changed since) */
     public static String presetNow(MinecraftServer server) {
         AdminWorld w = AdminWorld.get(server);
-        String name = AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty());
+        String name = net.jj.giants.tools.Tools.presetName(server);
         if (name.endsWith(", changed")) return "";
         String id = AdminTransfer.builtInId(name);
         return id == null ? "" : id;

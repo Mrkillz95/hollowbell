@@ -1,0 +1,94 @@
+# JJ answers 2 pictures: Home during an event (the preset's own name, "· Event: Giant war"), the Server tools map
+# fitted to the players and spawn, dragged and zoomed, the Respawns tab (held by a "no giants" Overworld), the All
+# giants Spawning section (Giants in each other's grounds) and My Giant's pick screen (every giant Normal).
+# With the eight giants loaded: set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd tp @s 0 -60 0 0 10
+wait 20
+cmd wreckback summon calm 0.06
+wait 10
+cmd tp @s 60 -60 20 0 10
+cmd cerberus summon calm 0.06
+wait 10
+cmd tp @s 0 -60 0 0 10
+cmd giants admin event war 30
+wait 60
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot ans2_home_event
+adminbook tools/general/t_map
+wait 60
+mouse 2 2
+wait 25
+shot ans2_map_fit
+mapview 60 30 1
+wait 10
+mouse 2 2
+wait 10
+shot ans2_map_dragged
+mapview 0 0 4
+wait 10
+mouse 2 2
+wait 10
+shot ans2_map_zoomed_out
+mapview 0 0 0.125
+wait 10
+mouse 2 2
+wait 10
+shot ans2_map_zoomed_in
+close
+cmd giants admin event stop
+cmd giants admin dimension overworld nogiants
+cmd giants admin respawn pitchgut 3d
+wait 60
+adminbook tools/general/t_respawns
+wait 60
+mouse 2 2
+wait 25
+shot ans2_respawns_held
+close
+cmd giants admin dimension overworld allowed
+cmd giants admin set all spawnMix true
+wait 20
+adminmode advanced
+adminbook all/general/spawning 0 each other
+wait 60
+mouse 2 2
+wait 25
+shot ans2_all_giants
+close
+adminmode simple
+cmd giants admin set all spawnMix false
+cmd giants admin preset my_giant
+cmd giants admin confirm
+wait 10
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot ans2_pick
+close
+guiscale 3
+wait 10
+cmd giants admin preset classic
+cmd giants admin confirm
+cmd giants admin event siege 20
+wait 40
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot ans2_s3_home_event
+cmd giants admin event stop
+close
+quit

@@ -222,6 +222,13 @@ public final class AdminBook {
             liveSoon = true;
             return r;
         }
+        // (JJ answers 2, #15) Watch: moderators too, while the admins allow it (Moderators may watch, on to start with)
+        if (role == Role.MODERATOR && (what.equals("spectate") || what.equals("spectatestop"))) {
+            if (what.equals("spectate") && !modWatch(server))
+                return AdminServer.Result.fail("The admins have turned off watching for moderators.");
+            AdminServer.Result wr = net.jj.giants.fun.Fun.request(server, p, who, what, o);
+            return wr == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : wr;
+        }
         // everything else: Admins only
         if (role != Role.ADMIN) {
             GiantsGuideMod.LOG.info("Giants admin book: {} (a moderator) asked for {}, which only admins may", who,
@@ -514,11 +521,23 @@ public final class AdminBook {
         if (r != Role.NONE) sender.accept(p, live(server));
     }
 
+    /** (JJ answers 2, #15) moderators may watch giants (an admin setting, on to start with) */
+    public static boolean modWatch(MinecraftServer server) {
+        return net.jj.giants.tools.Tools.on(server, "modWatch");
+    }
+
     static AdminBookStatePayload roleState(ServerPlayer p, Role r) {
         JsonObject o = new JsonObject();
         o.addProperty("role", r.word());
         o.addProperty("name", p.getGameProfile().getName());
         o.addProperty("id", p.getStringUUID());
+        // (JJ answers 2, #15) Watch on Live control: may they, and whom they watch now
+        MinecraftServer server = p.getServer();
+        if (server != null) {
+            o.addProperty("watch", r == Role.ADMIN || r == Role.MODERATOR && modWatch(server));
+            JsonObject now = net.jj.giants.fun.Fun.watchingJson(p);
+            if (now != null) o.add("watching", now);
+        }
         return new AdminBookStatePayload(AdminBookStatePayload.ROLE, o.toString());
     }
 
@@ -550,7 +569,7 @@ public final class AdminBook {
     static Map<String, Double> allValues(AdminWorld w) {
         Map<String, Double> all = new HashMap<>();
         for (AdminSetting s : AdminServer.shared(w))
-            if (!AdminCatalog.player(s)) all.put(s.id(), s.value().getAsDouble());
+            if (AdminCatalog.multiplier(s)) all.put(s.id(), s.value().getAsDouble());
             // (Part 5: the player switches as 1/0, for the clash rules)
             else if (s.type() == AdminSetting.Type.BOOL) all.put(s.id(), s.value().getAsBoolean() ? 1.0 : 0.0);
         return all;
@@ -563,7 +582,7 @@ public final class AdminBook {
     public static AdminBookStatePayload home(MinecraftServer server) {
         AdminWorld w = AdminWorld.get(server);
         JsonObject o = homeJson(AdminView.of(server),
-                AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty()));
+                net.jj.giants.tools.Tools.presetName(server));
         List<AdminWorld.Change> log = w.log();
         if (!log.isEmpty()) {
             AdminWorld.Change c = log.get(log.size() - 1);
@@ -732,7 +751,7 @@ public final class AdminBook {
     public static AdminBookStatePayload presets(MinecraftServer server, ServerPlayer p) {
         AdminWorld w = AdminWorld.get(server);
         return new AdminBookStatePayload(AdminBookStatePayload.PRESETS, presetsJson(AdminView.of(server),
-                p.getStringUUID(), AdminInsight.presetName(w.log(), !w.giantsWithValues().isEmpty())).toString());
+                p.getStringUUID(), net.jj.giants.tools.Tools.presetName(server)).toString());
     }
 
     /**
