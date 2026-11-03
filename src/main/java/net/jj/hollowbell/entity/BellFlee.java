@@ -53,6 +53,17 @@ public final class BellFlee {
     }
 
     /**
+     * Brought this low by a giant (by: the giant behind it), he backs down now. As shipped: under yieldAt, in a fight
+     * he may back down from. meetGiants run_away: from a wild fight once he has lost any health, yieldAt and
+     * fleeInWildFights not read; a player's fight as shipped.
+     */
+    public boolean shouldYield(@Nullable Entity by, float hp) {
+        if ("run_away".equals(net.jj.hollowbell.GiantsBehave.meets()) && !playerFight(by))
+            return !hb.yielding() && hp < hb.healthMax();
+        return BellConfig.V.yieldAt > 0f && hp < hb.healthMax() * BellConfig.V.yieldAt && mayBackDown(by);
+    }
+
+    /**
      * a fight a player started or ordered: somebody riding him, the giant behind the blow is one the book sent him
      * after, or a meeting fight the book or /giants meet started that is still on
      */

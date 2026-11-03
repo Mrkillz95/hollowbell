@@ -94,10 +94,23 @@ public final class Meeting {
         return TABLE[a].charAt(b) == 'f' ? Way.FIGHT : Way.AVOID;
     }
 
-    /** (Part 4) what he does now: seeking other giants, every meeting with another kind is a fight */
+    /**
+     * (Part 4, 2C) what he does now on a wild meeting: his meetGiants setting, and as shipped (decide) the table, where
+     * seeking other giants makes every meeting with another kind a fight
+     */
     public static Way wayNow(@Nullable String other) {
         Way w = way(ME, other);
-        return w == Way.AVOID && BellConfig.V.seekGiants ? Way.FIGHT : w;
+        if (w == Way.NONE) return w; // (his own kind, or not a giant: nothing, always)
+        switch (net.jj.hollowbell.GiantsBehave.meets()) {
+            case "fight":
+                return Way.FIGHT;
+            case "run_away":
+                return Way.AVOID;
+            case "ignore":
+                return Way.NONE;
+            default:
+                return w == Way.AVOID && BellConfig.V.seekGiants ? Way.FIGHT : w;
+        }
     }
 
     /** which giant this is (its kind tag first, then its entity type's mod), or null for anything else */

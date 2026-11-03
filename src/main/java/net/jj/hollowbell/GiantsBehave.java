@@ -32,6 +32,8 @@ public final class GiantsBehave {
     public static final List<String> TEMPERS = List.of("peaceful", "normal", "hunter");
     public static final List<String> ROAMS = List.of("home", "wander", "stay");
     public static final List<String> SLEEPS = List.of("usual", "day", "never");
+    /** (Part 2C) meeting another kind */
+    public static final List<String> MEETS = List.of("decide", "fight", "run_away", "ignore");
 
     /** the config file's own limits for the shared settings */
     static void clamp(BellConfig.Values v) {
@@ -46,6 +48,7 @@ public final class GiantsBehave {
         v.temper = option(v.temper, TEMPERS, "normal");
         v.roam = option(v.roam, ROAMS, "home");
         v.sleepSchedule = option(v.sleepSchedule, SLEEPS, "usual");
+        v.meetGiants = option(v.meetGiants, MEETS, "decide");
         v.nightStrength = Float.isFinite(v.nightStrength) ? Mth.clamp(v.nightStrength, 0.5f, 4f) : 1f;
         v.lootMultiplier = Float.isFinite(v.lootMultiplier) ? Mth.clamp(v.lootMultiplier, 0f, 10f) : 1f;
     }
@@ -73,6 +76,11 @@ public final class GiantsBehave {
 
     public static boolean dayNow(Level l) {
         return hasNights(l) && l.isDay();
+    }
+
+    /** (Part 2C) what he does meeting another kind: "decide" as shipped */
+    public static String meets() {
+        return v().meetGiants;
     }
 
     // temper and sleep

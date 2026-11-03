@@ -396,7 +396,9 @@ final class BellTargets {
 
     /** (Part 4, seekGiants) free to go looking for a giant: free to meet, fights and meetings on */
     public boolean freeToSeek() {
+        String m = net.jj.hollowbell.GiantsBehave.meets();
         return freeToMeet()
+                && (m.equals("decide") || m.equals("fight"))
                 && BellConfig.V.fightGiants
                 && net.jj.hollowbell.GiantsPerf.worldOn("feature.meetings");
     }
@@ -454,10 +456,7 @@ final class BellTargets {
                 hb.moves.dropClouds(); // (his spores don't hang about on it)
                 hb.angerTicks = 0;
                 victory();
-            } else if (!hb.yielding()
-                    && BellConfig.V.yieldAt > 0f
-                    && hb.healthNow() < hb.healthMax() * BellConfig.V.yieldAt
-                    && hb.flee.mayBackDown(foe)) {
+            } else if (!hb.yielding() && hb.flee.shouldYield(foe, hb.healthNow())) {
                 backDown(foe);
             } else if (hb.getTarget() != foe && fairGame(foe)) {
                 hb.setTarget(foe);

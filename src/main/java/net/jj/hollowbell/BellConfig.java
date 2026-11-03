@@ -195,6 +195,8 @@ public final class BellConfig {
         public String roam = "home";
         /** he travels to the nearest other giant and fights it */
         public boolean seekGiants = false;
+        /** (Part 2C) meeting another kind: decide (the table, as always), fight, run_away, ignore */
+        public String meetGiants = "decide";
         /** he heads for villages and players and attacks */
         public boolean raidVillages = false;
         /** usual, day (sleeps all day, hunts all night), never */
