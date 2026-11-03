@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.giants.toolsmixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "TickCostMixin",
+    "BlockBreakMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

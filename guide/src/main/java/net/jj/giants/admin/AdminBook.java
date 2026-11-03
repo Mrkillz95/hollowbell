@@ -151,10 +151,16 @@ public final class AdminBook {
         if (AdminBookAskPayload.CLOSE.equals(what)) {
             watching.remove(p.getUUID());
             liveWatching.remove(p.getUUID());
+            net.jj.giants.tools.ToolsAdmin.watch(server, p, false);
             return;
         }
         if (AdminBookAskPayload.LIVE_OFF.equals(what)) {
             liveWatching.remove(p.getUUID());
+            return;
+        }
+        // (Part 6) the Server tools page, looked at or not (admins only: checked there)
+        if (what.equals("tools") || what.equals("tools_off")) {
+            net.jj.giants.tools.ToolsAdmin.watch(server, p, what.equals("tools"));
             return;
         }
         Role r = role(p);
@@ -221,6 +227,11 @@ public final class AdminBook {
             GiantsGuideMod.LOG.info("Giants admin book: {} (a moderator) asked for {}, which only admins may", who,
                     what);
             return AdminServer.Result.fail("Only admins can do that. Moderators have Live control.");
+        }
+        // (Part 6) the Server tools page's requests
+        if (net.jj.giants.tools.ToolsAdmin.DOS.contains(what)) {
+            AdminServer.Result tr = net.jj.giants.tools.ToolsAdmin.request(server, p, what, o);
+            return tr == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : tr;
         }
         // (Part 5) the Players page's requests
         if (net.jj.giants.players.PlayersAdmin.DOS.contains(what)) {
@@ -435,6 +446,8 @@ public final class AdminBook {
         pages.add(changes(server));
         // (Part 5) the Players page: rules, picks, the vote, the leaderboards
         if (every || what.contains("players")) pages.add(net.jj.giants.players.PlayersAdmin.page(server));
+        // (Part 6) the Server tools page
+        if (every || what.contains(net.jj.giants.tools.ToolsAdmin.KIND)) pages.add(net.jj.giants.tools.ToolsAdmin.page(server));
         boolean presets = every || what.contains("presets");
         for (UUID u : List.copyOf(watching)) {
             ServerPlayer p = server.getPlayerList().getPlayer(u);
@@ -488,6 +501,7 @@ public final class AdminBook {
             sender.accept(p, changes(server));
             sender.accept(p, presets(server, p));
             sender.accept(p, net.jj.giants.players.PlayersAdmin.page(server));
+            sender.accept(p, net.jj.giants.tools.ToolsAdmin.page(server));
         }
         if (r != Role.NONE) sender.accept(p, live(server));
     }
@@ -565,6 +579,8 @@ public final class AdminBook {
         }
         o.add("players", players);
         o.addProperty("locks", w.locks().size());
+        // (Part 6) what the server tools have on now: paused, quiet, an event, a schedule, a modpack
+        o.add("tools", net.jj.giants.tools.ToolsAdmin.homeJson(server));
         return new AdminBookStatePayload(AdminBookStatePayload.HOME, o.toString());
     }
 

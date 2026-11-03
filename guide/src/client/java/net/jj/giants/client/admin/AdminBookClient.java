@@ -56,6 +56,8 @@ public final class AdminBookClient {
     private static @Nullable JsonObject live, changes, presets, preview;
     /** (Part 5) the Players page: rules, picks, the vote, the leaderboards */
     private static @Nullable JsonObject players;
+    /** (Part 6) the Server tools page: pause, events, schedules, areas, map, stats, alerts, respawns, profile, pack */
+    private static @Nullable JsonObject tools;
     /** goes up with every Live control page (once a second while it is looked at) */
     private static int liveVersion, previewVersion;
     /** the server's last word on a change */
@@ -86,7 +88,7 @@ public final class AdminBookClient {
         pages.clear();
         said = List.of();
         role = "";
-        live = changes = presets = preview = players = null;
+        live = changes = presets = preview = players = tools = null;
         version++;
         liveVersion++;
     }
@@ -124,6 +126,24 @@ public final class AdminBookClient {
 
     public static @Nullable JsonObject presets() {
         return presets;
+    }
+
+    /** (Part 6) the Server tools page */
+    public static @Nullable JsonObject tools() {
+        return tools;
+    }
+
+    /** (the picture-taking) the Server tools page as the server would send it */
+    public static void toolsForTests(JsonObject o) {
+        tools = o;
+        version++;
+    }
+
+    /** (Part 6) the Server tools page is being looked at (the server sends it every two seconds) or not */
+    static void watchTools(boolean on) {
+        if (local != null) return;
+        if (Minecraft.getInstance().getConnection() != null && ClientPlayNetworking.canSend(AdminBookAskPayload.TYPE))
+            ClientPlayNetworking.send(new AdminBookAskPayload(on ? "tools" : "tools_off"));
     }
 
     static @Nullable JsonObject preview() {
@@ -380,6 +400,7 @@ public final class AdminBookClient {
             }
             case AdminBookStatePayload.CHANGES -> changes = o;
             case "players" -> players = o;
+            case "tools" -> tools = o;
             case AdminBookStatePayload.PRESETS -> presets = o;
             case AdminBookStatePayload.PREVIEW -> {
                 preview = o;

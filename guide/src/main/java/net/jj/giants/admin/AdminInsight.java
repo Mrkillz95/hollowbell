@@ -520,6 +520,8 @@ public final class AdminInsight {
             if (c.undo().isEmpty()) continue;
             // (Part 5) a player setting changed after a preset doesn't make it "changed"
             if (c.giant().equals(AdminCatalog.ALL) && AdminCatalog.player(c.id())) continue;
+            // (Part 6) an event or a schedule changes things for a while and puts them back: not a preset of its own
+            if (c.id().startsWith("tools:")) continue;
             // (Part 3) the world's settings from the Create World screen or new_world.txt: the preset chosen there
             if (c.id().equals(AdminCreation.LOG_ID)) {
                 String name = c.old().isEmpty() ? "Custom" : c.old();

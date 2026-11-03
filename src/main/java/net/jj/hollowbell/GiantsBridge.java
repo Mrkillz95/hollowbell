@@ -75,6 +75,9 @@ public final class GiantsBridge {
         if (action.equals("give")) return net.jj.hollowbell.world.MyGiant.give(server, arg);
         if (action.equals("live")) return GiantsLive.describe(server, arg);
         if (action.equals("liveact")) return GiantsLive.act(server, arg);
+        // (Part 6) the admin book's respawn timers: when the world's own one comes back, and setting that (GiantsRespawn)
+        if (action.equals("respawn")) return GiantsRespawn.describe(server, arg);
+        if (action.equals("respawnact")) return GiantsRespawn.act(server, arg);
         // the Giants Guide's Controls tab: the triple crouch to sit, on or off (on your own game, server null)
         if ("controlget".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlGet(arg);
         if ("controlset".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlSet(arg);

@@ -98,6 +98,8 @@ public final class AdminStyle {
 
     /** a section's (or page's) picture, 16x16 at size */
     public static void icon(GuiGraphics g, String name, int x, int y, int size) {
+        // (Part 6) the Server tools page's own pictures
+        if (ToolsArt.icon(g, name, x, y, size)) return;
         int i = ICON_NAMES.indexOf(name);
         if (i < 0) i = ICON_NAMES.indexOf("misc");
         g.blit(ICONS, x, y, size, size, i * 16, 0, 16, 16, ICON_NAMES.size() * 16, 16);

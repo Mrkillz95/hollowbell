@@ -18,7 +18,9 @@
       "net.jj.giants.test.CreationGameTests",
       "net.jj.giants.test.P2cGameTests",
       "net.jj.giants.test.PlayersGameTests",
-      "net.jj.giants.test.PlayersGiantsGameTests"
+      "net.jj.giants.test.PlayersGiantsGameTests",
+      "net.jj.giants.test.ToolsGameTests",
+      "net.jj.giants.test.ToolsGiantsGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"

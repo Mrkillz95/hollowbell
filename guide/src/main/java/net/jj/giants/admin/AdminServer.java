@@ -142,7 +142,9 @@ public final class AdminServer {
 
     /** sends one giant its values; what it answered (null: it doesn't speak the protocol) */
     public static @Nullable List<String> push(MinecraftServer server, AdminWorld w, Giant g) {
-        List<String> r = call(server, g, SET, AdminJson.setArg(w.values(g.key()), w.values(AdminCatalog.ALL)));
+        // (Part 6) quiet mode turns the giants' chat switches off
+        List<String> r = call(server, g, SET, AdminJson.setArg(w.values(g.key()),
+                net.jj.giants.tools.Tools.forGiants(w.values(AdminCatalog.ALL))));
         if (r != null && r.size() > 1)
             GiantsGuideMod.LOG.warn("Admin settings: {} didn't take {}", g.key(), r.subList(1, r.size()));
         return r;
@@ -293,7 +295,10 @@ public final class AdminServer {
         if (f.why() != null) return Result.fail(f.why());
         AdminSetting s = f.s();
         if (f.giant() == null)
-            return Result.fail(AdminCatalog.player(s)
+            return Result.fail(AdminCatalog.server(s)
+                    ? "The server tools settings are only kept for each world: there's no server default to change."
+                            + " Leave out allworlds."
+                    : AdminCatalog.player(s)
                     ? "The player settings are only kept for each world: there's no server default to change. Leave"
                             + " out allworlds."
                     : "The all-giants multipliers are only kept for each world: there's no server default to"
@@ -447,6 +452,9 @@ public final class AdminServer {
         AdminWorld w = AdminWorld.get(server);
         long now = System.currentTimeMillis();
         if (which.equalsIgnoreCase("everything")) {
+            // (Part 6) a modpack that keeps its preset
+            String pack = net.jj.giants.tools.PackMode.refusal();
+            if (pack != null) return Result.fail(pack);
             Map<String, Map<String, JsonElement>> before = new LinkedHashMap<>();
             int n = 0, kept = 0;
             for (String g : w.giantsWithValues()) {
@@ -623,12 +631,16 @@ public final class AdminServer {
         if (c.id().startsWith("mod:")) return c.name();
         // (Part 5) a player rule, a re-pick, a vote
         if (c.id().startsWith("players:")) return c.name();
+        // (Part 6) the server tools: events, schedules, areas, respawn timers, profiles
+        if (c.id().startsWith("tools:")) return c.name() + (c.now().isEmpty() ? "" : " (" + c.now() + ")");
         return g + " " + c.name() + " " + c.old() + " → " + c.now();
     }
 
     /** tells every other operator online (and the server log) */
     public static void announce(MinecraftServer server, @Nullable ServerPlayer by, List<String> lines) {
         for (String s : lines) GiantsGuideMod.LOG.info("Giants admin: {}", s);
+        // (Part 6) quiet mode: the change log and the server log only
+        if (net.jj.giants.tools.Tools.quiet(server)) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (p == by || !p.hasPermissions(2)) continue;
             for (String s : lines)

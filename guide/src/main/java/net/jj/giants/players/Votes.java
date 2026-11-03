@@ -31,6 +31,9 @@ public final class Votes {
     public static AdminServer.Result open(MinecraftServer server, String who, List<String> options, int minutes,
             boolean auto) {
         if (!Players.on(server, "votes")) return AdminServer.Result.fail("Votes are turned off in this world.");
+        // (Part 6) a modpack that keeps its preset
+        String pack = net.jj.giants.tools.PackMode.refusal();
+        if (pack != null) return AdminServer.Result.fail(pack);
         PlayerData d = PlayerData.get(server);
         if (d.s.vote != null)
             return AdminServer.Result.fail("A vote is open already. /giants vote close ends it.");

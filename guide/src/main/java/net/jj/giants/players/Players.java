@@ -185,6 +185,13 @@ public final class Players {
             o.addProperty("ignored", r.ignored);
             rules.add(e.getKey(), o);
         }
+        // (Part 6) players standing in a safe area are ignored there
+        for (String id : net.jj.giants.tools.Watch.safeNow()) {
+            JsonObject o = rules.has(id) ? rules.getAsJsonObject(id) : new JsonObject();
+            if (!o.has("own")) o.addProperty("own", d.rule(id).own);
+            o.addProperty("ignored", true);
+            rules.add(id, o);
+        }
         JsonObject arg = new JsonObject();
         arg.addProperty("players", 1);
         arg.add("rules", rules);
@@ -718,6 +725,8 @@ public final class Players {
     /** a giant of this kind fell, by this player's hand (or nobody's) */
     public static void slain(MinecraftServer server, String kind, @Nullable ServerPlayer killer) {
         Challenges.fell(server, kind, killer);
+        // (Part 6) the stats page
+        net.jj.giants.tools.Stats.fell(server, kind, killer != null);
         if (killer == null) return;
         PlayerData d = PlayerData.get(server);
         PlayerData.Stats st = d.stats(killer.getStringUUID(), killer.getGameProfile().getName());
