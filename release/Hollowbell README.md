@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.36
+# Hollowbell (Java mod), version 1.12.37
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,16 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Server tools in the Giants Admin Book (in the all-in-one jar): the Respawn timers page shows when the world's
+  own Hollowbell comes back, and an admin can bring him back now or set the wait (`/giants admin respawn hollowbell now`,
+  `... 3d`). Pause all giants stops him where he stands until it's turned off.
+- Admin fun (in the all-in-one jar): an admin can play as him with no time limit, stage a fight with him, give
+  him a name and title that shows on his boss bar, his own loot, and a giant tag with its own health,
+  damage and speed. He can be moved to live somewhere else on land, or in the sky, and the biome brush paints his ground
+  wherever it points. Left alone, nothing about him changes.
+
+### 1.12.36
 
 - New setting for the Giants Admin Book (in the all-in-one jar): Meeting other giants, what he does on meeting
   a giant of another kind when no player sent either: decide (as always), fight, run away or ignore.
