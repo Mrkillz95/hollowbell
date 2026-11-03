@@ -116,11 +116,11 @@ final class BellFlight {
         Player f = followed();
         if (f == null) return null;
         Vec3 fp = hb.keptIn(f.position());
-        // how far off he keeps: just past his rim. He sets off once you're a little further than that, and stops once
-        // he's back there (one line both ways would have him stopping and starting all the time)
-        double keep = hb.bellRadius() + 12, d = hb.horiz(fp);
-        if (!closing && d > keep * 1.25) closing = true;
-        else if (closing && d < keep) closing = false;
+        // how far off he keeps: just past his rim. He sets off once you're a little past it, and stops once he's just
+        // clear of you again (FollowGap, as every giant; one line both ways would have him stopping and starting)
+        double d = hb.horiz(fp);
+        if (!closing && d > hb.followStart()) closing = true;
+        else if (closing && d < hb.followStop()) closing = false;
         return closing ? fp : null;
     }
 
