@@ -6,7 +6,8 @@
   "mixins": [
     "GriefMixin",
     "PlayerDeathMixin",
-    "PhantomAccess"
+    "PhantomAccess",
+    "FollowerSunMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -185,7 +185,9 @@ public class SystemsBGiantsGameTests implements FabricGameTest {
                         double tall = FunGiants.height(key, FunGiants.sizeOf(one));
                         h.assertTrue(tall <= 31, key + ": fits the room: " + tall + " blocks at size "
                                 + FunGiants.sizeOf(one));
-                        h.assertTrue(firstY[0] > 30 && firstY[0] < 70, key + ": put in the room: " + firstY[0]);
+                        // (a flyer rises at once: he only has to be under the roof)
+                        double most = key.equals("hollowbell") ? 123 : 70;
+                        h.assertTrue(firstY[0] > 30 && firstY[0] < most, key + ": put in the room: " + firstY[0]);
                         h.assertTrue(one.getY() < 123, key + ": still under the roof: " + one.getY());
                     }
                     one.discard();

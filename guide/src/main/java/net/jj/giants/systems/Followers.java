@@ -17,8 +17,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -214,11 +212,7 @@ public final class Followers {
             m.setItemSlot(EquipmentSlot.MAINHAND, hand);
             m.setDropChance(EquipmentSlot.MAINHAND, 0f);
         }
-        // (the ones the sun burns keep going by day)
-        if (m.getType() == EntityType.DROWNED || m.getType() == EntityType.PHANTOM
-                || m.getType() == EntityType.ZOMBIE)
-            m.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, MobEffectInstance.INFINITE_DURATION, 0, true,
-                    false));
+        // (the ones the sun burns keep going by day: FollowerSunMixin)
         if (m instanceof Vex v) {
             if (giant instanceof Mob gm) v.setOwner(gm);
             v.setBoundOrigin(giant.blockPosition().above(3));

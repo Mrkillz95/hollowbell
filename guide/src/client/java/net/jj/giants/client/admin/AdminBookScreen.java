@@ -5834,19 +5834,26 @@ public class AdminBookScreen extends Screen {
         int followers = (int) dbl(n, "followers", 0);
         if (followers > 0) lines.add(tr("systems.now.followers", followers));
         if (n.get("underworld") instanceof JsonArray u && !u.isEmpty()) {
-            List<String> parts = new ArrayList<>();
+            // (grouped: who is there, who comes back when, who fell for good, who waits for a player)
+            List<String> there = new ArrayList<>(), back = new ArrayList<>(), never = new ArrayList<>(),
+                    waits = new ArrayList<>();
             for (JsonElement e : u) {
                 if (!(e instanceof JsonObject j)) continue;
-                String where = str(j, "dim").endsWith("end") ? "End" : "Nether";
-                String state = str(j, "state");
-                parts.add(giantName(str(j, "kind")) + " (" + where + ": " + switch (state) {
-                    case "standing" -> "there";
-                    case "never" -> "fell for good";
-                    case "waits" -> "back in " + (int) dbl(j, "minutes", 0) + " min";
-                    default -> "waits for a player there";
-                } + ")");
+                String who = giantName(str(j, "kind")) + (str(j, "dim").endsWith("end") ? " (End)" : " (Nether)");
+                switch (str(j, "state")) {
+                    case "standing" -> there.add(who);
+                    case "never" -> never.add(who);
+                    case "waits" -> back.add(who + " in " + (int) dbl(j, "minutes", 0) + " min");
+                    default -> waits.add(who);
+                }
             }
-            lines.add(tr("systems.now.under", String.join(", ", parts)));
+            List<String> parts = new ArrayList<>();
+            if (!there.isEmpty()) parts.add("there: " + String.join(", ", there));
+            if (!back.isEmpty()) parts.add("back: " + String.join(", ", back));
+            if (!never.isEmpty()) parts.add("fell for good: " + String.join(", ", never));
+            if (!waits.isEmpty()) parts.add(waits.size() == u.size() ? "each kind comes when a player is there"
+                    : "come when a player is there: " + String.join(", ", waits));
+            lines.add(tr("systems.now.under", String.join("; ", parts)));
         }
         if (n.get("sacred") instanceof JsonArray sa) {
             List<String> names = new ArrayList<>();

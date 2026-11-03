@@ -13,6 +13,7 @@ cmd gamerule doDaylightCycle false
 cmd weather clear
 cmd gamerule doMobSpawning false
 cmd difficulty normal
+cmd gamerule sendCommandFeedback false
 cmd giants admin setall maxInWorld 8
 cmd tp @s 0 -60 0 0 10
 wait 20
@@ -24,27 +25,27 @@ cmd giants admin set all sacred on
 cmd giants admin set all underworld end
 cmd wreckback summon calm 0.08
 wait 200
-adminbook systems 1200
+adminbook systems 2300
 wait 60
 mouse 2 2
 wait 25
 shot p9_systems_0
-adminbook systems 1500
+adminbook systems 2700
 wait 30
 mouse 2 2
 wait 25
 shot p9_systems_1
-adminbook systems 1800
+adminbook systems 3100
 wait 30
 mouse 2 2
 wait 25
 shot p9_systems_2
-adminbook systems 2100
+adminbook systems 3500
 wait 30
 mouse 2 2
 wait 25
 shot p9_systems_3
-adminbook systems 2500
+adminbook systems 3900
 wait 30
 mouse 2 2
 wait 25
@@ -56,17 +57,17 @@ wait 25
 shot p9_systems_now
 close
 guiscale 3
-adminbook systems 1600
+adminbook systems 3600
 wait 50
 mouse 2 2
 wait 20
 shot p9_systems_scale3_0
-adminbook systems 2200
+adminbook systems 4300
 wait 30
 mouse 2 2
 wait 20
 shot p9_systems_scale3_1
-adminbook systems 2800
+adminbook systems 5000
 wait 30
 mouse 2 2
 wait 20
@@ -90,69 +91,85 @@ cmd giants admin set all sacred off
 cmd giants admin set all mirror off
 cmd wreckback kill
 wait 40
-# Weather Gods: a storm round Hollowbell, ash round Pitchgut, the gloaming round the Gloamwick
+# Weather Gods: a storm round Hollowbell, ash round Pitchgut, the gloaming round the Gloamwick, mist round the Willow
+# (each held still, you a little way off looking at him)
 cmd giants admin set all weather on
 cmd tp @s 300 -60 0 0 10
 wait 30
 cmd hollowbell summon calm 0.08
+wait 20
 cmd giants freeze
-cmd tp @s 300 -58 -30 0 -5
+cmd execute at @e[type=hollowbell:hollowbell,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -15
 wait 200
 shot p9_weather_storm
 cmd giants unfreeze
 cmd hollowbell kill
 cmd tp @s 700 -60 0 0 10
-wait 30
+wait 60
 cmd pitchgut summon calm 0.08
+wait 20
 cmd giants freeze
-cmd tp @s 700 -57 -32 0 5
+cmd execute at @e[type=mountain_breathes:mountain,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
 wait 200
 shot p9_weather_ash
 cmd giants unfreeze
 cmd pitchgut kill
 cmd tp @s 1100 -60 0 0 10
-wait 30
+wait 60
 cmd gloamwick summon calm 0.08
+wait 20
 cmd giants freeze
-cmd tp @s 1100 -57 -30 0 5
+cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
 wait 200
 shot p9_weather_gloaming
 cmd giants unfreeze
 cmd gloamwick kill
 cmd tp @s 1500 -60 0 0 10
-wait 30
+wait 60
 cmd lanternwillow summon calm 0.08
+wait 20
 cmd giants freeze
-cmd tp @s 1500 -57 -30 0 5
+cmd execute at @e[type=lanternwillow:lanternwillow,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
 wait 200
 shot p9_weather_mist
 cmd giants unfreeze
 cmd lanternwillow kill
-cmd giants admin set all weather off
-wait 60
-# villagers worship a calm Cerberus (and leave him bread), then flee a hunting one; golems go for him
 cmd tp @s 1900 -60 0 0 10
+wait 60
+cmd cerberus summon calm 0.08
+wait 20
+cmd giants freeze
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
+wait 200
+shot p9_weather_sleet
+cmd giants unfreeze
+cmd cerberus kill
+cmd giants admin set all weather off
+wait 100
+# villagers worship a calm Cerberus (and leave him bread), then flee a hunting one; golems go for him
+cmd tp @s 2300 -60 0 0 10
 wait 30
 cmd cerberus summon calm 0.05
+wait 20
 cmd giants freeze
-cmd summon villager 1915 -60 5
-cmd summon villager 1885 -60 8
-cmd summon villager 1910 -60 -12
-cmd summon villager 1890 -60 -15
-cmd summon villager 1920 -60 -2
-cmd summon villager 1880 -60 0
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~10 ~ ~4
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-10 ~ ~6
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~8 ~ ~-9
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-9 ~ ~-8
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~12 ~ ~-1
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-12 ~ ~0
 cmd gamemode spectator
-cmd tp @s 1900 -50 -38 0 25
-wait 260
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ ~12 ~-26 0 25
+wait 400
 shot p9_villagers_worship
 cmd giants admin set all villagers flee
 cmd giants unfreeze
-cmd cerberus mood hunting
-cmd summon iron_golem 1925 -60 20
-cmd summon iron_golem 1875 -60 25
-wait 80
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~14 ~ ~10
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~-14 ~ ~12
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ ~12 ~-26 0 25
+wait 120
 shot p9_villagers_flee
-wait 60
+wait 80
 shot p9_golems
 cmd giants admin set all villagers off
 cmd giants admin set all golems off
@@ -165,45 +182,58 @@ wait 40
 cmd giants admin set all followers on
 cmd giants admin set all followerCount 8
 cmd giants admin set all followerEvery 10
-cmd tp @s 2300 -60 0 0 10
+cmd tp @s 2700 -60 0 0 10
 wait 30
 cmd gloamwick summon calm 0.06
+wait 20
 cmd giants freeze
-cmd tp @s 2300 -55 -28 0 10
+cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~ -55 ~-22 0 10
 wait 1800
 shot p9_followers_gloamwick
 cmd giants unfreeze
 cmd gloamwick kill
-cmd tp @s 2700 -60 0 0 10
+cmd tp @s 3100 -60 0 0 10
 wait 30
 cmd wreckback summon calm 0.06
+wait 20
 cmd giants freeze
-cmd tp @s 2700 -55 -28 0 10
+cmd execute at @e[type=wreckback:wreckback,limit=1,sort=nearest] run tp @s ~ -55 ~-22 0 10
 wait 1800
 shot p9_followers_wreckback
 cmd giants unfreeze
 cmd wreckback kill
 cmd giants admin set all followers off
 wait 40
-# the Underworld: one of each comes near you in the Nether, sized to fit under its roof
+# the Underworld: one of each comes near you in the Nether, sized to fit under its roof (seen with night vision, from
+# spectator a little off each)
 cmd giants admin set all underworld nether
+cmd effect give @s night_vision 99999 0 true
 cmd execute in minecraft:the_nether run tp @s 0 70 0
-wait 600
+wait 900
 cmd giants admin spectate pitchgut
-wait 100
+wait 80
 shot p9_underworld_pitchgut
 cmd giants admin spectate cerberus
-wait 100
+wait 80
 shot p9_underworld_cerberus
-cmd giants admin spectate hollowbell
-wait 100
-shot p9_underworld_hollowbell
+cmd giants admin spectate gloamwick
+wait 80
+shot p9_underworld_gloamwick
+cmd giants admin spectate lanternwillow
+wait 80
+shot p9_underworld_lanternwillow
 cmd giants admin spectate stop
-wait 40
-cmd giants admin systems
 wait 20
+cmd gamemode creative
+cmd gamerule sendCommandFeedback true
 chat /giants admin systems
 wait 40
 shot p9_underworld_command
+adminbook systems 0
+wait 60
+mouse 2 2
+wait 25
+shot p9_systems_now_underworld
+close
 cmd giants admin set all underworld off
 quit

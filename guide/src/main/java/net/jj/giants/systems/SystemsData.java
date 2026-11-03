@@ -84,6 +84,8 @@ public final class SystemsData extends SavedData {
         public long fell, due;
         /** he never comes back (Comes back after he falls is off) */
         public boolean never;
+        /** the spot he was put on (under a roof he is put back there if he ends up on the roof) */
+        public int sx, sy, sz;
     }
 
     public static final class State {

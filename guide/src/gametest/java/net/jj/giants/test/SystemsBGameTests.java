@@ -245,8 +245,15 @@ public class SystemsBGameTests implements FabricGameTest {
             List<Mob> b = band.get();
             h.assertTrue(b.size() == 2, "as many as he may: " + b.size());
             Mob f = b.get(0);
-            h.assertTrue(f instanceof Zombie && f.isPersistenceRequired() && f.hasEffect(MobEffects.FIRE_RESISTANCE)
-                    && f.distanceTo(g) < 40, "his kind (another kind's: zombies), kept, near him");
+            h.assertTrue(f instanceof Zombie && f.isPersistenceRequired() && f.distanceTo(g) < 40,
+                    "his kind (another kind's: zombies), kept, near him");
+            try {
+                java.lang.reflect.Method burn = Mob.class.getDeclaredMethod("isSunBurnTick");
+                burn.setAccessible(true);
+                h.assertTrue(!(Boolean) burn.invoke(f), "the sun doesn't burn him");
+            } catch (ReflectiveOperationException x) {
+                throw new RuntimeException(x);
+            }
             // his blows and theirs don't cross
             h.assertTrue(!Followers.allowDamage(f, g.damageSources().mobAttack(g), 5f), "he doesn't hurt his own");
             h.assertTrue(!Followers.allowDamage(g, f.damageSources().mobAttack(f), 5f), "they don't hurt him");

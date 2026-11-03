@@ -126,7 +126,15 @@ public final class Underworld {
                 String key = g.key() + "|" + dim;
                 SystemsData.Under u = d.s.under.computeIfAbsent(key, k -> new SystemsData.Under());
                 if (!u.id.isEmpty()) {
-                    if (listed(rows, g.key(), u.id) || FunGiants.find(server, u.id) != null) continue;
+                    LivingEntity kept = FunGiants.find(server, u.id);
+                    // (under a roof: one who ended up on the roof is put back on his spot below it)
+                    if (kept != null && kept.level() == level && level.dimensionType().hasCeiling() && u.sy > 0
+                            && kept.getY() >= level.getMinBuildHeight() + level.getLogicalHeight() - 0.5) {
+                        kept.teleportTo(u.sx + 0.5, u.sy, u.sz + 0.5);
+                        kept.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                        Systems.log("the {} in the {} was on the roof: back under it", g.key(), dim);
+                    }
+                    if (kept != null || listed(rows, g.key(), u.id)) continue;
                     // he fell (or was taken away): the next after his own days, or never
                     u.id = "";
                     u.fell = now;
@@ -250,6 +258,9 @@ public final class Underworld {
         SystemsData d = SystemsData.get(server);
         SystemsData.Under u = d.s.under.computeIfAbsent(q.key(), k -> new SystemsData.Under());
         u.id = best.getStringUUID();
+        u.sx = q.at().getX();
+        u.sy = q.at().getY();
+        u.sz = q.at().getZ();
         u.fell = 0;
         u.due = 0;
         d.setDirty();
