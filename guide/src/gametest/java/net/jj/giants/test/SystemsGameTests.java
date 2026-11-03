@@ -822,7 +822,7 @@ public class SystemsGameTests implements FabricGameTest {
         if (PlayersGameTests.realGiants(h)) return;
         MinecraftServer s = fresh(h);
         BlockPos at = FunGameTests.spot(h, 33);
-        IronGolem lead = golem(h, at, 0, 0), wild = golem(h, at, 10, 0), mine = golem(h, at, 5, 5);
+        IronGolem lead = golem(h, at, 0, 0), wild = golem(h, at, -30, 0), mine = golem(h, at, -25, 5);
         lead.addTag(GiantsBridge.TAG + ".own");
         ServerPlayer owner = PlayersGameTests.join(h, "herdowner", false);
         ServerPlayer other = PlayersGameTests.join(h, "follower", false);
@@ -830,10 +830,11 @@ public class SystemsGameTests implements FabricGameTest {
             sweep(h);
             set(h, s, "herd", "on");
             set(h, s, "herdRange", "32");
-            // the leader is owned and follows his owner 55 blocks off; one of the herd follows another player
+            // the leader is owned and follows his owner 40 blocks off (past the spread: the stand-in's reach, 50, from
+            // the others); one of the herd follows another player
             GiantsBridge.put(lead, "owner", owner.getStringUUID());
             GiantsBridge.put(mine, "owner", other.getStringUUID());
-            lead.teleportTo(at.getX() + 55.5, at.getY(), at.getZ() + 0.5);
+            lead.teleportTo(at.getX() + 40.5, at.getY(), at.getZ() + 0.5);
             Look.lookForTests(s);
             String goes = GiantsBridge.get(wild, "goes", "");
             h.assertTrue(!goes.isEmpty(), "the wild one walks to where the leader went: " + GiantsBridge.calls);
