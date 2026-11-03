@@ -205,7 +205,6 @@ public class PlayersGiantsGameTests implements FabricGameTest {
                 }
             } else {
                 if (e instanceof net.minecraft.world.entity.LivingEntity le && le.isAlive() && !le.isRemoved()) {
-                    le.setLastHurtByPlayer(ps[2]);
                     if (t < 300) le.hurt(ps[2].damageSources().playerAttack(ps[2]), 100000f);
                     else if (t % 20 == 0) le.kill();
                 }

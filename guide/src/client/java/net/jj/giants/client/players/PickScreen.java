@@ -63,7 +63,10 @@ public class PickScreen extends Screen {
         py0 = (height - ph) / 2;
         cols = pw >= 380 ? 2 : 1;
         cardW = (pw - 16 - (cols - 1) * 6) / cols;
-        cardH = 74;
+        // (tall enough for the longest card's words at this width: nothing cut off at any GUI scale)
+        int most = 0;
+        for (JsonObject o : giants) most = Math.max(most, lineCount(o, cardW - 66));
+        cardH = Math.max(62, 27 + most * 9 + 3);
         gx = px0 + 8;
         gy = py0 + 40;
         gh = py0 + ph - 32 - gy;
@@ -76,6 +79,14 @@ public class PickScreen extends Screen {
         pickButton = addRenderableWidget(Button.builder(Component.empty(), b -> choose())
                 .bounds(px0 + pw - 8 - 160, py0 + ph - 26, 160, 20).build());
         updatePick();
+    }
+
+    private int lineCount(JsonObject o, int tw) {
+        String lineKey = "guide.jj_giants." + str(o, "key") + ".pick";
+        int n = Language.getInstance().has(lineKey) ? font.split(Component.translatable(lineKey), tw).size() : 0;
+        String note = str(o, "note");
+        if (!note.isEmpty()) n += font.split(Component.literal(note), tw).size();
+        return n;
     }
 
     private void updatePick() {
@@ -169,12 +180,11 @@ public class PickScreen extends Screen {
         Component line = Language.getInstance().has(lineKey) ? Component.translatable(lineKey) : Component.empty();
         List<FormattedCharSequence> ls = font.split(line, tw);
         String note = str(o, "note");
-        int most = note.isEmpty() ? 5 : 3;
-        for (int i = 0; i < ls.size() && i < most; i++) g.drawString(font, ls.get(i), tx, y + 25 + i * 9, TEXT, false);
+        for (int i = 0; i < ls.size(); i++) g.drawString(font, ls.get(i), tx, y + 25 + i * 9, TEXT, false);
         if (!note.isEmpty()) {
             List<FormattedCharSequence> ns = font.split(Component.literal(note), tw);
-            for (int i = 0; i < ns.size() && i < 2; i++)
-                g.drawString(font, ns.get(i), tx, y + 25 + (Math.min(ls.size(), most) + i) * 9, NOTE, false);
+            for (int i = 0; i < ns.size(); i++)
+                g.drawString(font, ns.get(i), tx, y + 25 + (ls.size() + i) * 9, NOTE, false);
         }
     }
 

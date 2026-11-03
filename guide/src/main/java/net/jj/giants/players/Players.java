@@ -94,9 +94,17 @@ public final class Players {
         // (several giants die their own way, with a death of their own and then gone, never through the game's
         // own death: caught when the one who was dying leaves the world)
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_UNLOAD.register((e, level) -> {
-            if (e instanceof LivingEntity le && e.getRemovalReason() != null && e.getRemovalReason().shouldDestroy()
-                    && kindOf(le) != null && dying(le))
-                fell(le);
+            if (!(e instanceof LivingEntity le) || kindOf(le) == null) return;
+            LOADED.remove(le);
+            if (e.getRemovalReason() != null && e.getRemovalReason().shouldDestroy()) {
+                if (dying(le)) fell(le);
+                else CREDIT.remove(le.getUUID());
+            }
+        });
+        // (the giants in loaded land, to remember who last hurt each: a death of his own can outlast the game's
+        // own memory of the player behind the blow)
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> {
+            if (e instanceof LivingEntity le && kindOf(le) != null) LOADED.add(le);
         });
         ServerTickEvents.END_SERVER_TICK.register(Players::tick);
         ServerLifecycleEvents.SERVER_STARTED.register(s -> running = s);
@@ -130,6 +138,8 @@ public final class Players {
 
     public static void forget() {
         lastMusic = null;
+        LOADED.clear();
+        CREDIT.clear();
         Challenges.forget();
     }
 
@@ -608,6 +618,7 @@ public final class Players {
             lastMusic = music;
         }
         if (t % 100 == 0) Challenges.tick(server);
+        if (t % 10 == 0) rememberCredit();
         if (t % 600 == 0) {
             Boards.lookAtOwners(server);
             Boards.updateSigns(server);
@@ -624,6 +635,20 @@ public final class Players {
                     return size() > 256;
                 }
             });
+
+    /** the giants standing in loaded land now */
+    private static final java.util.Set<LivingEntity> LOADED = java.util.Collections.newSetFromMap(
+            new java.util.WeakHashMap<>());
+    /** each giant's last player behind a blow (giant id to player id) */
+    private static final Map<UUID, UUID> CREDIT = new HashMap<>();
+
+    /** twice a second: whoever the game says last hurt each giant */
+    private static void rememberCredit() {
+        for (LivingEntity le : List.copyOf(LOADED)) {
+            Player p = le.getKillCredit() instanceof Player x ? x : le.getLastHurtByMob() instanceof Player y ? y : null;
+            if (p != null) CREDIT.put(le.getUUID(), p.getUUID());
+        }
+    }
 
     private static @Nullable String kindOf(LivingEntity e) {
         String type = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
@@ -652,6 +677,8 @@ public final class Players {
         if (kind == null || !counted.add(e.getUUID())) return;
         ServerPlayer killer = e.getKillCredit() instanceof ServerPlayer sp ? sp
                 : e.getLastHurtByMob() instanceof ServerPlayer sp2 ? sp2 : null;
+        UUID was = CREDIT.remove(e.getUUID());
+        if (killer == null && was != null) killer = sl.getServer().getPlayerList().getPlayer(was);
         slain(sl.getServer(), kind, killer);
     }
 

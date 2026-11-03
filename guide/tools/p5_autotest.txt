@@ -18,7 +18,9 @@ wait 40
 cmd cerberus summon calm 0.02
 wait 20
 cmd damage @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] 1000000 minecraft:player_attack by @s
-wait 40
+wait 5
+cmd kill @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest]
+wait 200
 # the Titans preset, a few player settings, a vote
 cmd giants admin preset titans
 cmd giants admin confirm
