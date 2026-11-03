@@ -1207,18 +1207,28 @@ public class WorldOne extends SavedData {
      * spawn size, coming down out of the sky 1.5 to 3 times his reach away over loaded land. Null if no spot.
      */
     public static @Nullable HollowbellEntity companion(ServerLevel level, HollowbellEntity lead) {
+        return companionNear(
+                level, lead.position(), Math.max(lead.bellRadius(), 110 * lead.bellScale()), lead.home(), lead);
+    }
+
+    /**
+     * (Part 5, My Giant) the same, near a spot (a player who picked him): 1.5 to 3 times his reach from it (at least
+     * 12 blocks), home = the given home (else where he comes down), never where a woken crown keeps him out. Null if
+     * no spot is loaded.
+     */
+    public static @Nullable HollowbellEntity companionNear(
+            ServerLevel level, Vec3 near, double reach, @Nullable Vec3 home, @Nullable HollowbellEntity lead) {
         float size = Mth.clamp(
                 net.jj.hollowbell.GiantsAdmin.sized(net.jj.hollowbell.GiantsBehave.spawnScale(level.random)),
                 HollowbellEntity.MIN_SCALE,
                 HollowbellEntity.MAX_SCALE);
-        double reach = Math.max(lead.bellRadius(), 110 * lead.bellScale());
         int[] at = null;
         for (int i = 0; i < 8 && at == null; i++) {
             double a = level.random.nextDouble() * Math.PI * 2;
             double d = Math.max(12, reach * (1.5 + 1.5 * level.random.nextDouble()));
-            int cx = Mth.floor(lead.getX() + Math.cos(a) * d), cz = Mth.floor(lead.getZ() + Math.sin(a) * d);
+            int cx = Mth.floor(near.x + Math.cos(a) * d), cz = Mth.floor(near.z + Math.sin(a) * d);
             if (!NoWait.loaded(level, cx, cz) || !level.getWorldBorder().isWithinBounds(cx, cz)) continue;
-            if (lead.warded(cx, cz)) continue;
+            if (lead != null ? lead.warded(cx, cz) : get(level.getServer()).warded(level, cx, cz)) continue;
             at = new int[] {cx, cz};
         }
         if (at == null) return null;
@@ -1229,7 +1239,7 @@ public class WorldOne extends SavedData {
         int y = NoWait.heightOrGuess(level, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at[0], at[1]);
         e.moveTo(at[0] + 0.5, Math.max(y, level.getMinBuildHeight() + 1), at[1] + 0.5,
                 level.random.nextFloat() * 360f, 0f);
-        e.setHome(lead.home() != null ? lead.home() : e.position());
+        e.setHome(home != null ? home : e.position());
         level.getChunkSource().addRegionTicket(TICKET, new ChunkPos(e.blockPosition()), 2, e.getId());
         level.addFreshEntityWithPassengers(e);
         HollowbellMod.LOG.info("A companion Hollowbell comes down at {}, {}", at[0], at[1]);

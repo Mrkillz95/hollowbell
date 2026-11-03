@@ -374,6 +374,8 @@ public final class GiantsAdmin {
         head.addProperty("name", NAME);
         JsonArray uses = new JsonArray();
         for (String u : USES) uses.add(u);
+        // (Part 5) the Guide's player switches he applies (ADMIN_BRIDGE.md 20.3)
+        for (String u : GiantsPlayers.USES) uses.add(u);
         head.add("uses", uses);
         JsonObject a = new JsonObject();
         for (var e : all.entrySet()) a.addProperty(e.getKey(), e.getValue());
@@ -476,6 +478,8 @@ public final class GiantsAdmin {
                 else w.put(r.id(), v);
             }
             JsonObject al = o.has("all") ? o.getAsJsonObject("all") : new JsonObject();
+            // (Part 5) the player switches: on/off and options, not multipliers
+            GiantsPlayers.receiveAll(al);
             for (Map.Entry<String, JsonElement> e : al.entrySet()) {
                 if (!List.of(USES).contains(e.getKey())) continue; // (one he doesn't apply)
                 try {
@@ -567,6 +571,7 @@ public final class GiantsAdmin {
     /** a world's settings, back to none (when the server stops, so the next world starts from the file) */
     public static void clear() {
         put(Map.of(), Map.of());
+        GiantsPlayers.clear();
     }
 
     /** his full-size health as it is in use now: the setting times his own multiplier and the all-giants one */

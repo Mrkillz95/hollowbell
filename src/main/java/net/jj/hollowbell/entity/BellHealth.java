@@ -242,14 +242,17 @@ final class BellHealth {
                 hb.setMax(max, full ? 1f : Math.min(1f, hb.healthNow() / Math.max(1f, max)));
             }
             hb.setLastHurtByPlayer(p);
-            if (hb.spares(p) && !p.isSpectator()) {
+            if (net.jj.hollowbell.GiantsPlayers.ignored(p)) {
+                // (Part 5) an admin's rule: he leaves this player alone, their hits too
+            } else if (hb.spares(p) && !p.isSpectator()) {
                 if (hb.mood.struck(p.getUUID())) {
                     hb.setTarget(p);
                     hb.angerTicks = 2400;
-                    p.displayClientMessage(Component.translatable("message.hollowbell.had_enough"), false);
+                    if (net.jj.hollowbell.GiantsPlayers.chatBackDown())
+                        p.displayClientMessage(Component.translatable("message.hollowbell.had_enough"), false);
                 } else {
                     int left = hb.mood.strikesLeft(p.getUUID());
-                    if (left < Integer.MAX_VALUE)
+                    if (left < Integer.MAX_VALUE && net.jj.hollowbell.GiantsPlayers.chatBackDown())
                         p.displayClientMessage(Component.translatable("message.hollowbell.lets_it_go", left), true);
                 }
             } else if (!hb.moves.caught(p)) {

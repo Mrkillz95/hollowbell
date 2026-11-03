@@ -342,9 +342,40 @@ public final class CodexOrders {
                 && p.serverLevel().getWorldBorder().isWithinBounds(x, z);
     }
 
+    /** (Part 5, bookOrders noattacks) the book's attack orders: a move, "go after that", the hunting mood */
+    public static boolean attackOrder(int action) {
+        return action == CodexPayload.ATTACK_MOVE || action == CodexPayload.ATTACK_THAT
+                || action == CodexPayload.HUNTER;
+    }
+
+    /**
+     * (Part 5) the Guide's switches and rules: books off, this player may not own giants, no attack orders, no
+     * riding. True (and they're told why) when this order is refused.
+     */
+    public static boolean refused(ServerPlayer p, int action) {
+        if (!net.jj.hollowbell.GiantsPlayers.books()) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "books_off");
+            return true;
+        }
+        if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p) && action != CodexPayload.SAFE_GET) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "no_own");
+            return true;
+        }
+        if (!net.jj.hollowbell.GiantsPlayers.attackOrders() && attackOrder(action)) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "attacks_off");
+            return true;
+        }
+        if (!net.jj.hollowbell.GiantsPlayers.ride() && action == CodexPayload.RIDE) {
+            net.jj.hollowbell.GiantsPlayers.say(p, "ride_off");
+            return true;
+        }
+        return false;
+    }
+
     private static void handle(ServerPlayer p, CodexPayload pay, boolean already) {
         int action = pay.action();
         if (!(p.level() instanceof ServerLevel)) return;
+        if (refused(p, action)) return;
         if (!CodexItem.carriedBy(p)) {
             if (CodexItem.onlyQuiet(p)) {
                 BookRule.get(p.server).sayQuiet(p);

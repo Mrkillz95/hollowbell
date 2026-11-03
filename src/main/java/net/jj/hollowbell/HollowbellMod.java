@@ -103,6 +103,11 @@ public class HollowbellMod implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(
                 ArmourPowerPayload.TYPE,
                 (pay, ctx) -> ctx.server().execute(() -> {
+                    // (Part 5) armour powers turned off in this world: the armour still protects
+                    if (!GiantsPlayers.armourPowers()) {
+                        if (BellArmorItem.fullSet(ctx.player())) GiantsPlayers.say(ctx.player(), "powers_off");
+                        return;
+                    }
                     if (pay.bell()) GlassBell.ring(ctx.player());
                     else Powers.use(ctx.player());
                 }));
@@ -179,6 +184,8 @@ public class HollowbellMod implements ModInitializer {
         });
         ServerTickEvents.END_SERVER_TICK.register(CodexOrders::serverTick);
         ServerTickEvents.END_SERVER_TICK.register(BookRule::serverTick);
+        // (Part 5) standing on him turned off: set down beside him
+        ServerTickEvents.END_SERVER_TICK.register(GiantsPlayers::tick);
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BookRule.leaving(handler.player));
         ServerTickEvents.END_SERVER_TICK.register(Away::tick);
         ServerTickEvents.END_SERVER_TICK.register(WorldOne::serverTick);
@@ -226,6 +233,8 @@ public class HollowbellMod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
             // the world's admin settings go with it: the next world starts from the config file
             GiantsAdmin.clear();
+            GiantsPlayers.forget();
+            net.jj.hollowbell.world.MyGiant.forget();
             CodexOrders.forgetEverything();
             NoWait.forget();
             Cracks.forget();

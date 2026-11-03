@@ -99,7 +99,9 @@ public class Belling extends Monster {
                         || !Double.isFinite(t.getX() + t.getY() + t.getZ())
                         // (a giant that has backed down, or him backing down: the giants' fight is over)
                         || (Giants.isGiant(t) && (Meeting.yielding(t) || (h != null && h.yielding())))
-                        || (t instanceof Player p && (p.isCreative() || p.isSpectator())))) {
+                        || (t instanceof Player p && (p.isCreative() || p.isSpectator()))
+                        // (Part 5) an admin's rule: the giants and their creatures leave this player alone
+                        || net.jj.hollowbell.GiantsPlayers.ignored(t))) {
             setTarget(null);
             t = null;
         }
@@ -117,7 +119,10 @@ public class Belling extends Monster {
             Player best = null;
             double bd = 24 * 24;
             for (Player p : level().players()) {
-                if (p.isCreative() || p.isSpectator() || (h != null && h.spares(p))) continue;
+                if (p.isCreative()
+                        || p.isSpectator()
+                        || net.jj.hollowbell.GiantsPlayers.ignored(p)
+                        || (h != null && h.spares(p))) continue;
                 double d = p.distanceToSqr(this);
                 if (d < bd) {
                     bd = d;

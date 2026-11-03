@@ -326,6 +326,14 @@ final class BellRiding {
     }
 
     void riderTick() {
+        // (Part 5) riding giants turned off in this world: no fetching, and whoever rides him is set down
+        if (!net.jj.hollowbell.GiantsPlayers.ride()) {
+            if (hb.fetching != null) stopFetch();
+            if (hb.rider instanceof Player rp && !hb.moves.settingDown()) {
+                setMeDown(rp);
+                net.jj.hollowbell.GiantsPlayers.say(rp, "ride_off");
+            }
+        }
         if (hb.rider == null) return;
         if (!hb.rider.isAlive()
                 || hb.rider.isRemoved()
