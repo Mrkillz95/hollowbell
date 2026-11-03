@@ -86,7 +86,7 @@ public final class AdminJson {
         return new Report(giant, name, v, List.copyOf(uses), Map.copyOf(all), List.copyOf(out));
     }
 
-    static @Nullable JsonObject object(@Nullable String line) {
+    public static @Nullable JsonObject object(@Nullable String line) {
         if (line == null) return null;
         try {
             JsonElement e = JsonParser.parseString(line);
@@ -170,7 +170,7 @@ public final class AdminJson {
         }
     }
 
-    static String str(JsonObject o, String k, int most) {
+    public static String str(JsonObject o, String k, int most) {
         try {
             JsonElement e = o.get(k);
             if (e == null || !e.isJsonPrimitive()) return "";
@@ -181,7 +181,7 @@ public final class AdminJson {
         }
     }
 
-    static double num(JsonObject o, String k, double or) {
+    public static double num(JsonObject o, String k, double or) {
         try {
             double d = o.get(k).getAsDouble();
             return Double.isFinite(d) ? d : or;

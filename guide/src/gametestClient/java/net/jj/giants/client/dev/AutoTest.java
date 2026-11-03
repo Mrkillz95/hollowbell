@@ -374,6 +374,11 @@ public final class AutoTest implements ClientModInitializer {
                 mc.setScreen(null);
                 continue;
             }
+            // (Part 5) pickchosen N: My Giant's pick screen opens with giant N chosen (-1: none)
+            if (s.startsWith("pickchosen ")) {
+                net.jj.giants.client.players.PickScreen.startChosen = Integer.parseInt(s.substring(11).trim());
+                continue;
+            }
             // log guides: how many Giants Guides the player has (the first-join book on a real server)
             if (s.equals("log guides")) {
                 int n = 0;

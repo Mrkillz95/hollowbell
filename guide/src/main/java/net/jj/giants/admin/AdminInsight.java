@@ -379,6 +379,11 @@ public final class AdminInsight {
                             && c.all.getOrDefault("all.windCost", 1.0) == 0,
                     c -> "{who}: " + c.g.nameOf("bookCosts") + " is on, but the all-giants Wind cost is x0, so"
                             + " orders cost nothing anyway."),
+            // (Part 5) My Giant with only one of him at once: the first to pick him owns him, the rest share
+            new Rule("my_giant_one",
+                    c -> c.all.getOrDefault("all.myGiant", 0.0) >= 0.5 && c.has("maxInWorld") && c.v("maxInWorld") == 1,
+                    c -> "{who}: My Giant is on, but " + c.g.nameOf("maxInWorld") + " is 1: only the first player to"
+                            + " pick {him} gets one; the others share."),
             new Rule("wind_unused",
                     c -> c.has("bookCosts", "windSeconds") && !c.g.on("bookCosts") && c.g.ratio("windSeconds") != 1,
                     c -> "{who}: " + c.g.nameOf("windSeconds") + " is changed, but " + c.g.nameOf("bookCosts")
@@ -465,6 +470,11 @@ public final class AdminInsight {
             out.add(new Warning("healing_unused", List.of(AdminCatalog.ALL),
                     "All giants: Healing is x" + AdminSetting.plain(heal) + ", but no giant heals on his own (Heals on"
                             + " his own is off for every one), so it changes nothing."));
+        // (Part 5) My Giant with the giants' books off: nobody can own the giant they pick
+        if (all.getOrDefault("all.myGiant", 0.0) >= 0.5 && all.getOrDefault("all.books", 1.0) < 0.5)
+            out.add(new Warning("my_giant_books_off", List.of(AdminCatalog.ALL),
+                    "Players: My Giant is on, but Giants' books are off, so nobody owns the giant they pick (they are"
+                            + " only taken to his ground)."));
         return out;
     }
 
@@ -473,6 +483,7 @@ public final class AdminInsight {
         boolean many = names.size() > 1;
         return text.replace("{who}", join(names))
                 .replace("{he}", many ? "they" : "he")
+                .replace("{him}", many ? "them" : "him")
                 .replace("{his}", many ? "their" : "his")
                 .replace("{comes}", many ? "come" : "comes")
                 .replace("{heals}", many ? "heal" : "heals")
@@ -495,6 +506,8 @@ public final class AdminInsight {
         for (int i = log.size() - 1; i >= 0; i--) {
             AdminWorld.Change c = log.get(i);
             if (c.undo().isEmpty()) continue;
+            // (Part 5) a player setting changed after a preset doesn't make it "changed"
+            if (c.giant().equals(AdminCatalog.ALL) && AdminCatalog.player(c.id())) continue;
             // (Part 3) the world's settings from the Create World screen or new_world.txt: the preset chosen there
             if (c.id().equals(AdminCreation.LOG_ID)) {
                 String name = c.old().isEmpty() ? "Custom" : c.old();

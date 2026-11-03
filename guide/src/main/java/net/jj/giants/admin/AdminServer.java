@@ -49,6 +49,8 @@ public final class AdminServer {
                 // (a brand-new world: the Create World choice or new_world.txt goes in first, Part 3)
                 AdminCreation.atLoad(server, level);
                 push(server, AdminWorld.get(level));
+                // (Part 5) and the per-player rules
+                net.jj.giants.players.Players.atLoad(server, level);
             }
         });
         ServerLifecycleEvents.SERVER_STARTING.register(s -> AdminPresets.forget());
@@ -229,7 +231,7 @@ public final class AdminServer {
 
     /** a value the way a list shows it: x2 for the all-giants ones */
     static String shown(AdminSetting s, JsonElement v) {
-        return (s.giant().equals(AdminCatalog.ALL) ? "x" : "") + AdminSetting.text(v);
+        return (s.giant().equals(AdminCatalog.ALL) && !AdminCatalog.player(s) ? "x" : "") + AdminSetting.text(v);
     }
 
     /** the id as a command takes it ("health" for all.health) */
@@ -291,8 +293,11 @@ public final class AdminServer {
         if (f.why() != null) return Result.fail(f.why());
         AdminSetting s = f.s();
         if (f.giant() == null)
-            return Result.fail("The all-giants multipliers are only kept for each world: there's no server default to"
-                    + " change. Leave out allworlds.");
+            return Result.fail(AdminCatalog.player(s)
+                    ? "The player settings are only kept for each world: there's no server default to change. Leave"
+                            + " out allworlds."
+                    : "The all-giants multipliers are only kept for each world: there's no server default to"
+                            + " change. Leave out allworlds.");
         JsonElement v;
         try {
             v = s.parse(text);
@@ -615,6 +620,8 @@ public final class AdminServer {
         if (c.id().startsWith("lock:")) return g + " " + c.name() + " locked " + c.now();
         if (c.id().startsWith("unlock:")) return g + " " + c.name() + " unlocked";
         if (c.id().startsWith("mod:")) return c.name();
+        // (Part 5) a player rule, a re-pick, a vote
+        if (c.id().startsWith("players:")) return c.name();
         return g + " " + c.name() + " " + c.old() + " → " + c.now();
     }
 

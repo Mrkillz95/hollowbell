@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:shield"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.held_the_line",
+      "fallback": "Held the Line"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.held_the_line.what",
+      "fallback": "Survive a whole Siege night, dusk to dawn, without dying"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -222,6 +222,11 @@ public final class AdminBook {
                     what);
             return AdminServer.Result.fail("Only admins can do that. Moderators have Live control.");
         }
+        // (Part 5) the Players page's requests
+        if (net.jj.giants.players.PlayersAdmin.DOS.contains(what)) {
+            AdminServer.Result pr = net.jj.giants.players.PlayersAdmin.request(server, who, what, o);
+            return pr == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : pr;
+        }
         return switch (what) {
             case "set", "reset" -> settingRequest(server, who, what, o);
             case "summon" -> {
@@ -423,6 +428,8 @@ public final class AdminBook {
                 if (pg != null) pages.add(pg);
             }
         pages.add(changes(server));
+        // (Part 5) the Players page: rules, picks, the vote, the leaderboards
+        if (every || what.contains("players")) pages.add(net.jj.giants.players.PlayersAdmin.page(server));
         boolean presets = every || what.contains("presets");
         for (UUID u : List.copyOf(watching)) {
             ServerPlayer p = server.getPlayerList().getPlayer(u);
@@ -475,6 +482,7 @@ public final class AdminBook {
             }
             sender.accept(p, changes(server));
             sender.accept(p, presets(server, p));
+            sender.accept(p, net.jj.giants.players.PlayersAdmin.page(server));
         }
         if (r != Role.NONE) sender.accept(p, live(server));
     }
@@ -507,9 +515,17 @@ public final class AdminBook {
     }
 
     /** the all-giants multipliers in use, as numbers */
+    /** (the tests) the all-giants values as numbers, the player switches as 1/0 */
+    public static Map<String, Double> allValuesForTests(AdminWorld w) {
+        return allValues(w);
+    }
+
     static Map<String, Double> allValues(AdminWorld w) {
         Map<String, Double> all = new HashMap<>();
-        for (AdminSetting s : AdminServer.shared(w)) all.put(s.id(), s.value().getAsDouble());
+        for (AdminSetting s : AdminServer.shared(w))
+            if (!AdminCatalog.player(s)) all.put(s.id(), s.value().getAsDouble());
+            // (Part 5: the player switches as 1/0, for the clash rules)
+            else if (s.type() == AdminSetting.Type.BOOL) all.put(s.id(), s.value().getAsBoolean() ? 1.0 : 0.0);
         return all;
     }
 

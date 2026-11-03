@@ -17,5 +17,6 @@ public class GuideClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> Live.forget());
         PerfClient.init();
         AdminBookClient.init();
+        net.jj.giants.client.players.PlayersClient.init();
     }
 }

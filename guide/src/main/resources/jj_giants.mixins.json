@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.giants.craftmixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "CraftResultMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -458,7 +458,7 @@ public class AdminBookGameTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE)
     public void clashesAreFoundAndOnlyWhenTheyAreReal(GameTestHelper h) {
         h.assertTrue(AdminInsight.ruleIds().equals(List.of("grief_unloaded", "heal_rates_zero", "heal_rates_unused",
-                "never_backs_down", "ward_no_time", "free_orders", "wind_unused", "size_capped", "count_capped",
+                "never_backs_down", "ward_no_time", "free_orders", "my_giant_one", "wind_unused", "size_capped", "count_capped",
                 "count_alone", "seek_no_fight", "raid_peaceful", "stay_roams", "tiny_war")),
                 "" + AdminInsight.ruleIds());
         h.assertTrue(AdminInsight.warnings(List.of(giant("a"), giant("b")), Map.of()).isEmpty(), "as shipped: none");
@@ -518,7 +518,7 @@ public class AdminBookGameTests implements FabricGameTest {
         h.assertTrue(AdminInsight.presetName(log, false).equals("Classic"), "all back: Classic");
         // Simple mode: about twenty, every all-giants multiplier among them
         h.assertTrue(AdminInsight.SIMPLE.size() >= 18 && AdminInsight.SIMPLE.size() <= 22, "about twenty");
-        for (AdminSetting s : AdminCatalog.shared()) h.assertTrue(AdminInsight.simple(s.id()), s.id());
+        for (AdminSetting s : AdminCatalog.multipliers()) h.assertTrue(AdminInsight.simple(s.id()), s.id());
         h.succeed();
     }
 

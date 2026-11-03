@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:bundle"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.pocket_full",
+      "fallback": "Pocket Full"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.pocket_full.what",
+      "fallback": "Slay four giants while the world is on Pocket Giants"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

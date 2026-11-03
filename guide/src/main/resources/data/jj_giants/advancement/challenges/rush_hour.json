@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:clock"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.rush_hour",
+      "fallback": "Rush Hour"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.rush_hour.what",
+      "fallback": "Slay three giants within twenty minutes in Boss Rush"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

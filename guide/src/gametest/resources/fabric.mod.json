@@ -15,7 +15,9 @@
       "net.jj.giants.test.ScopeGameTests",
       "net.jj.giants.test.AdminBookGameTests",
       "net.jj.giants.test.AdminBook2GameTests",
-      "net.jj.giants.test.CreationGameTests"
+      "net.jj.giants.test.CreationGameTests",
+      "net.jj.giants.test.PlayersGameTests",
+      "net.jj.giants.test.PlayersGiantsGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"

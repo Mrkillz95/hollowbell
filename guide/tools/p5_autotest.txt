@@ -1,0 +1,120 @@
+# Part 5 pictures (ADMIN_BRIDGE.md 20): My Giant's pick screen, the Guide's This world pages (Rules, Votes,
+# Leaderboards), a leaderboard sign at spawn and the admin book's Players page, at GUI scale 2 and 3.
+#   withslot.ps1 <guide> runAutotest -Pgiants -Pscript=tools/p5_autotest.txt   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+# a few numbers for the leaderboards: two tiny giants slain by the player
+cmd wreckback summon calm 0.02
+wait 20
+cmd damage @e[type=wreckback:wreckback,limit=1,sort=nearest] 1000000 minecraft:player_attack by @s
+wait 40
+cmd cerberus summon calm 0.02
+wait 20
+cmd damage @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] 1000000 minecraft:player_attack by @s
+wait 40
+# the Titans preset, a few player settings, a vote
+cmd giants admin preset titans
+cmd giants admin confirm
+cmd giants admin set all ride off
+cmd giants admin set all kitFinders all
+cmd giants vote open 10 auto titans, gentle_giants, lite
+cmd giants vote 2
+wait 20
+# the Guide: This world
+guide world 0
+wait 40
+mouse 2 2
+wait 20
+shot p5_rules
+guide world 1
+wait 40
+mouse 2 2
+wait 20
+shot p5_votes
+guide world 2
+wait 40
+mouse 2 2
+wait 20
+shot p5_leaderboards
+close
+# the admin book's Players page
+adminbook players
+wait 60
+mouse 2 2
+wait 25
+shot p5_admin_players
+adminbook players 380
+wait 30
+mouse 2 2
+wait 25
+shot p5_admin_players_rules
+adminbook players 760
+wait 30
+mouse 2 2
+wait 25
+shot p5_admin_players_vote
+close
+# My Giant: the pick screen
+cmd giants admin set all myGiant on
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p5_pick
+pickchosen 5
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p5_pick_chosen
+close
+# a leaderboard sign at spawn
+cmd tp @s ~ ~ ~ 0 0
+cmd setblock ~ ~1 ~2 minecraft:oak_sign[rotation=8]
+cmd setblock ~1 ~1 ~2 minecraft:oak_sign[rotation=8]
+cmd giants players board set slayers ~ ~1 ~2
+cmd giants players board set owners ~1 ~1 ~2
+wait 40
+gui off
+wait 10
+shot p5_sign
+gui on
+# GUI scale 3
+guiscale 3
+wait 20
+guide world 0
+wait 40
+mouse 2 2
+wait 20
+shot p5_rules_gui3
+guide world 1
+wait 40
+mouse 2 2
+wait 20
+shot p5_votes_gui3
+guide world 2
+wait 40
+mouse 2 2
+wait 20
+shot p5_leaderboards_gui3
+close
+adminbook players
+wait 60
+mouse 2 2
+wait 25
+shot p5_admin_players_gui3
+close
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p5_pick_gui3
+close
+quit

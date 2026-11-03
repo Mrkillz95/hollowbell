@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:golden_boots"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.any_percent",
+      "fallback": "Any Percent"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.any_percent.what",
+      "fallback": "Slay a giant within thirty minutes of first joining, on Speedrun"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

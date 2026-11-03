@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:name_tag"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.yours_to_keep",
+      "fallback": "Yours to Keep"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.yours_to_keep.what",
+      "fallback": "Pick your own giant in My Giant"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "jj_giants:giants_guide"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.root",
+      "fallback": "Giants: Challenges"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.root.what",
+      "fallback": "Challenges for the presets. Each only counts while the world is on its preset."
+    },
+    "background": "minecraft:textures/block/deepslate_tiles.png",
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "on": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

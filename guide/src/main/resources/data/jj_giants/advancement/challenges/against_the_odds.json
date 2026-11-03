@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:totem_of_undying"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.against_the_odds",
+      "fallback": "Against the Odds"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.against_the_odds.what",
+      "fallback": "Slay a giant while the world is on Hardcore"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

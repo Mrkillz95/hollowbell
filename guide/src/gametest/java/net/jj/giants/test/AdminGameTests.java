@@ -309,7 +309,8 @@ public class AdminGameTests implements FabricGameTest {
         h.assertTrue(v.getAsDouble() == 1.25, "x in front is fine");
         h.assertTrue(AdminSetting.text(new JsonPrimitive(2.0)).equals("2"), "2, not 2.0");
         h.assertTrue(AdminSetting.same(new JsonPrimitive(1), new JsonPrimitive(1.0)), "1 is 1.0");
-        h.assertTrue(AdminCatalog.shared().stream().allMatch(x -> x.def().getAsDouble() == 1.0), "x1 changes nothing");
+        h.assertTrue(AdminCatalog.multipliers().stream().allMatch(x -> x.def().getAsDouble() == 1.0),
+                "x1 changes nothing");
         done(h);
     }
 

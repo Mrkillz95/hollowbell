@@ -61,9 +61,12 @@ public class AdminBookScreen extends Screen {
     public static final String HOME = "home";
     /** Part 2B's pages (moderators only ever see LIVE) */
     public static final String LIVE = "live", PRESETS = "presets", CHANGES = "changes";
+    /** (Part 5) the Players page */
+    public static final String PLAYERS = "players";
 
     private static boolean ownPage(String key) {
-        return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES);
+        return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES)
+                || key.equals(PLAYERS);
     }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
@@ -266,8 +269,8 @@ public class AdminBookScreen extends Screen {
         // (a moderator has Live control only; before the server says who you are, only Home, asking)
         if (AdminBookClient.role().equals("moderator")) return List.of(LIVE);
         if (!AdminBookClient.admin()) return List.of(HOME);
-        List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL)
-                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL));
+        List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS)
+                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -288,7 +291,8 @@ public class AdminBookScreen extends Screen {
     private int setCount(String key) {
         JsonObject h = AdminBookClient.home();
         if (h == null) return 0;
-        if (key.equals(AdminCatalog.ALL)) return AdminBookClient.AdminJsonBridge.num(h, "allSet", 0);
+        if (key.equals(PLAYERS)) return playersSet();
+        if (key.equals(AdminCatalog.ALL)) return AdminBookClient.AdminJsonBridge.num(h, "allSet", 0) - playersSet();
         JsonObject g = homeGiant(key);
         return g == null ? 0 : AdminBookClient.AdminJsonBridge.num(g, "set", 0);
     }
@@ -1083,6 +1087,7 @@ public class AdminBookScreen extends Screen {
         else if (pageKey.equals(LIVE)) liveRows();
         else if (pageKey.equals(PRESETS)) presetRows();
         else if (pageKey.equals(CHANGES)) changeRows();
+        else if (pageKey.equals(PLAYERS)) playersRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1099,7 +1104,8 @@ public class AdminBookScreen extends Screen {
         headButton.visible = false;
         if (searching) return;
         Component label;
-        if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES)) return;
+        if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS))
+            return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
             headButton.active = AdminBookClient.home() != null && anySet();
@@ -1138,6 +1144,8 @@ public class AdminBookScreen extends Screen {
             Map<String, List<AdminSetting>> groups = new LinkedHashMap<>();
             for (AdminSetting s : p.settings()) {
                 if (!s.cat().equals(cat)) continue;
+                // (Part 5: the player settings have their own page)
+                if (key.equals(AdminCatalog.ALL) && AdminCatalog.player(s)) continue;
                 boolean show = advanced || AdminInsight.simple(s.id());
                 if (!show) {
                     hidden++;
@@ -1336,6 +1344,7 @@ public class AdminBookScreen extends Screen {
                 case LIVE -> net.minecraft.world.item.Items.SPYGLASS;
                 case PRESETS -> net.minecraft.world.item.Items.ENCHANTED_BOOK;
                 case CHANGES -> net.minecraft.world.item.Items.WRITABLE_BOOK;
+                case PLAYERS -> net.minecraft.world.item.Items.PLAYER_HEAD;
                 default -> GiantsGuideMod.GUIDE;
             });
             g.pose().pushPose();
@@ -2342,7 +2351,7 @@ public class AdminBookScreen extends Screen {
     private static String presetName = "", importText = "";
 
     /** the suggested presets still to come (ADMIN_BOOK.md's picker layout), shown greyed: My Giant (Part 5) */
-    private static final List<String> SUGGESTED = List.of("My Giant");
+    private static final List<String> SUGGESTED = List.of();
 
     private void presetRows() {
         JsonObject p = AdminBookClient.presets();
@@ -2679,6 +2688,162 @@ public class AdminBookScreen extends Screen {
             bx += bw + 4;
         }
         rows.add(b);
+    }
+
+    // (Part 5, ADMIN_BRIDGE.md 20.9) the Players page: the player settings, each player, the vote, the leaderboards
+
+    /** the player settings on their page, by sub-heading */
+    private static final String[][] PLAYER_GROUPS = {
+        {"players.pages", "all.myGiant", "all.rulesPage", "all.votes", "all.boards", "all.boardSlayers",
+            "all.boardOwners", "all.boardFriends", "all.achievements"},
+        {"players.kit", "all.kitGuide", "all.kitFinders", "all.kitFinder", "all.kitArmour", "all.kitBook"},
+        {"players.features", "all.sit", "all.ride", "all.stand", "all.armourPowers", "all.bossBars",
+            "all.fightMusic", "all.chatMeetings", "all.chatMoves", "all.chatBackDown", "all.books", "all.bookOrders",
+            "all.findersCraftable"}};
+
+    /** the vote being made: the presets ticked, how long, whether the winner goes on by itself */
+    private static final java.util.LinkedHashSet<String> voteTicked = new java.util.LinkedHashSet<>();
+    private static int voteMinutes = 5;
+    private static boolean voteAuto = true;
+    private static final int[] VOTE_MINUTES = {1, 2, 5, 10, 15, 30, 60};
+
+    private int playersSet() {
+        AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
+        if (p == null) return 0;
+        int n = 0;
+        for (AdminSetting s : p.settings()) if (s.set() && AdminCatalog.player(s)) n++;
+        return n;
+    }
+
+    private void playersRows() {
+        AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
+        if (p == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        for (String[] grp : PLAYER_GROUPS) {
+            rows.add(new Head(tr(grp[0]), rows.isEmpty() ? tr("players.note") : null, null));
+            for (int i = 1; i < grp.length; i++)
+                for (AdminSetting s : p.settings()) if (s.id().equals(grp[i])) rows.add(new SetRow(s));
+        }
+        if (creating()) return;
+        JsonObject pl = AdminBookClient.players();
+        if (pl == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        // each player
+        rows.add(new Head(tr("players.each"), tr("players.each.note"), null));
+        List<JsonObject> people = objects(pl, "rules");
+        if (people.isEmpty()) rows.add(new Note(tr("players.nobody"), GREY));
+        for (JsonObject j : people) {
+            String id = str(j, "id"), name = str(j, "name");
+            boolean own = bool(j, "own"), ignored = bool(j, "ignored"), nokit = bool(j, "nokit");
+            String pick = str(j, "pick");
+            Component sub = pick.isEmpty() ? (bool(j, "online") ? tr("players.online") : tr("players.offline"))
+                    : tr("players.picked", pick, tr("players.outcome." + (str(j, "outcome").isEmpty() ? "going"
+                            : str(j, "outcome"))));
+            List<Object[]> bs = new ArrayList<>();
+            bs.add(new Object[] {tr(own ? "players.own.yes" : "players.own.no"),
+                (Runnable) () -> request("prule", "player", id, "rule", "own", "on", String.valueOf(!own)),
+                tr("players.own.tip")});
+            bs.add(new Object[] {tr(ignored ? "players.ignored.yes" : "players.ignored.no"),
+                (Runnable) () -> request("prule", "player", id, "rule", "ignored", "on", String.valueOf(!ignored)),
+                tr("players.ignored.tip")});
+            bs.add(new Object[] {tr(nokit ? "players.nokit.yes" : "players.nokit.no"),
+                (Runnable) () -> request("prule", "player", id, "rule", "nokit", "on", String.valueOf(!nokit)),
+                tr("players.nokit.tip")});
+            if (!pick.isEmpty())
+                bs.add(new Object[] {tr("players.repick"), (Runnable) () -> confirm(tr("players.repick.title", name),
+                    tr("players.repick.body", name), tr("players.repick"), () -> request("repick", "player", id)),
+                    tr("players.repick.tip")});
+            rows.add(new LineRow(Component.literal(name), !own || ignored || nokit ? GOLD : TEXT, sub, bs));
+        }
+        // the vote
+        rows.add(new Head(tr("players.vote"), tr("players.vote.note"), null));
+        JsonObject v = pl.get("vote") instanceof JsonObject vo ? vo : new JsonObject();
+        if (v.has("on") && !v.get("on").getAsBoolean()) rows.add(new Note(tr("players.vote.off"), GREY));
+        else if (v.get("open") instanceof JsonObject open) {
+            long secs = lng(open, "secondsLeft");
+            rows.add(new Note(tr("players.vote.open", secs / 60, secs % 60, str(open, "by"),
+                    tr(bool(open, "auto") ? "players.vote.auto.on" : "players.vote.auto.off")), TEXT));
+            for (JsonObject op : objects(open, "options"))
+                rows.add(new LineRow(Component.literal(str(op, "name")), KEY,
+                        tr("players.vote.count", (int) dbl(op, "votes", 0)), List.of()));
+            rows.add(new LineRow(Component.empty(), TEXT, Component.empty(), List.<Object[]>of(
+                    new Object[] {tr("players.vote.cancel"), (Runnable) () -> confirm(tr("players.vote.cancel.title"),
+                        tr("players.vote.cancel.body"), tr("players.vote.cancel"), () -> request("votecancel"))},
+                    new Object[] {tr("players.vote.close"), (Runnable) () -> request("voteclose"),
+                        tr("players.vote.close.tip")})));
+        } else {
+            List<JsonObject> presets = objects(pl, "presets");
+            Block b = new Block(22, (g, x, y, w, mx, my) -> g.drawString(font, tr("players.vote.pick"), x, y + 6,
+                    GREY, false));
+            int bx = font.width(tr("players.vote.pick")) + 6, by = 2;
+            for (JsonObject pr : presets) {
+                String pid = str(pr, "id");
+                boolean on = voteTicked.contains(pid);
+                Component c = Component.literal((on ? "✔ " : "") + str(pr, "name"));
+                int bw = font.width(c) + 12;
+                if (bx > 0 && bx + bw > lw) {
+                    bx = 0;
+                    by += 20;
+                    b.h += 20;
+                }
+                Button bt = Button.builder(c, x -> {
+                            if (!voteTicked.remove(pid) && voteTicked.size() < 6) voteTicked.add(pid);
+                            build();
+                        })
+                        .bounds(0, 0, bw, 16)
+                        .build();
+                b.add(bt, bx, by, false);
+                bx += bw + 4;
+            }
+            rows.add(b);
+            int ticked = voteTicked.size();
+            rows.add(new LineRow(tr("players.vote.ticked", ticked), ticked >= 2 ? TEXT : GREY,
+                    tr("players.vote.ticked.note"), List.<Object[]>of(
+                    new Object[] {tr("players.vote.minutes", voteMinutes), (Runnable) () -> {
+                        int i = 0;
+                        while (i < VOTE_MINUTES.length && VOTE_MINUTES[i] != voteMinutes) i++;
+                        voteMinutes = VOTE_MINUTES[(i + 1) % VOTE_MINUTES.length];
+                        build();
+                    }, tr("players.vote.minutes.tip")},
+                    new Object[] {tr(voteAuto ? "players.vote.auto.on" : "players.vote.auto.off"), (Runnable) () -> {
+                        voteAuto = !voteAuto;
+                        build();
+                    }, tr("players.vote.auto.tip")},
+                    new Object[] {tr("players.vote.go"), (Runnable) () -> {
+                        request("voteopen", "options", String.join(",", voteTicked), "minutes", voteMinutes, "auto",
+                                String.valueOf(voteAuto));
+                        voteTicked.clear();
+                    }, tr("players.vote.go.tip"), ticked >= 2})));
+        }
+        if (v.has("last")) rows.add(new Note(Component.literal(str(v, "last")), GREY));
+        // the leaderboards
+        rows.add(new Head(tr("players.boards"), tr("players.boards.note"), null));
+        JsonObject bo = pl.get("boards") instanceof JsonObject x ? x : new JsonObject();
+        if (bo.has("on") && !bo.get("on").getAsBoolean()) rows.add(new Note(tr("players.boards.off"), GREY));
+        for (JsonObject board : objects(bo, "boards")) {
+            List<JsonObject> rs = objects(board, "rows");
+            StringBuilder sb = new StringBuilder();
+            for (JsonObject r : rs)
+                sb.append(sb.length() == 0 ? "" : "   ").append((int) dbl(r, "place", 0)).append(" ")
+                        .append(str(r, "name")).append(" ").append(str(r, "text"));
+            rows.add(new LineRow(Component.literal(str(board, "title")), KEY,
+                    sb.length() == 0 ? tr("players.boards.nobody") : Component.literal(sb.toString()), List.of()));
+        }
+        List<JsonObject> signs = objects(pl, "signs");
+        rows.add(new Note(signs.isEmpty() ? tr("players.signs.none") : tr("players.signs", signs.size()), GREY));
+        for (int i = 0; i < signs.size(); i++) {
+            JsonObject s = signs.get(i);
+            int at = i;
+            rows.add(new LineRow(Component.literal(str(s, "title")), TEXT,
+                    Component.literal((int) dbl(s, "x", 0) + " " + (int) dbl(s, "y", 0) + " " + (int) dbl(s, "z", 0)
+                            + "  " + dimName(str(s, "dim"))),
+                    List.<Object[]>of(new Object[] {tr("players.signs.remove"),
+                        (Runnable) () -> request("boardremove", "i", at), tr("players.signs.remove.tip")})));
+        }
     }
 
     // the walkthrough and questions

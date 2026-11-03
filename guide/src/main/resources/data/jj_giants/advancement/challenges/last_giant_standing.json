@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:wither_skeleton_skull"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.last_giant_standing",
+      "fallback": "Last One Standing"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.last_giant_standing.what",
+      "fallback": "In One Life, help bring down every kind of giant in the world"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

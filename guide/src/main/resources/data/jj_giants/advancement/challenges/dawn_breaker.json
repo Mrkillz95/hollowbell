@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:lantern"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.dawn_breaker",
+      "fallback": "Dawn Breaker"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.dawn_breaker.what",
+      "fallback": "Slay a giant at night while the world is on Night Terrors"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
