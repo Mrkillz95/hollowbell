@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.35
+# Hollowbell (Java mod), version 1.12.36
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,20 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- New setting for the Giants Admin Book (in the all-in-one jar): Meeting other giants, what he does on meeting
+  a giant of another kind when no player sent either: decide (as always), fight, run away or ignore.
+  `/hollowbell config meetGiants fight` works too. Follow me fixed: a following Hollowbell lay down after two quiet minutes, and lying down ended the follow. A follower now stays busy.
+- The Giants Guide's player settings (in the all-in-one jar) reach him: sitting on, riding and standing on him,
+  his armour powers, boss bar, fight music, chat lines, his book, and "no attack orders", which now also refuses
+  every attack move used from his crown (Grab and Harvest count as attacks); the guardian mood still works. Per-player rules too: a player who may not
+  own giants can't hold his book, and an ignored player is never his target.
+- My Giant: a player who picks him is taken to his ground with his finder and their own book of him, and one of
+  him comes to them as their own: he answers only their book. Two players can each have their own, up to Most at
+  once; at that limit the next one shares the holder's book and is told why. If their one falls, their book goes
+  quiet. With My Giant off, the one-book rule is exactly as before.
+
+### 1.12.35
 
 - Ten new behaviour settings for the Giants Admin Book (in the all-in-one jar): Size spread (each one that
   comes on his own at a random size in a range), How many come (up to 8 of him at once), Comes back after he
