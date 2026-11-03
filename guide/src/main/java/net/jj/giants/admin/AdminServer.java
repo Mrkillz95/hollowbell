@@ -144,7 +144,9 @@ public final class AdminServer {
     public static @Nullable List<String> push(MinecraftServer server, AdminWorld w, Giant g) {
         // (Part 6) quiet mode turns the giants' chat switches off
         // (Part 8) the systems: their server defaults, and the scaling, moon and season factors on the multipliers
-        List<String> r = call(server, g, SET, AdminJson.setArg(w.values(g.key()),
+        // (Part 9) Random chaos: the day's resting moves on what he is sent (never on the world's own values)
+        List<String> r = call(server, g, SET, AdminJson.setArg(
+                net.jj.giants.systems.Systems.forGiant(server, g, w.values(g.key())),
                 net.jj.giants.systems.Systems.forGiants(server,
                         net.jj.giants.tools.Tools.forGiants(w.values(AdminCatalog.ALL)))));
         if (r != null && r.size() > 1)

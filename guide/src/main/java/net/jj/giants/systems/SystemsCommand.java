@@ -67,7 +67,70 @@ public final class SystemsCommand {
         int grief = (int) AdminJson.num(n, "grief", 0), rot = (int) AdminJson.num(n, "rotting", 0);
         if (grief > 0) lines.add("  " + grief + " broken blocks wait to grow back.");
         if (rot > 0) lines.add("  " + rot + (rot == 1 ? " corpse is" : " corpses are") + " rotting.");
+        // (Part 9) new systems B
+        partB(server, n, lines);
         return lines;
+    }
+
+    private static String nameOf(String kind) {
+        net.jj.giants.Giant g = net.jj.giants.admin.AdminServer.giant(kind);
+        return g == null ? kind : net.jj.giants.admin.AdminServer.nameOf(g);
+    }
+
+    /** (Part 9) what the weather, followers, the underworld, sacred ground, Mirror and Random chaos do now */
+    static void partB(net.minecraft.server.MinecraftServer server, JsonObject n, List<String> lines) {
+        if (Systems.on(server, "weather"))
+            lines.add("  Weather Gods: " + (int) AdminJson.num(n, "weatherPlayers", 0) + " players in a giant's"
+                    + " weather.");
+        if (Systems.on(server, "followers"))
+            lines.add("  Followers: " + (int) AdminJson.num(n, "followers", 0) + " with their giants.");
+        if (n.get("underworld") instanceof JsonArray u && !u.isEmpty()) {
+            List<String> parts = new ArrayList<>();
+            for (JsonElement e : u) {
+                JsonObject j = e.getAsJsonObject();
+                String where = AdminJson.str(j, "dim", 64).endsWith("end") ? "the End" : "the Nether";
+                String state = AdminJson.str(j, "state", 16);
+                parts.add(nameOf(AdminJson.str(j, "kind", 32)) + " in " + where + " (" + switch (state) {
+                    case "standing" -> "there";
+                    case "never" -> "fell, never back";
+                    case "waits" -> "back in " + (int) AdminJson.num(j, "minutes", 0) + " min";
+                    default -> "comes when a player is there";
+                } + ")");
+            }
+            lines.add("  Underworld: " + String.join(", ", parts) + ".");
+        }
+        if (n.get("sacred") instanceof JsonArray sa) {
+            List<String> names = new ArrayList<>();
+            for (JsonElement e : sa) names.add(nameOf(e.getAsString()));
+            lines.add("  Sacred ground: " + (names.isEmpty() ? "no giant lives now, so nothing is held sacred"
+                    : String.join(", ", names) + " (no building or breaking in their grounds)") + ".");
+        }
+        if (n.get("mirror") instanceof JsonObject m) {
+            List<String> parts = new ArrayList<>();
+            for (var e : m.entrySet()) {
+                JsonObject k = e.getValue().getAsJsonObject();
+                for (String t : Mirror.TACTICS) {
+                    double f = AdminJson.num(k, t, 1);
+                    if (f < 1) parts.add(nameOf(e.getKey()) + " counters " + Mirror.WORDS.get(Mirror.TACTICS.indexOf(t))
+                            + " (x" + AdminSetting.plain(f) + ")");
+                }
+            }
+            if (Systems.on(server, "mirror"))
+                lines.add("  Mirror: " + (parts.isEmpty() ? "nothing learned yet" : String.join(", ", parts)) + ".");
+        }
+        if (n.get("chaos") instanceof JsonObject c && c.has("day")) {
+            long day = (long) AdminJson.num(c, "day", -1);
+            StringBuilder b = new StringBuilder("  Random chaos: ");
+            b.append(day < 0 ? "not shuffled yet" : "shuffled on day " + day + ", next on day "
+                    + (long) AdminJson.num(c, "next", 0));
+            if (c.get("rests") instanceof JsonObject r && !r.entrySet().isEmpty()) {
+                List<String> parts = new ArrayList<>();
+                for (var e : r.entrySet()) parts.add(nameOf(e.getKey()) + " rests " + e.getValue().getAsJsonArray()
+                        .size());
+                b.append("; moves resting today: ").append(String.join(", ", parts));
+            }
+            lines.add(b.append('.').toString());
+        }
     }
 
     private static int now(CommandContext<CommandSourceStack> c) {

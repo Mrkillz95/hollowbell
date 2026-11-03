@@ -7,7 +7,9 @@
     "CreateWorldGameTabMixin",
     "CreateWorldMoreTabMixin",
     "CreateWorldScreenMixin",
-    "GridLayoutTabAccess"
+    "GridLayoutTabAccess",
+    "WeatherFogMixin",
+    "WeatherSkyMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,0 +1,209 @@
+# Part 9 pictures (ADMIN_BRIDGE.md 25): the Systems page's new systems B (GUI scale 2 and 3), the presets, then the
+# systems in action on a flat world: each giant's weather round him, villagers worshipping and fleeing, golems going
+# for a hunting giant, a band of followers, and giants in the Nether (Underworld).
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamerule doMobSpawning false
+cmd difficulty normal
+cmd giants admin setall maxInWorld 8
+cmd tp @s 0 -60 0 0 10
+wait 20
+# some of them on, so the page shows them
+cmd giants admin set all villagers worship
+cmd giants admin set all golems on
+cmd giants admin set all mirror on
+cmd giants admin set all sacred on
+cmd giants admin set all underworld end
+cmd wreckback summon calm 0.08
+wait 200
+adminbook systems 1200
+wait 60
+mouse 2 2
+wait 25
+shot p9_systems_0
+adminbook systems 1500
+wait 30
+mouse 2 2
+wait 25
+shot p9_systems_1
+adminbook systems 1800
+wait 30
+mouse 2 2
+wait 25
+shot p9_systems_2
+adminbook systems 2100
+wait 30
+mouse 2 2
+wait 25
+shot p9_systems_3
+adminbook systems 2500
+wait 30
+mouse 2 2
+wait 25
+shot p9_systems_4
+adminbook systems 0
+wait 30
+mouse 2 2
+wait 25
+shot p9_systems_now
+close
+guiscale 3
+adminbook systems 1600
+wait 50
+mouse 2 2
+wait 20
+shot p9_systems_scale3_0
+adminbook systems 2200
+wait 30
+mouse 2 2
+wait 20
+shot p9_systems_scale3_1
+adminbook systems 2800
+wait 30
+mouse 2 2
+wait 20
+shot p9_systems_scale3_2
+close
+guiscale 2
+wait 10
+adminbook presets 900
+wait 50
+mouse 2 2
+wait 20
+shot p9_presets
+adminbook presets 1300
+wait 30
+mouse 2 2
+wait 20
+shot p9_presets2
+close
+cmd giants admin set all underworld off
+cmd giants admin set all sacred off
+cmd giants admin set all mirror off
+cmd wreckback kill
+wait 40
+# Weather Gods: a storm round Hollowbell, ash round Pitchgut, the gloaming round the Gloamwick
+cmd giants admin set all weather on
+cmd tp @s 300 -60 0 0 10
+wait 30
+cmd hollowbell summon calm 0.08
+cmd giants freeze
+cmd tp @s 300 -58 -30 0 -5
+wait 200
+shot p9_weather_storm
+cmd giants unfreeze
+cmd hollowbell kill
+cmd tp @s 700 -60 0 0 10
+wait 30
+cmd pitchgut summon calm 0.08
+cmd giants freeze
+cmd tp @s 700 -57 -32 0 5
+wait 200
+shot p9_weather_ash
+cmd giants unfreeze
+cmd pitchgut kill
+cmd tp @s 1100 -60 0 0 10
+wait 30
+cmd gloamwick summon calm 0.08
+cmd giants freeze
+cmd tp @s 1100 -57 -30 0 5
+wait 200
+shot p9_weather_gloaming
+cmd giants unfreeze
+cmd gloamwick kill
+cmd tp @s 1500 -60 0 0 10
+wait 30
+cmd lanternwillow summon calm 0.08
+cmd giants freeze
+cmd tp @s 1500 -57 -30 0 5
+wait 200
+shot p9_weather_mist
+cmd giants unfreeze
+cmd lanternwillow kill
+cmd giants admin set all weather off
+wait 60
+# villagers worship a calm Cerberus (and leave him bread), then flee a hunting one; golems go for him
+cmd tp @s 1900 -60 0 0 10
+wait 30
+cmd cerberus summon calm 0.05
+cmd giants freeze
+cmd summon villager 1915 -60 5
+cmd summon villager 1885 -60 8
+cmd summon villager 1910 -60 -12
+cmd summon villager 1890 -60 -15
+cmd summon villager 1920 -60 -2
+cmd summon villager 1880 -60 0
+cmd gamemode spectator
+cmd tp @s 1900 -50 -38 0 25
+wait 260
+shot p9_villagers_worship
+cmd giants admin set all villagers flee
+cmd giants unfreeze
+cmd cerberus mood hunting
+cmd summon iron_golem 1925 -60 20
+cmd summon iron_golem 1875 -60 25
+wait 80
+shot p9_villagers_flee
+wait 60
+shot p9_golems
+cmd giants admin set all villagers off
+cmd giants admin set all golems off
+cmd kill @e[type=villager]
+cmd kill @e[type=iron_golem]
+cmd cerberus kill
+cmd gamemode creative
+wait 40
+# a band of followers: vexes round the Gloamwick, drowned round the Wreckback
+cmd giants admin set all followers on
+cmd giants admin set all followerCount 8
+cmd giants admin set all followerEvery 10
+cmd tp @s 2300 -60 0 0 10
+wait 30
+cmd gloamwick summon calm 0.06
+cmd giants freeze
+cmd tp @s 2300 -55 -28 0 10
+wait 1800
+shot p9_followers_gloamwick
+cmd giants unfreeze
+cmd gloamwick kill
+cmd tp @s 2700 -60 0 0 10
+wait 30
+cmd wreckback summon calm 0.06
+cmd giants freeze
+cmd tp @s 2700 -55 -28 0 10
+wait 1800
+shot p9_followers_wreckback
+cmd giants unfreeze
+cmd wreckback kill
+cmd giants admin set all followers off
+wait 40
+# the Underworld: one of each comes near you in the Nether, sized to fit under its roof
+cmd giants admin set all underworld nether
+cmd execute in minecraft:the_nether run tp @s 0 70 0
+wait 600
+cmd giants admin spectate pitchgut
+wait 100
+shot p9_underworld_pitchgut
+cmd giants admin spectate cerberus
+wait 100
+shot p9_underworld_cerberus
+cmd giants admin spectate hollowbell
+wait 100
+shot p9_underworld_hollowbell
+cmd giants admin spectate stop
+wait 40
+cmd giants admin systems
+wait 20
+chat /giants admin systems
+wait 40
+shot p9_underworld_command
+cmd giants admin set all underworld off
+quit

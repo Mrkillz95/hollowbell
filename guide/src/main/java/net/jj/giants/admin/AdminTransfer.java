@@ -218,6 +218,26 @@ public final class AdminTransfer {
                         + " week becomes a Titan.",
                 "\"all.size\":0.4,\"all.growth\":true,\"all.growthPerDay\":0.1,\"all.growthPerWin\":0.25,"
                         + "\"all.growthMost\":5,\"all.growthTitan\":7", "", Map.of()));
+        // Part 9: new systems B (ADMIN_BRIDGE.md 25.10)
+        BUILT_IN.put("random_chaos", retune("random_chaos", "Random Chaos",
+                "Every game day the giants are shuffled: new sizes, new moods, and each uses only some of his moves"
+                        + " that day.",
+                "\"all.chaos\":true", "", Map.of()));
+        BUILT_IN.put("underworld", retune("underworld", "Underworld",
+                "The giants live in the Nether and the End instead of the Overworld: one of each in both, coming near"
+                        + " players there, sized to fit under the Nether's roof.",
+                "\"all.underworld\":\"both\"", "", Map.of()));
+        BUILT_IN.put("weather_gods", retune("weather_gods", "Weather Gods",
+                "Each giant brings his own weather to the land round him: ash, dust, sleet and embers, storms, mist,"
+                        + " smog or the gloaming. The bigger the giant, the further it reaches.",
+                "\"all.weather\":true", "", Map.of()));
+        BUILT_IN.put("sacred_ground", retune("sacred_ground", "Sacred Ground",
+                "Nobody may build or break blocks in a giant's ground while he lives. Bring him down first.",
+                "\"all.sacred\":true", "", Map.of()));
+        BUILT_IN.put("mirror", retune("mirror", "Mirror",
+                "Giants copy the players: the better the armour worn on the server, the stronger they are, and each"
+                        + " kind learns to shrug off the tactic players lean on.",
+                "\"all.mirror\":true,\"all.scaleArmour\":1", "", Map.of()));
         // (Part 3's two last, after every re-tune one)
         BUILT_IN.put("close_quarters", BUILT_IN.remove("close_quarters"));
         BUILT_IN.put("far_frontier", BUILT_IN.remove("far_frontier"));

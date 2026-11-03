@@ -66,15 +66,54 @@ public final class SystemsData extends SavedData {
         public List<String> block = new ArrayList<>();
     }
 
+    /** (Part 9) Mirror: what players have done to one kind lately, and what he has learned to counter */
+    public static final class Learned {
+        /** the damage players dealt him by each tactic (melee, arrows, magic, blasts), fading */
+        public double[] score = new double[4];
+        /** what each tactic does to him now (1 = all of it) */
+        public double[] factor = {1, 1, 1, 1};
+        /** each tactic the players near were told he is learning */
+        public boolean[] told = new boolean[4];
+    }
+
+    /** (Part 9) Underworld: the one of a kind the Guide keeps in the Nether or the End */
+    public static final class Under {
+        /** his id ("" while none stands) */
+        public String id = "";
+        /** the game time he fell (0: not yet) and when the next may come */
+        public long fell, due;
+        /** he never comes back (Comes back after he falls is off) */
+        public boolean never;
+    }
+
     public static final class State {
         public Map<String, G> giants = new LinkedHashMap<>();
         public List<Remains> remains = new ArrayList<>();
         /** the season last told (-1: none yet) */
         public int season = -1;
+        /** (Part 9) Random chaos: the last game day the giants were shuffled (-1: never) and each kind's moves resting */
+        public long chaosDay = -1;
+        public Map<String, List<String>> rests = new LinkedHashMap<>();
+        /** (Part 9) Mirror: each kind's learning */
+        public Map<String, Learned> mirror = new LinkedHashMap<>();
+        /** (Part 9) Underworld: "kind|dimension" -> the one kept there */
+        public Map<String, Under> under = new LinkedHashMap<>();
+        /** (Part 9) Villagers worship: the game day each giant was last left an offering */
+        public Map<String, Long> offered = new LinkedHashMap<>();
 
         void fill() {
             if (giants == null) giants = new LinkedHashMap<>();
             if (remains == null) remains = new ArrayList<>();
+            if (rests == null) rests = new LinkedHashMap<>();
+            rests.values().removeIf(l -> l == null);
+            if (mirror == null) mirror = new LinkedHashMap<>();
+            mirror.values().removeIf(m -> m == null || m.score == null || m.score.length != 4 || m.factor == null
+                    || m.factor.length != 4);
+            for (Learned m : mirror.values()) if (m.told == null || m.told.length != 4) m.told = new boolean[4];
+            if (under == null) under = new LinkedHashMap<>();
+            under.values().removeIf(u -> u == null);
+            for (Under u : under.values()) if (u.id == null) u.id = "";
+            if (offered == null) offered = new LinkedHashMap<>();
             giants.values().removeIf(g -> g == null);
             for (G g : giants.values()) {
                 if (g.belly == null) g.belly = new ArrayList<>();

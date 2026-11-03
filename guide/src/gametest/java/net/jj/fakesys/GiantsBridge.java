@@ -24,11 +24,29 @@ public final class GiantsBridge {
     public static final List<String> calls = new ArrayList<>();
     /** the all-giants values last sent ("adminset") */
     public static volatile JsonObject all = new JsonObject();
+    /** (Part 9) his own values last sent, and what he counters (Mirror) */
+    public static volatile JsonObject values = new JsonObject();
+    public static volatile JsonObject counter = new JsonObject();
 
     public static void reset() {
         calls.clear();
         all = new JsonObject();
+        values = new JsonObject();
+        counter = new JsonObject();
     }
+
+    /** (Part 9) his own settings: four moves to rest (Random chaos), his respawn and his size (Underworld) */
+    private static final String[][] OWN = {
+        {"move.stomp.on", "{\"cat\":\"moves\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Stomp: on\",\"group\":\"stomp\"}"},
+        {"move.roar.on", "{\"cat\":\"moves\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Roar: on\",\"group\":\"roar\"}"},
+        {"move.swipe.on", "{\"cat\":\"moves\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Swipe: on\",\"group\":\"swipe\"}"},
+        {"move.bite.on", "{\"cat\":\"moves\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Bite: on\",\"group\":\"bite\"}"},
+        {"move.charge.on", "{\"cat\":\"moves\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Charge: on\",\"group\":\"charge\"}"},
+        {"move.slam.on", "{\"cat\":\"moves\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Slam: on\",\"group\":\"slam\"}"},
+        {"respawn", "{\"cat\":\"spawning\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Comes back after he falls\"}"},
+        {"worldRespawnDays", "{\"cat\":\"spawning\",\"type\":\"float\",\"min\":0,\"max\":30,\"step\":0.5,\"default\":1,\"when\":\"live\",\"name\":\"Days before he comes back\"}"},
+        {"worldScale", "{\"cat\":\"spawning\",\"type\":\"float\",\"min\":0.01,\"max\":4,\"step\":0.01,\"default\":1,\"when\":\"newSpawns\",\"name\":\"Size of the world's own\"}"}
+    };
 
     public static List<IronGolem> golems(MinecraftServer s) {
         List<IronGolem> out = new ArrayList<>();
@@ -70,12 +88,22 @@ public final class GiantsBridge {
     public static List<String> giants(MinecraftServer s, String action, String arg) {
         List<String> out = new ArrayList<>();
         switch (action) {
-            case "admin" -> out.add("{\"admin\":1,\"giant\":\"fakesys\",\"name\":\"Fakesys\",\"uses\":[\"all.health\","
-                    + "\"all.damage\",\"all.speed\",\"all.healing\",\"all.weakPoints\",\"all.weakHit\",\"all.bodyHit\"],"
-                    + "\"all\":{}}");
+            case "admin" -> {
+                out.add("{\"admin\":1,\"giant\":\"fakesys\",\"name\":\"Fakesys\",\"uses\":[\"all.health\","
+                        + "\"all.damage\",\"all.speed\",\"all.healing\",\"all.weakPoints\",\"all.weakHit\",\"all.bodyHit\","
+                        + "\"all.mirror\"],\"all\":{}}");
+                for (String[] o : OWN) {
+                    JsonObject j = JsonParser.parseString(o[1]).getAsJsonObject();
+                    j.addProperty("id", o[0]);
+                    j.add("value", values.has(o[0]) ? values.get(o[0]) : j.get("default"));
+                    j.addProperty("set", values.has(o[0]));
+                    out.add(j.toString());
+                }
+            }
             case "adminset" -> {
                 JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
                 all = o.has("all") ? o.getAsJsonObject("all") : new JsonObject();
+                values = o.has("values") ? o.getAsJsonObject("values") : new JsonObject();
                 out.add("ok");
             }
             case "live" -> {
@@ -108,16 +136,23 @@ public final class GiantsBridge {
                 IronGolem g = byId(s, o.get("id").getAsString());
                 if (g == null) return List.of("no", "He isn't there any more.");
                 if (o.get("do").getAsString().equals("size")) put(g, "size", o.get("value").getAsString());
+                // (Part 9: the Underworld takes a world's own one away)
+                if (o.get("do").getAsString().equals("remove")) g.discard();
                 out.add("ok");
                 out.add("Fakesys: done.");
             }
             case "sys" -> out.add("{\"sys\":1,\"giant\":\"fakesys\",\"name\":\"Fakesys\",\"weak\":[\"his nose\"],"
-                    + "\"does\":[\"spots\",\"mood\",\"turn\",\"go\"]}");
+                    + "\"does\":[\"spots\",\"mood\",\"turn\",\"go\",\"counter\"]}");
             case "sysact" -> {
                 JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
                 if (o.get("sys").getAsInt() > 1) return null;
                 String what = o.get("do").getAsString();
                 calls.add(what + " " + arg);
+                // (Part 9) Mirror: every one of him
+                if (what.equals("counter")) {
+                    counter = o.has("counter") ? o.getAsJsonObject("counter") : new JsonObject();
+                    return List.of("ok", "Fakesys: countering.");
+                }
                 IronGolem g = byId(s, o.get("id").getAsString());
                 if (g == null) return List.of("no", "He isn't there any more.");
                 switch (what) {
@@ -141,6 +176,21 @@ public final class GiantsBridge {
                         return null;
                     }
                 }
+            }
+            // (Part 9) his own summon (the Underworld): a stand-in there, at that size and mood
+            case "summon" -> {
+                calls.add("summon " + arg);
+                String[] w = arg.trim().split("\s+");
+                ServerLevel l = s.getLevel(net.minecraft.resources.ResourceKey.create(
+                        net.minecraft.core.registries.Registries.DIMENSION,
+                        net.minecraft.resources.ResourceLocation.parse(w[0])));
+                if (l == null) return List.of("Fakesys: no such world.");
+                IronGolem g = spawn(l, Double.parseDouble(w[1]), Double.parseDouble(w[2]), Double.parseDouble(w[3]));
+                for (int i = 5; i < w.length; i++)
+                    if (w[i].matches("[0-9.]+")) put(g, "size", w[i]);
+                    else put(g, "mood", w[i]);
+                g.addTag("fakesys.summoned");
+                out.add("Fakesys: summoned.");
             }
             case "fun" -> out.add("{\"fun\":1,\"giant\":\"fakesys\",\"name\":\"Fakesys\",\"does\":[\"stats\"],"
                     + "\"places\":[\"land\"]}");

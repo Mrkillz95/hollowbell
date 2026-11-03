@@ -18,5 +18,7 @@ public class GuideClient implements ClientModInitializer {
         PerfClient.init();
         AdminBookClient.init();
         net.jj.giants.client.players.PlayersClient.init();
+        // (Part 9) Weather Gods: a giant's weather round the player
+        WeatherClient.init();
     }
 }

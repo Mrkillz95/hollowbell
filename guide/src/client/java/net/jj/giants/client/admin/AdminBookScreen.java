@@ -5702,6 +5702,8 @@ public class AdminBookScreen extends Screen {
         JsonObject sy = creating() ? null : AdminBookClient.systems();
         if (sy != null && sy.get("now") instanceof JsonObject now) systemsNow(now);
         for (String[] grp : net.jj.giants.systems.SystemsCatalog.GROUPS) {
+            // (Part 9) new systems B under their own heading
+            if (grp[0].equals(net.jj.giants.systems.SystemsCatalog.FIRST_B)) systemsB();
             List<AdminSetting> in = new ArrayList<>();
             for (int i = 1; i < grp.length; i++)
                 for (AdminSetting s : p.settings()) if (s.id().equals(grp[i])) in.add(s);
@@ -5754,6 +5756,7 @@ public class AdminBookScreen extends Screen {
         int grief = (int) dbl(n, "grief", 0), rot = (int) dbl(n, "rotting", 0);
         if (grief > 0) lines.add(tr("systems.now.grief", grief));
         if (rot > 0) lines.add(tr("systems.now.rot", rot));
+        systemsNowB(n, lines);
         List<FormattedCharSequence> split = new ArrayList<>();
         for (Component c : lines) split.addAll(font.split(c, lw - 34));
         int h = 22 + split.size() * 10;
@@ -5809,5 +5812,69 @@ public class AdminBookScreen extends Screen {
         int fill = (int) Math.round((w - 2) * Math.max(0, Math.min(1, f)));
         if (fill > 0) g.fill(bx + 1, y + 2, bx + 1 + fill, y + 7, colour);
         g.drawString(font, Math.round(f * 100) + "%", bx + w + 4, y, GREY, false);
+    }
+
+    // (Part 9, ADMIN_BRIDGE.md 25.11) new systems B on the Systems page
+
+    /** the heading the new systems B start under */
+    private void systemsB() {
+        int h = 30;
+        rows.add(new Block(h + 4, (g, x, y, w, mx, my) -> {
+            g.fill(x + 2, y + 3, x + w - 2, y + 4, 0x55804020);
+            AdminStyle.icon(g, "systems_b", x + 4, y + 8, 16);
+            g.drawString(font, tr("systems.b"), x + 25, y + 8, HEAD, false);
+            g.drawString(font, cut(tr("systems.b.note").getString(), w - 30), x + 25, y + 19, GREY, false);
+        }));
+    }
+
+    /** the "Right now" lines for new systems B */
+    private void systemsNowB(JsonObject n, List<Component> lines) {
+        int weather = (int) dbl(n, "weatherPlayers", -1);
+        if (weather > 0) lines.add(tr("systems.now.weather", weather));
+        int followers = (int) dbl(n, "followers", 0);
+        if (followers > 0) lines.add(tr("systems.now.followers", followers));
+        if (n.get("underworld") instanceof JsonArray u && !u.isEmpty()) {
+            List<String> parts = new ArrayList<>();
+            for (JsonElement e : u) {
+                if (!(e instanceof JsonObject j)) continue;
+                String where = str(j, "dim").endsWith("end") ? "End" : "Nether";
+                String state = str(j, "state");
+                parts.add(giantName(str(j, "kind")) + " (" + where + ": " + switch (state) {
+                    case "standing" -> "there";
+                    case "never" -> "fell for good";
+                    case "waits" -> "back in " + (int) dbl(j, "minutes", 0) + " min";
+                    default -> "waits for a player there";
+                } + ")");
+            }
+            lines.add(tr("systems.now.under", String.join(", ", parts)));
+        }
+        if (n.get("sacred") instanceof JsonArray sa) {
+            List<String> names = new ArrayList<>();
+            for (JsonElement e : sa) names.add(giantName(e.getAsString()));
+            lines.add(names.isEmpty() ? tr("systems.now.sacred.none")
+                    : tr("systems.now.sacred", String.join(", ", names)));
+        }
+        if (n.get("mirror") instanceof JsonObject m) {
+            List<String> parts = new ArrayList<>();
+            String[] tactics = {"melee", "arrows", "magic", "blasts"};
+            for (var e : m.entrySet()) {
+                if (!(e.getValue() instanceof JsonObject k)) continue;
+                for (String t : tactics) {
+                    double f = dbl(k, t, 1);
+                    if (f < 1) parts.add(giantName(e.getKey()) + ": " + t + " x" + AdminSetting.plain(f));
+                }
+            }
+            lines.add(parts.isEmpty() ? tr("systems.now.mirror.none")
+                    : tr("systems.now.mirror", String.join(", ", parts)));
+        }
+        if (n.get("chaos") instanceof JsonObject c && c.has("day") && dbl(c, "day", -1) >= 0) {
+            lines.add(tr("systems.now.chaos", (long) dbl(c, "day", 0), (long) dbl(c, "next", 0)));
+            if (c.get("rests") instanceof JsonObject r && !r.entrySet().isEmpty()) {
+                List<String> parts = new ArrayList<>();
+                for (var e : r.entrySet())
+                    if (e.getValue() instanceof JsonArray a) parts.add(giantName(e.getKey()) + " " + a.size());
+                lines.add(tr("systems.now.chaos.rest", String.join(", ", parts)));
+            }
+        }
     }
 }

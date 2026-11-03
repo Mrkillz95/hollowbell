@@ -21,7 +21,7 @@ import net.jj.giants.admin.AdminSetting.Type;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * (Part 8, ADMIN_BRIDGE.md §24.2) The new systems' settings: all-giants settings of the category "systems", each off
+ * (Part 8, ADMIN_BRIDGE.md §24.2; Part 9, §25.2) The new systems' settings: all-giants settings of the category "systems", each off
  * (or "as always") in the jar. Unlike the multipliers they have a server default, kept in
  * config/jj_giants_admin/systems.json (only what differs from the jar), under the world's own value.
  */
@@ -115,7 +115,50 @@ public final class SystemsCatalog {
             flag("all.seasons", false, "Seasons",
                     "Spring (giants heal faster), summer (hit harder, move faster), autumn (as usual), winter"
                             + " (slower, tougher hide). Everyone is told when the season turns."),
-            num("all.seasonDays", Type.INT, 7, 1, 60, 1, "Season length", "Game days each season lasts."));
+            num("all.seasonDays", Type.INT, 7, 1, 60, 1, "Season length", "Game days each season lasts."),
+            // (Part 9, ADMIN_BRIDGE.md 25.2) new systems B
+            choice("all.villagers", List.of("off", "flee", "hide", "worship"), "Villagers",
+                    "How villagers take a giant near them: off (as always), flee (they run from a wild or hunting"
+                            + " one), hide (they shut themselves in, as for a raid), worship (they gather round a"
+                            + " calm one, look up at him and leave him food once a day; from a hunting one they"
+                            + " hide)."),
+            flag("all.golems", false, "Golems fight wild giants",
+                    "Iron golems go for a wild giant who hunts or fights near them, or who walks into their"
+                            + " village."),
+            flag("all.followers", false, "Followers",
+                    "Wild giants gather a band of creatures that keep near them and go for whatever they fight: each"
+                            + " giant his own kind (magma cubes, husks, wither skeletons, phantoms, slimes,"
+                            + " drowned, vindicators, vexes)."),
+            num("all.followerCount", Type.INT, 6, 1, 32, 1, "Followers each",
+                    "How many creatures follow each wild giant, at most (up to an army)."),
+            num("all.followerEvery", Type.INT, 60, 10, 600, 10, "A new follower every",
+                    "Seconds between new followers joining him while he has fewer than he may (only with a player"
+                            + " near)."),
+            flag("all.weather", false, "Weather Gods",
+                    "Each giant brings his own weather to the land round him: ash, dust, sleet and embers, storms,"
+                            + " mist, smog or the gloaming. Only players in his area see it; the bigger he is, the"
+                            + " bigger his area."),
+            num("all.weatherArea", Type.FLOAT, 1, 0.5, 3, 0.25, "Weather area",
+                    "How far his weather reaches, times this."),
+            num("all.weatherStrength", Type.FLOAT, 1, 0.25, 1, 0.05, "Weather strength",
+                    "How thick his weather is: fog, rain and what falls."),
+            choice("all.underworld", List.of("off", "nether", "end", "both"), "Underworld",
+                    "Giants live in the Nether and the End instead of the Overworld: none come in the Overworld (a"
+                            + " wild world's own one there goes below), and one of each comes near players in the"
+                            + " Nether, the End or both, sized to fit."),
+            flag("all.sacred", false, "Sacred ground",
+                    "Nobody may build or break blocks in a giant's ground while he lives (players in creative"
+                            + " mode still may)."),
+            flag("all.mirror", false, "Mirror",
+                    "Giants learn how players fight them: the tactic players lean on (melee, arrows, magic or"
+                            + " blasts) hurts each kind less and less. Pair it with Stronger against armour."),
+            num("all.mirrorMost", Type.FLOAT, 0.5, 0.1, 0.9, 0.05, "Most they learn",
+                    "The most a favourite tactic is cut by (0.5: it does half)."),
+            flag("all.chaos", false, "Random chaos",
+                    "Every game day each giant's size, mood and moves are shuffled: a new size, a new mood (wild"
+                            + " ones), and only some of his moves that day."),
+            num("all.chaosDays", Type.INT, 1, 1, 10, 1, "Shuffle every",
+                    "Game days between shuffles."));
 
     /** the book's groups: a name key and the settings in it */
     public static final String[][] GROUPS = {
@@ -129,7 +172,18 @@ public final class SystemsCatalog {
         {"scaling", "all.scalePlayers", "all.scaleDays", "all.scaleArmour", "all.scaleMost"},
         {"weak", "all.weakPoints", "all.weakHit", "all.bodyHit"},
         {"fear", "all.fear", "all.awe"},
-        {"seasons", "all.moonFrenzy", "all.seasons", "all.seasonDays"}};
+        {"seasons", "all.moonFrenzy", "all.seasons", "all.seasonDays"},
+        // (Part 9) new systems B
+        {"villages", "all.villagers", "all.golems"},
+        {"followers", "all.followers", "all.followerCount", "all.followerEvery"},
+        {"weather", "all.weather", "all.weatherArea", "all.weatherStrength"},
+        {"underworld", "all.underworld"},
+        {"sacred", "all.sacred"},
+        {"mirror", "all.mirror", "all.mirrorMost"},
+        {"chaos", "all.chaos", "all.chaosDays"}};
+
+    /** (Part 9) the first group of new systems B (the book starts them under their own heading) */
+    public static final String FIRST_B = "villages";
 
     /** the settings, each with the server default from the file in place of the jar's */
     public static List<AdminSetting> settings() {

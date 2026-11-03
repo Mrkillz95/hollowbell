@@ -52,6 +52,12 @@ public class PresetGameTests implements FabricGameTest {
         RATED.put("speedrun", 2);
         RATED.put("herds", 3);
         RATED.put("evolution", 3);
+        // (Part 9)
+        RATED.put("random_chaos", 3);
+        RATED.put("underworld", 3);
+        RATED.put("weather_gods", 3);
+        RATED.put("sacred_ground", 3);
+        RATED.put("mirror", 4);
         RATED.put("close_quarters", 3);
         RATED.put("far_frontier", 3);
     }

@@ -304,6 +304,14 @@ public final class AdminInsight {
             parts.add(new Part("weak points to aim for", clamp(-0.25 * log2(Math.max(1,
                     all.getOrDefault("all.weakHit", 2.5))) + 0.5 * -log2(Math.max(0.1,
                     all.getOrDefault("all.bodyHit", 1.0))), -0.5, 0.75)));
+        // (Part 9, ADMIN_BRIDGE.md 25) new systems B that change how hard the giants are
+        if (all.getOrDefault("all.followers", 0.0) >= 0.5)
+            parts.add(new Part("a band of followers each", clamp(0.15 * log2(1 + all.getOrDefault(
+                    "all.followerCount", 6.0)), 0, 0.75)));
+        if (all.getOrDefault("all.mirror", 0.0) >= 0.5)
+            parts.add(new Part("giants that learn your tactics", clamp(0.25 + 0.5 * all.getOrDefault("all.mirrorMost",
+                    0.5), 0, 0.75)));
+        if (all.getOrDefault("all.chaos", 0.0) >= 0.5) parts.add(new Part("giants shuffled every day", 0.25));
         double score = 3;
         for (Part p : parts) score += p.by();
         int level = (int) clamp(Math.floor(score + 0.5), 1, 5);
@@ -497,6 +505,14 @@ public final class AdminInsight {
             out.add(new Warning("healing_unused", List.of(AdminCatalog.ALL),
                     "All giants: Healing is x" + AdminSetting.plain(heal) + ", but no giant heals on his own (Heals on"
                             + " his own is off for every one), so it changes nothing."));
+        // (Part 9) the Underworld, with giants kept out of the world it puts them in
+        double under = all.getOrDefault("all.underworld", 0.0);
+        boolean nether = under == 1 || under == 3, end = under == 2 || under == 3;
+        if (nether && all.getOrDefault("all.dimNether", 0.0) >= 1 || end && all.getOrDefault("all.dimEnd", 0.0) >= 1)
+            out.add(new Warning("underworld_shut", List.of(AdminCatalog.ALL),
+                    "Systems: Underworld puts the giants in the " + (nether && all.getOrDefault("all.dimNether", 0.0)
+                            >= 1 ? "Nether" : "End") + ", but Server tools keep giants out of it (nogiants), so"
+                            + " each one is taken away again."));
         // (Part 5) My Giant with the giants' books off: nobody can own the giant they pick
         if (all.getOrDefault("all.myGiant", 0.0) >= 0.5 && all.getOrDefault("all.books", 1.0) < 0.5)
             out.add(new Warning("my_giant_books_off", List.of(AdminCatalog.ALL),

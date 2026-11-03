@@ -89,6 +89,17 @@ public final class SystemsAdmin {
         now.addProperty("healing", f.healing());
         now.addProperty("grief", Grief.waiting());
         now.addProperty("rotting", Remains.rotting(server));
+        // (Part 9) new systems B
+        now.addProperty("weatherPlayers", Weather.players());
+        now.addProperty("followers", Followers.standing);
+        now.add("underworld", Underworld.json(server));
+        now.add("mirror", Mirror.json(server));
+        now.add("chaos", Chaos.json(server));
+        if (Systems.on(server, "sacred")) {
+            JsonArray sacred = new JsonArray();
+            for (String k : Sacred.living()) sacred.add(k);
+            now.add("sacred", sacred);
+        }
         o.add("now", now);
         JsonArray gs = new JsonArray();
         SystemsData d = SystemsData.get(server);

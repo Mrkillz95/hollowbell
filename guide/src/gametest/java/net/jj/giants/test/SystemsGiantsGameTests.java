@@ -48,7 +48,7 @@ public class SystemsGiantsGameTests implements FabricGameTest {
                 h.assertTrue(head != null && head.size() == 1, key + ": answers sys: " + head);
                 JsonObject o = net.jj.giants.admin.AdminJson.object(head.get(0));
                 h.assertTrue(o != null && o.getAsJsonArray("weak").size() >= 1
-                        && o.getAsJsonArray("does").toString().equals("[\"spots\",\"mood\",\"turn\",\"go\"]"),
+                        && o.getAsJsonArray("does").toString().equals("[\"spots\",\"mood\",\"turn\",\"go\",\"counter\"]"),
                         key + ": " + o);
                 // his weak spots, on his body
                 JsonObject none = new JsonObject();

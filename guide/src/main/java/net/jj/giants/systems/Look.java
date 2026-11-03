@@ -423,7 +423,7 @@ public final class Look {
     }
 
     /** sets his mood through his sys bridge; true when he took it */
-    private static boolean mood(MinecraftServer server, Kind k, LivingEntity e, String mood) {
+    static boolean mood(MinecraftServer server, Kind k, LivingEntity e, String mood) {
         if (!sys(server, k.g()).contains("mood")) return false;
         JsonObject more = new JsonObject();
         more.addProperty("value", mood);

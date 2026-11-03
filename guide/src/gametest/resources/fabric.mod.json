@@ -24,7 +24,9 @@
       "net.jj.giants.test.FunGameTests",
       "net.jj.giants.test.FunGiantsGameTests",
       "net.jj.giants.test.SystemsGameTests",
-      "net.jj.giants.test.SystemsGiantsGameTests"
+      "net.jj.giants.test.SystemsGiantsGameTests",
+      "net.jj.giants.test.SystemsBGameTests",
+      "net.jj.giants.test.SystemsBGiantsGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"

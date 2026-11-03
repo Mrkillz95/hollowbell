@@ -565,6 +565,9 @@ public final class AdminBook {
             else if (s.type() == AdminSetting.Type.BOOL) all.put(s.id(), s.value().getAsBoolean() ? 1.0 : 0.0);
             else if (s.type() == AdminSetting.Type.FLOAT || s.type() == AdminSetting.Type.INT)
                 all.put(s.id(), s.value().getAsDouble());
+            // (Part 9: a choice as its option's number, for the clash rules: the Underworld and the dimensions)
+            else if (s.type() == AdminSetting.Type.CHOICE && s.value().isJsonPrimitive())
+                all.put(s.id(), (double) Math.max(0, s.options().indexOf(s.value().getAsString())));
         return all;
     }
 

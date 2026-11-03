@@ -52,6 +52,11 @@ public final class Systems {
         ServerLivingEntityEvents.ALLOW_DEATH.register(PlayerDeaths::dying);
         ServerPlayerEvents.COPY_FROM.register(PlayerDeaths::copy);
         CommandRegistrationCallback.EVENT.register((d, reg, env) -> SystemsCommand.register(d));
+        // (Part 9) a follower and his giant don't hurt each other; sacred ground; the weather on players' games
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register(Followers::allowDamage);
+        Sacred.register();
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.playS2C().register(
+                net.jj.giants.net.WeatherPayload.TYPE, net.jj.giants.net.WeatherPayload.CODEC);
     }
 
     public static void forget() {
@@ -61,6 +66,13 @@ public final class Systems {
         Scaling.forget();
         PlayerDeaths.forget();
         SystemsAdmin.forget();
+        // (Part 9)
+        Followers.forget();
+        Weather.forget();
+        Underworld.forget();
+        Sacred.forget();
+        Mirror.forget();
+        Chaos.forget();
     }
 
     // the settings (their world value, else the server's default from the systems file)
@@ -108,7 +120,7 @@ public final class Systems {
         if (server == null) return all;
         Map<String, JsonElement> out = null;
         // a server default for a system the giants apply (the weak points)
-        for (String id : List.of("all.weakPoints", "all.weakHit", "all.bodyHit")) {
+        for (String id : List.of("all.weakPoints", "all.weakHit", "all.bodyHit", "all.mirror")) {
             if (all.containsKey(id)) continue;
             AdminSetting s = AdminCatalog.shared(id);
             if (s == null || AdminSetting.same(s.def(), s.jar())) continue;
@@ -127,7 +139,18 @@ public final class Systems {
             if (out == null) out = new LinkedHashMap<>(all);
             out.put("all.sysReport", new JsonPrimitive(true));
         }
+        // (Part 9) Underworld: the giants' own spawners keep the world's own ones out of the Overworld
+        if (Underworld.on(server)) {
+            if (out == null) out = new LinkedHashMap<>(all);
+            out.put("all.dimOverworld", new JsonPrimitive("nogiants"));
+        }
         return out == null ? all : out;
+    }
+
+    /** (Part 9) one giant's own values as he is sent them: Random chaos's resting moves off for the day */
+    public static Map<String, JsonElement> forGiant(@Nullable MinecraftServer server, Giant g,
+            Map<String, JsonElement> values) {
+        return server == null ? values : Chaos.forGiant(server, g, values);
     }
 
     private static void times(Map<String, JsonElement> m, String id, double f) {
@@ -148,7 +171,18 @@ public final class Systems {
         int t = server.getTickCount();
         Grief.tick(server);
         Remains.tick(server);
+        Weather.everyTick(server);
         if (t % 20 == 0) {
+            // (Part 9) every second: villagers and golems, followers, weather, the underworld
+            Villages.tick(server);
+            Followers.tick(server);
+            Weather.tick(server);
+            Underworld.tick(server);
+            if (t % 100 == 0) Sacred.tick(server);
+            if (t % 200 == 0) {
+                Mirror.tick(server);
+                Chaos.tick(server);
+            }
             Weak.tick(server);
             if (t % 40 == 0) Fear.tick(server);
             if (t % 200 == 0) {
@@ -244,6 +278,10 @@ public final class Systems {
         }
         String id = AdminJson.str(o, "id", 40), by = AdminJson.str(o, "by", 40);
         Look.hurt(server, id, by.equals("-") ? "" : by);
+        // (Part 9) Mirror: a player's hit, by its tactic
+        if (o.has("tactic"))
+            Mirror.hurt(server, id, AdminJson.str(o, "tactic", 16), o.has("player") && o.get("player").getAsBoolean(),
+                    AdminJson.num(o, "amount", 0));
         return List.of("ok");
     }
 
