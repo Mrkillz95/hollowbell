@@ -4470,6 +4470,14 @@ public class AdminBookScreen extends Screen {
                 bool(pack, "lock") ? WARN : bool(pack, "on") ? KEY : GREY, List.of()));
     }
 
+    /** (1.12.0) Part 6's Pause all giants is on (Home's server tools line says so) */
+    private static boolean allPaused() {
+        JsonObject h = AdminBookClient.home();
+        return h != null && h.get("tools") instanceof JsonObject t && bool(t, "paused");
+    }
+
+    private static final String PAUSED_FUN = "All giants are paused right now. Unpause them first (Server tools).";
+
     /** Home's line about the server tools: what is on now (paused, an event, a schedule, quiet, a modpack) */
     private void toolsHomeLine(JsonObject h) {
         JsonObject t = h.get("tools") instanceof JsonObject o ? o : null;
@@ -4891,9 +4899,11 @@ public class AdminBookScreen extends Screen {
                     h += 18;
                 }
                 Button b = Button.builder(c, x -> press(act)).bounds(0, 0, w, 16).build();
-                b.active = here && (boolean) o[1];
+                // (1.12.0) while every giant is paused (Server tools) none can be played
+                boolean paused = act.equals("play") && allPaused();
+                b.active = here && (boolean) o[1] && !paused;
                 b.setTooltip(Tooltip.create(!here ? tr("fun.away") : !(boolean) o[1] ? tr("fun.cant", str(kind, "name"))
-                        : tr("fun.act." + act + ".tip")));
+                        : paused ? tt("paused.fun", PAUSED_FUN) : tr("fun.act." + act + ".tip")));
                 add(b, bx, by, false);
                 bx += w + 3;
             }
@@ -5059,7 +5069,8 @@ public class AdminBookScreen extends Screen {
                     o.add("b", fightSide(fightB, fightSizeB));
                     o.addProperty("spot", fightLook ? "look" : "here");
                     funRequest("fight", o);
-                }, tr("fun.fight.go.tip"), !fightA.equals(fightB) || !fightA.startsWith("id:")}), true));
+                }, allPaused() ? tt("paused.fun", PAUSED_FUN) : tr("fun.fight.go.tip"),
+                    (!fightA.equals(fightB) || !fightA.startsWith("id:")) && !allPaused()}), true));
     }
 
     private static JsonObject fightSide(String pick, double size) {
@@ -5144,9 +5155,12 @@ public class AdminBookScreen extends Screen {
             mode.setTooltip(Tooltip.create(tr("world.brush.mode.tip")));
             b.add(mode, 0, 3, true);
             rows.add(b);
+            // (1.12.0) the brush's words on a line of their own, the buttons under them: at GUI scale 3 the three
+            // buttons left too little room beside the words
             rows.add(new LineRow(tr("world.brush.now", bg.equals("erase") ? tr("world.brush.erase").getString()
                     : giantName(bg), radius), TEXT, tr(Boolean.TRUE.equals(bool(f, "erasing")) ? "world.brush.erasing"
-                    : "world.brush.sub"), List.<Object[]>of(
+                    : "world.brush.sub"), List.of(), true));
+            rows.add(new LineRow(Component.empty(), TEXT, Component.empty(), List.<Object[]>of(
                     new Object[] {tr("world.brush.get"), (Runnable) () -> funRequest("brushget", new JsonObject()),
                         tr("world.brush.get.tip")},
                     new Object[] {tr("world.brush.paint"), (Runnable) () -> {
@@ -5158,7 +5172,7 @@ public class AdminBookScreen extends Screen {
                         JsonObject o = new JsonObject();
                         o.addProperty("spot", "here");
                         funRequest("eraseat", o);
-                    }, tr("world.brush.eraseat.tip")}), true));
+                    }, tr("world.brush.eraseat.tip")})));
         }
         // building
         List<JsonObject> builds = objects(f, "builds");

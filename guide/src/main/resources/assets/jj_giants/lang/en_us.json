@@ -1449,6 +1449,8 @@
   "admin.jj_giants.book.fun.sub": "Watch a giant, play as one, stage fights, give giants names, loot and tags",
   "admin.jj_giants.book.world": "World tools",
   "admin.jj_giants.book.world.sub": "Paint biomes, build arenas and dens, move giants to live elsewhere",
+  "admin.jj_giants.book.fun.tile": "Watch, play as, stage fights",
+  "admin.jj_giants.book.world.tile": "Biome brush, arenas, dens",
   "admin.jj_giants.book.fun.note": "These are for admins only. Watching hides you from players. Playing as a giant puts you at his controls with no time limit.",
   "admin.jj_giants.book.fun.you": "You, now",
   "admin.jj_giants.book.fun.you.watching": "Watching the %s",

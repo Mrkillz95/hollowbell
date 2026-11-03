@@ -45,6 +45,8 @@ public final class PlayAs {
         Giant g = kind == null ? null : AdminServer.giant(kind);
         if (g == null) return AdminServer.Result.fail("That isn't a giant.");
         String name = AdminServer.nameOf(g);
+        // (Part 6 with Part 7) a paused giant can't be played: he stands frozen until the pause ends
+        if (paused(server)) return AdminServer.Result.fail(PAUSED);
         if (!FunGiants.does(server, g).contains("playas"))
             return AdminServer.Result.fail(name + ": this version can't be played. Update the " + name + " mod.");
         // (watching first: back in their own game mode, then to him)
@@ -71,6 +73,10 @@ public final class PlayAs {
         ServerPlayer p = server.getPlayerList().getPlayer(pd.player());
         Giant g = AdminServer.giant(pd.kind());
         if (p == null || g == null) return;
+        if (paused(server)) {
+            p.displayClientMessage(Component.literal(PAUSED), false);
+            return;
+        }
         JsonObject o = new JsonObject();
         o.addProperty("by", p.getStringUUID());
         o.addProperty("on", true);
@@ -115,6 +121,20 @@ public final class PlayAs {
                     seat(server, pd);
                 }
         if (playing.isEmpty() || server.getTickCount() % 20 != 0) return;
+        // (Part 6 with Part 7) pausing every giant sets down everyone playing one, back on their feet beside him
+        if (paused(server)) {
+            for (UUID id : List.copyOf(playing.keySet())) {
+                ServerPlayer p = server.getPlayerList().getPlayer(id);
+                if (p == null) {
+                    playing.remove(id);
+                    continue;
+                }
+                AdminServer.Result r = stop(server, p);
+                p.displayClientMessage(Component.literal("All giants were paused, so "
+                        + String.join(" ", r.lines()).replaceFirst("^You", "you")), false);
+            }
+            return;
+        }
         for (var e : List.copyOf(playing.entrySet())) {
             ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
             LivingEntity g = FunGiants.find(server, e.getValue().giant());
@@ -129,6 +149,14 @@ public final class PlayAs {
                 Fun.changed();
             }
         }
+    }
+
+    /** the line for playing as a giant (or staging a fight) while every giant is paused */
+    static final String PAUSED = "All giants are paused right now. Unpause them first (Server tools).";
+
+    /** Part 6's Pause all giants is on */
+    static boolean paused(MinecraftServer server) {
+        return net.jj.giants.tools.Tools.on(server, "paused");
     }
 
     static void left(ServerPlayer p) {

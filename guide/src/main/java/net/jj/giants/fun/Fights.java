@@ -46,6 +46,8 @@ public final class Fights {
     public static AdminServer.Result stage(MinecraftServer server, ServerPlayer p, Side a, Side b, boolean look) {
         if (a.existing() != null && a.existing() == b.existing())
             return AdminServer.Result.fail("Pick two different giants.");
+        // (Part 6 with Part 7) paused giants stand frozen: no fight while the pause is on
+        if (PlayAs.paused(server)) return AdminServer.Result.fail(PlayAs.PAUSED);
         BlockPos at = look ? Spots.looked(p, Spots.LOOK) : p.blockPosition();
         if (at == null) return AdminServer.Result.fail("Look at the ground where they should fight (256 blocks at most).");
         ServerLevel l = p.serverLevel();

@@ -186,6 +186,37 @@ public class FunGameTests implements FabricGameTest {
         });
     }
 
+    // (Part 6 with Part 7) Pause all giants: none can be played or set fighting, and anyone playing one steps out
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "p7_paused")
+    public void pausedGiantsCantBePlayedOrStaged(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = spot(h, 1);
+        ServerPlayer p = op(h, "pauser", at.offset(0, 0, -20));
+        IronGolem g = GiantsBridge.spawn(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        h.runAfterDelay(5, () -> h.assertTrue(PlayAs.start(s, p, g).ok(), "playing to start with"));
+        h.runAfterDelay(20, () -> {
+            h.assertTrue(PlayAs.of(p) != null && p.getVehicle() == g, "seated");
+            h.assertTrue(AdminServer.set(s, "Tester", "all", "paused", "on").ok(), "paused");
+            var r = PlayAs.start(s, p, g);
+            h.assertTrue(!r.ok() && r.lines().get(0).contains("paused"), "refused while paused: " + r.lines());
+            var f = Fights.stage(s, p, new Fights.Side(FAKE, 0.2, null), new Fights.Side(FAKE, 0.2, g), false);
+            h.assertTrue(!f.ok() && f.lines().get(0).contains("paused"), "no fight while paused: " + f.lines());
+        });
+        h.runAfterDelay(70, () -> {
+            h.assertTrue(PlayAs.of(p) == null && p.getVehicle() == null, "stepped out when paused");
+            AdminServer.set(s, "Tester", "all", "paused", "off");
+            h.assertTrue(PlayAs.start(s, p, g).ok(), "playable again once unpaused");
+        });
+        h.runAfterDelay(90, () -> {
+            h.assertTrue(PlayAs.of(p) != null, "playing again");
+            PlayAs.stop(s, p);
+            unspot(h, at);
+            done(h, p);
+        });
+    }
+
     // a fight
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "p7_fight")

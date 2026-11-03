@@ -1,0 +1,128 @@
+# Pictures of the merged book (1.12.0: Part 6 Server tools + Part 7 Fun and World tools together): Home, Server
+# tools, Fun and World tools, at GUI scale 2 then 3. With the eight giants loaded:
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd tp @s 0 -60 0 0 10
+wait 20
+cmd wreckback summon calm 0.06
+wait 10
+cmd tp @s 40 -60 0 0 10
+cmd cerberus summon calm 0.06
+wait 10
+cmd tp @s -40 -60 30 0 10
+cmd swarmforge summon calm 0.04
+wait 40
+cmd tp @s 0 -60 0 0 10
+cmd giants admin name wreckback Grukk
+cmd giants admin title wreckback Terror of the Bay
+cmd giants admin namecolour wreckback gold
+cmd giants admin tag give "Event boss" cerberus
+cmd tp @s 400 -60 150
+cmd giants admin area add keepout 120 The village
+cmd tp @s 0 -60 0 0 10
+cmd giants admin schedule add titans weekends
+cmd giants admin event war 30
+cmd giants admin respawn pitchgut 3d
+wait 200
+cmd giants admin pause on
+wait 60
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_home
+adminbook tools/general/t_now
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_tools_now
+adminbook tools/general/t_map
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_tools_map
+adminbook tools/general/t_respawns
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_tools_respawns
+adminbook fun 0
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_fun
+adminbook fun 400
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_fun_b
+adminbook world 0
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_world
+adminbook world 300
+wait 60
+mouse 2 2
+wait 25
+shot p67_s2_world_b
+close
+guiscale 3
+wait 10
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_home
+adminbook tools/general/t_now
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_tools_now
+adminbook tools/general/t_map
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_tools_map
+adminbook tools/general/t_respawns
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_tools_respawns
+adminbook fun 0
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_fun
+adminbook fun 400
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_fun_b
+adminbook world 0
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_world
+adminbook world 300
+wait 60
+mouse 2 2
+wait 25
+shot p67_s3_world_b
+close
+# paused: playing as a giant is refused (said in chat)
+cmd giants admin playas wreckback
+wait 40
+shot p67_s3_playas_paused
+cmd giants admin pause off
+cmd giants admin event stop
+wait 20
+quit
