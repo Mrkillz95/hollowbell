@@ -125,7 +125,9 @@ def allTests = [
     'net.jj.hollowbell.test.AdminTests',
     'net.jj.hollowbell.test.ScopeTests',
     'net.jj.hollowbell.test.LiveTests',
-    'net.jj.hollowbell.test.WorldGenRuleTests'
+    'net.jj.hollowbell.test.WorldGenRuleTests',
+    'net.jj.hollowbell.test.MeetGiantsTests',
+    'net.jj.hollowbell.test.FollowTests'
 ]
 // probes: long measuring runs, never in the usual run, only when named with -Ponly
 def probeTests = ['net.jj.hollowbell.test.StallProbe']

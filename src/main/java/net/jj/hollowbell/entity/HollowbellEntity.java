@@ -407,6 +407,7 @@ public class HollowbellEntity extends Monster implements SitHost {
                     || rider != null
                     || goal != null
                     || comeTo != null
+                    || flight.follow != null // (following somebody is an order: he doesn't doze off on it)
                     || fetching != null
                     || (moveNow() != Moves.NONE && moveNow() != Moves.HARVEST)
                     || hunted != null
