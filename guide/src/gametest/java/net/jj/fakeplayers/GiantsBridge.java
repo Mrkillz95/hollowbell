@@ -24,6 +24,8 @@ public final class GiantsBridge {
     public static String holder, holderName;
     public static int most = 0;
     public static final Map<String, Boolean> standing = new LinkedHashMap<>();
+    /** (1.11.0, My Giant's own books) the ones bound to a picker: id -> {uuid, name} */
+    public static final Map<String, String[]> boundTo = new LinkedHashMap<>();
     public static final List<String> gave = new ArrayList<>();
     /** where his ground's middle is (the test sets it) */
     public static double gx, gy, gz;
@@ -35,6 +37,7 @@ public final class GiantsBridge {
         holderName = null;
         most = 0;
         standing.clear();
+        boundTo.clear();
         gave.clear();
     }
 
@@ -69,7 +72,11 @@ public final class GiantsBridge {
                     g.addProperty("dim", "minecraft:overworld");
                     g.addProperty("x", gx);
                     g.addProperty("z", gz);
-                    if (holder != null) {
+                    String[] own = boundTo.get(id);
+                    if (own != null) {
+                        g.addProperty("owner", own[1]);
+                        g.addProperty("ownerId", own[0]);
+                    } else if (holder != null) {
                         g.addProperty("owner", holderName);
                         g.addProperty("ownerId", holder);
                     }
@@ -103,8 +110,19 @@ public final class GiantsBridge {
                     outcome = "placed";
                     line = "Welcome to the Fakeplayers's ground.";
                 } else if (holder != null && !holder.equals(p.getStringUUID())) {
-                    outcome = "shared";
-                    line = holderName + " has the Fakeplayers book, so you share theirs.";
+                    // (BOOK_RULE.md's My Giant exception) room: their own book and their own one; the cap: shared
+                    if (most <= 0 || standing.size() < most) {
+                        String id = UUID.randomUUID().toString();
+                        standing.put(id, true);
+                        boundTo.put(id, new String[] {p.getStringUUID(), p.getGameProfile().getName()});
+                        spawned = true;
+                        outcome = "own";
+                        line = "The Fakeplayers is yours: your own book.";
+                    } else {
+                        outcome = "shared";
+                        line = "This world already has as many of the Fakeplayers as it allows, so you share "
+                                + holderName + "'s.";
+                    }
                 } else {
                     holder = p.getStringUUID();
                     holderName = p.getGameProfile().getName();
@@ -123,7 +141,8 @@ public final class GiantsBridge {
                 done.addProperty("player", p.getStringUUID());
                 done.addProperty("giant", "fakeplayers");
                 done.addProperty("outcome", outcome);
-                done.addProperty("holder", holderName == null ? "" : holderName);
+                done.addProperty("holder", outcome.equals("own") && spawned && !p.getStringUUID().equals(holder)
+                        ? p.getGameProfile().getName() : holderName == null ? "" : holderName);
                 done.addProperty("spawned", spawned);
                 GuideBridge.guide(s, "mygiantdone", done.toString());
                 out.add("ok");

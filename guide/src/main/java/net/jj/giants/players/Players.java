@@ -399,14 +399,15 @@ public final class Players {
             j.addProperty("label", AdminInsight.LABELS[level - 1]);
             Live live = live(server, g);
             String note = "";
+            AdminSetting cap = r == null ? null : r.setting("maxInWorld");
+            int most = cap == null ? 0 : (int) cap.value().getAsDouble();
+            boolean full = most > 0 && live.count >= most;
+            boolean other = live.owner != null && !live.owner.equals(viewer.getGameProfile().getName());
+            // (1.11.0, BOOK_RULE.md's My Giant exception) with room, a picker gets their own book and their own one
             if (!mayOwn) note = "You'd go to his ground; you may not own giants in this world.";
-            else if (live.owner != null && !live.owner.equals(viewer.getGameProfile().getName()))
-                note = live.owner + " has his book: you'd share it.";
-            else if (r != null) {
-                AdminSetting cap = r.setting("maxInWorld");
-                int most = cap == null ? 0 : (int) cap.value().getAsDouble();
-                if (most > 0 && live.count >= most) note = "As many as the world allows: you'd take charge of them.";
-            }
+            else if (other && full) note = "As many as the world allows: you'd share " + live.owner + "'s book.";
+            else if (other) note = live.owner + " has his book: you'd get your own book and your own one of him.";
+            else if (full) note = "As many as the world allows: you'd take charge of them.";
             j.addProperty("note", note);
             a.add(j);
         }

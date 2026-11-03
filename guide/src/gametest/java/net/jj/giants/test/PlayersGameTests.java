@@ -208,7 +208,7 @@ public class PlayersGameTests implements FabricGameTest {
         h.assertFalse(Players.pick(s, early, "fakeplayers").ok(), "no picking while it's off");
         set(h, s, "myGiant", "on");
         ServerPlayer a = join(h, "alex", false), b = join(h, "bea", false), c = join(h, "cal", false),
-                d = join(h, "dot", false);
+                d = join(h, "dot", false), e = join(h, "eve", false);
         JsonObject list = last(a, PlayersStatePayload.PICK);
         h.assertTrue(list != null, "joining a My Giant world opens the pick screen");
         JsonObject g0 = list.getAsJsonArray("giants").get(0).getAsJsonObject();
@@ -221,18 +221,27 @@ public class PlayersGameTests implements FabricGameTest {
         h.assertTrue(pk != null && pk.outcome.equals("own"), "the pick and its outcome kept");
         h.assertTrue(net.jj.fakeplayers.GiantsBridge.standing.size() == 1, "one of him came");
         h.assertFalse(Players.pick(s, a, "fakeplayers").ok(), "only one pick");
-        // someone else holds the book: b would share it (the list says so), and does
+        // someone else holds the book, with room: b gets their own book and their own one (BOOK_RULE.md's My Giant
+        // exception), and the list says so
         JsonObject forB = Players.pickJson(s, b);
         h.assertTrue(forB.getAsJsonArray("giants").get(0).getAsJsonObject().get("note").getAsString()
-                .contains("alex has his book"), "the list says b would share: " + forB);
-        h.assertTrue(Players.pick(s, b, "fakeplayers").lines().get(0).contains("share theirs"), "b shares a's");
-        h.assertTrue(PlayerData.get(s).s.picks.get(b.getStringUUID()).outcome.equals("shared"), "kept as shared");
-        // the world's limit: the next holder takes charge of the ones there are
+                .contains("alex has his book: you'd get your own book"), "the list says b gets their own: " + forB);
+        h.assertTrue(Players.pick(s, b, "fakeplayers").lines().get(0).contains("is yours"), "b owns their own");
+        h.assertTrue(PlayerData.get(s).s.picks.get(b.getStringUUID()).outcome.equals("own")
+                && net.jj.fakeplayers.GiantsBridge.standing.size() == 2, "kept as own, a second one came");
+        // the world's limit with someone holding the book: c shares (the list says so)
+        net.jj.fakeplayers.GiantsBridge.most = 2;
+        JsonObject forC = Players.pickJson(s, c);
+        h.assertTrue(forC.getAsJsonArray("giants").get(0).getAsJsonObject().get("note").getAsString()
+                .contains("you'd share alex's book"), "the list says c would share: " + forC);
+        h.assertTrue(Players.pick(s, c, "fakeplayers").lines().get(0).contains("share alex's"), "c shares a's");
+        h.assertTrue(PlayerData.get(s).s.picks.get(c.getStringUUID()).outcome.equals("shared")
+                && net.jj.fakeplayers.GiantsBridge.standing.size() == 2, "kept as shared, none more came");
+        // the world's limit with nobody holding the book: the next holder takes charge of the ones there are
         net.jj.fakeplayers.GiantsBridge.holder = null;
-        net.jj.fakeplayers.GiantsBridge.most = 1;
-        h.assertTrue(Players.pick(s, c, "fakeplayers").lines().get(0).contains("take charge"), "c at the limit");
-        h.assertTrue(PlayerData.get(s).s.picks.get(c.getStringUUID()).outcome.equals("own_cap")
-                && net.jj.fakeplayers.GiantsBridge.standing.size() == 1, "own_cap, none more came");
+        h.assertTrue(Players.pick(s, e, "fakeplayers").lines().get(0).contains("take charge"), "e at the limit");
+        h.assertTrue(PlayerData.get(s).s.picks.get(e.getStringUUID()).outcome.equals("own_cap")
+                && net.jj.fakeplayers.GiantsBridge.standing.size() == 2, "own_cap, none more came");
         // may not own giants: only taken to his ground
         Players.setRule(s, "Tester", "dot", "own", false);
         Players.pick(s, d, "fakeplayers");
@@ -242,7 +251,7 @@ public class PlayersGameTests implements FabricGameTest {
         AdminServer.Result rp = Players.repick(s, "Tester", "alex");
         h.assertTrue(rp.ok() && !PlayerData.get(s).s.picks.containsKey(a.getStringUUID()), "a's pick forgotten");
         h.assertTrue(last(a, PlayersStatePayload.PICK) != null, "the pick screen opened again");
-        done(h, early, a, b, c, d);
+        done(h, early, a, b, c, d, e);
     }
 
     // per-player rules

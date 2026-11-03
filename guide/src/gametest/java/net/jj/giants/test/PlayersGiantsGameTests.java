@@ -85,6 +85,7 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         var r = Players.pick(s, a, key);
         h.assertTrue(r.ok(), key + ": picked: " + r.lines());
         int[] tries = {1};
+        boolean[] bPicked = {false};
         h.succeedWhen(() -> {
             PlayerData.Pick pk = PlayerData.get(s).s.picks.get(a.getStringUUID());
             // (a busy test server: a minute and the land there wasn't made yet, so the trip gave up and the pick
@@ -108,8 +109,18 @@ public class PlayersGiantsGameTests implements FabricGameTest {
             List<String> other = give(s, g, b, "book");
             h.assertTrue(other.get(0).equals("no") && other.get(1).contains(a.getGameProfile().getName()),
                     key + ": the picker holds his book: " + other);
+            // (1.11.0, BOOK_RULE.md's My Giant exception) a second picker: their own book and own one of him when
+            // he can be placed near them, else they share a's (never a quiet copy, never a failure)
+            if (!bPicked[0]) {
+                bPicked[0] = true;
+                h.assertTrue(Players.pick(s, b, key).ok(), key + ": b picked");
+            }
+            PlayerData.Pick pb = PlayerData.get(s).s.picks.get(b.getStringUUID());
+            h.assertTrue(pb != null && !pb.outcome.isEmpty(), key + ": b still on the way");
+            h.assertTrue(pb.outcome.equals("own") || pb.outcome.equals("shared"), key + ": b's outcome " + pb.outcome);
             net.jj.giants.GiantsGuideMod.LOG.info("p5 test: {} picked for real: {}, one came: {}, {} blocks from"
-                    + " the middle, {} more standing", key, pk.outcome, pk.spawned, (int) d, came);
+                    + " the middle, {} more standing; the second picker: {}, own one came: {}", key, pk.outcome,
+                    pk.spawned, (int) d, came, pb.outcome, pb.spawned);
             // tidy up: the book's holder let go of, the one who came taken away
             AdminServer.call(s, g, "players", "{\"players\":1,\"rules\":{\"" + a.getStringUUID()
                     + "\":{\"own\":false}}}");
