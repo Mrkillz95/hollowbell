@@ -426,10 +426,8 @@ public final class Players {
     }
 
     static Map<String, Double> allValues(MinecraftServer server) {
-        Map<String, Double> all = new HashMap<>();
-        for (AdminSetting s : AdminServer.shared(AdminWorld.get(server)))
-            if (!AdminCatalog.player(s)) all.put(s.id(), s.value().getAsDouble());
-        return all;
+        // (the same numbers the book's rating reads: the multipliers, the switches as 1/0, the systems' numbers)
+        return net.jj.giants.admin.AdminBook.allValuesForTests(AdminWorld.get(server));
     }
 
     /** what a giant's live list says now: how many of him, and who holds his book */
@@ -703,6 +701,8 @@ public final class Players {
                 : e.getLastHurtByMob() instanceof ServerPlayer sp2 ? sp2 : null;
         UUID was = CREDIT.remove(e.getUUID());
         if (killer == null && was != null) killer = sl.getServer().getPlayerList().getPlayer(was);
+        // (Part 8) his remains, what he swallowed, the win for whoever brought him down
+        net.jj.giants.systems.Systems.fell(e);
         slain(sl.getServer(), kind, killer);
     }
 
@@ -719,6 +719,8 @@ public final class Players {
         if (kind == null) return;
         ServerPlayer killer = src.getEntity() instanceof ServerPlayer sp ? sp
                 : e.getKillCredit() instanceof ServerPlayer sp2 ? sp2 : null;
+        // (Part 8) his remains, what he swallowed, the win for whoever brought him down
+        net.jj.giants.systems.Systems.fell(e);
         slain(sl.getServer(), kind, killer);
     }
 

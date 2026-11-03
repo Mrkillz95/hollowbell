@@ -143,8 +143,10 @@ public final class AdminServer {
     /** sends one giant its values; what it answered (null: it doesn't speak the protocol) */
     public static @Nullable List<String> push(MinecraftServer server, AdminWorld w, Giant g) {
         // (Part 6) quiet mode turns the giants' chat switches off
+        // (Part 8) the systems: their server defaults, and the scaling, moon and season factors on the multipliers
         List<String> r = call(server, g, SET, AdminJson.setArg(w.values(g.key()),
-                net.jj.giants.tools.Tools.forGiants(w.values(AdminCatalog.ALL))));
+                net.jj.giants.systems.Systems.forGiants(server,
+                        net.jj.giants.tools.Tools.forGiants(w.values(AdminCatalog.ALL)))));
         if (r != null && r.size() > 1)
             GiantsGuideMod.LOG.warn("Admin settings: {} didn't take {}", g.key(), r.subList(1, r.size()));
         return r;
@@ -233,7 +235,7 @@ public final class AdminServer {
 
     /** a value the way a list shows it: x2 for the all-giants ones */
     static String shown(AdminSetting s, JsonElement v) {
-        return (s.giant().equals(AdminCatalog.ALL) && !AdminCatalog.player(s) ? "x" : "") + AdminSetting.text(v);
+        return (s.giant().equals(AdminCatalog.ALL) && !AdminCatalog.plain(s) ? "x" : "") + AdminSetting.text(v);
     }
 
     /** the id as a command takes it ("health" for all.health) */
@@ -294,6 +296,8 @@ public final class AdminServer {
         Found f = setting(server, target(server, which), id);
         if (f.why() != null) return Result.fail(f.why());
         AdminSetting s = f.s();
+        // (Part 8) the systems keep a server default of their own (config/jj_giants_admin/systems.json)
+        if (f.giant() == null && AdminCatalog.systems(s)) return systemsDefault(server, who, f, s, text);
         if (f.giant() == null)
             return Result.fail(AdminCatalog.server(s)
                     ? "The server tools settings are only kept for each world: there's no server default to change."
@@ -325,6 +329,31 @@ public final class AdminServer {
         if (!s.whenNote().isEmpty()) lines.add(s.whenNote());
         return new Result(true, lines, List.of(who + " set " + f.name() + " " + s.name() + " to " + shown(s, v)
                 + " for all worlds (server default)."));
+    }
+
+    /** (Part 8) a system's server default: the systems file, logged and told like any change */
+    private static Result systemsDefault(MinecraftServer server, String who, Found f, AdminSetting s, String text) {
+        JsonElement v;
+        try {
+            v = s.parse(text);
+        } catch (AdminSetting.BadValue e) {
+            return Result.fail(e.getMessage());
+        }
+        AdminWorld w = AdminWorld.get(server);
+        String locked = lockedFor(w, AdminCatalog.ALL, f.name(), s, who);
+        if (locked != null) return Result.fail(locked);
+        String why = net.jj.giants.systems.SystemsCatalog.setDefault(s, v);
+        if (why != null) return Result.fail(why);
+        w.log(new AdminWorld.Change(System.currentTimeMillis(), who, AdminCatalog.ALL, s.id(),
+                s.name() + " (server default)", shown(s, s.def()), shown(s, v), ""));
+        String line = f.name() + ": " + s.name() + " set to " + shown(s, v) + " for all worlds (server default; was "
+                + shown(s, s.def()) + ").";
+        if (s.set())
+            line += " This world keeps its own: " + shown(s, s.value()) + " (/giants admin reset all "
+                    + commandId(s) + ").";
+        else push(server, w);
+        return new Result(true, List.of(line), List.of(who + " set " + f.name() + " " + s.name() + " to "
+                + shown(s, v) + " for all worlds (server default)."));
     }
 
     /**

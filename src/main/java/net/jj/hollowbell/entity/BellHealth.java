@@ -190,6 +190,10 @@ final class BellHealth {
             if ((k == BellRig.Kind.SPOT || k == BellRig.Kind.CROWN) && at != null)
                 hb.particles(ParticleTypes.GLOW, at, 20, 4 * hb.bellScale() + 0.5, 0.1);
         }
+        // (Part 8) weak points: the glowing spots on his bell and his crown (off: the same number)
+        if (net.jj.hollowbell.GiantsSystems.active())
+            dealt = net.jj.hollowbell.GiantsSystems.hit(hb, src, dealt, net.jj.hollowbell.GiantsSystems.weakBone(hb, bone),
+                    bone >= 0 ? boneCentreWorld(bone) : null);
         if (att instanceof LivingEntity le && hb.moves.caught(le)) hb.moves.hurtFromInside(dealt);
         return takeDamage(src, dealt);
     }

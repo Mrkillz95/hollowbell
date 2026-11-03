@@ -58,6 +58,8 @@ public final class AdminBookClient {
     private static @Nullable JsonObject players;
     /** (Part 6) the Server tools page: pause, events, schedules, areas, map, stats, alerts, respawns, profile, pack */
     private static @Nullable JsonObject tools;
+    /** (Part 8) the Systems page: what the new systems are doing now, and each giant they follow */
+    private static @Nullable JsonObject systems;
     /** (Part 7) the Fun and World tools pages' own state */
     private static @Nullable JsonObject fun;
     /** goes up with every Live control page (once a second while it is looked at) */
@@ -90,7 +92,7 @@ public final class AdminBookClient {
         pages.clear();
         said = List.of();
         role = "";
-        live = changes = presets = preview = players = tools = null;
+        live = changes = presets = preview = players = tools = systems = null;
         fun = null;
         version++;
         liveVersion++;
@@ -149,6 +151,24 @@ public final class AdminBookClient {
     public static void toolsForTests(JsonObject o) {
         tools = o;
         version++;
+    }
+
+    /** (Part 8) the Systems page */
+    public static @Nullable JsonObject systems() {
+        return systems;
+    }
+
+    /** (the picture-taking) the Systems page as the server would send it */
+    public static void systemsForTests(JsonObject o) {
+        systems = o;
+        version++;
+    }
+
+    /** (Part 8) the Systems page is being looked at (the server sends it every two seconds) or not */
+    static void watchSystems(boolean on) {
+        if (local != null) return;
+        if (Minecraft.getInstance().getConnection() != null && ClientPlayNetworking.canSend(AdminBookAskPayload.TYPE))
+            ClientPlayNetworking.send(new AdminBookAskPayload(on ? "systems" : "systems_off"));
     }
 
     /** (Part 6) the Server tools page is being looked at (the server sends it every two seconds) or not */
@@ -413,6 +433,7 @@ public final class AdminBookClient {
             case AdminBookStatePayload.CHANGES -> changes = o;
             case "players" -> players = o;
             case "tools" -> tools = o;
+            case "systems" -> systems = o;
             case "fun" -> fun = o;
             case AdminBookStatePayload.PRESETS -> presets = o;
             case AdminBookStatePayload.PREVIEW -> {

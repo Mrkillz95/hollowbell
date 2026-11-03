@@ -69,7 +69,7 @@ public class AdminBookScreen extends Screen {
     private static boolean ownPage(String key) {
         return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES)
                 || key.equals(PLAYERS) || key.equals(TOOLS)
-                || key.equals(FUN) || key.equals(WORLD);
+                || key.equals(FUN) || key.equals(WORLD) || key.equals(SYSTEMS);
     }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
@@ -258,7 +258,7 @@ public class AdminBookScreen extends Screen {
 
     /** an all-giants multiplier, shown with an "x" (not the player settings, which are switches and choices) */
     private static boolean mult(AdminSetting s) {
-        return shared(s) && !AdminCatalog.player(s);
+        return shared(s) && !AdminCatalog.plain(s);
     }
 
     private static boolean move(AdminSetting s) {
@@ -286,7 +286,8 @@ public class AdminBookScreen extends Screen {
 
     /** whether it can be changed where changes go now (the all-giants and move ones only have world values) */
     private boolean editable(AdminSetting s) {
-        return !allWorlds || !shared(s) && !move(s);
+        // (Part 8) the systems' settings have a server default of their own
+        return !allWorlds || (shared(s) ? AdminCatalog.systems(s) : !move(s));
     }
 
     private String giantName(String key) {
@@ -310,8 +311,8 @@ public class AdminBookScreen extends Screen {
         // (a moderator has Live control only; before the server says who you are, only Home, asking)
         if (AdminBookClient.role().equals("moderator")) return List.of(LIVE);
         if (!AdminBookClient.admin()) return List.of(HOME);
-        List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS)
-                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS, FUN, WORLD));
+        List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS, SYSTEMS)
+                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS, FUN, WORLD, SYSTEMS));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -334,8 +335,9 @@ public class AdminBookScreen extends Screen {
         if (h == null) return 0;
         if (key.equals(PLAYERS)) return playersSet();
         if (key.equals(TOOLS)) return toolsSet();
+        if (key.equals(SYSTEMS)) return systemsSet();
         if (key.equals(AdminCatalog.ALL))
-            return AdminBookClient.AdminJsonBridge.num(h, "allSet", 0) - playersSet() - toolsSet();
+            return AdminBookClient.AdminJsonBridge.num(h, "allSet", 0) - playersSet() - toolsSet() - systemsSet();
         JsonObject g = homeGiant(key);
         return g == null ? 0 : AdminBookClient.AdminJsonBridge.num(g, "set", 0);
     }
@@ -359,6 +361,7 @@ public class AdminBookScreen extends Screen {
         }
         if (livePage(pageKey)) AdminBookClient.watchLive(true);
         if (pageKey.equals(TOOLS)) AdminBookClient.watchTools(true);
+        if (pageKey.equals(SYSTEMS)) AdminBookClient.watchSystems(true);
         seenVersion = AdminBookClient.version();
         seenLive = AdminBookClient.liveVersion();
         seenPreview = AdminBookClient.previewVersion();
@@ -776,7 +779,7 @@ public class AdminBookScreen extends Screen {
         if (s.giant().equals(EVERY)) return everyLine(s);
         String n = narrow ? ".short" : "";
         if (allWorlds) {
-            if (shared(s) || move(s)) return tr("line.world_only" + n);
+            if (shared(s) && !AdminCatalog.systems(s) || move(s)) return tr("line.world_only" + n);
             MutableComponent c = tr("line.ships" + n, show(s, s.jar()));
             if (s.set()) c.append(tr("line.keeps" + n, show(s, s.value())).withStyle(st -> st.withColor(ORANGE)));
             return c;
@@ -1262,6 +1265,7 @@ public class AdminBookScreen extends Screen {
         else if (pageKey.equals(TOOLS)) toolsRows();
         else if (pageKey.equals(FUN)) funRows();
         else if (pageKey.equals(WORLD)) worldRows();
+        else if (pageKey.equals(SYSTEMS)) systemsRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1279,7 +1283,7 @@ public class AdminBookScreen extends Screen {
         if (searching) return;
         Component label;
         if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS)
-                || pageKey.equals(TOOLS) || pageKey.equals(FUN) || pageKey.equals(WORLD))
+                || pageKey.equals(TOOLS) || pageKey.equals(FUN) || pageKey.equals(WORLD) || pageKey.equals(SYSTEMS))
             return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
@@ -1424,7 +1428,7 @@ public class AdminBookScreen extends Screen {
             everyRows.clear();
             for (AdminSetting s : p.settings())
                 // (Part 5: the player settings have their own page)
-                if (!AdminCatalog.player(s)) out.get(sectionOf(s)).add(s);
+                if (!AdminCatalog.plain(s)) out.get(sectionOf(s)).add(s);
             for (String id : sharedIds()) {
                 List<AdminSetting> ss = everyOf(id);
                 if (ss.isEmpty()) continue;
@@ -1750,6 +1754,8 @@ public class AdminBookScreen extends Screen {
         if (livePage(key) != livePage(pageKey)) AdminBookClient.watchLive(livePage(key));
         // (Part 6) the Server tools page comes every two seconds only while it is looked at
         if (key.equals(TOOLS) != pageKey.equals(TOOLS)) AdminBookClient.watchTools(key.equals(TOOLS));
+        // (Part 8) and the Systems page
+        if (key.equals(SYSTEMS) != pageKey.equals(SYSTEMS)) AdminBookClient.watchSystems(key.equals(SYSTEMS));
         pageKey = key;
         keptPage = key;
         loadTabs();
@@ -1873,6 +1879,7 @@ public class AdminBookScreen extends Screen {
             case PLAYERS -> AdminBookClient.players() != null && AdminBookClient.page(AdminCatalog.ALL) != null;
             case TOOLS -> AdminBookClient.tools() != null;
             case FUN, WORLD -> AdminBookClient.fun() != null && AdminBookClient.live() != null;
+            case SYSTEMS -> AdminBookClient.page(AdminCatalog.ALL) != null;
             default -> AdminBookClient.home() != null
                     && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
         };
@@ -2140,6 +2147,10 @@ public class AdminBookScreen extends Screen {
             title = tt("name", "Server tools");
             sub = tt("sub", "Pause, events, schedules, areas, the map, stats, alerts and respawn timers.");
             pic = "tools";
+        } else if (pageKey.equals(SYSTEMS)) {
+            title = tr("systems");
+            sub = tr("systems.sub");
+            pic = "systems";
         } else if (pageKey.equals(FUN) || pageKey.equals(WORLD)) {
             title = tr(pageKey);
             sub = tr(pageKey + ".sub");
@@ -5666,5 +5677,137 @@ public class AdminBookScreen extends Screen {
         void cancel() {
             closeModal();
         }
+    }
+
+    // (Part 8, ADMIN_BRIDGE.md 24.8) the Systems page: what the new systems are doing now, each system's settings in
+    // its own folding group, and each giant they follow
+
+    public static final String SYSTEMS = "systems";
+
+    private int systemsSet() {
+        AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
+        if (p == null) return 0;
+        int n = 0;
+        for (AdminSetting s : p.settings()) if (s.set() && AdminCatalog.systems(s)) n++;
+        return n;
+    }
+
+    private void systemsRows() {
+        AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
+        if (p == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        rows.add(new Note(tr("systems.note"), GREY));
+        JsonObject sy = creating() ? null : AdminBookClient.systems();
+        if (sy != null && sy.get("now") instanceof JsonObject now) systemsNow(now);
+        for (String[] grp : net.jj.giants.systems.SystemsCatalog.GROUPS) {
+            List<AdminSetting> in = new ArrayList<>();
+            for (int i = 1; i < grp.length; i++)
+                for (AdminSetting s : p.settings()) if (s.id().equals(grp[i])) in.add(s);
+            boolean on = false;
+            for (AdminSetting s : in) if (!AdminSetting.same(s.value(), s.jar())) on = true;
+            MutableComponent title = tr("systems." + grp[0]);
+            if (on) title.append(Component.literal("  • ").append(tr("systems.on")).withStyle(
+                    st -> st.withColor(GOOD)));
+            Head head = new Head(title, tr("systems." + grp[0] + ".note"), null)
+                    .folding(SYSTEMS + "/" + grp[0], grp[0], in.size());
+            rows.add(head);
+            if (head.shut()) continue;
+            for (AdminSetting s : in) rows.add(new SetRow(s));
+            // (the weak points: where each giant's are)
+            if (grp[0].equals("weak") && sy != null && sy.get("weak") instanceof JsonObject weak)
+                for (var e : weak.entrySet())
+                    if (e.getValue() instanceof JsonArray a && !a.isEmpty()) {
+                        List<String> w = new ArrayList<>();
+                        for (JsonElement x : a) w.add(x.getAsString());
+                        rows.add(new LineRow(Component.literal(giantName(e.getKey())), TEXT,
+                                Component.literal(String.join(", ", w)), List.of(), true));
+                    }
+        }
+        if (sy == null) return;
+        List<JsonObject> gs = objects(sy, "giants");
+        Head each = new Head(tr("systems.each"), tr("systems.each.note"), null)
+                .folding(SYSTEMS + "/each", "general", gs.size());
+        rows.add(each);
+        if (each.shut()) return;
+        if (gs.isEmpty()) rows.add(new Note(tr("systems.each.none"), GREY));
+        for (JsonObject j : gs) rows.add(systemsGiant(j));
+    }
+
+    /** the "Right now" card: the season, the moon, the scaling, what waits to grow back or rot */
+    private void systemsNow(JsonObject n) {
+        List<Component> lines = new ArrayList<>();
+        String season = str(n, "season");
+        if (!season.isEmpty())
+            lines.add(tr("systems.now.season", tr("systems.season." + season), (int) dbl(n, "seasonDay", 1),
+                    (int) dbl(n, "seasonDays", 7)));
+        lines.add(bool(n, "fullMoon") ? tr("systems.now.fullmoon")
+                : tr("systems.now.moon", tr("systems.moon." + (int) dbl(n, "moonPhase", 0))));
+        double scale = dbl(n, "scale", 1);
+        if (scale != 1)
+            lines.add(tr("systems.now.scale", AdminSetting.plain(scale), (int) dbl(n, "players", 0),
+                    (int) dbl(n, "days", 0), Math.round(dbl(n, "armour", 0) * 100)));
+        lines.add(tr("systems.now.sent", AdminSetting.plain(dbl(n, "health", 1)),
+                AdminSetting.plain(dbl(n, "damage", 1)), AdminSetting.plain(dbl(n, "speed", 1)),
+                AdminSetting.plain(dbl(n, "healing", 1))));
+        int grief = (int) dbl(n, "grief", 0), rot = (int) dbl(n, "rotting", 0);
+        if (grief > 0) lines.add(tr("systems.now.grief", grief));
+        if (rot > 0) lines.add(tr("systems.now.rot", rot));
+        List<FormattedCharSequence> split = new ArrayList<>();
+        for (Component c : lines) split.addAll(font.split(c, lw - 34));
+        int h = 22 + split.size() * 10;
+        rows.add(new Block(h + 6, (g, x, y, w, mx, my) -> {
+            AdminStyle.card(g, x, y + 2, w, h, false);
+            AdminStyle.icon(g, "systems", x + 5, y + 6, 16);
+            g.drawString(font, tr("systems.now"), x + 26, y + 10, HEAD, false);
+            for (int i = 0; i < split.size(); i++)
+                g.drawString(font, split.get(i), x + 26, y + 22 + i * 10, TEXT, false);
+        }));
+    }
+
+    /** one giant the systems follow: his picture, his size against where he started, his food and loyalty bars */
+    private Row systemsGiant(JsonObject j) {
+        String kind = str(j, "kind");
+        double size = dbl(j, "size", 0), start = dbl(j, "start", 0), food = dbl(j, "food", 100),
+                loyal = dbl(j, "loyalty", -1);
+        boolean here = bool(j, "here"), titan = bool(j, "titan");
+        String name = str(j, "name");
+        Component line = here && start > 0
+                ? tr("systems.each.size", AdminSetting.plain(size), AdminSetting.plain(start),
+                        AdminSetting.plain(Math.round(size / start * 100) / 100.0),
+                        AdminSetting.plain(dbl(j, "days", 0)), (int) dbl(j, "wins", 0))
+                : tr("systems.each.away", AdminSetting.plain(dbl(j, "days", 0)), (int) dbl(j, "wins", 0));
+        int belly = (int) dbl(j, "belly", 0);
+        String owner = str(j, "owner");
+        int rh = loyal >= 0 ? 54 : 44;
+        return new Block(rh, (g, x, y, w, mx, my) -> {
+            AdminStyle.card(g, x, y + 2, w, rh - 4, false);
+            icon(g, kind, x + 6, y + 8, 26);
+            int tx = x + 40, tw = w - 46;
+            int nx = g.drawString(font, cut(name, tw), tx, y + 7, TEXT, false);
+            if (titan) g.drawString(font, tr("systems.titan"), nx + 6, y + 7, WARN, false);
+            String l2 = line.getString() + (belly > 0 ? "  " + tr("systems.each.belly", belly).getString() : "");
+            g.drawString(font, cut(l2, tw), tx, y + 18, GREY, false);
+            int bw = Math.max(40, Math.min(110, tw / 2 - 40));
+            bar(g, tx, y + 30, bw, tr("systems.each.food").getString(), food / 100.0, 0xFFB86A20);
+            if (loyal >= 0) {
+                String who = owner.isEmpty() ? "" : " (" + owner + ")";
+                bar(g, tx, y + 41, bw, tr("systems.each.loyalty").getString() + who, loyal / 100.0,
+                        bool(j, "turned") ? WARN : bool(j, "sulking") ? ORANGE : 0xFFB83040);
+            }
+        });
+    }
+
+    /** a labelled bar on the parchment */
+    private void bar(GuiGraphics g, int x, int y, int w, String label, double f, int colour) {
+        int lwid = Math.max(54, font.width(label) + 6);
+        g.drawString(font, label, x, y, DIM, false);
+        int bx = x + lwid;
+        g.fill(bx, y + 1, bx + w, y + 8, 0xFF8A6A40);
+        g.fill(bx + 1, y + 2, bx + w - 1, y + 7, 0xFFEADBB8);
+        int fill = (int) Math.round((w - 2) * Math.max(0, Math.min(1, f)));
+        if (fill > 0) g.fill(bx + 1, y + 2, bx + 1 + fill, y + 7, colour);
+        g.drawString(font, Math.round(f * 100) + "%", bx + w + 4, y, GREY, false);
     }
 }

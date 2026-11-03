@@ -235,7 +235,8 @@ public final class AdminCommand {
             "/giants admin lock|unlock <giant|all> <setting>, locks: keep a setting as it is.",
             "/giants admin undo [count]; snapshot [restore <n>]: put changes back.",
             "/giants admin moderator add|remove <player>, moderators: Live control only.",
-            "/giants admin sync [now|status]: config/jj_giants_admin/sync.txt as the server defaults.");
+            "/giants admin sync [now|status]: config/jj_giants_admin/sync.txt as the server defaults.",
+            "/giants admin systems [giants]: what the new systems (growth, hunger, seasons...) are doing now.");
 
     /**
      * /giants admin set ... [world|allworlds] (ADMIN_BRIDGE.md, "Command scope"): the last word of the value says where

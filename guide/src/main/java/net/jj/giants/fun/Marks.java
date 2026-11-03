@@ -238,6 +238,9 @@ public final class Marks {
 
     /** his stats tags: one per stat, none when x1 */
     static void setStat(LivingEntity e, String what, double v) {
+        // (Part 8) times the systems' own factor on him (1 when there's none: as before)
+        double sys = net.jj.giants.systems.SystemsTags.sys(e, what);
+        if (Math.abs(sys - 1) > 1e-9) v = Math.round(v * sys * 1000) / 1000.0;
         for (String t : List.copyOf(e.getTags())) if (t.startsWith(TAG + what + "=")) e.removeTag(t);
         if (Math.abs(v - 1) > 1e-9) e.addTag(TAG + what + "=" + AdminSetting.plain(v));
     }
@@ -392,6 +395,8 @@ public final class Marks {
         for (String x : List.copyOf(e.getTags()))
             if (x.startsWith(WEARS) || x.startsWith(TAG + "health=") || x.startsWith(TAG + "damage=")
                     || x.startsWith(TAG + "speed=")) e.removeTag(x);
+        // (Part 8) the systems' own factors stay on him
+        net.jj.giants.systems.SystemsTags.rewrite(server, e);
         if (FunGiants.does(server, g).contains("stats"))
             FunGiants.act(server, g, e.getStringUUID(), "stats", new JsonObject());
         FunWorld.Mark m = w.markOf(e.getStringUUID());
@@ -433,8 +438,11 @@ public final class Marks {
             take(server, "Server", e, false);
             return;
         }
-        if (Math.abs(stat(e, "health") - t.health) > 1e-6 || Math.abs(stat(e, "damage") - t.damage) > 1e-6
-                || Math.abs(stat(e, "speed") - t.speed) > 1e-6) give(server, "Server", e, t, false);
+        // (Part 8: his tag's stats times the systems' own factors)
+        if (Math.abs(stat(e, "health") - t.health * net.jj.giants.systems.SystemsTags.sys(e, "health")) > 1e-3
+                || Math.abs(stat(e, "damage") - t.damage * net.jj.giants.systems.SystemsTags.sys(e, "damage")) > 1e-3
+                || Math.abs(stat(e, "speed") - t.speed * net.jj.giants.systems.SystemsTags.sys(e, "speed")) > 1e-3)
+            give(server, "Server", e, t, false);
     }
 
     /** how many standing giants wear each tag now */

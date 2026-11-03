@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.giants.systemsmixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "GriefMixin",
+    "PlayerDeathMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

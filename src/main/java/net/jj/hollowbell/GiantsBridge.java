@@ -80,6 +80,9 @@ public final class GiantsBridge {
         if (action.equals("respawnact")) return GiantsRespawn.act(server, arg);
         // (Part 7, ADMIN_BRIDGE.md 23.2) the Guide's fun and world tools
         if (action.equals("fun")) return GiantsFun.describe(server, arg);
+        // (Part 8, ADMIN_BRIDGE.md 24.4) the new systems: his weak spots, his mood, turning on a player, a spot to walk to
+        if (action.equals("sys")) return GiantsSystems.describe(server, arg);
+        if (action.equals("sysact")) return GiantsSystems.act(server, arg);
         if (action.equals("funact")) return GiantsFun.act(server, arg);
         // the Giants Guide's Controls tab: the triple crouch to sit, on or off (on your own game, server null)
         if ("controlget".equals(action)) return net.jj.hollowbell.solid.SitSettings.controlGet(arg);

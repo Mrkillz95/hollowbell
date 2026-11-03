@@ -50,6 +50,8 @@ public class PresetGameTests implements FabricGameTest {
         RATED.put("public_server_safe", 2);
         RATED.put("lite", 3);
         RATED.put("speedrun", 2);
+        RATED.put("herds", 3);
+        RATED.put("evolution", 3);
         RATED.put("close_quarters", 3);
         RATED.put("far_frontier", 3);
     }
@@ -139,7 +141,7 @@ public class PresetGameTests implements FabricGameTest {
         for (Giant g : AdminServer.giants()) vs.add(AdminInsight.view(d.report(g)));
         Map<String, Double> all = new HashMap<>();
         for (AdminSetting s : AdminServer.shared(d.world()))
-            if (!AdminCatalog.player(s)) all.put(s.id(), s.value().getAsDouble());
+            if (!AdminCatalog.plain(s)) all.put(s.id(), s.value().getAsDouble());
         return AdminInsight.warnings(vs, all);
     }
 
