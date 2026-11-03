@@ -523,19 +523,19 @@ public class BehaviourTests implements FabricGameTest {
     public void theChoicesTakeConfigCommands(net.minecraft.gametest.framework.GameTestHelper h) {
         var server = h.getLevel().getServer();
         var src = server.createCommandSourceStack().withPermission(4).withSuppressedOutput();
-        String was = net.jj.hollowbell.BellConfig.V.temper;
+        String was = net.jj.hollowbell.BellConfig.fileValues().temper, roamWas = net.jj.hollowbell.BellConfig.fileValues().roam;
         try {
             server.getCommands().performPrefixedCommand(src, "hollowbell config temper hunter allworlds");
-            h.assertTrue(net.jj.hollowbell.BellConfig.V.temper.equals("hunter"), "config temper hunter: " + net.jj.hollowbell.BellConfig.V.temper);
+            h.assertTrue(net.jj.hollowbell.BellConfig.fileValues().temper.equals("hunter"), "config temper hunter: " + net.jj.hollowbell.BellConfig.V.temper);
             server.getCommands().performPrefixedCommand(src, "hollowbell config roam wander allworlds");
-            h.assertTrue(net.jj.hollowbell.BellConfig.V.roam.equals("wander"), "config roam wander: " + net.jj.hollowbell.BellConfig.V.roam);
+            h.assertTrue(net.jj.hollowbell.BellConfig.fileValues().roam.equals("wander"), "config roam wander: " + net.jj.hollowbell.BellConfig.V.roam);
             server.getCommands().performPrefixedCommand(src, "hollowbell config sleepSchedule nonsense allworlds");
-            h.assertTrue(net.jj.hollowbell.BellConfig.V.sleepSchedule.equals("usual"), "a wrong option is refused");
+            h.assertTrue(net.jj.hollowbell.BellConfig.fileValues().sleepSchedule.equals("usual"), "a wrong option is refused");
         } finally {
             server.getCommands().performPrefixedCommand(src, "hollowbell config temper " + was + " allworlds");
-            server.getCommands().performPrefixedCommand(src, "hollowbell config roam home allworlds");
+            server.getCommands().performPrefixedCommand(src, "hollowbell config roam " + roamWas + " allworlds");
         }
-        h.assertTrue(net.jj.hollowbell.BellConfig.V.temper.equals(was) && net.jj.hollowbell.BellConfig.V.roam.equals("home"), "back");
+        h.assertTrue(net.jj.hollowbell.BellConfig.fileValues().temper.equals(was) && net.jj.hollowbell.BellConfig.fileValues().roam.equals(roamWas), "back");
         h.succeed();
     }
 }

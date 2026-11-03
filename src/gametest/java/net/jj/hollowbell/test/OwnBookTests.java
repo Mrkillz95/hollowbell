@@ -294,6 +294,9 @@ public class OwnBookTests implements FabricGameTest {
             r.sayQuiet(b, ownBookOf(b));
             h.assertTrue(hb.said("own_book_off"), "b told why: " + hb.keys);
             h.assertTrue(hisB.bookHolder() == a, "b's one answers the main holder now: " + hisB.bookHolder());
+            // (the others that answer a's main book, a's own companion among them, can land anywhere round the pad:
+            // gone, so b's one is surely the nearest)
+            for (HollowbellEntity e : near(h, pad)) if (e != hisB) e.discard();
             CodexOrders.handle(a, new CodexPayload(CodexPayload.FOLLOW));
             h.assertTrue(a.getUUID().equals(hisB.followingWho()), "a's order reaches him, the nearest");
             h.assertTrue(r.own(b.getUUID()) != null, "b's entry kept");

@@ -108,6 +108,11 @@ public class MixTests implements FabricGameTest {
                     && Math.abs(e.getY() - mid.getY()) < 2, "in that ground, on the ground: " + e.position());
             h.assertTrue(state(s).get("state").getAsString().equals("standing") && !state(s).has("in"),
                     "the world's own one, standing: " + state(s));
+            // (1.13.0, Herds) his companions (a herd) come beside him in that ground, not in his own
+            HollowbellEntity mate = net.jj.hollowbell.world.WorldOne.companion(l, e);
+            h.assertTrue(mate != null && Math.hypot(mate.getX() - e.getX(), mate.getZ() - e.getZ()) < 64,
+                    "a companion beside him there: " + (mate == null ? null : mate.position()) + " he " + e.position());
+            if (mate != null) mate.discard();
             e.discard();
             // a ground all water: one who swims comes in the water; a land-only one finds nowhere
             for (int x = 2; x <= 6; x++)
