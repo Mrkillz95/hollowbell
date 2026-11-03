@@ -329,7 +329,8 @@ final class BellRiding {
         // (Part 5) riding giants turned off in this world: no fetching, and whoever rides him is set down
         if (!net.jj.hollowbell.GiantsPlayers.ride()) {
             if (hb.fetching != null) stopFetch();
-            if (hb.rider instanceof Player rp && !hb.moves.settingDown()) {
+            // (Part 7) an admin playing as him isn't held to the players' switch
+            if (hb.rider instanceof Player rp && !hb.moves.settingDown() && !net.jj.hollowbell.GiantsFun.playing(rp)) {
                 setMeDown(rp);
                 net.jj.hollowbell.GiantsPlayers.say(rp, "ride_off");
             }

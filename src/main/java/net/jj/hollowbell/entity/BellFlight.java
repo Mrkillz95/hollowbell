@@ -128,13 +128,15 @@ final class BellFlight {
     public double maxSpeed() {
         float s = hb.bellScale();
         // (the admin book's all-giants speed: x1 changes nothing)
-        double v = (0.10 + 0.16 * Math.sqrt(s)) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed");
+        // (Part 7) and this one's own speed, from the Guide's tags (x1 without)
+        double own = net.jj.hollowbell.GiantsFun.mult(hb, "speed");
+        double v = (0.10 + 0.16 * Math.sqrt(s)) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed") * own;
         if (hb.rider != null) v *= 1.5;
         if (hb.angry()) v *= 1.15;
         if (hb.tired()) v *= 0.4;
         // backed down from a giant and up out of its reach: he gets away fast (tired or not)
         if (escaping() && escapeUp)
-            v = (0.10 + 0.16 * Math.sqrt(s)) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed")
+            v = (0.10 + 0.16 * Math.sqrt(s)) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed") * own
                     * ESCAPE_FAST;
         return v;
     }

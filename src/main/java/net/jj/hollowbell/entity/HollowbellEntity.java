@@ -440,10 +440,69 @@ public class HollowbellEntity extends Monster implements SitHost {
         s = Mth.clamp(s, MIN_SCALE, MAX_SCALE);
         float ratio = hp > 0 && healthMax() > 0 ? hp / healthMax() : 1f;
         entityData.set(DATA_SCALE, s);
-        baseMax = Math.max(40f, BellConfig.V.health * healthTimes() * s);
+        baseMax = baseMaxFor(s);
         healthMult = healthTimes();
         setMax(baseMax * playerBoost(), ratio);
         refreshDimensions();
+    }
+
+    /** his most health at this size, before any players are counted (with this one's own tag: Part 7) */
+    float baseMaxFor(float s) {
+        float own = net.jj.hollowbell.GiantsFun.mult(this, "health");
+        float base = BellConfig.V.health * healthTimes() * s;
+        return Math.max(40f, own == 1f ? base : base * own);
+    }
+
+    /** (Part 7) the Guide changed this one's own tags: his most health again (keeping his share), the rest as read */
+    public void funStats() {
+        setBellScale(bellScale());
+    }
+
+    /**
+     * (Part 7) moved somewhere to live, at once: whoever rides, sits or stands on him set down first, what he holds
+     * let go, his target, goal and follow dropped; drifting over the ground there at his own height (or up in the
+     * sky at the height asked); holding still there with it his home when asked to stay
+     */
+    public void funMoveTo(Vec3 at, boolean sky, boolean stay) {
+        riding.stopFetch();
+        riding.dropRider();
+        if (solidReady())
+            for (Entity x : riding.standingOnHim(true)) if (x instanceof LivingEntity le) riding.setDownBeside(le);
+        Sitting.setDownAll(this);
+        moves.letGoOfEverything(true);
+        moves.stopNow();
+        targets.clearHitList();
+        meetFoe = null;
+        setGoal(null);
+        flight.follow(null);
+        clearWandering();
+        // (his circle, the book's "keep to here", would pull him straight back: a new place to live ends it)
+        if (bound() && Math.hypot(at.x - boundX, at.z - boundZ) > boundR) unbind();
+        moveTo(at.x, at.y, at.z, getYRot(), 0f);
+        double g = groundAt(at.x, at.z);
+        int top = NoWait.height(level(), Heightmap.Types.MOTION_BLOCKING, Mth.floor(at.x), Mth.floor(at.z));
+        if (top == NoWait.NOT_YET && !level().dimensionType().hasCeiling()) g = at.y;
+        if (cruise < 0) cruise = 6 * bellScale() + 1;
+        double y = g + cruise;
+        if (sky) {
+            y = Math.max(at.y, y);
+            cruise = y - g;
+            wanderIn = Math.max(wanderIn, 1200);
+        }
+        moveTo(at.x, y, at.z, getYRot(), 0f);
+        setDeltaMovement(Vec3.ZERO);
+        vel = Vec3.ZERO;
+        wantY = y;
+        arriving = 0;
+        settled = true;
+        setStay(stay);
+        if (stay) setHome(position());
+        partsDirty = true;
+    }
+
+    /** (Part 7, the tests) the name on his health bar now (null before it is made) */
+    public @Nullable Component barName() {
+        return barHp == null ? null : barHp.getName();
     }
 
     /** /giants health changed the multiplier: his most health follows it, and he keeps his share of it */
@@ -1635,7 +1694,8 @@ public class HollowbellEntity extends Monster implements SitHost {
         if (sunk()) return 0.01;
         float s = bellScale();
         return (0.10 + 0.16 * Math.sqrt(s)) * (angry() ? 1.15 : 1.0) * 0.8 * speedMul
-                * net.jj.hollowbell.GiantsAdmin.all("all.speed");
+                * net.jj.hollowbell.GiantsAdmin.all("all.speed")
+                * net.jj.hollowbell.GiantsFun.mult(this, "speed");
     }
 
     /** ticks with nobody anywhere near him */
@@ -1988,6 +2048,9 @@ public class HollowbellEntity extends Monster implements SitHost {
         // the numbers in the moves are for full size; a small one hits a good deal less, a huge one more
         float size = Mth.clamp(0.2f + 0.8f * (float) Math.pow(bellScale(), 0.6), 0.25f, 1.5f);
         float f = base * BellConfig.V.damageMultiplier * net.jj.hollowbell.GiantsAdmin.all("all.damage") * size;
+        // (Part 7) this one's own damage, from the Guide's tags
+        float own = net.jj.hollowbell.GiantsFun.mult(this, "damage");
+        if (own != 1f) f *= own;
         if (!(to instanceof Player)) f *= BellConfig.V.mobDamage;
         return GiantsBehave.nightHit(level(), f);
     }
