@@ -49,6 +49,9 @@ public class GiantsGuideMod implements ModInitializer {
         AdminBookItem.register();
         AdminServer.register();
         AdminBook.register();
+        // (Part 6) the server tools: pause, events, schedules, areas, map, stats, alerts, respawns, quiet, profiles,
+        // pack mode (ADMIN_BRIDGE.md §22)
+        net.jj.giants.tools.Tools.register();
         LOG.info(
                 "Giants Guide loaded: {} of {} giants installed",
                 Giants.installed().size(),

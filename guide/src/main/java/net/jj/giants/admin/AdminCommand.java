@@ -399,6 +399,9 @@ public final class AdminCommand {
         if (p == null)
             return AdminServer.Result.fail("Nothing to confirm. Pick a preset, an import or a snapshot first (a"
                     + " preview is kept five minutes).");
+        // (Part 6) a modpack that keeps its preset
+        String pack = net.jj.giants.tools.PackMode.refusal(p.bundle());
+        if (pack != null) return AdminServer.Result.fail(pack);
         int n = AdminTransfer.apply(server, who, p);
         boolean snap = p.bundle().id().equals("snapshot");
         String title = snap ? "The " + p.bundle().name() : p.bundle().name().isEmpty() ? "The settings"

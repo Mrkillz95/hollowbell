@@ -68,7 +68,7 @@ public class AdminBookScreen extends Screen {
 
     private static boolean ownPage(String key) {
         return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES)
-                || key.equals(PLAYERS);
+                || key.equals(PLAYERS) || key.equals(TOOLS);
     }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
@@ -290,6 +290,7 @@ public class AdminBookScreen extends Screen {
 
     private String giantName(String key) {
         if (key.equals(AdminCatalog.ALL)) return tr("all").getString();
+        if (key.equals(TOOLS)) return tt("name", "Server tools").getString();
         if (ownPage(key)) return tr(key).getString();
         AdminBookClient.Page p = AdminBookClient.page(key);
         if (p != null && !p.name().isEmpty()) return p.name();
@@ -309,7 +310,7 @@ public class AdminBookScreen extends Screen {
         if (AdminBookClient.role().equals("moderator")) return List.of(LIVE);
         if (!AdminBookClient.admin()) return List.of(HOME);
         List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS)
-                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS));
+                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -331,7 +332,9 @@ public class AdminBookScreen extends Screen {
         JsonObject h = AdminBookClient.home();
         if (h == null) return 0;
         if (key.equals(PLAYERS)) return playersSet();
-        if (key.equals(AdminCatalog.ALL)) return AdminBookClient.AdminJsonBridge.num(h, "allSet", 0) - playersSet();
+        if (key.equals(TOOLS)) return toolsSet();
+        if (key.equals(AdminCatalog.ALL))
+            return AdminBookClient.AdminJsonBridge.num(h, "allSet", 0) - playersSet() - toolsSet();
         JsonObject g = homeGiant(key);
         return g == null ? 0 : AdminBookClient.AdminJsonBridge.num(g, "set", 0);
     }
@@ -349,9 +352,10 @@ public class AdminBookScreen extends Screen {
         loadTabs();
         if (creating()) {
             allWorlds = false;
-            if (pageKey.equals(LIVE) || pageKey.equals(CHANGES)) pageKey = HOME;
+            if (pageKey.equals(LIVE) || pageKey.equals(CHANGES) || pageKey.equals(TOOLS)) pageKey = HOME;
         }
         if (pageKey.equals(LIVE)) AdminBookClient.watchLive(true);
+        if (pageKey.equals(TOOLS)) AdminBookClient.watchTools(true);
         seenVersion = AdminBookClient.version();
         seenLive = AdminBookClient.liveVersion();
         seenPreview = AdminBookClient.previewVersion();
@@ -1252,6 +1256,7 @@ public class AdminBookScreen extends Screen {
         else if (pageKey.equals(PRESETS)) presetRows();
         else if (pageKey.equals(CHANGES)) changeRows();
         else if (pageKey.equals(PLAYERS)) playersRows();
+        else if (pageKey.equals(TOOLS)) toolsRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1268,7 +1273,8 @@ public class AdminBookScreen extends Screen {
         headButton.visible = false;
         if (searching) return;
         Component label;
-        if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS))
+        if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS)
+                || pageKey.equals(TOOLS))
             return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
@@ -1433,6 +1439,7 @@ public class AdminBookScreen extends Screen {
 
     /** the section tabs shown now: "all", then each section the page has */
     private List<String> sectionTabs() {
+        if (pageKey.equals(TOOLS) && keptQuery.isBlank()) return TOOL_TABS;
         if (!sectioned()) return List.of();
         List<String> out = new ArrayList<>();
         out.add(ALL_SECTIONS);
@@ -1443,6 +1450,7 @@ public class AdminBookScreen extends Screen {
     /** the section to show: the one picked if the page has it, else the first */
     private String sectionNow(List<String> tabs) {
         if (tabs.contains(section)) return section;
+        if (pageKey.equals(TOOLS) && !tabs.isEmpty()) return tabs.get(0);
         return tabs.size() > 1 ? tabs.get(1) : ALL_SECTIONS;
     }
 
@@ -1615,6 +1623,8 @@ public class AdminBookScreen extends Screen {
             if (mx >= x && mx < x + w && my >= y && my < y + 14)
                 setTooltipForNextRenderPass(font.split(tr("home.danger.tip"), 280));
         }));
+        // (Part 6) what the server tools have on now
+        if (!creating()) toolsHomeLine(h);
         // what clashes
         JsonArray warn = h.get("warnings") instanceof JsonArray a ? a : new JsonArray();
         Head clashes = new Head(tr("home.clashes"), null, null).folding("home/clashes", "behaviour", warn.size());
@@ -1694,7 +1704,8 @@ public class AdminBookScreen extends Screen {
         JsonObject gj = homeGiant(key);
         boolean speaks = key.equals(AdminCatalog.ALL) || gj == null || gj.get("speaks") == null
                 || gj.get("speaks").getAsBoolean();
-        Component sub = ownPage(key) ? tr(key + ".tile") : !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n)
+        Component sub = key.equals(TOOLS) ? tt("tile", "Pause, events, map, stats")
+                : ownPage(key) ? tr(key + ".tile") : !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n)
                 : tr("tile.default");
         g.drawString(font, cut(sub.getString(), tw), tx, y + 16, !speaks ? DIM : n > 0 ? GOLD : GREY, false);
     }
@@ -1732,6 +1743,8 @@ public class AdminBookScreen extends Screen {
         if (key.equals(pageKey) && keptQuery.isBlank()) return;
         // (the server sends Live control once a second only while it is looked at)
         if (key.equals(LIVE) != pageKey.equals(LIVE)) AdminBookClient.watchLive(key.equals(LIVE));
+        // (Part 6) the Server tools page comes every two seconds only while it is looked at
+        if (key.equals(TOOLS) != pageKey.equals(TOOLS)) AdminBookClient.watchTools(key.equals(TOOLS));
         pageKey = key;
         keptPage = key;
         loadTabs();
@@ -1853,6 +1866,7 @@ public class AdminBookScreen extends Screen {
             case PRESETS -> AdminBookClient.presets() != null;
             case CHANGES -> AdminBookClient.changes() != null;
             case PLAYERS -> AdminBookClient.players() != null && AdminBookClient.page(AdminCatalog.ALL) != null;
+            case TOOLS -> AdminBookClient.tools() != null;
             default -> AdminBookClient.home() != null
                     && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
         };
@@ -1905,6 +1919,7 @@ public class AdminBookScreen extends Screen {
     private final List<TabBox> tabBoxes = new ArrayList<>();
 
     private Component sectionName(String sec) {
+        if (sec.startsWith("t_")) return toolTabName(sec);
         return sec.equals(ALL_SECTIONS) ? tr("section.all") : tr("cat." + sec);
     }
 
@@ -2045,6 +2060,12 @@ public class AdminBookScreen extends Screen {
         } else if (!pageKey.equals(HOME)) {
             words.add(Component.literal(giantName(pageKey)));
             goes.add(sectioned() ? () -> pickSection(ALL_SECTIONS) : null);
+            if (pageKey.equals(TOOLS)) {
+                // (Part 6) Home › Server tools › Map
+                goes.set(goes.size() - 1, () -> pickSection(TOOL_TABS.get(0)));
+                words.add(sectionName(sectionNow(TOOL_TABS)));
+                goes.add(null);
+            }
             if (giantPage()) {
                 words.add(tr("part." + part));
                 goes.add(() -> pickSection(ALL_SECTIONS));
@@ -2109,6 +2130,10 @@ public class AdminBookScreen extends Screen {
             title = tr("players");
             sub = tr("players.sub");
             pic = PLAYERS;
+        } else if (pageKey.equals(TOOLS)) {
+            title = tt("name", "Server tools");
+            sub = tt("sub", "Pause, events, schedules, areas, the map, stats, alerts and respawn timers.");
+            pic = "tools";
         } else {
             title = Component.literal(giantName(pageKey));
             AdminBookClient.Page p = AdminBookClient.page(pageKey);
@@ -3397,7 +3422,7 @@ public class AdminBookScreen extends Screen {
         AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
         if (p == null) return 0;
         int n = 0;
-        for (AdminSetting s : p.settings()) if (s.set() && AdminCatalog.player(s)) n++;
+        for (AdminSetting s : p.settings()) if (s.set() && AdminCatalog.player(s) && !AdminCatalog.server(s)) n++;
         return n;
     }
 
@@ -3545,6 +3570,883 @@ public class AdminBookScreen extends Screen {
                     List.<Object[]>of(new Object[] {tr("players.signs.remove"),
                         (Runnable) () -> request("boardremove", "i", at), tr("players.signs.remove.tip")})));
         }
+    }
+
+    // (Part 6, ADMIN_BRIDGE.md §22) the Server tools page: pause and events, schedules, areas, the map, the stats,
+    // the alerts, the respawn timers, the world's profile and the modpack. Every setting on it is an ordinary
+    // all-giants setting (category "server"); every button is a request the server checks, the twin of a command.
+
+    /** the Server tools page */
+    public static final String TOOLS = "tools";
+    /** its tabs (the section tab bar), in order */
+    private static final List<String> TOOL_TABS = List.of("t_now", "t_schedules", "t_areas", "t_map", "t_stats",
+            "t_alerts", "t_respawns", "t_server");
+
+    /** a Server tools line: its lang key (admin.jj_giants.tools.*) or these words */
+    static MutableComponent tt(String key, String fallback, Object... args) {
+        return Component.translatableWithFallback("admin.jj_giants.tools." + key, fallback, args);
+    }
+
+    private static Component toolTabName(String sec) {
+        return switch (sec) {
+            case "t_now" -> tt("tab.now", "Pause & events");
+            case "t_schedules" -> tt("tab.schedules", "Schedules");
+            case "t_areas" -> tt("tab.areas", "Areas");
+            case "t_map" -> tt("tab.map", "Map");
+            case "t_stats" -> tt("tab.stats", "Stats");
+            case "t_alerts" -> tt("tab.alerts", "Alerts");
+            case "t_respawns" -> tt("tab.respawns", "Respawns");
+            default -> tt("tab.server", "Profile & pack");
+        };
+    }
+
+    /** how many server tools settings the world set (the contents' count) */
+    private int toolsSet() {
+        AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
+        if (p == null) return 0;
+        int n = 0;
+        for (AdminSetting s : p.settings()) if (s.set() && AdminCatalog.server(s)) n++;
+        return n;
+    }
+
+    private @Nullable AdminSetting allSetting(String id) {
+        AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
+        return p == null ? null : p.setting(id);
+    }
+
+    /** setting rows for these all-giants ids, under a folding heading */
+    private void toolSettings(String fold, Component title, @Nullable Component note, String pic, String... ids) {
+        List<AdminSetting> in = new ArrayList<>();
+        for (String id : ids) {
+            AdminSetting s = allSetting(id);
+            if (s != null) in.add(s);
+        }
+        if (in.isEmpty()) return;
+        Head head = new Head(title, note, null).folding(TOOLS + "/" + fold, pic, in.size());
+        rows.add(head);
+        if (!head.shut()) for (AdminSetting s : in) rows.add(new SetRow(s));
+    }
+
+    private void toolsRows() {
+        JsonObject t = AdminBookClient.tools();
+        if (t == null || AdminBookClient.page(AdminCatalog.ALL) == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        switch (sectionNow(TOOL_TABS)) {
+            case "t_schedules" -> toolsSchedules(t);
+            case "t_areas" -> toolsAreas(t);
+            case "t_map" -> toolsMap(t);
+            case "t_stats" -> toolsStats(t);
+            case "t_alerts" -> toolsAlerts(t);
+            case "t_respawns" -> toolsRespawns(t);
+            case "t_server" -> toolsServer(t);
+            default -> toolsNow(t);
+        }
+    }
+
+    /** a card with a few lines of words and buttons under them */
+    private final class Card extends Row {
+        final List<FormattedCharSequence> lines = new ArrayList<>();
+        final int colour;
+        final Component title;
+        final @Nullable String pic;
+
+        Card(Component title, @Nullable String pic, Component body, int colour, List<Object[]> buttons) {
+            this.title = title;
+            this.pic = pic;
+            this.colour = colour;
+            lines.addAll(font.split(body, lw - 34));
+            h = 22 + lines.size() * 10 + (buttons.isEmpty() ? 4 : 24);
+            int bx = 26, by = h - 22;
+            for (Object[] b : buttons) {
+                Component c = (Component) b[0];
+                int bw = font.width(c) + 16;
+                if (bx > 26 && bx + bw > lw - 4) {
+                    bx = 26;
+                    by += 20;
+                    h += 20;
+                }
+                Button bt = Button.builder(c, x -> ((Runnable) b[1]).run()).bounds(0, 0, bw, 18).build();
+                if (b.length > 2 && b[2] != null) bt.setTooltip(Tooltip.create((Component) b[2]));
+                if (b.length > 3) bt.active = (boolean) b[3];
+                add(bt, bx, by, false);
+                bx += bw + 4;
+            }
+        }
+
+        @Override
+        void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
+            AdminStyle.card(g, x - 2, y + 2, w + 2, h - 5, false);
+            g.fill(x - 2, y + 2, x, y + h - 3, colour);
+            if (pic != null) AdminStyle.icon(g, pic, x + 4, y + 6, 16);
+            g.drawString(font, cut(title.getString(), w - 34), x + 26, y + 7, colour, false);
+            for (int i = 0; i < lines.size(); i++) g.drawString(font, lines.get(i), x + 26, y + 19 + i * 10, TEXT, false);
+        }
+    }
+
+    // the first tab: pause, quiet, events
+
+    /** the minutes picked for each event (kept while the game runs) */
+    private static final Map<String, Integer> eventMinutes = new HashMap<>();
+
+    private void toolsNow(JsonObject t) {
+        AdminSetting paused = allSetting("all.paused");
+        boolean on = bool(t, "paused");
+        if (paused != null) {
+            boolean can = !lockedForMe(paused);
+            rows.add(new Card(on ? tt("paused.on", "The giants are paused") : tt("paused.off",
+                    "The giants are moving freely"), "t_now",
+                    on ? tt("paused.on.body", "Every giant in loaded land is standing still: no moves, no walking, no"
+                            + " fights. One out of the world stops as soon as he comes back.")
+                            : tt("paused.off.body", "Pause stops every giant where he is, at once, until you let them"
+                                    + " carry on. Nothing else changes."),
+                    on ? WARN : GOOD,
+                    List.<Object[]>of(new Object[] {on ? tt("paused.resume", "Let them carry on")
+                            : tt("paused.pause", "Pause all giants"),
+                        (Runnable) () -> commit(paused, new JsonPrimitive(!on)), can ? null
+                                : tr("lock.locked.tip", lockedBy(paused)), can})));
+        }
+        toolSettings("now/settings", tt("settings", "Settings"), null, "misc", "all.paused", "all.quiet");
+        // events
+        rows.add(new Head(tt("events", "Events"), tt("events.note", "An event changes the giants for a while, then"
+                + " everything it changed goes back by itself. One at a time; everyone is told (not in quiet mode)."),
+                null).pic("t_events"));
+        JsonObject ev = t.get("event") instanceof JsonObject e ? e : null;
+        if (ev != null) {
+            long s = lng(ev, "seconds");
+            rows.add(new Card(tt("event.on", "%s is on", str(ev, "name")), "t_events",
+                    tt("event.on.body", "%s:%s left · started by %s · %s settings changed until it ends", s / 60,
+                            String.format("%02d", s % 60), str(ev, "by"), (int) dbl(ev, "changes", 0)), ORANGE,
+                    List.<Object[]>of(new Object[] {tt("event.stop", "End it now"), (Runnable) () -> confirm(
+                            tt("event.stop.title", "End %s now?", str(ev, "name")), tt("event.stop.body",
+                                    "Everything it changed goes back now (anything changed since stays)."),
+                            tt("event.stop", "End it now"), () -> request("eventstop"))})));
+        }
+        for (JsonObject k : objects(t, "events")) {
+            String id = str(k, "id");
+            int m = eventMinutes.getOrDefault(id, (int) dbl(k, "minutes", 30));
+            rows.add(new LineRow(Component.literal(str(k, "name")), KEY, Component.literal(str(k, "about")),
+                    List.<Object[]>of(
+                            new Object[] {tt("event.minutes", "%s min", m), (Runnable) () -> {
+                                int[] mm = {5, 10, 20, 30, 60, 120};
+                                int i = 0;
+                                while (i < mm.length && mm[i] != m) i++;
+                                eventMinutes.put(id, mm[(i + 1) % mm.length]);
+                                build();
+                            }, tt("event.minutes.tip", "How long it lasts (click for the next)")},
+                            new Object[] {tt("event.start", "Start"), (Runnable) () -> confirm(
+                                    tt("event.start.title", "Start %s?", str(k, "name")),
+                                    tt("event.start.body", "%s For %s minutes, then it all goes back by itself.",
+                                            str(k, "about"), m), tt("event.start", "Start"),
+                                    () -> request("eventstart", "kind", id, "minutes", m)),
+                                tt("event.start.tip", "Starts it now for everyone"), ev == null})));
+        }
+    }
+
+    // schedules
+
+    private static int schedPreset = 0, schedKind = 0;
+    private static final java.util.TreeSet<Integer> schedDays = new java.util.TreeSet<>(List.of(6, 7));
+    private static String schedDate = "";
+    private static final String[] SCHED_KINDS = {"weekends", "weekdays", "every", "days", "fullmoon", "date"};
+    private static final String[] DAY_NAMES = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+
+    private Component schedKindName(String k) {
+        return switch (k) {
+            case "weekends" -> tt("sched.weekends", "Weekends");
+            case "weekdays" -> tt("sched.weekdays", "Weekdays");
+            case "every" -> tt("sched.every", "Every day");
+            case "days" -> tt("sched.days", "These days");
+            case "fullmoon" -> tt("sched.fullmoon", "Full-moon nights");
+            default -> tt("sched.date", "A date");
+        };
+    }
+
+    private void toolsSchedules(JsonObject t) {
+        rows.add(new Note(tt("sched.note", "A schedule puts a preset on by itself at certain times (days by the"
+                + " server's clock, full moons in the game) and takes it off after: what it changed goes back, and"
+                + " anything an admin changed meanwhile stays. The first one due goes on."), GREY));
+        JsonObject pack = t.get("pack") instanceof JsonObject p ? p : new JsonObject();
+        if (bool(pack, "lock"))
+            rows.add(new Note(tt("sched.pack", "%s keeps the %s preset, so schedules don't go on.", str(pack, "name"),
+                    str(pack, "presetName")), WARN));
+        JsonObject run = t.get("schedule") instanceof JsonObject r ? r : null;
+        if (run != null)
+            rows.add(new Card(tt("sched.on", "Now on: %s", str(run, "name")), "t_schedules",
+                    tt("sched.on.body", "It puts back %s changes when its time is over.", (int) dbl(run, "changes", 0)),
+                    ORANGE, List.<Object[]>of(new Object[] {tt("sched.stop", "Stop it now"),
+                        (Runnable) () -> confirm(tt("sched.stop.title", "Stop %s now?", str(run, "name")),
+                                tt("sched.stop.body", "What it changed goes back now, and the schedule is turned off"
+                                        + " (turn it on again below)."), tt("sched.stop", "Stop it now"),
+                                () -> request("schedstop"))})));
+        List<JsonObject> list = objects(t, "schedules");
+        Head head = new Head(tt("sched.list", "Schedules"), null, null).folding(TOOLS + "/sched/list", "t_schedules",
+                list.size());
+        rows.add(head);
+        if (list.isEmpty()) rows.add(new Note(tt("sched.none", "None yet: make one below."), GREY));
+        for (JsonObject s : head.shut() ? List.<JsonObject>of() : list) {
+            boolean on = bool(s, "on"), now = bool(s, "now");
+            String id = str(s, "id");
+            rows.add(new LineRow(Component.literal(str(s, "name")), now ? GOLD : on ? TEXT : DIM,
+                    Component.literal(str(s, "when") + (now ? " · " + tt("sched.now", "on now").getString()
+                            : on ? "" : " · " + tt("sched.off", "turned off").getString())),
+                    List.<Object[]>of(
+                            new Object[] {on ? tt("sched.turnoff", "Turn off") : tt("sched.turnon", "Turn on"),
+                                (Runnable) () -> request("schedturn", "id", id, "on", String.valueOf(!on))},
+                            new Object[] {tt("remove", "Remove"), (Runnable) () -> confirm(
+                                    tt("sched.remove.title", "Remove this schedule?"), tt("sched.remove.body",
+                                            "%s on %s. If it is on now, what it changed goes back.", str(s, "name"),
+                                            str(s, "when")), tt("remove", "Remove"),
+                                    () -> request("schedremove", "id", id))})));
+        }
+        // a new one
+        rows.add(new Head(tt("sched.new", "New schedule"), null, null).pic("presets"));
+        List<JsonObject> presets = objects(t, "presets");
+        if (presets.isEmpty()) return;
+        schedPreset = Math.floorMod(schedPreset, presets.size());
+        JsonObject pick = presets.get(schedPreset);
+        String kind = SCHED_KINDS[Math.floorMod(schedKind, SCHED_KINDS.length)];
+        Block b = new Block(24, (g, x, y, w, mx, my) -> {});
+        int bx = 0;
+        Component pc = tt("sched.preset", "Preset: %s", str(pick, "name"));
+        Button pb = Button.builder(pc, x -> {
+                    schedPreset++;
+                    build();
+                })
+                .bounds(0, 0, Math.min(lw / 2 - 4, font.width(pc) + 16), 18)
+                .build();
+        pb.setTooltip(Tooltip.create(tt("sched.preset.tip", "Click for the next preset")));
+        b.add(pb, bx, 3, false);
+        bx += pb.getWidth() + 4;
+        Component kc = tt("sched.when", "When: %s", schedKindName(kind));
+        Button kb = Button.builder(kc, x -> {
+                    schedKind++;
+                    build();
+                })
+                .bounds(0, 0, font.width(kc) + 16, 18)
+                .build();
+        kb.setTooltip(Tooltip.create(tt("sched.when.tip", "Click for the next choice")));
+        if (bx + kb.getWidth() > lw) {
+            bx = 0;
+            b.h += 22;
+        }
+        b.add(kb, bx, b.h - 21, false);
+        rows.add(b);
+        Block extra = new Block(24, (g, x, y, w, mx, my) -> {});
+        boolean ready = true;
+        if (kind.equals("days")) {
+            int dx = 0;
+            for (int i = 1; i <= 7; i++) {
+                int day = i;
+                Component c = Component.literal((schedDays.contains(i) ? "✔ " : "") + DAY_NAMES[i - 1]);
+                Button d = Button.builder(c, x -> {
+                            if (!schedDays.remove(day)) schedDays.add(day);
+                            build();
+                        })
+                        .bounds(0, 0, font.width(c) + 12, 18)
+                        .build();
+                if (dx > 0 && dx + d.getWidth() > lw) {
+                    dx = 0;
+                    extra.h += 22;
+                }
+                extra.add(d, dx, extra.h - 21, false);
+                dx += d.getWidth() + 3;
+            }
+            ready = !schedDays.isEmpty();
+            rows.add(extra);
+        } else if (kind.equals("date")) {
+            EditBox date = new EditBox(font, 0, 0, 120, 18, tt("sched.date.hint", "MM-DD"));
+            date.setHint(tt("sched.date.hint", "MM-DD or YYYY-MM-DD").withStyle(ChatFormatting.DARK_GRAY));
+            date.setMaxLength(10);
+            date.setValue(schedDate);
+            date.setResponder(v -> schedDate = v.strip());
+            extra.add(date, 0, 3, false);
+            rows.add(extra);
+            ready = schedDate.matches("\\d{2}-\\d{2}|\\d{4}-\\d{2}-\\d{2}");
+        }
+        String when = switch (kind) {
+            case "days" -> {
+                StringBuilder sb = new StringBuilder();
+                for (int d : schedDays) sb.append(sb.length() == 0 ? "" : ",").append(d);
+                yield sb.toString();
+            }
+            case "date" -> schedDate;
+            case "weekdays", "every" -> kind;
+            default -> "";
+        };
+        String sendKind = kind.equals("weekdays") || kind.equals("every") ? "days" : kind;
+        boolean go = ready;
+        rows.add(new LineRow(tt("sched.add.line", "%s on %s", str(pick, "name"), schedKindName(kind)), TEXT,
+                Component.empty(), List.<Object[]>of(new Object[] {tt("sched.add", "Add schedule"),
+                    (Runnable) () -> request("schedadd", "preset", str(pick, "id"), "kind", sendKind, "when", when),
+                    tt("sched.add.tip", "It goes on by itself when due, and back off after"), go})));
+    }
+
+    // areas
+
+    private static int areaKind = 0, areaR = 64;
+    private static String areaName = "";
+    private static final int[] AREA_R = {16, 32, 64, 128, 256, 512, 1000};
+
+    private void toolsAreas(JsonObject t) {
+        toolSettings("areas/rules", tt("areas.rules", "Spawn and dimensions"), tt("areas.rules.note",
+                "Giants near spawn are sent home, and taken away if they stay a minute. A dimension with no giants"
+                        + " has every giant in it taken away."), "worldgen", "all.spawnClear", "all.dimOverworld",
+                "all.dimNether", "all.dimEnd");
+        List<JsonObject> areas = objects(t, "areas");
+        Head head = new Head(tt("areas.list", "Areas"), tt("areas.note", "Circles round where you stood. No giants:"
+                + " giants that come in are sent home, and taken away if they stay a minute. Safe: the giants leave"
+                + " players standing in it alone."), null).folding(TOOLS + "/areas/list", "t_areas", areas.size());
+        rows.add(head);
+        if (areas.isEmpty()) rows.add(new Note(tt("areas.none", "None yet: make one below."), GREY));
+        for (JsonObject a : head.shut() ? List.<JsonObject>of() : areas) {
+            String id = str(a, "id");
+            boolean safe = str(a, "kind").equals("safe");
+            int r = (int) dbl(a, "r", 64);
+            rows.add(new LineRow(Component.literal(str(a, "name")), safe ? GOOD : WARN,
+                    tt("areas.line", "%s · %s blocks round %s, %s · %s", safe ? tt("areas.safe", "Safe")
+                                    : tt("areas.keepout", "No giants"), r, (int) dbl(a, "x", 0), (int) dbl(a, "z", 0),
+                            dimName(str(a, "dim"))),
+                    List.<Object[]>of(
+                            new Object[] {Component.literal("−"), (Runnable) () -> request("areaedit", "id", id, "r",
+                                    Math.max(8, (int) Math.round(r / 1.5))), tt("areas.smaller", "Smaller")},
+                            new Object[] {Component.literal("+"), (Runnable) () -> request("areaedit", "id", id, "r",
+                                    Math.min(2000, (int) Math.round(r * 1.5))), tt("areas.bigger", "Bigger")},
+                            new Object[] {safe ? tt("areas.tokeepout", "Make no giants") : tt("areas.tosafe",
+                                    "Make safe"), (Runnable) () -> request("areaedit", "id", id, "kind",
+                                    safe ? "keepout" : "safe")},
+                            new Object[] {tt("remove", "Remove"), (Runnable) () -> confirm(tt("areas.remove.title",
+                                    "Remove %s?", str(a, "name")), tt("areas.remove.body",
+                                    "Giants may come there again."), tt("remove", "Remove"),
+                                    () -> request("arearemove", "id", id))})));
+        }
+        // a new one round where you stand
+        var me = net.minecraft.client.Minecraft.getInstance().player;
+        rows.add(new Head(tt("areas.new", "New area round you"), me == null ? null : tt("areas.new.note",
+                "You're at %s, %s (%s): the area's middle.", me.getBlockX(), me.getBlockZ(),
+                dimName(me.level().dimension().location().toString())), null).pic("t_areas"));
+        Block b = new Block(24, (g, x, y, w, mx, my) -> {});
+        String kind = areaKind % 2 == 0 ? "keepout" : "safe";
+        Component kc = kind.equals("safe") ? tt("areas.safe", "Safe") : tt("areas.keepout", "No giants");
+        Button kb = Button.builder(kc, x -> {
+                    areaKind++;
+                    build();
+                })
+                .bounds(0, 0, Math.max(70, font.width(kc) + 16), 18)
+                .build();
+        kb.setTooltip(Tooltip.create(tt("areas.kind.tip", "No giants or safe (click to change)")));
+        b.add(kb, 0, 3, false);
+        Component rc = tt("areas.radius", "%s blocks", areaR);
+        Button rb = Button.builder(rc, x -> {
+                    int i = 0;
+                    while (i < AREA_R.length && AREA_R[i] != areaR) i++;
+                    areaR = AREA_R[(i + 1) % AREA_R.length];
+                    build();
+                })
+                .bounds(0, 0, Math.max(70, font.width(rc) + 16), 18)
+                .build();
+        rb.setTooltip(Tooltip.create(tt("areas.radius.tip", "How far it reaches from you (click for the next)")));
+        b.add(rb, kb.getWidth() + 4, 3, false);
+        int nx = kb.getWidth() + rb.getWidth() + 8;
+        Component add = tt("areas.add", "Add area");
+        int aw = font.width(add) + 16;
+        EditBox name = new EditBox(font, 0, 0, Math.max(60, lw - nx - aw - 6), 18, tt("areas.name", "Name"));
+        name.setHint(tt("areas.name", "Name (optional)").withStyle(ChatFormatting.DARK_GRAY));
+        name.setMaxLength(32);
+        name.setValue(areaName);
+        name.setResponder(v -> areaName = v);
+        b.add(name, nx, 3, false);
+        Button ab = Button.builder(add, x -> request("areaadd", "kind", kind, "r", areaR, "name", areaName.strip()))
+                .bounds(0, 0, aw, 18)
+                .build();
+        ab.setTooltip(Tooltip.create(tt("areas.add.tip", "A circle round where you stand now")));
+        b.add(ab, 0, 3, true);
+        rows.add(b);
+    }
+
+    // the map
+
+    private static String mapDim = "minecraft:overworld";
+    /** blocks per pixel (-1: fit everything) and the middle */
+    private static double mapScale = -1, mapCx, mapCz;
+
+    /** each giant's own colour (his book cover's mark), darkened to read on parchment */
+    static int giantColour(String key) {
+        return switch (key) {
+            case "pitchgut" -> 0xFFC86878;
+            case "furrowmaw" -> 0xFFD04A1C;
+            case "cerberus" -> 0xFF3A94D0;
+            case "hollowbell" -> 0xFF20A898;
+            case "lanternwillow" -> 0xFF5AA02A;
+            case "wreckback" -> 0xFF8A8270;
+            case "swarmforge" -> 0xFFD0761E;
+            case "gloamwick" -> 0xFF8A66D8;
+            default -> 0xFF806040;
+        };
+    }
+
+    private void toolsMap(JsonObject t) {
+        // the dimension and the zoom
+        Block bar = new Block(24, (g, x, y, w, mx, my) -> {});
+        int bx = 0;
+        for (String d : List.of("minecraft:overworld", "minecraft:the_nether", "minecraft:the_end")) {
+            Component c = Component.literal((d.equals(mapDim) ? "● " : "") + dimName(d));
+            Button b = Button.builder(c, x -> {
+                        mapDim = d;
+                        mapScale = -1;
+                        build();
+                    })
+                    .bounds(0, 0, font.width(c) + 12, 18)
+                    .build();
+            bar.add(b, bx, 3, false);
+            bx += b.getWidth() + 3;
+        }
+        int rx = 0;
+        for (Object[] z : new Object[][] {
+            {tt("map.fit", "Fit"), (Runnable) () -> mapScale = -1, tt("map.fit.tip", "Everything on the map")},
+            {tt("map.me", "Me"), (Runnable) () -> {
+                var me = net.minecraft.client.Minecraft.getInstance().player;
+                if (me == null) return;
+                mapDim = me.level().dimension().location().toString();
+                mapCx = me.getX();
+                mapCz = me.getZ();
+                if (mapScale < 0) mapScale = 4;
+            }, tt("map.me.tip", "The map round you")},
+            {Component.literal("+"), (Runnable) () -> mapScale = Math.max(0.25, (mapScale < 0 ? 8 : mapScale) / 2),
+                tt("map.in", "Closer")},
+            {Component.literal("−"), (Runnable) () -> mapScale = Math.min(512, (mapScale < 0 ? 8 : mapScale) * 2),
+                tt("map.out", "Further out")}}) {
+            Component c = (Component) z[0];
+            Runnable r = (Runnable) z[1];
+            Button b = Button.builder(c, x -> {
+                        r.run();
+                        build();
+                    })
+                    .bounds(0, 0, font.width(c) + 12, 18)
+                    .build();
+            b.setTooltip(Tooltip.create((Component) z[2]));
+            bar.add(b, rx, 3, true);
+            rx += b.getWidth() + 3;
+        }
+        rows.add(bar);
+        int mh = Mth.clamp(Math.min((int) (lw * 0.62), ly1 - ly0 - 60), 120, 340);
+        rows.add(new MapRow(t, mh));
+        rows.add(new Note(tt("map.note", "Click a giant to go to him, his ground's middle to go there; anywhere else"
+                + " moves the map there. Circles: the giants' grounds (their colours), areas (red: no giants, green:"
+                + " safe). ★ spawn, ■ players."), GREY));
+    }
+
+    /** the map itself: the giants, their grounds, the areas, spawn and the players in one dimension, from above */
+    private final class MapRow extends Row {
+        final JsonObject t;
+        /** what can be clicked or hovered: x, y (on the screen, from the row's top), radius, tip, what it does */
+        record Spot(int x, int y, int r, List<FormattedCharSequence> tip, @Nullable Runnable go) {}
+
+        final List<Spot> spots = new ArrayList<>();
+        double scale, cx, cz;
+        int drawnX, drawnW;
+
+        MapRow(JsonObject t, int mh) {
+            this.t = t;
+            h = mh;
+            // fit: every thing in this dimension, with room round it
+            if (mapScale < 0) {
+                double x0 = Double.MAX_VALUE, x1 = -Double.MAX_VALUE, z0 = Double.MAX_VALUE, z1 = -Double.MAX_VALUE;
+                List<double[]> pts = new ArrayList<>();
+                for (JsonObject g : objects(t, "giants"))
+                    if (str(g, "dim").equals(mapDim)) pts.add(new double[] {dbl(g, "x", 0), dbl(g, "z", 0), 16});
+                if (mapDim.equals("minecraft:overworld")) {
+                    for (JsonObject g : objects(t, "grounds"))
+                        pts.add(new double[] {dbl(g, "x", 0), dbl(g, "z", 0), dbl(g, "r", 0)});
+                    JsonObject sp = t.get("spawn") instanceof JsonObject s ? s : new JsonObject();
+                    pts.add(new double[] {dbl(sp, "x", 0), dbl(sp, "z", 0), Math.max(32, dbl(sp, "clear", 0))});
+                }
+                for (JsonObject p : objects(t, "players"))
+                    if (str(p, "dim").equals(mapDim)) pts.add(new double[] {dbl(p, "x", 0), dbl(p, "z", 0), 16});
+                for (JsonObject a : objects(t, "areas"))
+                    if (str(a, "dim").equals(mapDim)) pts.add(new double[] {dbl(a, "x", 0), dbl(a, "z", 0), dbl(a, "r", 0)});
+                for (double[] p : pts) {
+                    x0 = Math.min(x0, p[0] - p[2]);
+                    x1 = Math.max(x1, p[0] + p[2]);
+                    z0 = Math.min(z0, p[1] - p[2]);
+                    z1 = Math.max(z1, p[1] + p[2]);
+                }
+                if (pts.isEmpty()) {
+                    x0 = z0 = -256;
+                    x1 = z1 = 256;
+                }
+                mapCx = (x0 + x1) / 2;
+                mapCz = (z0 + z1) / 2;
+                double sx = (x1 - x0) / Math.max(40, lw - 20), sz = (z1 - z0) / Math.max(40, mh - 20);
+                scale = Math.max(0.25, Math.max(sx, sz) * 1.1);
+            } else scale = mapScale;
+            cx = mapCx;
+            cz = mapCz;
+        }
+
+        int sx(double wx, int x, int w) {
+            return (int) Math.round(x + w / 2.0 + (wx - cx) / scale);
+        }
+
+        int sy(double wz, int y) {
+            return (int) Math.round(y + h / 2.0 + (wz - cz) / scale);
+        }
+
+        void circle(GuiGraphics g, int x, int y, int r, int fill, int edge) {
+            if (r < 1) r = 1;
+            for (int dy = -r; dy <= r; dy++) {
+                int dx = (int) Math.round(Math.sqrt((double) r * r - (double) dy * dy));
+                g.fill(x - dx, y + dy, x + dx + 1, y + dy + 1, fill);
+                g.fill(x - dx, y + dy, x - dx + 1, y + dy + 1, edge);
+                g.fill(x + dx, y + dy, x + dx + 1, y + dy + 1, edge);
+            }
+            int top = (int) Math.round(Math.sqrt((double) r * r - (double) (r - 1) * (r - 1)));
+            g.fill(x - top, y - r, x + top + 1, y - r + 1, edge);
+            g.fill(x - top, y + r, x + top + 1, y + r + 1, edge);
+        }
+
+        @Override
+        void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
+            spots.clear();
+            drawnX = x;
+            drawnW = w;
+            int top = y;
+            // the paper, its edge
+            g.fill(x - 2, y, x + w, y + h, 0xFFE4D2A2);
+            g.renderOutline(x - 2, y, w + 2, h, 0xFF8A6A40);
+            g.enableScissor(x - 1, Math.max(y + 1, ly0), x + w - 1, Math.min(y + h - 1, ly1));
+            // a grid every round number of blocks
+            double step = 16;
+            while (step / scale < 40) step *= 2;
+            double gx0 = Math.floor((cx - (w / 2.0) * scale) / step) * step;
+            for (double gx = gx0; gx < cx + (w / 2.0) * scale; gx += step) {
+                int px = sx(gx, x, w);
+                g.fill(px, y, px + 1, y + h, gx == 0 ? 0x50703010 : 0x22503010);
+            }
+            double gz0 = Math.floor((cz - (h / 2.0) * scale) / step) * step;
+            for (double gz = gz0; gz < cz + (h / 2.0) * scale; gz += step) {
+                int py = sy(gz, y);
+                g.fill(x, py, x + w, py + 1, gz == 0 ? 0x50703010 : 0x22503010);
+            }
+            boolean over = mapDim.equals("minecraft:overworld");
+            // the grounds
+            if (over)
+                for (JsonObject gr : objects(t, "grounds")) {
+                    String key = str(gr, "key");
+                    int c = giantColour(key);
+                    int gx = sx(dbl(gr, "x", 0), x, w), gy = sy(dbl(gr, "z", 0), y), r = (int) (dbl(gr, "r", 0) / scale);
+                    circle(g, gx, gy, r, (c & 0x00FFFFFF) | 0x30000000, (c & 0x00FFFFFF) | 0xA0000000);
+                    g.fill(gx - 1, gy - 1, gx + 2, gy + 2, c);
+                    String gname = giantName(key);
+                    int copy = (int) dbl(gr, "copy", 0);
+                    List<FormattedCharSequence> tip = new ArrayList<>();
+                    tip.add(tt("map.ground", "%s's ground", gname).withStyle(ChatFormatting.YELLOW)
+                            .getVisualOrderText());
+                    tip.addAll(font.split(tt("map.ground.tip", "%s, %s · %s blocks across%s · click: take me to its"
+                            + " middle", (int) dbl(gr, "x", 0), (int) dbl(gr, "z", 0), (int) dbl(gr, "r", 0) * 2,
+                            copy > 0 ? " · copy " + copy : ""), 240));
+                    spots.add(new Spot(gx - x, gy - top, 5, tip, () -> request("mapground", "giant", key)));
+                }
+            // the areas and spawn
+            for (JsonObject a : objects(t, "areas")) {
+                if (!str(a, "dim").equals(mapDim)) continue;
+                boolean safe = str(a, "kind").equals("safe");
+                int c = safe ? 0x2E7A2E : 0xB82818;
+                int ax = sx(dbl(a, "x", 0), x, w), ay = sy(dbl(a, "z", 0), y);
+                circle(g, ax, ay, (int) (dbl(a, "r", 0) / scale), c | 0x28000000, c | 0xC0000000);
+                List<FormattedCharSequence> tip = new ArrayList<>();
+                tip.add(Component.literal(str(a, "name")).withStyle(ChatFormatting.YELLOW).getVisualOrderText());
+                tip.add((safe ? tt("areas.safe", "Safe") : tt("areas.keepout", "No giants")).getVisualOrderText());
+                spots.add(new Spot(ax - x, ay - top, 4, tip, null));
+            }
+            if (over) {
+                JsonObject sp = t.get("spawn") instanceof JsonObject s ? s : new JsonObject();
+                int px = sx(dbl(sp, "x", 0), x, w), py = sy(dbl(sp, "z", 0), y);
+                int clear = (int) dbl(sp, "clear", 0);
+                if (clear > 0) circle(g, px, py, (int) (clear / scale), 0x20B82818, 0x90B82818);
+                g.drawString(font, "★", px - 3, py - 4, 0xFFC08A10, false);
+                List<FormattedCharSequence> tip = new ArrayList<>();
+                tip.add(tt("map.spawn", "The world's spawn").withStyle(ChatFormatting.YELLOW).getVisualOrderText());
+                if (clear > 0) tip.add(tt("map.spawn.clear", "No giants within %s blocks", clear).getVisualOrderText());
+                spots.add(new Spot(px - x, py - top, 4, tip, null));
+            }
+            // the players
+            for (JsonObject p : objects(t, "players")) {
+                if (!str(p, "dim").equals(mapDim)) continue;
+                int px = sx(dbl(p, "x", 0), x, w), py = sy(dbl(p, "z", 0), y);
+                g.fill(px - 2, py - 2, px + 3, py + 3, 0xFF202020);
+                g.fill(px - 1, py - 1, px + 2, py + 2, 0xFFFFFFFF);
+                spots.add(new Spot(px - x, py - top, 3, List.of(Component.literal(str(p, "name"))
+                        .withStyle(ChatFormatting.YELLOW).getVisualOrderText()), null));
+            }
+            // the giants
+            for (JsonObject gi : objects(t, "giants")) {
+                if (!str(gi, "dim").equals(mapDim)) continue;
+                String key = str(gi, "key"), state = str(gi, "state");
+                int gx = sx(dbl(gi, "x", 0), x, w), gy = sy(dbl(gi, "z", 0), y);
+                int edge = bool(gi, "fighting") ? 0xFFE03020 : bool(gi, "asleep") ? 0xFF2A5E9A : giantColour(key);
+                g.fill(gx - 7, gy - 7, gx + 7, gy + 7, edge);
+                icon(g, key, gx - 6, gy - 6, 12);
+                if (!state.equals("here")) g.fill(gx - 6, gy - 6, gx + 6, gy + 6, 0x90E4D2A2);
+                List<FormattedCharSequence> tip = new ArrayList<>();
+                tip.add(Component.literal(str(gi, "name")).withStyle(ChatFormatting.YELLOW).getVisualOrderText());
+                StringBuilder sb = new StringBuilder();
+                sb.append(Math.round(dbl(gi, "x", 0))).append(", ").append(Math.round(dbl(gi, "z", 0)));
+                if (gi.has("health"))
+                    sb.append(" · ").append(Math.round(dbl(gi, "health", 0))).append("/")
+                            .append(Math.round(dbl(gi, "max", 0)));
+                if (!str(gi, "mood").isEmpty()) sb.append(" · ").append(str(gi, "mood"));
+                if (bool(gi, "fighting")) sb.append(" · ").append(tr("live.fighting").getString());
+                if (bool(gi, "asleep")) sb.append(" · ").append(tr("live.asleep").getString());
+                if (!state.equals("here")) sb.append(" · ").append(tr("live.state." + state).getString());
+                if (!str(gi, "owner").isEmpty()) sb.append(" · ").append(tr("live.owner", str(gi, "owner")).getString());
+                tip.addAll(font.split(Component.literal(sb.toString()), 240));
+                tip.add(tt("map.giant.tip", "Click: take me to him").withStyle(ChatFormatting.GRAY)
+                        .getVisualOrderText());
+                String id = str(gi, "id");
+                spots.add(new Spot(gx - x, gy - top, 7, tip, () -> request("maptp", "giant", key, "id", id)));
+            }
+            g.disableScissor();
+            // a scale bar and north
+            int barPx = (int) Math.round(step / scale);
+            int by = y + h - 8;
+            g.fill(x + 4, by, x + 4 + barPx, by + 1, 0xFF3A2814);
+            g.fill(x + 4, by - 2, x + 5, by + 2, 0xFF3A2814);
+            g.fill(x + 3 + barPx, by - 2, x + 4 + barPx, by + 2, 0xFF3A2814);
+            g.drawString(font, tt("map.blocks", "%s blocks", (int) step), x + 8 + barPx, by - 4, GREY, false);
+            g.drawString(font, "N ↑", x + w - 22, y + 4, HEAD, false);
+            // what the mouse is over
+            Spot best = null;
+            double bd = Double.MAX_VALUE;
+            for (Spot s : spots) {
+                double d = Math.hypot(mx - (x + s.x()), my - (top + s.y()));
+                if (d <= s.r() + 1 && d < bd) {
+                    bd = d;
+                    best = s;
+                }
+            }
+            if (best != null && my >= ly0 && my < ly1) setTooltipForNextRenderPass(best.tip());
+        }
+
+        @Override
+        boolean click(double mx, double my, int top) {
+            if (mx < drawnX || mx >= drawnX + drawnW) return false;
+            Spot best = null;
+            double bd = Double.MAX_VALUE;
+            for (Spot s : spots) {
+                if (s.go() == null) continue;
+                double d = Math.hypot(mx - (drawnX + s.x()), my - (top + s.y()));
+                if (d <= s.r() + 1 && d < bd) {
+                    bd = d;
+                    best = s;
+                }
+            }
+            if (best != null) {
+                best.go().run();
+                return true;
+            }
+            // anywhere else: the map moves there
+            mapScale = scale;
+            mapCx = cx + (mx - (drawnX + drawnW / 2.0)) * scale;
+            mapCz = cz + (my - (top + h / 2.0)) * scale;
+            double sc = scroll;
+            build();
+            scroll = sc;
+            place();
+            return true;
+        }
+    }
+
+    // stats
+
+    private void toolsStats(JsonObject t) {
+        long since = lng(t, "statsSince");
+        rows.add(new Note(tt("stats.note", "Counted in this world%s. What each kind costs the server is the time his"
+                + " own entities (him, his parts, his creatures) take to tick, each tick, over the last ten seconds.",
+                since > 0 ? " since " + when(since) : ""), GREY));
+        List<JsonObject> stats = objects(t, "stats");
+        double most = 0.05;
+        for (JsonObject s : stats) most = Math.max(most, dbl(s, "ms", 0));
+        double top = most;
+        for (JsonObject s : stats) {
+            String key = str(s, "key");
+            int here = (int) dbl(s, "here", 0), away = (int) dbl(s, "away", 0);
+            String owners = str(s, "owners");
+            List<FormattedCharSequence> l2 = font.split(tt("stats.line", "Fell %s (%s by players) · killed %s players ·"
+                    + " %s damage to players · %s blocks broken%s", (int) dbl(s, "deaths", 0), (int) dbl(s, "slain", 0),
+                    (int) dbl(s, "killed", 0), (long) dbl(s, "damage", 0), (long) dbl(s, "blocks", 0),
+                    owners.isEmpty() ? "" : " · owned by " + owners), lw - 30);
+            double ms = dbl(s, "ms", 0);
+            rows.add(new Block(16 + l2.size() * 10 + 6, (g, x, y, w, mx, my) -> {
+                AdminStyle.card(g, x - 2, y + 1, w + 2, 14 + l2.size() * 10 + 3, false);
+                icon(g, key, x + 2, y + 3, 18);
+                int nx = g.drawString(font, str(s, "name"), x + 26, y + 4, KEY, false) + 6;
+                String standing = !bool(s, "listed") ? tt("stats.unlisted", "not listed").getString()
+                        : tt("stats.standing", "%s standing", here).getString()
+                                + (away > 0 ? " · " + tt("stats.away", "%s away", away).getString() : "");
+                g.drawString(font, standing, nx, y + 4, GREY, false);
+                int barW = Mth.clamp(w / 5, 40, 90), bx = x + w - barW - 4;
+                String mt = String.format(Locale.ROOT, "%.2f ms", ms);
+                g.drawString(font, mt, bx - font.width(mt) - 4, y + 4, ms > 2 ? WARN : TEXT, false);
+                g.fill(bx, y + 6, bx + barW, y + 11, 0x40503010);
+                g.fill(bx, y + 6, bx + (int) Math.round(barW * Math.min(1, ms / top)), y + 11,
+                        ms > 2 ? 0xFFE04040 : ms > 0.5 ? 0xFFE0C050 : 0xFF60C060);
+                for (int i = 0; i < l2.size(); i++) g.drawString(font, l2.get(i), x + 26, y + 15 + i * 10, TEXT, false);
+            }));
+        }
+        rows.add(new LineRow(tt("stats.server", "The whole server: %s ms per tick (50 is the most it has)",
+                dbl(t, "tickMs", 0)), TEXT, Component.empty(), List.<Object[]>of(new Object[] {tt("stats.reset",
+                "Clear the counts"), (Runnable) () -> confirm(tt("stats.reset.title", "Clear the giants' counts?"),
+                tt("stats.reset.body", "Falls, players killed, damage and blocks start again from now."),
+                tt("stats.reset", "Clear the counts"), () -> request("statsreset"))})));
+    }
+
+    // alerts
+
+    private void toolsAlerts(JsonObject t) {
+        toolSettings("alerts/which", tt("alerts.which", "Which alerts"), tt("alerts.which.note", "Told in chat to the"
+                + " admins online (not to the one it is about), with a link to go there. Quiet mode keeps them in"
+                + " the book only."), "t_alerts", "all.alertFights", "all.alertRadius", "all.alertGrief",
+                "all.alertGriefBlocks", "all.alertDeaths", "all.alertAreas");
+        List<JsonObject> alerts = objects(t, "alerts");
+        rows.add(new Head(tt("alerts.list", "Alerts (%s)", alerts.size()), null, null).pic("t_alerts"));
+        if (alerts.isEmpty()) {
+            rows.add(new Note(tt("alerts.none", "Nothing yet."), GREY));
+            return;
+        }
+        rows.add(new LineRow(tt("alerts.newest", "Newest first"), GREY, Component.empty(), List.<Object[]>of(
+                new Object[] {tt("alerts.clear", "Clear"), (Runnable) () -> request("alertsclear")})));
+        for (JsonObject a : alerts) {
+            String giant = str(a, "giant"), id = str(a, "id"), kind = str(a, "kind");
+            int colour = kind.equals("death") || kind.equals("fight") ? WARN : kind.equals("grief") ? ORANGE : KEY;
+            List<Object[]> bs = new ArrayList<>();
+            if (!giant.isEmpty() && !id.isEmpty())
+                bs.add(new Object[] {tt("alerts.go", "Go there"), (Runnable) () -> request("maptp", "giant", giant,
+                        "id", id), tt("alerts.go.tip", "Takes you to him, if he's still there")});
+            String where = str(a, "dim").isEmpty() ? "" : " · " + (int) dbl(a, "x", 0) + ", " + (int) dbl(a, "z", 0)
+                    + " " + dimName(str(a, "dim"));
+            rows.add(new LineRow(Component.literal(str(a, "text")), colour,
+                    Component.literal(when(lng(a, "time")) + where), bs));
+        }
+    }
+
+    // respawn timers
+
+    private static final long[] WAITS = {1200 * 5, 24000, 72000, 120000, 168000, 336000, 720000};
+
+    private static String waitWords(long ticks) {
+        if (ticks >= 24000) {
+            long d = Math.round(ticks / 24000.0);
+            return tt(d == 1 ? "wait.day" : "wait.days", d == 1 ? "about %s day" : "about %s days", d).getString();
+        }
+        long m = Math.max(1, Math.round(ticks / 1200.0));
+        return tt(m == 1 ? "wait.minute" : "wait.minutes", m == 1 ? "about %s minute" : "about %s minutes", m)
+                .getString();
+    }
+
+    private void toolsRespawns(JsonObject t) {
+        rows.add(new Note(tt("resp.note", "When each giant's own one (the one that comes on his own) comes back after"
+                + " he falls or is taken away. Bring him back now, or set how long until he comes: he still comes"
+                + " his own way, to his own spot, and never past Most at once. A game day is 20 minutes."), GREY));
+        for (JsonObject r : objects(t, "respawns")) {
+            String key = str(r, "key"), state = str(r, "state");
+            boolean speaks = bool(r, "speaks");
+            long ticks = lng(r, "ticks");
+            Component sub = !speaks ? tt("resp.old", "This version doesn't say.")
+                    : switch (state) {
+                        case "standing" -> tt("resp.standing", "Out there now%s", r.has("x") ? " (" + (int) dbl(r, "x",
+                                0) + ", " + (int) dbl(r, "z", 0) + ")" : "");
+                        case "due" -> ticks <= 100 ? tt("resp.soon", "Comes back within a few seconds")
+                                : tt("resp.due", "Comes back in %s", waitWords(ticks));
+                        case "gone" -> tt("resp.gone", "Fallen for good (Comes back after he falls is off)");
+                        case "off" -> tt("resp.off", "Doesn't come on his own (Comes on his own is off)");
+                        default -> tt("resp.waiting", "Not counting yet (nobody has been in the world)");
+                    };
+            boolean can = speaks && (state.equals("due") || state.equals("gone") || state.equals("waiting"));
+            int colour = state.equals("standing") ? GOOD : state.equals("due") ? KEY : DIM;
+            String name = str(r, "name");
+            rows.add(new LineRow(Component.literal(name), colour, sub, List.<Object[]>of(
+                    new Object[] {tt("resp.now", "Bring back now"), (Runnable) () -> request("respawn", "giant", key,
+                            "ticks", 0), tt("resp.now.tip", "He comes within a few seconds, once someone is in the"
+                                    + " world"), can},
+                    new Object[] {tt("resp.set", "Set the wait…"), (Runnable) () -> {
+                        List<JsonObject> opts = new ArrayList<>();
+                        for (long w : WAITS) {
+                            JsonObject o = new JsonObject();
+                            o.addProperty("id", String.valueOf(w));
+                            o.addProperty("name", waitWords(w));
+                            opts.add(o);
+                        }
+                        modal = new PickPlayer(tt("resp.set.title", "When does the %s come back?", name),
+                                tt("resp.set.body", "From now. He comes his own way when the time is up."), opts,
+                                o -> request("respawn", "giant", key, "ticks", Long.parseLong(str(o, "id"))));
+                        place();
+                    }, tt("resp.set.tip", "How long until he comes back, from now"), can})));
+        }
+    }
+
+    // the world's profile, the modpack
+
+    private void toolsServer(JsonObject t) {
+        JsonObject p = t.get("profile") instanceof JsonObject o ? o : new JsonObject();
+        boolean exists = bool(p, "exists"), changedFile = bool(p, "changed");
+        long at = lng(p, "applied");
+        rows.add(new Head(tt("profile", "This world's profile"), tt("profile.note", "A file of this world's settings"
+                + " in the server's config folder. When the world starts and the file has changed since, the world"
+                + " takes it (like a preset, a snapshot first). Copy or edit it to set this world up again."), null)
+                .pic("t_server"));
+        rows.add(new Card(Component.literal(str(p, "file")), "t_server",
+                !exists ? tt("profile.none", "No file yet. Save writes this world's settings there.")
+                        : changedFile ? tt("profile.changed", "It has changed since the world last took it: it goes in"
+                                + " when the world next starts, or press Put it in now.")
+                        : tt("profile.same", "The world has what the file says%s.", at > 0 ? " (since " + when(at) + ")"
+                                : ""),
+                exists ? KEY : GREY, List.<Object[]>of(
+                        new Object[] {tt("profile.save", "Save this world's settings"), (Runnable) () -> {
+                            if (exists) confirm(tt("profile.save.title", "Write over the profile?"), tt(
+                                    "profile.save.body", "The file gets this world's settings as they are now."),
+                                    tt("profile.save", "Save this world's settings"), () -> request("profilesave"));
+                            else request("profilesave");
+                        }},
+                        new Object[] {tt("profile.apply", "Put it in now"), (Runnable) () -> confirm(
+                                tt("profile.apply.title", "Put the profile in now?"), tt("profile.apply.body",
+                                        "This world's settings become what the file says (a snapshot first)."),
+                                tt("profile.apply", "Put it in now"), () -> request("profileapply")), null, exists},
+                        new Object[] {tt("profile.delete", "Delete the file"), (Runnable) () -> confirm(
+                                tt("profile.delete.title", "Delete the profile file?"), tt("profile.delete.body",
+                                        "The world keeps the settings it has."), tt("profile.delete",
+                                        "Delete the file"), () -> request("profiledelete")), null, exists})));
+        JsonObject pack = t.get("pack") instanceof JsonObject o ? o : new JsonObject();
+        rows.add(new Head(tt("pack", "Modpack"), tt("pack.note", "A modpack sets the preset its worlds play with in"
+                + " %s: {\"name\":..., \"preset\":..., \"lock\":true|false}. New worlds start with it; locked, it stays.",
+                str(pack, "file")), null).pic("presets"));
+        rows.add(new Card(bool(pack, "on") ? Component.literal(str(pack, "name")) : tt("pack.none", "No modpack"),
+                "presets", !bool(pack, "on") ? tt("pack.none.body", "Every world picks its own preset.")
+                        : tt(bool(pack, "lock") ? "pack.locked" : "pack.open", bool(pack, "lock")
+                                ? "Plays with the %s preset and keeps it: other presets, imports, snapshots, schedules"
+                                        + " and votes can't be applied. Single settings can still change."
+                                : "Plays with the %s preset: new worlds start with it, and admins may change it.",
+                                str(pack, "presetName")),
+                bool(pack, "lock") ? WARN : bool(pack, "on") ? KEY : GREY, List.of()));
+    }
+
+    /** Home's line about the server tools: what is on now (paused, an event, a schedule, quiet, a modpack) */
+    private void toolsHomeLine(JsonObject h) {
+        JsonObject t = h.get("tools") instanceof JsonObject o ? o : null;
+        if (t == null) return;
+        List<String> on = new ArrayList<>();
+        if (bool(t, "paused")) on.add(tt("home.paused", "Paused").getString());
+        if (t.get("event") instanceof JsonObject e) on.add(tt("home.event", "Event: %s", str(e, "name")).getString());
+        if (t.get("schedule") instanceof JsonObject s)
+            on.add(tt("home.schedule", "Schedule: %s", str(s, "name")).getString());
+        if (bool(t, "quiet")) on.add(tt("home.quiet", "Quiet mode").getString());
+        if (t.get("pack") instanceof JsonObject p && bool(p, "on"))
+            on.add(tt("home.pack", "Modpack: %s (%s)", str(p, "name"), str(p, "presetName")).getString());
+        if (on.isEmpty()) return;
+        rows.add(new LineRow(tt("home.now", "Now: %s", String.join(" · ", on)), bool(t, "paused") ? WARN : KEY,
+                Component.empty(), List.<Object[]>of(new Object[] {tt("name", "Server tools"),
+                    (Runnable) () -> go(TOOLS)})));
     }
 
     // the walkthrough and questions

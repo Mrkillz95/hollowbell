@@ -21,7 +21,7 @@ public final class CreationClient {
 
     /** this Create World screen's draft */
     public static AdminDraft draft(Screen createWorld) {
-        return DRAFTS.computeIfAbsent(createWorld, s -> new AdminDraft());
+        return DRAFTS.computeIfAbsent(createWorld, s -> net.jj.giants.tools.PackMode.newDraft());
     }
 
     /** "Giants…", or "Giants: Far Frontier…" once something is chosen */

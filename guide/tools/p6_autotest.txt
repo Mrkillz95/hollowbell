@@ -1,0 +1,160 @@
+# Part 6 pictures (ADMIN_BRIDGE.md §22): the admin book's Server tools page, every tab, at GUI scale 2 then 3, and
+# Home's "Now:" line. With the eight giants loaded:
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+# a few giants about, small, calm
+cmd wreckback summon calm 0.04
+cmd tp @s ~40 ~ ~
+cmd cerberus summon calm 0.04
+cmd tp @s ~-80 ~ ~30
+cmd swarmforge summon calm 0.04
+cmd tp @s ~40 ~ ~-30
+wait 40
+# two areas a little way off, a rule or two
+cmd tp @s 400 ~ 150
+cmd giants admin area add keepout 120 The village
+cmd tp @s -350 ~ -250
+cmd giants admin area add safe 80 Market
+cmd tp @s 0 ~ 0
+cmd giants admin set all dimEnd nogiants
+cmd giants admin set all alertRadius 512
+# schedules, an event, a respawn wait, a profile, a few counts
+cmd giants admin schedule add titans weekends
+cmd giants admin schedule add night_terrors fullmoon
+cmd giants admin schedule add gentle_giants days mon,wed
+cmd giants admin schedule off 3
+cmd giants admin event war 30
+cmd giants admin respawn pitchgut 3d
+cmd giants admin respawn gloamwick 30m
+cmd giants admin profile save
+wait 300
+cmd giants admin pause on
+wait 60
+# Home: the "Now:" line
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p6_s2_home
+# every tab
+adminbook tools/general/t_now
+wait 60
+mouse 2 2
+wait 25
+shot p6_s2_now
+adminbook tools/general/t_now 300
+wait 40
+mouse 2 2
+wait 25
+shot p6_s2_now_b
+adminbook tools/general/t_schedules
+wait 50
+mouse 2 2
+wait 25
+shot p6_s2_schedules
+adminbook tools/general/t_schedules 300
+wait 40
+mouse 2 2
+wait 25
+shot p6_s2_schedules_b
+adminbook tools/general/t_areas
+wait 50
+mouse 2 2
+wait 25
+shot p6_s2_areas
+adminbook tools/general/t_areas 400
+wait 40
+mouse 2 2
+wait 25
+shot p6_s2_areas_b
+adminbook tools/general/t_map
+wait 60
+mouse 2 2
+wait 25
+shot p6_s2_map
+adminbook tools/general/t_stats
+wait 50
+mouse 2 2
+wait 25
+shot p6_s2_stats
+adminbook tools/general/t_alerts
+wait 50
+mouse 2 2
+wait 25
+shot p6_s2_alerts
+adminbook tools/general/t_alerts 400
+wait 40
+mouse 2 2
+wait 25
+shot p6_s2_alerts_b
+adminbook tools/general/t_respawns
+wait 50
+mouse 2 2
+wait 25
+shot p6_s2_respawns
+adminbook tools/general/t_server
+wait 50
+mouse 2 2
+wait 25
+shot p6_s2_server
+close
+# GUI scale 3
+guiscale 3
+wait 20
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p6_s3_home
+adminbook tools/general/t_now
+wait 60
+mouse 2 2
+wait 25
+shot p6_s3_now
+adminbook tools/general/t_schedules
+wait 50
+mouse 2 2
+wait 25
+shot p6_s3_schedules
+adminbook tools/general/t_areas
+wait 50
+mouse 2 2
+wait 25
+shot p6_s3_areas
+adminbook tools/general/t_map
+wait 60
+mouse 2 2
+wait 25
+shot p6_s3_map
+adminbook tools/general/t_stats
+wait 50
+mouse 2 2
+wait 25
+shot p6_s3_stats
+adminbook tools/general/t_alerts
+wait 50
+mouse 2 2
+wait 25
+shot p6_s3_alerts
+adminbook tools/general/t_respawns
+wait 50
+mouse 2 2
+wait 25
+shot p6_s3_respawns
+adminbook tools/general/t_server
+wait 50
+mouse 2 2
+wait 25
+shot p6_s3_server
+close
+cmd giants admin pause off
+cmd giants admin event stop
+quit

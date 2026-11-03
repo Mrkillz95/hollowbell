@@ -159,7 +159,7 @@ public class PresetGameTests implements FabricGameTest {
                     : AdminTransfer.SUGGESTED.contains(id) ? group.equals("suggested") : group.equals("all"),
                     id + " group " + group);
             boolean retune = !List.of("classic", "close_quarters", "far_frontier").contains(id);
-            h.assertTrue(!retune || b.replace() && b.keep().equals(List.of("worldgen", "players")),
+            h.assertTrue(!retune || b.replace() && b.keep().equals(List.of("worldgen", "players", "server")),
                     id + ": a re-tune preset replaces and keeps the grounds");
             // (by name too, as the command takes it)
             h.assertTrue(AdminTransfer.builtInId(b.name()) != null || id.equals("builder_showcase"), id + " by name");
@@ -241,7 +241,7 @@ public class PresetGameTests implements FabricGameTest {
         // the field survives writing and reading
         AdminTransfer.Bundle b = AdminTransfer.read(AdminTransfer.write(AdminTransfer.preset("nomads")));
         AdminServer.useGiants(null);
-        h.assertTrue(b.keep().equals(List.of("worldgen", "players")) && b.replace(), "keep written and read");
+        h.assertTrue(b.keep().equals(List.of("worldgen", "players", "server")) && b.replace(), "keep written and read");
         h.succeed();
     }
 

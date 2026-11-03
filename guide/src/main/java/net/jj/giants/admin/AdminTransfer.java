@@ -87,7 +87,7 @@ public final class AdminTransfer {
             g.append(g.length() == 0 ? "" : ",").append('"').append(k).append("\":{").append(v).append('}');
         }
         return "{\"admin\":1,\"preset\":\"" + id + "\",\"name\":\"" + name + "\",\"about\":\"" + about
-                + "\",\"replace\":true,\"keep\":[\"worldgen\",\"players\"],\"all\":{" + myGiant(id, all)
+                + "\",\"replace\":true,\"keep\":[\"worldgen\",\"players\",\"server\"],\"all\":{" + myGiant(id, all)
                 + "},\"giants\":{" + g + "}}";
     }
 
@@ -123,7 +123,7 @@ public final class AdminTransfer {
         BUILT_IN.put("classic", "{\"admin\":1,\"preset\":\"classic\",\"name\":\"Classic\",\"about\":\"Every giant as"
                 + " the server's config files have him: every giant setting this world changed goes back (the"
                 + " player settings stay).\","
-                + "\"replace\":true,\"keep\":[\"players\"],\"all\":{\"all.myGiant\":false}}");
+                + "\"replace\":true,\"keep\":[\"players\",\"server\"],\"all\":{\"all.myGiant\":false}}");
         // Part 5: My Giant (ADMIN_BRIDGE.md 20.7)
         BUILT_IN.put("my_giant", retune("my_giant", "My Giant",
                 "Each player picks a giant the first time they join: they are taken to his ground with their own book"

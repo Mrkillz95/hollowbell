@@ -185,6 +185,9 @@ public final class AdminDraft implements AdminView {
         AdminTransfer.Plan p = held;
         held = null;
         if (p == null) return AdminServer.Result.fail("There's nothing to apply. Pick a preset first.");
+        // (Part 6) a modpack that keeps its preset
+        String pack = net.jj.giants.tools.PackMode.refusal(p.bundle());
+        if (pack != null) return AdminServer.Result.fail(pack);
         for (AdminTransfer.Step s : p.changes()) {
             if (s.now() == null) w.remove(s.giant(), s.id());
             else w.put(s.giant(), s.id(), s.now());

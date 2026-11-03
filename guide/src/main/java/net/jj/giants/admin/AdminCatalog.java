@@ -120,14 +120,80 @@ public final class AdminCatalog {
             flag("all.findersCraftable", true, "Finders craftable",
                     "Off: no giant's finder can be crafted (kits, loot and commands still give them)."));
 
-    /** a player setting (not a multiplier) */
+    // (Part 6, ADMIN_BRIDGE.md §22) the server tools' settings: pause, quiet mode, the dimension and spawn rules and
+    // the alerts; kept for each world like the player settings, shown on the Server tools page
+
+    public static final String SERVER = "server";
+
+    private static AdminSetting tool(String id, boolean on, String name, String what) {
+        JsonPrimitive v = new JsonPrimitive(on);
+        return new AdminSetting(ALL, id, SERVER, Type.BOOL, 0, 1, 1, List.of(), v, v, v, false, AdminSetting.LIVE,
+                name, what, "admin.jj_giants." + id, "");
+    }
+
+    private static AdminSetting tool(String id, int def, int min, int max, int step, String name, String what) {
+        JsonPrimitive v = new JsonPrimitive(def);
+        return new AdminSetting(ALL, id, SERVER, Type.INT, min, max, step, List.of(), v, v, v, false,
+                AdminSetting.LIVE, name, what, "admin.jj_giants." + id, "");
+    }
+
+    private static AdminSetting toolChoice(String id, List<String> options, String name, String what) {
+        JsonPrimitive v = new JsonPrimitive(options.get(0));
+        return new AdminSetting(ALL, id, SERVER, Type.CHOICE, 0, options.size() - 1, 1, options, v, v, v, false,
+                AdminSetting.LIVE, name, what, "admin.jj_giants." + id, "");
+    }
+
+    private static final String DIM_WHAT = "allowed: as always. nogiants: any giant in it is taken away (the world's own"
+            + " one still comes back on his timer, so turn Comes on his own off too if he lives there).";
+
+    private static final List<AdminSetting> SERVER_SETTINGS = List.of(
+            tool("all.paused", false, "Pause all giants",
+                    "Every giant in loaded land stops where he is: no moves, no walking, no fights. One out of the world"
+                            + " stops as soon as he comes back. Off: they all carry on."),
+            tool("all.quiet", false, "Quiet mode",
+                    "No giant chat: meeting news, move notices and backing-down news are off, events and schedules"
+                            + " start and end without telling players, and admins get no chat lines (the book keeps"
+                            + " them)."),
+            tool("all.spawnClear", 0, 0, 2000, 16, "No giants near spawn",
+                    "Giants that come this close to the world's spawn are sent home, and taken away if they're"
+                            + " still there a minute later. 0 = off."),
+            toolChoice("all.dimOverworld", List.of("allowed", "nogiants"), "Giants in the Overworld", DIM_WHAT),
+            toolChoice("all.dimNether", List.of("allowed", "nogiants"), "Giants in the Nether", DIM_WHAT),
+            toolChoice("all.dimEnd", List.of("allowed", "nogiants"), "Giants in the End", DIM_WHAT),
+            tool("all.alertFights", true, "Alert: fights near spawn",
+                    "Admins are told when a giant is fighting near the world's spawn (not the ones beside him)."),
+            tool("all.alertRadius", 256, 32, 4000, 16, "Near spawn means",
+                    "How close to the world's spawn a fight has to be for its alert, in blocks."),
+            tool("all.alertGrief", true, "Alert: heavy griefing",
+                    "Admins are told when one kind of giant breaks a lot of blocks in a minute."),
+            tool("all.alertGriefBlocks", 200, 20, 5000, 10, "Griefing alert at",
+                    "How many blocks one kind of giant breaks in a minute before admins are told."),
+            tool("all.alertDeaths", true, "Alert: players killed",
+                    "Admins are told when a giant kills a player (not the player who died)."),
+            tool("all.alertAreas", true, "Alert: kept out",
+                    "Admins are told when a giant is sent out of an area or a dimension he may not be in."));
+
+    /** a server tools setting (Part 6) */
+    public static boolean server(AdminSetting s) {
+        return s.cat().equals(SERVER);
+    }
+
+    public static List<AdminSetting> servers() {
+        return SERVER_SETTINGS;
+    }
+
+    /**
+     * Not a multiplier: a player setting, or (Part 6) a server tools one. Both are switches and choices kept only for
+     * each world, never shown with an "x", and neither makes Home's preset read ", changed".
+     */
     public static boolean player(AdminSetting s) {
-        return s.cat().equals(PLAYERS);
+        return s.cat().equals(PLAYERS) || s.cat().equals(SERVER);
     }
 
     public static boolean player(String id) {
         String full = id.startsWith("all.") ? id : "all." + id;
         for (AdminSetting s : PLAYER_SETTINGS) if (s.id().equals(full)) return true;
+        for (AdminSetting s : SERVER_SETTINGS) if (s.id().equals(full)) return true;
         return false;
     }
 
@@ -149,6 +215,7 @@ public final class AdminCatalog {
     public static List<AdminSetting> shared() {
         List<AdminSetting> out = new ArrayList<>(SHARED);
         out.addAll(players());
+        out.addAll(SERVER_SETTINGS);
         return out;
     }
 

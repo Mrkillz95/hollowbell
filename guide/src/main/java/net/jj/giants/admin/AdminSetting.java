@@ -47,7 +47,7 @@ public record AdminSetting(
 
     public static final List<String> CATEGORIES = List.of(
             "spawning", "worldgen", "stats", "behaviour", "moves", "healing", "taming", "loot", "players", "effects",
-            "load");
+            "load", "server");
 
     public static final String LIVE = "live", NEW_SPAWNS = "newSpawns", NEW_LAND = "newLand",
             WORLD_CREATION = "worldCreation", RESTART = "restart";
