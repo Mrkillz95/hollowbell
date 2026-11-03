@@ -33,7 +33,8 @@ public final class Events {
                 "Every giant seeks out the others and fights every kind he meets; the sleeping ones wake.",
                 "Giant war! The giants are seeking each other out to fight.", "The giant war is over.", 30));
         KINDS.put("siege", new Kind("siege", "Siege on spawn",
-                "Every giant marches on the world's spawn and hunts every player he sees there.",
+                "Every giant marches on the world's spawn, hunts every player he sees there and breaks blocks on the"
+                        + " way (griefing on while it lasts).",
                 "Siege! The giants are marching on spawn.", "The siege on spawn is over.", 20));
         KINDS.put("bossrush", new Kind("bossrush", "Boss Rush hour",
                 "Fallen giants come back at once, with less health, harder hits, shorter waits and three times the"
@@ -48,7 +49,8 @@ public final class Events {
         String every = switch (kind) {
             case "war" -> "\"seekGiants\":true,\"fightGiants\":true,\"meetings\":true,\"meetCooldown\":1,"
                     + "\"meetGiants\":\"fight\"";
-            case "siege" -> "\"temper\":\"hunter\"";
+            // (JJ, Nov 3) a siege breaks things: griefing on while it lasts, put back after like the rest
+            case "siege" -> "\"temper\":\"hunter\",\"griefing\":true";
             default -> "\"worldRespawnDays\":0,\"ownedRespawnDays\":0,\"lootMultiplier\":3";
         };
         String all = kind.equals("bossrush") ? "\"all.health\":0.6,\"all.damage\":1.25,\"all.cooldowns\":0.75" : "";

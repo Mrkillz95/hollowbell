@@ -178,6 +178,32 @@ public class ToolsGameTests implements FabricGameTest {
         done(h);
     }
 
+    // (JJ, Nov 3) the alerts start off in a single player game, on for a dedicated server; admins can change them
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "tools_alertsdefault")
+    public void alertsStartOffInSinglePlayerOnForADedicatedServer(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        try {
+            h.assertFalse(AdminCatalog.singlePlayer, "the test server counts as a dedicated one");
+            for (String id : AdminCatalog.ALERTS)
+                h.assertTrue(Tools.on(s, id), "on for a dedicated server: " + id);
+            AdminCatalog.singlePlayer = true;
+            for (String id : AdminCatalog.ALERTS) {
+                h.assertFalse(Tools.on(s, id), "off in single player: " + id);
+                h.assertFalse(AdminCatalog.shared(id).def().getAsBoolean(), "its default says so: " + id);
+            }
+            h.assertTrue(Tools.num(s, "alertRadius") == 256, "the other alert settings as they were");
+            set(h, s, "alertDeaths", "on");
+            h.assertTrue(Tools.on(s, "alertDeaths"), "an admin can still turn one on");
+            AdminServer.reset(s, "Tester", "all", "alertDeaths");
+            h.assertFalse(Tools.on(s, "alertDeaths"), "reset: off again in single player");
+        } finally {
+            AdminCatalog.singlePlayer = false;
+        }
+        h.assertTrue(Tools.on(s, "alertDeaths"), "dedicated: on");
+        done(h);
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "tools_quiet")
     public void quietModeTurnsTheGiantsChatOff(GameTestHelper h) {
         if (PlayersGameTests.realGiants(h)) return;
@@ -222,7 +248,10 @@ public class ToolsGameTests implements FabricGameTest {
         h.assertTrue(GiantsBridge.asked.contains("goto " + sp.getX() + " " + sp.getZ()), "to spawn: "
                 + GiantsBridge.asked);
         h.assertTrue("\"hunter\"".equals(GiantsBridge.values.get("temper").toString()), "hunting");
+        // (JJ, Nov 3) griefing on for the siege, back off after it
+        h.assertTrue(GiantsBridge.values.get("griefing").getAsBoolean(), "griefing on: " + GiantsBridge.values);
         Events.stop(s, "Tester");
+        h.assertTrue(!AdminWorld.get(s).values("faketools").containsKey("griefing"), "griefing put back");
         // logged with undo; Home's preset doesn't change for them
         boolean started = false;
         for (AdminWorld.Change c : AdminWorld.get(s).log())

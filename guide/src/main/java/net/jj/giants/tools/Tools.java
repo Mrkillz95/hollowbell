@@ -37,6 +37,10 @@ public final class Tools {
         ServerTickEvents.END_SERVER_TICK.register(Tools::tick);
         // (after the settings sync: the profile and the modpack's preset are this world's own values)
         ServerLifecycleEvents.SERVER_STARTING.register(s -> PackMode.load());
+        // (JJ, Nov 3) the alerts start off in a single player game, on for a dedicated server (the game tests' server
+        // counts as a dedicated one)
+        ServerLifecycleEvents.SERVER_STARTING.register(s -> net.jj.giants.admin.AdminCatalog.singlePlayer =
+                !s.isDedicatedServer() && !(s instanceof net.minecraft.gametest.framework.GameTestServer));
         ServerLifecycleEvents.SERVER_STARTED.register(s -> {
             PackMode.onStart(s);
             Profiles.onStart(s);

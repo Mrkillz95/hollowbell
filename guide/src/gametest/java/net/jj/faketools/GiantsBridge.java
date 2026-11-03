@@ -67,6 +67,7 @@ public final class GiantsBridge {
                         "Minutes between meetings"));
                 out.add(setting("temper", "behaviour", "choice", "\"options\":[\"peaceful\",\"normal\",\"hunter\"],",
                         "\"normal\"", "Temper"));
+                out.add(setting("griefing", "behaviour", "bool", "", "false", "Breaks blocks"));
                 out.add(setting("lootMultiplier", "loot", "float", "\"min\":0,\"max\":10,\"step\":0.25,", "1",
                         "Loot"));
             }

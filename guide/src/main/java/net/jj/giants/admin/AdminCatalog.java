@@ -143,6 +143,8 @@ public final class AdminCatalog {
                 AdminSetting.LIVE, name, what, "admin.jj_giants." + id, "");
     }
 
+    private static final String SP_OFF = " Off to start with in a single player game.";
+
     private static final String DIM_WHAT = "allowed: as always. nogiants: any giant in it is taken away (the world's own"
             + " one still comes back on his timer, so turn Comes on his own off too if he lives there).";
 
@@ -161,25 +163,46 @@ public final class AdminCatalog {
             toolChoice("all.dimNether", List.of("allowed", "nogiants"), "Giants in the Nether", DIM_WHAT),
             toolChoice("all.dimEnd", List.of("allowed", "nogiants"), "Giants in the End", DIM_WHAT),
             tool("all.alertFights", true, "Alert: fights near spawn",
-                    "Admins are told when a giant is fighting near the world's spawn (not the ones beside him)."),
+                    "Admins are told when a giant is fighting near the world's spawn (not the ones beside him)."
+                            + SP_OFF),
             tool("all.alertRadius", 256, 32, 4000, 16, "Near spawn means",
                     "How close to the world's spawn a fight has to be for its alert, in blocks."),
             tool("all.alertGrief", true, "Alert: heavy griefing",
-                    "Admins are told when one kind of giant breaks a lot of blocks in a minute."),
+                    "Admins are told when one kind of giant breaks a lot of blocks in a minute."
+                            + SP_OFF),
             tool("all.alertGriefBlocks", 200, 20, 5000, 10, "Griefing alert at",
                     "How many blocks one kind of giant breaks in a minute before admins are told."),
             tool("all.alertDeaths", true, "Alert: players killed",
-                    "Admins are told when a giant kills a player (not the player who died)."),
+                    "Admins are told when a giant kills a player (not the player who died)."
+                            + SP_OFF),
             tool("all.alertAreas", true, "Alert: kept out",
-                    "Admins are told when a giant is sent out of an area or a dimension he may not be in."));
+                    "Admins are told when a giant is sent out of an area or a dimension he may not be in."
+                            + SP_OFF));
 
     /** a server tools setting (Part 6) */
     public static boolean server(AdminSetting s) {
         return s.cat().equals(SERVER);
     }
 
+    /**
+     * (JJ, Nov 3) the admin alerts start off in a single player game (the game's own server) and on for a dedicated
+     * server; admins can change them either way. Set when a server starts (Tools).
+     */
+    public static volatile boolean singlePlayer;
+
+    /** the alert switches whose default is off in a single player game */
+    public static final List<String> ALERTS = List.of("all.alertFights", "all.alertGrief", "all.alertDeaths",
+            "all.alertAreas");
+
     public static List<AdminSetting> servers() {
-        return SERVER_SETTINGS;
+        if (!singlePlayer) return SERVER_SETTINGS;
+        List<AdminSetting> out = new ArrayList<>();
+        JsonPrimitive off = new JsonPrimitive(false);
+        for (AdminSetting s : SERVER_SETTINGS)
+            out.add(!ALERTS.contains(s.id()) ? s : new AdminSetting(s.giant(), s.id(), s.cat(), s.type(), s.min(),
+                    s.max(), s.step(), s.options(), off, off, off, false, s.when(), s.name(), s.what(), s.key(),
+                    s.group()));
+        return out;
     }
 
     /**
@@ -215,7 +238,7 @@ public final class AdminCatalog {
     public static List<AdminSetting> shared() {
         List<AdminSetting> out = new ArrayList<>(SHARED);
         out.addAll(players());
-        out.addAll(SERVER_SETTINGS);
+        out.addAll(servers());
         return out;
     }
 
