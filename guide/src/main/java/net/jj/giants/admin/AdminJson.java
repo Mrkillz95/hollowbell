@@ -147,8 +147,26 @@ public final class AdminJson {
         if (value == null) value = def;
         if (jar == null) jar = def;
         boolean set = o.get("set") instanceof JsonPrimitive p && p.isBoolean() && p.getAsBoolean();
+        // (Part 2C, 21.3) the book's section, when the giant names one; else it comes from the category
+        String section = str(o, "section", 16);
+        if (SECTIONS.contains(section)) SECTION_OF.put(giant + "/" + id, section);
+        else SECTION_OF.remove(giant + "/" + id);
         return new AdminSetting(giant, id, cat, type, min, max, step, List.copyOf(options), def, value, jar, set,
                 when, name, str(o, "what", 240), str(o, "key", 96), str(o, "group", 48));
+    }
+
+    /** (Part 2C, ADMIN_BRIDGE.md 21.3) the admin book's sections, in the order its tabs show them */
+    public static final List<String> SECTIONS = List.of("stats", "moves", "spawning", "behaviour", "healing", "taming",
+            "loot", "players", "effects", "worldgen", "misc");
+
+    /** sections named by a giant's own line (giant/id), for the few that differ from their category */
+    private static final java.util.Map<String, String> SECTION_OF = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** the section a setting shows in: the one its giant named, else its category's (server load: misc) */
+    public static String section(AdminSetting s) {
+        String named = SECTION_OF.get(s.giant() + "/" + s.id());
+        if (named != null) return named;
+        return SECTIONS.contains(s.cat()) ? s.cat() : "misc";
     }
 
     /** a value as the giant reported it, in this setting's form; a number outside the range is kept (the file's) */
@@ -215,6 +233,8 @@ public final class AdminJson {
         if (!s.what().isEmpty()) o.addProperty("what", s.what());
         if (!s.key().isEmpty()) o.addProperty("key", s.key());
         if (!s.group().isEmpty()) o.addProperty("group", s.group());
+        String section = SECTION_OF.get(s.giant() + "/" + s.id());
+        if (section != null) o.addProperty("section", section);
         return o;
     }
 

@@ -136,6 +136,11 @@ public final class AdminDraft implements AdminView {
                 + " for the new world."));
     }
 
+    /** (Part 2C) something changed by hand (the All giants page's every-giant rows) */
+    void markEdited() {
+        edited = true;
+    }
+
     /** a setting, a giant's or every one ("everything") back to the server default */
     public AdminServer.Result reset(String which, @Nullable String id) {
         if (which.equalsIgnoreCase("everything")) {

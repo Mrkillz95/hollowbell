@@ -32,7 +32,7 @@ public final class AdminInsight {
             "all.health", "all.damage", "all.speed", "all.size", "all.cooldowns", "all.healing", "all.windCost",
             // each giant
             "oneInTheWorld", "maxInWorld", "worldScale", "healthMultiplier", "damageMultiplier", "griefing",
-            "fightGiants", "fleeInWildFights", "passiveHeal", "bookCosts", "freeHits", "bossBar", "chunkLoading");
+            "fightGiants", "meetGiants", "fleeInWildFights", "passiveHeal", "bookCosts", "freeHits", "bossBar", "chunkLoading");
 
     public static boolean simple(String id) {
         return SIMPLE.contains(id);
@@ -409,6 +409,16 @@ public final class AdminInsight {
                     c -> "{who}: " + c.g.nameOf("seekGiants") + " is on, but " + c.g.nameOf("fightGiants") + " or "
                             + c.g.nameOf("meetings") + " is off, so {he} {walks} to other giants and {leaves} them"
                             + " be."),
+            // (Part 2C, ADMIN_BRIDGE.md 21.1) meetGiants: decide 0, fight 1, run_away 2, ignore 3
+            new Rule("meet_fight_off",
+                    c -> c.has("meetGiants", "fightGiants") && Math.abs(c.v("meetGiants") - 1) < 0.5
+                            && !c.g.on("fightGiants"),
+                    c -> "{who}: " + c.g.nameOf("meetGiants") + " is fight, but " + c.g.nameOf("fightGiants")
+                            + " is off, so {he} {fights} none."),
+            new Rule("seek_no_meet",
+                    c -> c.has("meetGiants", "seekGiants") && c.g.on("seekGiants") && c.v("meetGiants") > 1.5,
+                    c -> "{who}: " + c.g.nameOf("seekGiants") + " is on, but " + c.g.nameOf("meetGiants")
+                            + " is run away or ignore, so {he} never {goes} looking."),
             new Rule("raid_peaceful",
                     c -> c.has("raidVillages", "temper") && c.g.on("raidVillages") && c.v("temper") < 0.5,
                     c -> "{who}: " + c.g.nameOf("raidVillages") + " is on, but " + c.g.nameOf("temper")
@@ -479,7 +489,9 @@ public final class AdminInsight {
                 .replace("{backs}", many ? "back" : "backs")
                 .replace("{walks}", many ? "walk" : "walks")
                 .replace("{leaves}", many ? "leave" : "leaves")
-                .replace("{gets}", many ? "get" : "gets");
+                .replace("{gets}", many ? "get" : "gets")
+                .replace("{fights}", many ? "fight" : "fights")
+                .replace("{goes}", many ? "go" : "goes");
     }
 
     // the preset

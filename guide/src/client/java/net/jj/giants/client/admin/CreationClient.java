@@ -31,6 +31,12 @@ public final class CreationClient {
         return Component.translatable("admin.jj_giants.creation.button.chosen", d.label());
     }
 
+    /** (Part 2C) the preset as the Game tab's big button says it: "Classic", "Far Frontier, changed" */
+    public static String presetLabel(Screen createWorld) {
+        AdminDraft d = DRAFTS.get(createWorld);
+        return d == null ? "Classic" : d.label();
+    }
+
     /** Create New World was pressed: the draft waits for its world (nothing for an untouched Classic) */
     public static void arm(CreateWorldScreen s) {
         AdminDraft d = DRAFTS.get(s);

@@ -4,6 +4,7 @@
   "package": "net.jj.giants.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "CreateWorldGameTabMixin",
     "CreateWorldMoreTabMixin",
     "CreateWorldScreenMixin",
     "GridLayoutTabAccess"

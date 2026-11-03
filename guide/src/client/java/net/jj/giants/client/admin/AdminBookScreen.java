@@ -42,20 +42,22 @@ import org.jetbrains.annotations.Nullable;
  * checks and does exactly as /giants admin set does; the pages come back fresh whenever anyone changes anything.
  */
 public class AdminBookScreen extends Screen {
-    static final int GOLD = 0xFFE0B050,
-            TITLE = 0xFFE9C9BC,
-            TEXT = 0xFFD8D8D8,
-            KEY = 0xFFFFE080,
-            GREY = 0xFF9A9A9A,
-            DIM = 0xFF6E6E6E,
-            ORANGE = 0xFFE0A060,
-            BLUE = 0xFF88B8E8,
-            WARN = 0xFFFF7060,
-            GOOD = 0xFF80E080,
-            PANEL = 0xE8141210,
-            EDGE = 0xFF6B5A44,
-            LINE = 0x30FFFFFF;
-    private static final int SET_H = 26, SIZE_H = 40, MOVE_H = 20, HEAD_H = 20;
+    // (Part 2C) ink on the admin book's parchment (AdminStyle); the names are the old ones so the pages read the same
+    static final int GOLD = AdminStyle.AMBER,
+            TITLE = AdminStyle.RUBRIC,
+            TEXT = AdminStyle.INK,
+            KEY = 0xFF5A2A08,
+            GREY = AdminStyle.INK_SOFT,
+            DIM = AdminStyle.INK_DIM,
+            ORANGE = AdminStyle.ORANGE,
+            BLUE = AdminStyle.BLUE,
+            WARN = AdminStyle.WARN,
+            GOOD = AdminStyle.GOOD,
+            PANEL = 0xF0E8D8B0,
+            EDGE = 0xFF8A6A40,
+            LINE = 0x30503010,
+            HEAD = AdminStyle.RUBRIC;
+    private static final int SET_H = 34, SIZE_H = 48, MOVE_H = 22, HEAD_H = 22;
     /** most lines a search shows */
     private static final int MOST_FOUND = 80;
     public static final String HOME = "home";
@@ -77,6 +79,16 @@ public class AdminBookScreen extends Screen {
     private static @Nullable String[] startConfirm;
 
     private String pageKey = HOME;
+    /**
+     * (Part 2C) on a giant's page, which half: "general" (the settings every giant shares, his values) or "special"
+     * (only his own); and on a giant's page or All giants, the section shown ("all": every section, each one folding).
+     * Kept per page while the game runs.
+     */
+    private String part = GENERAL, section = "";
+    public static final String GENERAL = "general", SPECIAL = "special", ALL_SECTIONS = "all";
+    private static final Map<String, String[]> keptTabs = new HashMap<>();
+    /** the groups folded shut (page/part/group), kept while the game runs */
+    private static final java.util.Set<String> folded = new java.util.HashSet<>();
     private boolean advanced, allWorlds;
     private int seenVersion = -1;
     private long seenSaid;
@@ -104,6 +116,10 @@ public class AdminBookScreen extends Screen {
 
     // where things go (set in init)
     private int px0, py0, pw, ph, navX, navW, navY, navRowH, lx, lw, toolY, headY, ly0, ly1;
+    /** (Part 2C) inside the cover; where the page starts; the breadcrumb's line; the section tabs' line and rows */
+    private int inX0, inY0, inX1, inY1, pageX0, crumbY, tabY, tabRows;
+    /** the contents show only their pictures */
+    private boolean slim;
 
     public AdminBookScreen() {
         super(Component.translatable("admin.jj_giants.book.title"));
@@ -136,6 +152,12 @@ public class AdminBookScreen extends Screen {
 
     /** open next time on this page, scrolled this far, with this search (the picture-taking uses this) */
     public static void showAt(String page, double scroll, String query) {
+        // (Part 2C) "wreckback/special/moves": a page, its half and its section
+        if (page != null && page.contains("/")) {
+            String[] w = page.split("/");
+            page = w[0];
+            keptTabs.put(page, new String[] {w.length > 1 ? w[1] : GENERAL, w.length > 2 ? w[2] : ""});
+        }
         keptPage = page == null || page.isEmpty() ? HOME : page;
         keptScroll = scroll;
         keptQuery = query == null ? "" : query;
@@ -195,6 +217,18 @@ public class AdminBookScreen extends Screen {
         List<Button> bs = b.modal.buttons;
         bs.get(b.modal instanceof Intro ? bs.size() - 1 : 0).onPress();
         return true;
+    }
+
+    /** (the picture-taking) presses the open question's button whose words start so ("See all") */
+    public static boolean testPressWord(String start) {
+        if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b) || b.modal == null)
+            return false;
+        for (Button x : List.copyOf(b.modal.buttons))
+            if (x.getMessage().getString().startsWith(start)) {
+                x.onPress();
+                return true;
+            }
+        return false;
     }
 
     static MutableComponent tr(String key, Object... args) {
@@ -303,6 +337,7 @@ public class AdminBookScreen extends Screen {
             startAllWorlds = false;
         }
         pageKey = keptPage;
+        loadTabs();
         if (creating()) {
             allWorlds = false;
             if (pageKey.equals(LIVE) || pageKey.equals(CHANGES)) pageKey = HOME;
@@ -313,25 +348,38 @@ public class AdminBookScreen extends Screen {
         seenPreview = AdminBookClient.previewVersion();
         seenSaid = AdminBookClient.saidAt();
 
-        pw = Math.min(width - 8, 720);
-        ph = Math.min(height - 8, 460);
+        // (Part 2C) the book: a leather cover, the contents down the left on older paper, the page on the right
+        pw = Math.min(width - 8, 760);
+        ph = Math.min(height - 8, 480);
         px0 = (width - pw) / 2;
         py0 = (height - ph) / 2;
-        navX = px0 + 6;
+        int e = AdminStyle.EDGE;
+        inX0 = px0 + e;
+        inY0 = py0 + e;
+        inX1 = px0 + pw - e;
+        inY1 = py0 + ph - e;
+        navX = inX0 + 5;
         int names = 0;
         for (String k : navKeys())
             names = Math.max(names, font.width(k.equals(HOME) ? tr("home").getString() : giantName(k)));
         // (room for the picture, the name and a count)
-        navW = Mth.clamp(Math.max(pw / 5, names + 34), 76, Math.max(76, Math.min(120, pw / 4)));
-        navY = py0 + 20;
-        int entries = Math.max(2, navKeys().size());
-        navRowH = entries * 20 <= ph - 26 ? 20 : entries * 17 <= ph - 26 ? 17 : 14;
-        lx = navX + navW + 8;
-        lw = px0 + pw - 6 - 6 - lx;
-        toolY = py0 + 20;
-        headY = toolY + 20;
-        ly0 = headY + 24;
-        ly1 = py0 + ph - 14;
+        navW = Mth.clamp(Math.max(pw / 5, names + 36), 80, Math.max(80, Math.min(128, pw / 4)));
+        // (a narrow book, GUI scale 3 on a small window: the contents show only their pictures, names on hover)
+        slim = pw < 560;
+        if (slim) navW = 24;
+        navY = inY0 + 18;
+        int entries = Math.max(2, navKeys().size()) + 1;
+        int room = inY1 - navY - 4;
+        navRowH = entries * 19 <= room ? 19 : entries * 16 <= room ? 16 : 13;
+        pageX0 = navX + navW + 8;
+        lx = pageX0 + 10;
+        lw = inX1 - 10 - 6 - lx;
+        crumbY = inY0 + 6;
+        toolY = crumbY + 15;
+        headY = toolY + 21;
+        tabY = headY + 25;
+        ly0 = tabY + 10;
+        ly1 = inY1 - 15;
 
         // the tool bar: search, Simple/Advanced, where changes go
         Component scopeWords = scopeLabel();
@@ -379,16 +427,16 @@ public class AdminBookScreen extends Screen {
 
         // the page's own button (reset this giant, or on Home every giant)
         headButton = addRenderableWidget(Button.builder(Component.empty(), b -> headAction())
-                .bounds(0, headY + 2, 10, 16)
+                .bounds(0, headY + 3, 10, 16)
                 .build());
 
         Button close = Button.builder(Component.literal("✕"), b -> onClose())
-                .bounds(px0 + pw - 19, py0 + 2, 16, 14)
+                .bounds(inX1 - 6 - 16, crumbY - 3, 16, 14)
                 .build();
         close.setTooltip(Tooltip.create(Component.translatable("guide.jj_giants.close")));
         addRenderableWidget(close);
         Button help = Button.builder(Component.literal("?"), b -> openIntro(0))
-                .bounds(px0 + pw - 19 - 18, py0 + 2, 16, 14)
+                .bounds(inX1 - 6 - 16 - 18, crumbY - 3, 16, 14)
                 .build();
         help.setTooltip(Tooltip.create(tr("help.tip")));
         addRenderableWidget(help);
@@ -447,35 +495,87 @@ public class AdminBookScreen extends Screen {
 
         abstract void draw(GuiGraphics g, int x, int y, int w, int mx, int my);
 
+        /** (Part 2C) a click on the row itself (not its buttons); top: where the row is on the screen now */
+        boolean click(double mx, double my, int top) {
+            return false;
+        }
+
         <T extends AbstractWidget> T add(T w, int dx, int dy, boolean right) {
             ws.add(new Placed(addRenderableWidget(w), dx, dy, right));
             return w;
         }
     }
 
-    /** a category's (or a giant's, in a search) heading */
+    /**
+     * A section's (or a giant's, in a search) heading. (Part 2C) With a fold key it is a group that folds shut and
+     * opens again when clicked (▶ shut, ▼ open), with how many settings it holds.
+     */
     private final class Head extends Row {
         final Component title;
         final @Nullable String giant;
         final List<FormattedCharSequence> note;
+        @Nullable String fold, pic;
+        int count = -1;
 
         Head(Component title, @Nullable Component note, @Nullable String giant) {
             this.title = title;
             this.giant = giant;
-            this.note = note == null ? List.of() : font.split(note, lw);
-            h = HEAD_H + this.note.size() * 10;
+            this.note = note == null ? List.of() : font.split(note, lw - 4);
+            h = HEAD_H + this.note.size() * 10 + (this.note.isEmpty() ? 0 : 4);
+        }
+
+        Head folding(String key, String pic, int count) {
+            this.fold = key;
+            this.pic = pic;
+            this.count = count;
+            return this;
+        }
+
+        Head pic(String pic) {
+            this.pic = pic;
+            return this;
+        }
+
+        boolean shut() {
+            return fold != null && folded.contains(fold);
         }
 
         @Override
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
             int tx = x;
-            if (giant != null) {
-                icon(g, giant, x, y + 4, 12);
-                tx += 16;
+            boolean over = fold != null && mx >= x && mx < x + w && my >= Math.max(y, ly0) && my < Math.min(y + HEAD_H, ly1);
+            if (over) g.fill(x - 3, y + 2, x + w, y + HEAD_H - 2, AdminStyle.SHADE);
+            if (fold != null) {
+                // a small triangle: pointing right when shut, down when open
+                int ax = x + 1, ay = y + 8;
+                if (shut()) for (int i = 0; i < 4; i++) g.fill(ax + i, ay + i, ax + i + 1, ay + 7 - i, HEAD);
+                else for (int i = 0; i < 4; i++) g.fill(ax + i, ay + i + 1, ax + 7 - i, ay + i + 2, HEAD);
+                tx += 11;
             }
-            g.drawString(font, title, tx, y + 7, GOLD, false);
-            g.fill(x, y + HEAD_H - 3, x + w, y + HEAD_H - 2, LINE);
-            for (int i = 0; i < note.size(); i++) g.drawString(font, note.get(i), x, y + HEAD_H + i * 10, GREY, false);
+            if (giant != null) {
+                icon(g, giant, tx, y + 4, 14);
+                tx += 18;
+            } else if (pic != null) {
+                AdminStyle.icon(g, pic, tx, y + 4, 14);
+                tx += 18;
+            }
+            int nx = g.drawString(font, title, tx, y + 8, HEAD, false);
+            if (count >= 0) g.drawString(font, "(" + count + ")", nx + 4, y + 8, DIM, false);
+            g.fill(x, y + HEAD_H - 3, x + w, y + HEAD_H - 2, AdminStyle.RULE);
+            for (int i = 0; i < note.size(); i++)
+                g.drawString(font, note.get(i), x, y + HEAD_H + 1 + i * 10, GREY, false);
+            if (over) setTooltipForNextRenderPass(font.split(tr(shut() ? "fold.open" : "fold.shut"), 200));
+        }
+
+        @Override
+        boolean click(double mx, double my, int top) {
+            if (fold == null || my >= top + HEAD_H) return false;
+            if (!folded.remove(fold)) folded.add(fold);
+            double sc = scroll;
+            build();
+            scroll = sc;
+            place();
+            return true;
         }
     }
 
@@ -519,24 +619,45 @@ public class AdminBookScreen extends Screen {
         return Mth.clamp(lw * 3 / 10, 72, 132);
     }
 
-    /** one setting: its name and notes on the left; its control and ↺ on the right */
+    /**
+     * One setting: its name, what it does (up to two lines) and where its value comes from on the left; its control and
+     * ↺ on the right. (Part 2C) On a giant's General half, a line when his value isn't the one most giants have.
+     */
     private final class SetRow extends Row {
         final AdminSetting s;
         final boolean size;
+        final List<FormattedCharSequence> whatLines;
+        /** (General) what most giants have, when his is different; null when it's the same or nobody else has it */
+        final @Nullable String most;
 
         SetRow(AdminSetting s) {
+            this(s, null);
+        }
+
+        SetRow(AdminSetting s, @Nullable String most) {
             this.s = s;
+            this.most = most;
             this.size = SIZES.contains(s.id());
-            h = size ? SIZE_H : SET_H;
+            int tw = textW() - (size ? previewW() + 6 : 0);
+            List<FormattedCharSequence> wl = what(s).getString().isEmpty() ? List.of() : font.split(what(s), tw);
+            if (wl.size() > 2) {
+                // (two lines, the rest on hover)
+                String second = cut(font.split(what(s), tw).subList(1, wl.size()).stream()
+                        .map(AdminBookScreen::plainText).reduce("", (a, b) -> a + (a.isEmpty() ? "" : " ") + b), tw);
+                wl = List.of(wl.get(0), Component.literal(second).getVisualOrderText());
+            }
+            whatLines = wl;
+            h = Math.max(size ? SIZE_H : SET_H, 4 + 11 + whatLines.size() * 10 + 10 + (most != null ? 10 : 0)
+                    + (size ? 10 : 0) + 5);
             int cw = controlW(), dy = (h - 16) / 2;
             List<AbstractWidget> c = controls(s, cw);
             if (c.size() == 2) {
                 // a range: the low end on the left, the high end on the right
-                add(c.get(0), 18 + c.get(1).getWidth() + 2, dy, true);
-                add(c.get(1), 18, dy, true);
-            } else for (AbstractWidget w : c) add(w, 18 + lockW(), dy, true);
+                add(c.get(0), 18 + lockW(s) + c.get(1).getWidth() + 2, dy, true);
+                add(c.get(1), 18 + lockW(s), dy, true);
+            } else for (AbstractWidget w : c) add(w, 18 + lockW(s), dy, true);
             reset = add(resetButton(List.of(s)), 0, dy, true);
-            if (lockW() > 0) lock = add(lockButton(s), 18, dy, true);
+            if (lockW(s) > 0) lock = add(lockButton(s), 18, dy, true);
             if (lockedForMe(s))
                 for (Placed p : ws)
                     if (p.w() != lock) {
@@ -548,60 +669,86 @@ public class AdminBookScreen extends Screen {
         @Nullable Button lock;
 
         int textW() {
-            return lw - controlW() - 22 - lockW();
+            return lw - controlW() - 26 - lockW(s);
         }
 
         @Override
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
             boolean ch = changed(s), can = editable(s), overPicture = false;
-            if (ch) g.fill(x - 4, y + 2, x - 2, y + h - 2, GOLD);
+            if (ch) {
+                g.fill(x - 4, y + 1, x + w, y + h - 1, AdminStyle.TINT);
+                g.fill(x - 4, y + 2, x - 2, y + h - 2, GOLD);
+            }
             int tw = textW();
             // line 1: the name, "?", and when it takes effect
             Component marker = marker(s);
             String full = name(s).getString();
             if (!marker.getString().isEmpty() && font.width(full) + 12 + font.width(marker) + 4 > tw)
                 marker = shortMarker(s);
-            int markerW = marker.getString().isEmpty() ? 0 : font.width(marker) + 4;
+            int markerW = marker.getString().isEmpty() ? 0 : font.width(marker) + 6;
             String nm = cut(full, Math.max(30, tw - 12 - markerW));
-            int nx = g.drawString(font, nm, x, y + 3, !can ? GREY : ch ? GOLD : TEXT, false);
+            int nx = g.drawString(font, nm, x, y + 4, !can ? GREY : ch ? GOLD : TEXT, false);
             int qx = nx + 3;
-            boolean overQ = mx >= qx - 1 && mx < qx + 8 && my >= y + 2 && my < y + 12;
-            g.fill(qx - 1, y + 2, qx + 7, y + 12, overQ ? 0x80FFFFFF : 0x40FFFFFF);
-            g.drawString(font, "?", qx + 1, y + 3, overQ ? 0xFF202020 : BLUE, false);
-            if (markerW > 0) g.drawString(font, marker, qx + 12, y + 3, markerColour(s), false);
-            // line 2: the server default (or what the world keeps), then what it does
-            MutableComponent l2 = line2(s, false);
-            // (a size's lines 2 and 3 leave room for its picture)
+            boolean overQ = mx >= qx - 1 && mx < qx + 8 && my >= y + 3 && my < y + 13;
+            g.fill(qx - 1, y + 3, qx + 7, y + 13, overQ ? 0xFF2A5E9A : 0x302A5E9A);
+            g.drawString(font, "?", qx + 1, y + 4, overQ ? 0xFFFFFFFF : BLUE, false);
+            if (markerW > 0) {
+                int mx0 = qx + 11, mw0 = font.width(marker) + 4;
+                g.fill(mx0 - 1, y + 3, mx0 + mw0 - 1, y + 13, (markerColour(s) & 0x00FFFFFF) | 0x22000000);
+                g.drawString(font, marker, mx0 + 1, y + 4, markerColour(s), false);
+            }
+            // what it does, up to two lines (a size's leave room for its picture)
             int lineW = size ? tw - previewW() - 6 : tw;
+            int ty = y + 15;
+            for (FormattedCharSequence l : whatLines) {
+                g.drawString(font, l, x, ty, GREY, false);
+                ty += 10;
+            }
+            // where the value comes from: the server default, or what this world keeps
+            MutableComponent l2 = line2(s, false);
             if (font.width(l2) > lineW) l2 = line2(s, true);
             String l2s = cut(l2.getString(), lineW);
-            int ux = l2s.equals(l2.getString()) ? g.drawString(font, l2, x, y + 14, GREY, false)
-                    : g.drawString(font, l2s, x, y + 14, GREY, false);
-            String rest = what(s).getString();
-            if (!rest.isEmpty() && ux + 12 < x + lineW)
-                g.drawString(font, cut("· " + rest, x + lineW - ux - 4), ux + 4, y + 14, DIM, false);
+            if (l2s.equals(l2.getString())) g.drawString(font, l2, x, ty, DIM, false);
+            else g.drawString(font, l2s, x, ty, DIM, false);
+            ty += 10;
+            if (most != null) {
+                g.drawString(font, cut(tr("general.differs", most).getString(), lineW), x, ty, BLUE, false);
+                ty += 10;
+            }
             if (size) {
                 double v = number(shown(s));
                 String key = s.giant();
                 double tall = (shared(s) ? 200 : body(key)[0]) * v;
-                g.drawString(font, cut(tr(shared(s) ? "size.all" : "size.tall", AdminSetting.plain(Math.round(tall)))
-                        .getString(), lineW), x, y + 25, GREY, false);
                 int bx = x + tw - previewW();
-                preview(g, bx, y + 13, previewW(), h - 15, shared(s) ? "" : key, v);
-                if (mx >= bx && mx < bx + previewW() && my >= Math.max(y + 13, ly0) && my < Math.min(y + h - 2, ly1)) {
+                // (under the name's line, so its marker has the whole width)
+                preview(g, bx, y + 15, previewW(), h - 20, shared(s) ? "" : key, v);
+                String t = tr(shared(s) ? "size.all" : "size.tall", AdminSetting.plain(Math.round(tall))).getString();
+                if (ty + 8 <= y + h) g.drawString(font, cut(t, lineW), x, ty, GREY, false);
+                if (mx >= bx && mx < bx + previewW() && my >= Math.max(y + 15, ly0) && my < Math.min(y + h - 4, ly1)) {
                     setTooltipForNextRenderPass(font.split(tr(shared(s) ? "size.tip.all" : "size.tip",
                             AdminSetting.plain(Math.round(tall))), 220));
                     overPicture = true;
                 }
             }
+            AdminStyle.dots(g, x, y + h - 1, w);
             if (ch || pending.containsKey(s.giant() + "/" + s.id()))
                 for (Placed p : ws)
-                    if (p.w() != reset && p.w().visible)
+                    if (p.w() != reset && p.w() != lock && p.w().visible)
                         g.renderOutline(p.w().getX() - 1, p.w().getY() - 1, p.w().getWidth() + 2, 18,
                                 pending.containsKey(s.giant() + "/" + s.id()) ? GREY : GOLD);
             if (!overPicture && mx >= x - 4 && mx < x + tw && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
                 setTooltipForNextRenderPass(tip(s));
         }
+    }
+
+    /** a line's plain words */
+    static String plainText(FormattedCharSequence f) {
+        StringBuilder b = new StringBuilder();
+        f.accept((i, st, c) -> {
+            b.appendCodePoint(c);
+            return true;
+        });
+        return b.toString();
     }
 
     private int previewW() {
@@ -610,6 +757,7 @@ public class AdminBookScreen extends Screen {
 
     /** what line 2 says: where the value comes from */
     private MutableComponent line2(AdminSetting s, boolean narrow) {
+        if (s.giant().equals(EVERY)) return everyLine(s);
         String n = narrow ? ".short" : "";
         if (allWorlds) {
             if (shared(s) || move(s)) return tr("line.world_only" + n);
@@ -688,14 +836,14 @@ public class AdminBookScreen extends Screen {
             int sliders = (int) parts.stream().filter(p -> p.type() != AdminSetting.Type.BOOL).count();
             int sw = sliders == 0 ? 0 : (total - onW - 2 - 2 * (sliders - 1)) / sliders;
             // from the right: ↺, then the parts right to left
-            reset = add(resetButton(parts), 0, 2, true);
+            reset = add(resetButton(parts), 0, 3, true);
             int dx = 18;
             for (int i = parts.size() - 1; i >= 0; i--) {
                 AdminSetting s = parts.get(i);
                 int w = s.type() == AdminSetting.Type.BOOL ? onW : sw;
                 List<AbstractWidget> c = controls(s, w);
                 if (c.size() != 1) continue;
-                add(c.get(0), dx, 2, true);
+                add(c.get(0), dx, 3, true);
                 dx += w + 2;
             }
         }
@@ -704,9 +852,13 @@ public class AdminBookScreen extends Screen {
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
             boolean any = false;
             for (AdminSetting s : parts) any |= changed(s);
-            if (any) g.fill(x - 4, y + 2, x - 2, y + h - 2, GOLD);
+            if (any) {
+                g.fill(x - 4, y + 1, x + w, y + h - 1, AdminStyle.TINT);
+                g.fill(x - 4, y + 2, x - 2, y + h - 2, GOLD);
+            }
             int nameW = lw - moveW() - 22;
-            g.drawString(font, cut(name, nameW), x, y + 6, any ? GOLD : TEXT, false);
+            g.drawString(font, cut(name, nameW), x, y + 7, any ? GOLD : TEXT, false);
+            AdminStyle.dots(g, x, y + h - 1, w);
             for (Placed p : ws) {
                 AdminSetting s = partOf(p.w());
                 if (s == null || !p.w().visible) continue;
@@ -883,7 +1035,10 @@ public class AdminBookScreen extends Screen {
         if (todo.isEmpty()) return;
         Runnable go = () -> {
             for (AdminSetting s : todo) {
-                AdminBookClient.reset(s.giant(), s.id(), allWorlds);
+                if (s.giant().equals(EVERY)) {
+                    if (allWorlds) AdminBookClient.setAll(s.id(), AdminSetting.text(s.jar()), true);
+                    else AdminBookClient.resetAll(s.id());
+                } else AdminBookClient.reset(s.giant(), s.id(), allWorlds);
                 pending.put(s.giant() + "/" + s.id(), new Pend(allWorlds ? s.jar() : s.def(), Util.getMillis()));
             }
             say(tr("sent"), GREY);
@@ -898,7 +1053,10 @@ public class AdminBookScreen extends Screen {
     private void commit(AdminSetting s, JsonElement v) {
         if (AdminSetting.same(v, shown(s))) return;
         Runnable go = () -> {
-            if (!AdminBookClient.set(s.giant(), s.id(), AdminSetting.text(v), allWorlds)) {
+            boolean sent = s.giant().equals(EVERY)
+                    ? AdminBookClient.setAll(s.id(), AdminSetting.text(v), allWorlds)
+                    : AdminBookClient.set(s.giant(), s.id(), AdminSetting.text(v), allWorlds);
+            if (!sent) {
                 say(tr("no_server"), WARN);
                 refreshControls();
                 return;
@@ -1078,6 +1236,7 @@ public class AdminBookScreen extends Screen {
         search.visible = admin;
         modeButton.visible = admin;
         scopeButton.visible = admin && !creating();
+        layoutTabs();
         if (!q.isEmpty() && admin) searchRows(q);
         else if (pageKey.equals(HOME)) homeRows();
         else if (pageKey.equals(LIVE)) liveRows();
@@ -1122,7 +1281,159 @@ public class AdminBookScreen extends Screen {
         return false;
     }
 
-    /** a giant's page (or the all-giants one): by category, the moves folded one to a line */
+    // (Part 2C) the settings every giant shares, and the sections
+
+    /** the "giant" of an All giants row that sets every giant's own value at once */
+    static final String EVERY = "*every";
+    /** each every-giant row's giants' own settings, by id (filled when the All giants page is built) */
+    private final Map<String, List<AdminSetting>> everyRows = new LinkedHashMap<>();
+
+    /** the giants' pages (not All giants) */
+    private List<AdminBookClient.Page> giantPages() {
+        List<AdminBookClient.Page> out = new ArrayList<>();
+        for (AdminBookClient.Page p : AdminBookClient.pages()) if (!p.giant().equals(AdminCatalog.ALL)) out.add(p);
+        return out;
+    }
+
+    /**
+     * The settings the giants share: an id two or more giants have (one giant alone: all of his), never a move's.
+     * In the order the first giant lists them.
+     */
+    private List<String> sharedIds() {
+        List<AdminBookClient.Page> ps = giantPages();
+        Map<String, Integer> n = new LinkedHashMap<>();
+        for (AdminBookClient.Page p : ps)
+            for (AdminSetting s : p.settings())
+                if (s.group().isEmpty() && net.jj.giants.admin.AdminEvery.shareable(s.id()))
+                    n.merge(s.id(), 1, Integer::sum);
+        int need = Math.min(2, ps.size());
+        List<String> out = new ArrayList<>();
+        for (var e : n.entrySet()) if (e.getValue() >= need) out.add(e.getKey());
+        return out;
+    }
+
+    /** each giant's row of a shared setting */
+    private List<AdminSetting> everyOf(String id) {
+        List<AdminSetting> out = new ArrayList<>();
+        for (AdminBookClient.Page p : giantPages()) {
+            AdminSetting s = p.setting(id);
+            if (s != null) out.add(s);
+        }
+        return out;
+    }
+
+    /** the value most of them have (as text) */
+    private static String most(List<AdminSetting> ss, java.util.function.Function<AdminSetting, JsonElement> f) {
+        Map<String, Integer> n = new LinkedHashMap<>();
+        for (AdminSetting s : ss) n.merge(AdminSetting.text(f.apply(s)), 1, Integer::sum);
+        String best = "";
+        int bn = -1;
+        for (var e : n.entrySet())
+            if (e.getValue() > bn) {
+                best = e.getKey();
+                bn = e.getValue();
+            }
+        return best;
+    }
+
+    private static @Nullable JsonElement valueOf(List<AdminSetting> ss, String text,
+            java.util.function.Function<AdminSetting, JsonElement> f) {
+        for (AdminSetting s : ss) if (AdminSetting.text(f.apply(s)).equals(text)) return f.apply(s);
+        return ss.isEmpty() ? null : f.apply(ss.get(0));
+    }
+
+    /**
+     * One row standing for every giant's own setting: the widest range any of them takes (each keeps to his own when
+     * it is set), the options any of them has, the value most have.
+     */
+    private AdminSetting everyProxy(List<AdminSetting> ss) {
+        AdminSetting a = ss.get(0);
+        double min = a.min(), max = a.max(), step = step(a);
+        List<String> options = new ArrayList<>(a.options());
+        boolean set = false;
+        for (AdminSetting s : ss) {
+            min = Math.min(min, s.min());
+            max = Math.max(max, s.max());
+            step = Math.min(step, step(s));
+            for (String o : s.options()) if (!options.contains(o)) options.add(o);
+            set |= s.set();
+        }
+        java.util.function.Function<AdminSetting, JsonElement> value = AdminSetting::value, def = AdminSetting::def,
+                jar = AdminSetting::jar;
+        JsonElement v = valueOf(ss, most(ss, value), value), d = valueOf(ss, most(ss, def), def),
+                j = valueOf(ss, most(ss, jar), jar);
+        return new AdminSetting(EVERY, a.id(), a.cat(), a.type(), min, max, step, List.copyOf(options), d, v, j, set,
+                a.when(), a.name(), a.what(), a.key(), "");
+    }
+
+    /** what an every-giant row says about the giants' values: all the same, or who differs */
+    private MutableComponent everyLine(AdminSetting proxy) {
+        List<AdminSetting> ss = everyRows.getOrDefault(proxy.id(), List.of());
+        java.util.function.Function<AdminSetting, JsonElement> f = allWorlds ? AdminSetting::def : AdminSetting::value;
+        String m = most(ss, f);
+        List<String> odd = new ArrayList<>();
+        for (AdminSetting s : ss)
+            if (!AdminSetting.text(f.apply(s)).equals(m)) odd.add(giantName(s.giant()) + " " + show(s, f.apply(s)));
+        long setN = ss.stream().filter(AdminSetting::set).count();
+        MutableComponent c = odd.isEmpty() ? tr("every.same", ss.size(), m)
+                : tr("every.mixed", String.join(", ", odd), m);
+        if (!allWorlds && setN > 0) c.append(tr("every.set", setN));
+        return c;
+    }
+
+    /** an all-giants multiplier (shown with an "x") */
+    private static boolean multiplier(AdminSetting s) {
+        return s.giant().equals(AdminCatalog.ALL);
+    }
+
+    /** a setting's section (ADMIN_BRIDGE.md 21.3) */
+    private static String sectionOf(AdminSetting s) {
+        return net.jj.giants.admin.AdminJson.section(s);
+    }
+
+    /** what a sectioned page shows: the settings in it (General/Special on a giant's page), by section */
+    private Map<String, List<AdminSetting>> sectionsOf(String key) {
+        Map<String, List<AdminSetting>> out = new LinkedHashMap<>();
+        for (String sec : net.jj.giants.admin.AdminJson.SECTIONS) out.put(sec, new ArrayList<>());
+        AdminBookClient.Page p = AdminBookClient.page(key);
+        if (p == null) return out;
+        if (key.equals(AdminCatalog.ALL)) {
+            // the multipliers, then every shared setting (one row each, standing for every giant)
+            everyRows.clear();
+            for (AdminSetting s : p.settings()) out.get(sectionOf(s)).add(s);
+            for (String id : sharedIds()) {
+                List<AdminSetting> ss = everyOf(id);
+                if (ss.isEmpty()) continue;
+                everyRows.put(id, ss);
+                out.get(sectionOf(ss.get(0))).add(everyProxy(ss));
+            }
+        } else {
+            List<String> shared = sharedIds();
+            for (AdminSetting s : p.settings()) {
+                boolean general = shared.contains(s.id()) && s.group().isEmpty();
+                if (general == part.equals(GENERAL)) out.get(sectionOf(s)).add(s);
+            }
+        }
+        out.values().removeIf(List::isEmpty);
+        return out;
+    }
+
+    /** the section tabs shown now: "all", then each section the page has */
+    private List<String> sectionTabs() {
+        if (!sectioned()) return List.of();
+        List<String> out = new ArrayList<>();
+        out.add(ALL_SECTIONS);
+        out.addAll(sectionsOf(pageKey).keySet());
+        return out;
+    }
+
+    /** the section to show: the one picked if the page has it, else the first */
+    private String sectionNow(List<String> tabs) {
+        if (tabs.contains(section)) return section;
+        return tabs.size() > 1 ? tabs.get(1) : ALL_SECTIONS;
+    }
+
+    /** a giant's page or All giants: the section picked (or every section, each folding), the moves one to a line */
     private void settingRows(String key) {
         AdminBookClient.Page p = AdminBookClient.page(key);
         if (p == null) {
@@ -1132,30 +1443,65 @@ public class AdminBookScreen extends Screen {
             rows.add(new Note(asking ? tr("asking") : tr("no_settings", giantName(key)), GREY));
             return;
         }
+        Map<String, List<AdminSetting>> secs = sectionsOf(key);
+        List<String> tabs = new ArrayList<>(List.of(ALL_SECTIONS));
+        tabs.addAll(secs.keySet());
+        String now = sectionNow(tabs);
+        boolean all = now.equals(ALL_SECTIONS);
+        if (key.equals(AdminCatalog.ALL)) {
+            if (all) rows.add(new Note(tr("all.page.note"), GREY));
+        } else if (part.equals(SPECIAL) && secs.isEmpty())
+            rows.add(new Note(tr("special.none", giantName(key)), GREY));
         int hidden = 0;
-        for (String cat : AdminSetting.CATEGORIES) {
-            List<AdminSetting> plain = new ArrayList<>();
+        for (var e : secs.entrySet()) {
+            String sec = e.getKey();
+            if (!all && !sec.equals(now)) continue;
+            List<AdminSetting> plain = new ArrayList<>(), mult = new ArrayList<>(), every = new ArrayList<>();
             Map<String, List<AdminSetting>> groups = new LinkedHashMap<>();
-            for (AdminSetting s : p.settings()) {
-                if (!s.cat().equals(cat)) continue;
+            int shown = 0;
+            for (AdminSetting s : e.getValue()) {
                 boolean show = advanced || AdminInsight.simple(s.id());
                 if (!show) {
                     hidden++;
                     continue;
                 }
-                if (s.group().isEmpty()) plain.add(s);
+                shown++;
+                if (multiplier(s)) mult.add(s);
+                else if (s.giant().equals(EVERY)) every.add(s);
+                else if (s.group().isEmpty()) plain.add(s);
                 else groups.computeIfAbsent(s.group(), k -> new ArrayList<>()).add(s);
             }
-            if (plain.isEmpty() && groups.isEmpty()) continue;
-            Component note = null;
-            if (cat.equals("moves") && !groups.isEmpty()) {
-                boolean wind = groups.values().stream().anyMatch(l -> l.stream().anyMatch(s -> s.id().endsWith(".wind")));
-                note = tr(wind ? "moves.note" : "moves.note_nowind");
+            if (shown == 0) continue;
+            String base = key + "/" + (key.equals(AdminCatalog.ALL) ? "" : part) + "/" + sec;
+            Head head = new Head(tr("cat." + sec), null, null);
+            if (all) {
+                head.folding(base, sec, shown);
+                rows.add(head);
+                if (head.shut()) continue;
+            } else rows.add(head.pic(sec));
+            // All giants: the multipliers, then every giant's own value
+            if (!mult.isEmpty()) {
+                Head mh = new Head(tr("all.mult"), tr("all.mult.note"), null)
+                        .folding(base + "/mult", "all", mult.size());
+                rows.add(mh);
+                if (!mh.shut()) for (AdminSetting s : mult) rows.add(new SetRow(s));
             }
-            if (key.equals(AdminCatalog.ALL) && rows.isEmpty()) note = tr("all.note");
-            rows.add(new Head(tr("cat." + cat), note, null));
-            for (AdminSetting s : plain) rows.add(new SetRow(s));
-            for (List<AdminSetting> g : groups.values()) rows.add(new MoveRow(moveName(g.get(0)), g));
+            if (!every.isEmpty()) {
+                Head eh = new Head(tr("all.every"), tr("all.every.note"), null)
+                        .folding(base + "/every", "general", every.size());
+                rows.add(eh);
+                if (!eh.shut()) for (AdminSetting s : every) rows.add(new SetRow(s));
+            }
+            for (AdminSetting s : plain) rows.add(new SetRow(s, differs(s)));
+            if (!groups.isEmpty()) {
+                boolean wind = groups.values().stream()
+                        .anyMatch(l -> l.stream().anyMatch(x -> x.id().endsWith(".wind")));
+                Head gh = new Head(tr("moves.each"), tr(wind ? "moves.note" : "moves.note_nowind"), null)
+                        .folding(base + "/each", "moves", groups.size());
+                rows.add(gh);
+                if (!gh.shut())
+                    for (List<AdminSetting> gr : groups.values()) rows.add(new MoveRow(moveName(gr.get(0)), gr));
+            }
         }
         if (hidden > 0) {
             rows.add(new Note(tr("simple.more", hidden), GREY));
@@ -1171,6 +1517,18 @@ public class AdminBookScreen extends Screen {
             rows.add(b);
         }
         if (rows.isEmpty()) rows.add(new Note(tr("empty"), GREY));
+    }
+
+    /** (General) what most giants have for this one when his own value is different; else null */
+    private @Nullable String differs(AdminSetting s) {
+        if (!part.equals(GENERAL) || s.giant().equals(AdminCatalog.ALL)) return null;
+        List<AdminSetting> ss = everyOf(s.id());
+        if (ss.size() < 2) return null;
+        java.util.function.Function<AdminSetting, JsonElement> f = allWorlds ? AdminSetting::def : AdminSetting::value;
+        String m = most(ss, f);
+        if (AdminSetting.text(f.apply(s)).equals(m)) return null;
+        JsonElement v = valueOf(ss, m, f);
+        return v == null ? m : show(s, v);
     }
 
     /** every setting on every page whose name, id or note has the words */
@@ -1236,7 +1594,7 @@ public class AdminBookScreen extends Screen {
             int[] colours = {0xFF60C060, 0xFFA0C850, 0xFFE0C050, 0xFFE88040, 0xFFE04040};
             for (int i = 0; i < 5; i++) {
                 int bx = nx + i * 13;
-                g.fill(bx, y + 3, bx + 11, y + 11, i < level ? colours[level - 1] : 0x30FFFFFF);
+                g.fill(bx, y + 3, bx + 11, y + 11, i < level ? colours[level - 1] : 0x30503010);
             }
             g.drawString(font, level + " · " + label, nx + 5 * 13 + 4, y + 4, colours[level - 1], false);
             for (int i = 0; i < reason.size(); i++)
@@ -1245,10 +1603,11 @@ public class AdminBookScreen extends Screen {
                 setTooltipForNextRenderPass(font.split(tr("home.danger.tip"), 280));
         }));
         // what clashes
-        rows.add(new Head(tr("home.clashes"), null, null));
         JsonArray warn = h.get("warnings") instanceof JsonArray a ? a : new JsonArray();
+        Head clashes = new Head(tr("home.clashes"), null, null).folding("home/clashes", "behaviour", warn.size());
+        rows.add(clashes);
         if (warn.isEmpty()) rows.add(new Note(tr("home.no_clashes"), GOOD));
-        for (JsonElement e : warn) {
+        for (JsonElement e : clashes.shut() ? new JsonArray() : warn) {
             if (!e.isJsonObject()) continue;
             String text = AdminBookClient.AdminJsonBridge.str(e.getAsJsonObject(), "text");
             List<FormattedCharSequence> ls = font.split(Component.literal(text), lw - 12);
@@ -1258,7 +1617,7 @@ public class AdminBookScreen extends Screen {
             }));
         }
         // the giants: a tile each, the all-giants one first
-        rows.add(new Head(tr("home.pages"), null, null));
+        rows.add(new Head(tr("home.pages"), null, null).pic("all"));
         List<String> keys = new ArrayList<>(navKeys());
         keys.remove(HOME);
         int cols = Math.max(1, Math.min(4, (lw + 4) / 124)), tileW = (lw - (cols - 1) * 4) / cols, tileH = 30;
@@ -1270,7 +1629,7 @@ public class AdminBookScreen extends Screen {
             tiles.add(new TileLine(rows.get(rows.size() - 1), line, tileW, tileH));
         }
         // quick ways in
-        rows.add(new Head(tr("home.quick"), null, null));
+        rows.add(new Head(tr("home.quick"), null, null).pic("search"));
         Block quick = new Block(22, (g, x, y, w, mx, my) -> {});
         int qx = 0, qy = 2;
         for (Object[] q : new Object[][] {
@@ -1314,8 +1673,7 @@ public class AdminBookScreen extends Screen {
 
     private void tile(GuiGraphics g, String key, int x, int y, int w, int h, int mx, int my) {
         boolean over = mx >= x && mx < x + w && my >= y && my < y + h && my >= ly0 && my < ly1;
-        g.fill(x, y, x + w, y + h, over ? 0x40FFFFFF : 0x20FFFFFF);
-        g.renderOutline(x, y, w, h, over ? TITLE : 0x60FFFFFF);
+        AdminStyle.card(g, x, y, w, h, over);
         icon(g, key, x + 3, y + 3, h - 6);
         int tx = x + h, tw = w - h - 3;
         g.drawString(font, cut(giantName(key), tw), tx, y + 5, TEXT, false);
@@ -1331,18 +1689,8 @@ public class AdminBookScreen extends Screen {
     /** a giant's picture (the book, or the Guide for "all giants"), size x size */
     private void icon(GuiGraphics g, String key, int x, int y, int size) {
         if (ownPage(key) || key.equals(AdminCatalog.ALL)) {
-            ItemStack st = new ItemStack(switch (key) {
-                case HOME -> AdminBookItem.BOOK;
-                case LIVE -> net.minecraft.world.item.Items.SPYGLASS;
-                case PRESETS -> net.minecraft.world.item.Items.ENCHANTED_BOOK;
-                case CHANGES -> net.minecraft.world.item.Items.WRITABLE_BOOK;
-                default -> GiantsGuideMod.GUIDE;
-            });
-            g.pose().pushPose();
-            g.pose().translate(x, y, 0);
-            g.pose().scale(size / 16f, size / 16f, 1);
-            g.renderItem(st, 0, 0);
-            g.pose().popPose();
+            // (Part 2C) the book's own little pictures: home, live, presets, changes, all (a crown)
+            AdminStyle.icon(g, key, x, y, size);
             return;
         }
         g.fill(x - 1, y - 1, x + size + 1, y + size + 1, EDGE);
@@ -1373,10 +1721,54 @@ public class AdminBookScreen extends Screen {
         if (key.equals(LIVE) != pageKey.equals(LIVE)) AdminBookClient.watchLive(key.equals(LIVE));
         pageKey = key;
         keptPage = key;
+        loadTabs();
         keptQuery = "";
         search.setValue("");
         scroll = 0;
         build();
+    }
+
+    // (Part 2C) a giant's halves and every page's sections
+
+    /** the half and section this page was last on */
+    private void loadTabs() {
+        String[] t = keptTabs.get(pageKey);
+        part = t == null ? GENERAL : t[0].equals(SPECIAL) ? SPECIAL : GENERAL;
+        section = t == null ? "" : t[1];
+    }
+
+    private void saveTabs() {
+        keptTabs.put(pageKey, new String[] {part, section});
+    }
+
+    /** General or Special on a giant's page */
+    private void pickPart(String p) {
+        if (p.equals(part) && keptQuery.isBlank()) return;
+        part = p;
+        section = "";
+        keptQuery = "";
+        search.setValue("");
+        saveTabs();
+        scroll = 0;
+        build();
+    }
+
+    /** one section (or "all") */
+    private void pickSection(String sec) {
+        section = sec;
+        saveTabs();
+        scroll = 0;
+        build();
+    }
+
+    /** a page made of sections: a giant's, or All giants */
+    private boolean sectioned() {
+        return keptQuery.isBlank() && !ownPage(pageKey) && AdminBookClient.page(pageKey) != null;
+    }
+
+    /** a giant's own page (General and Special) */
+    private boolean giantPage() {
+        return sectioned() && !pageKey.equals(AdminCatalog.ALL);
     }
 
     // the server
@@ -1488,96 +1880,295 @@ public class AdminBookScreen extends Screen {
         if (modal != null) modal.render(g, mx, my, partial);
     }
 
+    /** (Part 2C) a place that does something when clicked: the contents, the breadcrumb, the tabs */
+    private record Zone(int x, int y, int w, int h, Runnable go) {}
+
+    private final List<Zone> zones = new ArrayList<>();
+
+    /** a section tab: where it is, and whether it shows its name (a narrow book shows only the picture) */
+    private record TabBox(String sec, int x, int y, int w, boolean named) {}
+
+    private final List<TabBox> tabBoxes = new ArrayList<>();
+
+    private Component sectionName(String sec) {
+        return sec.equals(ALL_SECTIONS) ? tr("section.all") : tr("cat." + sec);
+    }
+
+    /** the section tabs for this page, in one or two lines; where the list starts under them */
+    private void layoutTabs() {
+        tabBoxes.clear();
+        List<String> tabs = keptQuery.isBlank() ? sectionTabs() : List.of();
+        if (tabs.isEmpty()) {
+            tabRows = 0;
+            ly0 = headY + 25 + 10;
+            return;
+        }
+        String now = sectionNow(tabs);
+        for (int pass = 0; pass < 2; pass++) {
+            tabBoxes.clear();
+            int x = lx, row = 0;
+            for (String sec : tabs) {
+                boolean named = pass == 0 || sec.equals(now) || sec.equals(ALL_SECTIONS);
+                int w = named ? 22 + font.width(sectionName(sec)) : 20;
+                if (x > lx && x + w > lx + lw) {
+                    x = lx;
+                    row++;
+                }
+                tabBoxes.add(new TabBox(sec, x, tabY + row * 17, w, named));
+                x += w + 2;
+            }
+            tabRows = row + 1;
+            if (tabRows <= 2) break;
+        }
+        ly0 = tabY + tabRows * 17 + 7;
+    }
+
     @Override
     public void renderBackground(GuiGraphics g, int mx, int my, float partial) {
         super.renderBackground(g, mx, my, partial);
-        g.fill(px0, py0, px0 + pw, py0 + ph, PANEL);
-        g.renderOutline(px0, py0, pw, ph, EDGE);
-        g.drawCenteredString(font, title, px0 + pw / 2, py0 + 5, TITLE);
-        g.fill(lx - 5, py0 + 18, lx - 4, py0 + ph - 6, EDGE);
+        zones.clear();
+        // the cover, the contents' older paper, the page
+        AdminStyle.frame(g, px0, py0, pw, ph);
+        AdminStyle.index(g, inX0, inY0, pageX0 - inX0, inY1 - inY0);
+        AdminStyle.page(g, pageX0, inY0, inX1 - pageX0, inY1 - inY0);
+        // the title on a gilt label over the top edge
+        label(g, font, title, px0 + pw / 2, py0);
         drawNav(g, mx, my);
+        drawCrumb(g, mx, my);
         drawHead(g, mx, my);
-        g.fill(lx, ly0 - 3, lx + lw, ly0 - 2, EDGE);
+        drawTabs(g, mx, my);
         drawList(g, mx, my);
         if (!status.getString().isEmpty() && Util.getMillis() - statusAt < 8000) {
             String line = cut(status.getString(), lw);
-            g.drawString(font, line, lx, py0 + ph - 11, statusColour, false);
+            g.fill(lx - 4, inY1 - 13, lx + lw + 4, inY1 - 2, 0x30FFF8E0);
+            g.drawString(font, line, lx, inY1 - 11, statusColour, false);
             // (all of it on hover, when it didn't fit)
-            if (!line.equals(status.getString()) && modal == null && mx >= lx && mx < lx + lw && my >= py0 + ph - 12
-                    && my < py0 + ph - 2)
+            if (!line.equals(status.getString()) && modal == null && mx >= lx && mx < lx + lw && my >= inY1 - 12
+                    && my < inY1 - 2)
                 setTooltipForNextRenderPass(font.split(status, 300));
-        }
-        else if (AdminBookClient.home() == null)
-            g.drawString(font, tr("asking"), lx, py0 + ph - 11, GREY, false);
+        } else if (AdminBookClient.home() == null)
+            g.drawString(font, tr("asking"), lx, inY1 - 11, GREY, false);
     }
 
+    /** a gilt label with words on it, centred on x, over the cover's top edge at y */
+    static void label(GuiGraphics g, net.minecraft.client.gui.Font font, Component t, int x, int y) {
+        int tw = font.width(t) + 24, tx = x - tw / 2;
+        g.fill(tx, y, tx + tw, y + 16, 0xFF140A0C);
+        g.fill(tx + 1, y + 1, tx + tw - 1, y + 15, 0xFF5A1A30);
+        g.renderOutline(tx + 2, y + 2, tw - 4, 12, 0xFFE8B840);
+        g.drawString(font, t, x - font.width(t) / 2, y + 4, AdminStyle.GILT, true);
+    }
+
+    /** the contents down the left: the book's own pages, then the giants; the page open has a red ribbon */
     private void drawNav(GuiGraphics g, int mx, int my) {
+        if (slim) AdminStyle.icon(g, "presets", navX + 3, inY0 + 2, 12);
+        else g.drawString(font, tr("contents"), navX + 2, inY0 + 5, HEAD, false);
+        g.fill(navX + 2, inY0 + 14, navX + navW - 4, inY0 + 15, AdminStyle.RULE);
         List<String> keys = navKeys();
-        for (int i = 0; i < keys.size(); i++) {
-            String key = keys.get(i);
-            int y = navY + i * navRowH;
-            if (y + navRowH > py0 + ph - 4) break;
+        int y = navY;
+        boolean giants = false;
+        for (String key : keys) {
+            if (!giants && !ownPage(key) && !key.equals(AdminCatalog.ALL)) {
+                // (a gap and a word before the giants)
+                giants = true;
+                if (y + navRowH + 4 <= inY1 - 4) {
+                    AdminStyle.dots(g, navX + 2, y + 2, navW - 6);
+                    y += 5;
+                }
+            }
+            if (y + navRowH > inY1 - 2) break;
             boolean sel = key.equals(pageKey) && keptQuery.isBlank();
-            boolean over = modal == null && mx >= navX && mx < navX + navW && my >= y && my < y + navRowH - 2;
+            boolean over = modal == null && mx >= navX && mx < navX + navW && my >= y && my < y + navRowH - 1;
             if (sel) {
-                g.fill(navX, y, navX + navW, y + navRowH - 2, 0xFF3A3020);
-                g.renderOutline(navX, y, navW, navRowH - 2, TITLE);
-            } else if (over) g.fill(navX, y, navX + navW, y + navRowH - 2, 0x30FFFFFF);
-            int pic = navRowH - 6;
+                // a ribbon from the contents into the page
+                g.fill(navX - 3, y, pageX0 + 3, y + navRowH - 1, 0xFF7A2214);
+                g.fill(navX - 3, y, pageX0 + 3, y + 1, 0xFFA8442A);
+                g.fill(navX - 3, y + navRowH - 2, pageX0 + 3, y + navRowH - 1, 0xFF4A1208);
+            } else if (over) g.fill(navX, y, navX + navW, y + navRowH - 1, AdminStyle.SHADE);
+            int pic = navRowH - 5;
             icon(g, key, navX + 2, y + 2, pic);
             Component name = key.equals(HOME) ? tr("home") : Component.literal(giantName(key));
             JsonObject gj = homeGiant(key);
             boolean speaks = gj == null || gj.get("speaks") == null || gj.get("speaks").getAsBoolean();
             int n = key.equals(HOME) ? 0 : setCount(key);
             String count = n > 0 ? String.valueOf(n) : "";
-            int cw = count.isEmpty() ? 0 : font.width(count) + 4;
-            int tx = navX + pic + 6, tw = navW - pic - 9 - cw;
-            g.drawString(font, cut(name.getString(), tw), tx, y + (navRowH - 2 - 8) / 2, !speaks ? DIM : sel ? KEY : TEXT,
-                    false);
-            if (n > 0) g.drawString(font, count, navX + navW - 3 - font.width(count), y + (navRowH - 2 - 8) / 2, GOLD, false);
-            if (over && n > 0)
-                setTooltipForNextRenderPass(font.split(tr("nav.set", giantName(key), n), 220));
+            int cw = count.isEmpty() ? 0 : font.width(count) + 6;
+            int tx = navX + pic + 6, tww = navW - pic - 9 - cw;
+            int ty = y + (navRowH - 1 - 8) / 2;
+            if (slim) {
+                if (n > 0) g.fill(navX + navW - 5, y + 1, navX + navW - 1, y + 5, 0xFFA06208);
+                if (over) {
+                    List<FormattedCharSequence> tip = new ArrayList<>();
+                    tip.add(name.copy().withStyle(ChatFormatting.YELLOW).getVisualOrderText());
+                    if (n > 0) tip.addAll(font.split(tr("nav.set", giantName(key), n), 220));
+                    setTooltipForNextRenderPass(tip);
+                }
+            } else
+                g.drawString(font, cut(name.getString(), tww), tx, ty, sel ? AdminStyle.GILT : !speaks ? DIM : TEXT,
+                        false);
+            if (n > 0 && !slim) {
+                int bx = navX + navW - 3 - font.width(count) - 2;
+                g.fill(bx - 1, ty - 1, bx + font.width(count) + 3, ty + 9, sel ? 0xFFE8B840 : 0xFFA06208);
+                g.drawString(font, count, bx + 1, ty, sel ? 0xFF3A1008 : 0xFFFFF4D0, false);
+            }
+            if (over && n > 0 && !slim) setTooltipForNextRenderPass(font.split(tr("nav.set", giantName(key), n), 220));
+            String k = key;
+            zones.add(new Zone(navX, y, navW, navRowH - 1, () -> go(k)));
+            y += navRowH;
         }
     }
 
+    /** "Home › Wreckback › Special › Moves": where you are; each step but the last takes you there */
+    private void drawCrumb(GuiGraphics g, int mx, int my) {
+        List<Component> words = new ArrayList<>();
+        List<Runnable> goes = new ArrayList<>();
+        words.add(tr("home"));
+        goes.add(() -> go(HOME));
+        String q = keptQuery.strip();
+        if (!q.isEmpty()) {
+            words.add(tr("crumb.search", q));
+            goes.add(null);
+        } else if (!pageKey.equals(HOME)) {
+            words.add(Component.literal(giantName(pageKey)));
+            goes.add(sectioned() ? () -> pickSection(ALL_SECTIONS) : null);
+            if (giantPage()) {
+                words.add(tr("part." + part));
+                goes.add(() -> pickSection(ALL_SECTIONS));
+            }
+            if (sectioned()) {
+                String now = sectionNow(sectionTabs());
+                words.add(sectionName(now));
+                goes.add(null);
+            }
+        }
+        // the last step is where you are: nothing to click
+        goes.set(goes.size() - 1, null);
+        int right = inX1 - 6 - 16 - 18 - 6, x = lx;
+        String sep = " › ";
+        AdminStyle.icon(g, "home", lx - 1, crumbY - 2, 10);
+        x += 12;
+        for (int i = 0; i < words.size(); i++) {
+            String w = words.get(i).getString();
+            boolean last = i == words.size() - 1;
+            int ww = font.width(w);
+            if (x + ww > right) w = cut(w, Math.max(10, right - x));
+            ww = font.width(w);
+            Runnable r = goes.get(i);
+            boolean over = r != null && modal == null && mx >= x && mx < x + ww && my >= crumbY - 1 && my < crumbY + 9;
+            g.drawString(font, w, x, crumbY, last ? KEY : over ? 0xFFC0401C : HEAD, false);
+            if (r != null) {
+                g.fill(x, crumbY + 9, x + ww, crumbY + 10, over ? 0xFFC0401C : 0x608A2A14);
+                zones.add(new Zone(x, crumbY - 1, ww, 11, r));
+            }
+            x += ww;
+            if (!last) x = g.drawString(font, sep, x, crumbY, DIM, false);
+            if (x >= right) break;
+        }
+    }
+
+    /** the page's heading: its picture and words; on a giant's page, his General and Special halves as tabs */
     private void drawHead(GuiGraphics g, int mx, int my) {
         Component title, sub;
         String q = keptQuery.strip();
+        String pic;
         if (!q.isEmpty()) {
             title = tr("search.title", q);
             sub = foundTotal > MOST_FOUND ? tr("search.sub.more", foundTotal, MOST_FOUND) : tr("search.sub", foundTotal);
+            pic = "search";
         } else if (pageKey.equals(HOME)) {
             title = tr("home");
             sub = creating() ? tr("creation.home.sub") : tr("home.sub");
-
+            pic = HOME;
         } else if (pageKey.equals(LIVE)) {
             title = tr("live");
             sub = tr("live.sub", liveCount());
+            pic = LIVE;
         } else if (pageKey.equals(PRESETS)) {
             title = tr("presets");
             sub = tr("presets.sub");
+            pic = PRESETS;
         } else if (pageKey.equals(CHANGES)) {
             title = tr("changes");
             sub = tr("changes.sub");
+            pic = CHANGES;
         } else {
             title = Component.literal(giantName(pageKey));
             AdminBookClient.Page p = AdminBookClient.page(pageKey);
             int n = p == null ? 0 : p.settings().size(), set = setCount(pageKey);
             sub = pageKey.equals(AdminCatalog.ALL) ? tr("all.sub")
                     : p == null ? Component.empty() : set > 0 ? tr("page.sub.set", n, set) : tr("page.sub", n);
+            pic = pageKey.equals(AdminCatalog.ALL) ? "all" : null;
         }
         int right = headButton.visible ? headButton.getX() - 6 : lx + lw;
-        int tx = lx;
-        if (q.isEmpty() && !pageKey.equals(HOME) && !pageKey.equals(AdminCatalog.ALL)) {
-            icon(g, pageKey, lx, headY + 2, 18);
-            tx += 23;
-        }
-        g.drawString(font, cut(title.getString(), right - tx), tx, headY + 2, GOLD, false);
         boolean banner = allWorlds && (!q.isEmpty() || pageKey.equals(HOME) || !ownPage(pageKey));
         Component line = banner ? tr("scope.all.banner") : sub;
-        g.drawString(font, cut(line.getString(), right - tx), tx, headY + 12, banner ? ORANGE : GREY, false);
-        if (allWorlds && mx >= tx && mx < right && my >= headY + 10 && my < headY + 21)
+        if (giantPage()) {
+            // his picture, then General | Special
+            icon(g, pageKey, lx + 1, headY + 2, 20);
+            int x = lx + 27;
+            for (String pt : List.of(GENERAL, SPECIAL)) {
+                Component c = tr("part." + pt);
+                int w = font.width(c) + 26;
+                boolean sel = pt.equals(part), over = modal == null && mx >= x && mx < x + w && my >= headY + 2
+                        && my < headY + 22;
+                AdminStyle.tab(g, x, headY + 2, w, 20, sel, over);
+                AdminStyle.icon(g, pt, x + 5, headY + 6, 12);
+                g.drawString(font, c, x + 20, headY + 8, sel ? HEAD : TEXT, false);
+                if (over) setTooltipForNextRenderPass(font.split(tr("part." + pt + ".tip", giantName(pageKey)), 240));
+                zones.add(new Zone(x, headY + 2, w, 20, () -> pickPart(pt)));
+                x += w + 3;
+            }
+            int sx = x + 6;
+            if (sx + 40 < right) {
+                g.drawString(font, cut(title.getString(), right - sx), sx, headY + 3, HEAD, false);
+                g.drawString(font, cut(line.getString(), right - sx), sx, headY + 13, banner ? ORANGE : GREY, false);
+            }
+        } else {
+            int tx = lx;
+            if (pic != null) AdminStyle.icon(g, pic, lx, headY + 2, 18);
+            else icon(g, pageKey, lx, headY + 2, 18);
+            tx += 24;
+            g.drawString(font, cut(title.getString(), right - tx), tx, headY + 3, HEAD, false);
+            g.drawString(font, cut(line.getString(), right - tx), tx, headY + 13, banner ? ORANGE : GREY, false);
+        }
+        if (allWorlds && mx >= lx && mx < right && my >= headY + 11 && my < headY + 22)
             setTooltipForNextRenderPass(font.split(tr("scope.all.tip"), 260));
+    }
+
+    /** the section tabs (or, with none, a rubric line) over the list */
+    private void drawTabs(GuiGraphics g, int mx, int my) {
+        if (tabBoxes.isEmpty()) {
+            AdminStyle.flourish(g, lx, ly0 - 9, lw);
+            return;
+        }
+        String now = sectionNow(sectionTabs());
+        int base = tabY + tabRows * 17;
+        g.fill(lx - 4, base - 1, lx + lw + 4, base, AdminStyle.RUBRIC);
+        TabBox picked = null;
+        for (TabBox t : tabBoxes) {
+            boolean sel = t.sec().equals(now);
+            if (sel) {
+                picked = t;
+                continue;
+            }
+            tabAt(g, t, false, mx, my);
+        }
+        if (picked != null) tabAt(g, picked, true, mx, my);
+    }
+
+    private void tabAt(GuiGraphics g, TabBox t, boolean sel, int mx, int my) {
+        boolean over = modal == null && mx >= t.x() && mx < t.x() + t.w() && my >= t.y() && my < t.y() + 16;
+        // (the picked tab joins the page under it)
+        AdminStyle.tab(g, t.x(), t.y(), t.w(), sel ? 17 : 15, sel, over);
+        AdminStyle.icon(g, t.sec().equals(ALL_SECTIONS) ? "all" : t.sec(), t.x() + 4, t.y() + 2, 12);
+        if (t.named()) g.drawString(font, sectionName(t.sec()), t.x() + 18, t.y() + 4, sel ? HEAD : TEXT, false);
+        if (over) {
+            List<FormattedCharSequence> tip = new ArrayList<>();
+            tip.add(sectionName(t.sec()).copy().withStyle(ChatFormatting.YELLOW).getVisualOrderText());
+            tip.addAll(font.split(tr(t.sec().equals(ALL_SECTIONS) ? "section.all.tip" : "section.tip"), 220));
+            setTooltipForNextRenderPass(tip);
+        }
+        zones.add(new Zone(t.x(), t.y(), t.w(), 16, () -> pickSection(t.sec())));
     }
 
     private void drawList(GuiGraphics g, int mx, int my) {
@@ -1588,11 +2179,16 @@ public class AdminBookScreen extends Screen {
             r.draw(g, lx, y, lw, mx, my);
         }
         g.disableScissor();
+        // (a soft edge where the list goes under the tabs and the bottom)
+        for (int i = 0; i < 4; i++) {
+            g.fill(lx - 5, ly0 + i, lx + lw + 6, ly0 + i + 1, (4 - i) * 10 << 24);
+            g.fill(lx - 5, ly1 - i - 1, lx + lw + 6, ly1 - i, (4 - i) * 8 << 24);
+        }
         if (contentH > ly1 - ly0) {
             int track = ly1 - ly0, bar = Math.max(16, track * track / contentH);
             int by = ly0 + (int) ((track - bar) * scroll / Math.max(1, contentH - track));
-            g.fill(lx + lw + 3, ly0, lx + lw + 5, ly1, LINE);
-            g.fill(lx + lw + 3, by, lx + lw + 5, by + bar, EDGE);
+            g.fill(lx + lw + 3, ly0, lx + lw + 6, ly1, 0x30503010);
+            g.fill(lx + lw + 3, by, lx + lw + 6, by + bar, 0xFF8A2A14);
         }
     }
 
@@ -1625,7 +2221,9 @@ public class AdminBookScreen extends Screen {
      * plain to see once the giant is small), never less than a dot.
      */
     void preview(GuiGraphics g, int x, int y, int w, int h, String key, double size) {
-        g.fill(x, y, x + w, y + h, 0x50000000);
+        // (a little dusk-blue window in a brown frame, so the figures stand out on the parchment)
+        g.fill(x, y, x + w, y + h, 0xFF8A6A40);
+        g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF3A5068, 0xFF5E7A8E);
         int ground = y + h - 2;
         g.fill(x + 1, ground, x + w - 1, ground + 1, 0x60FFFFFF);
         double[] b = body(key);
@@ -1690,15 +2288,19 @@ public class AdminBookScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (modal != null) return modal.mouseClicked(mx, my, button);
         mouseDown = true;
-        // the pages down the left
-        if (button == 0 && mx >= navX && mx < navX + navW && my >= navY) {
-            List<String> keys = navKeys();
-            int i = (int) ((my - navY) / navRowH);
-            if (i < keys.size() && my - navY - i * navRowH < navRowH - 2) {
-                go(keys.get(i));
-                return true;
+        // (Part 2C) the contents, the breadcrumb, General/Special and the section tabs
+        if (button == 0)
+            for (Zone z : List.copyOf(zones))
+                if (mx >= z.x() && mx < z.x() + z.w() && my >= z.y() && my < z.y() + z.h()) {
+                    z.go().run();
+                    return true;
+                }
+        // a click on a row itself (a group's heading folds it)
+        if (button == 0 && mx >= lx - 4 && mx < lx + lw && my >= ly0 && my < ly1)
+            for (Row r : List.copyOf(rows)) {
+                int top = ly0 + r.y - (int) scroll;
+                if (my >= top && my < top + r.h && r.click(mx, my, top)) return true;
             }
-        }
         // Home's tiles
         if (button == 0 && keptQuery.isBlank() && pageKey.equals(HOME) && my >= ly0 && my < ly1)
             for (TileLine t : tiles) {
@@ -1751,7 +2353,10 @@ public class AdminBookScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        if (modal != null) return true;
+        if (modal != null) {
+            modal.scrolled(sy);
+            return true;
+        }
         if (mx >= lx - 5 && mx < lx + lw + 8 && my >= ly0 && my < ly1) {
             scroll -= sy * 24;
             place();
@@ -1878,7 +2483,7 @@ public class AdminBookScreen extends Screen {
                 ? Double.parseDouble(sz.get(1)) : 2;
         summonSize = Mth.clamp(summonSize, lo, hi);
         Block b = new Block(24, (g, x, y, w, mx, my) -> {
-            g.fill(x - 2, y, x + w, y + 22, 0x20FFFFFF);
+            AdminStyle.card(g, x - 2, y, w + 2, 22, false);
             g.drawString(font, tr("live.summon"), x + 2, y + 7, KEY, false);
         });
         int lx0 = font.width(tr("live.summon")) + 8;
@@ -2020,7 +2625,7 @@ public class AdminBookScreen extends Screen {
 
         @Override
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
-            g.fill(x - 2, y + 1, x + w, y + h - 2, 0x14FFFFFF);
+            AdminStyle.card(g, x - 2, y + 1, w + 2, h - 3, false);
             icon(g, key, x + 2, y + 4, 20);
             int tx = x + 30;
             // line 1: his name, then what he is up to
@@ -2055,7 +2660,7 @@ public class AdminBookScreen extends Screen {
                 g.fill(barX, y + 5, barX + barW, y + 11, 0x60000000);
                 g.fill(barX, y + 5, barX + (int) Math.round(barW * f), y + 11,
                         f > 0.5 ? 0xFF60C060 : f > 0.25 ? 0xFFE0C050 : 0xFFE04040);
-                g.renderOutline(barX - 1, y + 4, barW + 2, 8, 0x60FFFFFF);
+                g.renderOutline(barX - 1, y + 4, barW + 2, 8, 0x80503010);
                 g.drawString(font, hpText, hpTextX, y + 4, TEXT, false);
             }
             // line 2: where, size, owner
@@ -2281,7 +2886,7 @@ public class AdminBookScreen extends Screen {
             String m = cut(main.getString(), textW);
             g.drawString(font, m, x, y + (h == 18 ? 5 : 3), mainColour, false);
             if (!sub.getString().isEmpty()) g.drawString(font, cut(sub.getString(), textW), x, y + 14, GREY, false);
-            g.fill(x, y + h - 1, x + w, y + h, 0x18FFFFFF);
+            AdminStyle.dots(g, x, y + h - 1, w);
             boolean cutOff = !m.equals(main.getString()) || font.width(sub) > textW;
             if (cutOff && mx >= x && mx < x + textW && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
                 setTooltipForNextRenderPass(tip);
@@ -2369,8 +2974,8 @@ public class AdminBookScreen extends Screen {
                     cx = x;
                     cy += 16;
                 }
-                g.fill(cx, cy, cx + cw, cy + 13, 0x14FFFFFF);
-                g.renderOutline(cx, cy, cw, 13, 0x30FFFFFF);
+                g.fill(cx, cy, cx + cw, cy + 13, 0x14503010);
+                g.renderOutline(cx, cy, cw, 13, 0x50503010);
                 g.drawString(font, s, cx + 5, cy + 3, DIM, false);
                 if (mx >= cx && mx < cx + cw && my >= cy && my < cy + 13 && my >= ly0 && my < ly1)
                     setTooltipForNextRenderPass(font.split(tr("presets.soon.tip"), 220));
@@ -2504,6 +3109,11 @@ public class AdminBookScreen extends Screen {
                 AdminBookClient.clearPreview();
                 request("apply");
             });
+            // (Part 2C, JJ: every change, not only the first few)
+            if (n > 0) button(tr("preview.all", n), () -> {
+                modal = new AllChanges(this);
+                place();
+            });
             button(tr(n > 0 ? "cancel" : "preview.ok"), this::cancel);
             layout(buttonsW());
         }
@@ -2523,27 +3133,20 @@ public class AdminBookScreen extends Screen {
             int w = modalW() - 16;
             List<FormattedCharSequence> out = new ArrayList<>();
             String about = str(p, "about");
-            if (!about.isEmpty()) out.addAll(font.split(Component.literal(about).withStyle(ChatFormatting.GRAY), w));
+            if (!about.isEmpty()) out.addAll(font.split(Component.literal(about).withStyle(st -> st.withColor(GREY)), w));
             int n = (int) dbl(p, "count", 0);
             out.addAll(font.split(n == 0 ? tr("preview.nothing") : tr("preview.changes", n), w));
             // (the ones that only reach new land first: the note below speaks of them)
             List<JsonObject> ch = new ArrayList<>(objects(p, "changes"));
             ch.sort(java.util.Comparator.comparing(c -> !bool(c, "creation")));
             // (as many as fit; the rest counted)
-            int room = Math.max(3, (height - 120) / 10 - out.size() - 6);
+            int room = Math.max(3, bodyRoom() - out.size() - 6);
             for (int i = 0; i < ch.size(); i++) {
                 if (i >= room && ch.size() - i > 1) {
-                    out.add(tr("preview.more", ch.size() - i).withStyle(ChatFormatting.GRAY).getVisualOrderText());
+                    out.add(tr("preview.more", ch.size() - i).withStyle(st -> st.withColor(GREY)).getVisualOrderText());
                     break;
                 }
-                JsonObject c = ch.get(i);
-                MutableComponent l = Component.literal("  " + str(c, "gname") + " " + str(c, "name") + ": ")
-                        .withStyle(ChatFormatting.WHITE)
-                        .append(Component.literal(str(c, "old")).withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal(" → ").withStyle(ChatFormatting.DARK_GRAY))
-                        .append(Component.literal(str(c, "now")).withStyle(ChatFormatting.YELLOW));
-                if (bool(c, "creation")) l.append(tr("preview.creation").withStyle(st -> st.withColor(ORANGE)));
-                out.add(cut(l, w));
+                out.add(cut(changeLine(ch.get(i), true), w));
             }
             List<String> locked = strings(p, "locked"), skipped = strings(p, "skipped"),
                     creation = strings(p, "creation");
@@ -2553,7 +3156,7 @@ public class AdminBookScreen extends Screen {
                 out.addAll(font.split(tr("preview.locked", String.join(", ", locked))
                         .withStyle(st -> st.withColor(GOLD)), w));
             if (!skipped.isEmpty())
-                out.addAll(font.split(tr("preview.skipped", skipped.size()).withStyle(ChatFormatting.GRAY), w));
+                out.addAll(font.split(tr("preview.skipped", skipped.size()).withStyle(st -> st.withColor(GREY)), w));
             JsonObject b = p.get("before") instanceof JsonObject x ? x : new JsonObject(),
                     a = p.get("after") instanceof JsonObject x ? x : new JsonObject();
             int lb = (int) dbl(b, "level", 3), la = (int) dbl(a, "level", 3);
@@ -2565,7 +3168,7 @@ public class AdminBookScreen extends Screen {
 
         private FormattedCharSequence cut(MutableComponent c, int w) {
             if (font.width(c) <= w) return c.getVisualOrderText();
-            return Component.literal(AdminBookScreen.this.cut(c.getString(), w)).withStyle(ChatFormatting.WHITE)
+            return Component.literal(AdminBookScreen.this.cut(c.getString(), w)).withStyle(st -> st.withColor(TEXT))
                     .getVisualOrderText();
         }
 
@@ -2578,6 +3181,75 @@ public class AdminBookScreen extends Screen {
         @Override
         boolean keyPressed(int key) {
             if (key == 257 || key == 335) buttons.get(0).onPress();
+            return true;
+        }
+    }
+
+    /** one change of a preview: "  Pitchgut Most at once: 1 (default) → 6", the giant's name left out when grouped */
+    private static MutableComponent changeLine(JsonObject c, boolean withGiant) {
+        MutableComponent l = Component.literal("  " + (withGiant ? str(c, "gname") + " " : "") + str(c, "name") + ": ")
+                .withStyle(st -> st.withColor(TEXT))
+                .append(Component.literal(str(c, "old")).withStyle(st -> st.withColor(GREY)))
+                .append(Component.literal(" → ").withStyle(st -> st.withColor(DIM)))
+                .append(Component.literal(str(c, "now")).withStyle(st -> st.withColor(GOLD)));
+        if (bool(c, "creation")) l.append(tr("preview.creation").withStyle(st -> st.withColor(ORANGE)));
+        return l;
+    }
+
+    /**
+     * (Part 2C, JJ Nov 2) "See all changes": every change a preset, an import or a snapshot would make, giant by giant,
+     * scrolling; Back to the preview (Apply is there).
+     */
+    private final class AllChanges extends Modal {
+        final Preview back;
+        final List<FormattedCharSequence> lines = new ArrayList<>();
+
+        AllChanges(Preview back) {
+            this.back = back;
+            int w = modalW() - 20;
+            String giant = null;
+            for (JsonObject c : objects(back.p, "changes")) {
+                String g = str(c, "gname");
+                if (!g.equals(giant)) {
+                    giant = g;
+                    if (!lines.isEmpty()) lines.add(FormattedCharSequence.EMPTY);
+                    long n = objects(back.p, "changes").stream().filter(x -> str(x, "gname").equals(g)).count();
+                    lines.add(Component.literal(g + " (" + n + ")").withStyle(st -> st.withColor(HEAD))
+                            .getVisualOrderText());
+                }
+                lines.addAll(font.split(changeLine(c, false), w));
+            }
+            button(tr("preview.all.back"), this::cancel);
+            layout(buttonsW());
+        }
+
+        @Override
+        int modalW() {
+            return Math.min(pw - 24, 420);
+        }
+
+        @Override
+        Component title() {
+            return tr("preview.all.title", str(back.p, "title"), (int) dbl(back.p, "count", 0));
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            return lines;
+        }
+
+        @Override
+        void cancel() {
+            modal = back;
+            place();
+        }
+
+        @Override
+        boolean keyPressed(int key) {
+            if (key == 264) bodyScroll++;
+            else if (key == 265) bodyScroll--;
+            else if (key == 267) bodyScroll += bodyRoom();
+            else if (key == 266) bodyScroll -= bodyRoom();
             return true;
         }
     }
@@ -2605,6 +3277,11 @@ public class AdminBookScreen extends Screen {
                 for (int k = 0; k < px[r].length(); k++)
                     if (px[r].charAt(k) == '#') g.fill(x0 + k, y0 + r, x0 + k + 1, y0 + r + 1, c);
         }
+    }
+
+    /** room for the padlock on this setting's line (none on an every-giant row) */
+    private int lockW(AdminSetting s) {
+        return s.giant().equals(EVERY) ? 0 : lockW();
     }
 
     /** room for the padlock on a setting's line (admins) */
@@ -2714,10 +3391,18 @@ public class AdminBookScreen extends Screen {
             return Math.min(pw - 40, 300);
         }
 
+        /** (Part 2C) the first body line shown (a long body scrolls) */
+        int bodyScroll;
+
+        /** how many body lines fit on the screen */
+        int bodyRoom() {
+            return Math.max(4, (height - 90) / 10);
+        }
+
         void layout(int buttonsW) {
             mw = modalW();
             List<FormattedCharSequence> b = body();
-            mh = 30 + b.size() * 10 + 28;
+            mh = 30 + Math.min(b.size(), bodyRoom()) * 10 + 28;
             mx0 = (width - mw) / 2;
             my0 = (height - mh) / 2;
             int x = mx0 + mw - 8 - buttonsW, y = my0 + mh - 24;
@@ -2744,12 +3429,22 @@ public class AdminBookScreen extends Screen {
             g.pose().pushPose();
             g.pose().translate(0, 0, 400);
             g.fill(0, 0, width, height, 0x90000000);
-            g.fill(mx0, my0, mx0 + mw, my0 + mh, 0xF0181410);
-            g.renderOutline(mx0, my0, mw, mh, TITLE);
-            g.drawString(font, title(), mx0 + 8, my0 + 8, GOLD, false);
-            g.fill(mx0 + 8, my0 + 19, mx0 + mw - 8, my0 + 20, EDGE);
+            AdminStyle.frame(g, mx0 - 8, my0 - 8, mw + 16, mh + 16);
+            AdminStyle.page(g, mx0 + 2, my0 + 2, mw - 4, mh - 4);
+            g.drawString(font, title(), mx0 + 8, my0 + 8, HEAD, false);
+            g.fill(mx0 + 8, my0 + 19, mx0 + mw - 8, my0 + 20, AdminStyle.RULE);
             List<FormattedCharSequence> b = body();
-            for (int i = 0; i < b.size(); i++) g.drawString(font, b.get(i), mx0 + 8, my0 + 26 + i * 10, TEXT, false);
+            int room = Math.min(b.size(), bodyRoom());
+            bodyScroll = Mth.clamp(bodyScroll, 0, Math.max(0, b.size() - room));
+            for (int i = 0; i < room; i++)
+                g.drawString(font, b.get(i + bodyScroll), mx0 + 8, my0 + 26 + i * 10, TEXT, false);
+            if (b.size() > room) {
+                // a scroll bar on the right
+                int top = my0 + 26, track = room * 10, bar = Math.max(8, track * room / b.size());
+                int by = top + (track - bar) * bodyScroll / Math.max(1, b.size() - room);
+                g.fill(mx0 + mw - 6, top, mx0 + mw - 4, top + track, 0x30503010);
+                g.fill(mx0 + mw - 6, by, mx0 + mw - 4, by + bar, 0xFF8A2A14);
+            }
             extra(g);
             for (Button bt : buttons) bt.render(g, mx, my, partial);
             g.pose().popPose();
@@ -2764,6 +3459,11 @@ public class AdminBookScreen extends Screen {
 
         boolean keyPressed(int key) {
             return true;
+        }
+
+        /** the wheel over a long body */
+        void scrolled(double sy) {
+            bodyScroll -= (int) Math.signum(sy) * 3;
         }
     }
 

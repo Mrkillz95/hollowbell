@@ -66,21 +66,27 @@ public class CreationScreen extends Screen {
             presets = AdminBook.presetsJson(new AdminDraft(), "", "");
             for (Giant g : AdminServer.giants()) if (AdminServer.report(null, g) != null) anyGiant = true;
         }
-        pw = Math.min(width - 16, 460);
+        pw = Math.min(width - 16, 480);
         ph = height - 16;
         px0 = (width - pw) / 2;
         py0 = 8;
-        ly0 = py0 + 22;
-        ly1 = py0 + ph - 50;
-        int bw = Math.min(150, (pw - 30) / 2);
+        ly0 = py0 + 24;
+        ly1 = py0 + ph - 52;
+        // (Part 2C) See all changes | Edit settings… | Done
+        int bw = Math.min(140, (pw - 40) / 3);
+        Button all = addRenderableWidget(Button.builder(Component.translatable("admin.jj_giants.creation.all"),
+                        b -> minecraft.setScreen(new ChangesScreen(this, draft)))
+                .bounds(width / 2 - bw * 3 / 2 - 6, py0 + ph - 26, bw, 20)
+                .build());
+        all.setTooltip(Tooltip.create(Component.translatable("admin.jj_giants.creation.all.tip")));
         Button edit = addRenderableWidget(Button.builder(Component.translatable("admin.jj_giants.creation.edit"),
                         b -> edit())
-                .bounds(width / 2 - bw - 4, py0 + ph - 24, bw, 20)
+                .bounds(width / 2 - bw / 2, py0 + ph - 26, bw, 20)
                 .build());
         edit.setTooltip(Tooltip.create(Component.translatable("admin.jj_giants.creation.edit.tip")));
         edit.active = anyGiant;
         addRenderableWidget(Button.builder(Component.translatable("admin.jj_giants.creation.done"), b -> onClose())
-                .bounds(width / 2 + 4, py0 + ph - 24, bw, 20)
+                .bounds(width / 2 + bw / 2 + 6, py0 + ph - 26, bw, 20)
                 .build());
         build();
     }
@@ -98,7 +104,7 @@ public class CreationScreen extends Screen {
 
     private void build() {
         items.clear();
-        int tw = pw - 24 - 14;
+        int tw = pw - 40 - 14;
         if (!anyGiant)
             items.add(new Item("note", Component.translatable("admin.jj_giants.creation.none"), List.of(), null, "",
                     14));
@@ -210,7 +216,7 @@ public class CreationScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
-        if (mx < px0 + 8 || mx > px0 + pw - 8 || my < ly0 || my >= ly1) return false;
+        if (mx < px0 + 14 || mx > px0 + pw - 14 || my < ly0 || my >= ly1) return false;
         int y = ly0 - (int) scroll;
         for (Item i : items) {
             if (my >= y && my < y + i.h()) {
@@ -238,13 +244,15 @@ public class CreationScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mx, int my, float partial) {
         super.renderBackground(g, mx, my, partial);
-        g.fill(px0, py0, px0 + pw, py0 + ph, PANEL);
-        g.renderOutline(px0, py0, pw, ph, EDGE);
-        g.drawCenteredString(font, title, px0 + pw / 2, py0 + 7, TITLE);
-        g.fill(px0 + 6, ly0 - 3, px0 + pw - 6, ly0 - 2, EDGE);
-        g.fill(px0 + 6, ly1 + 1, px0 + pw - 6, ly1 + 2, EDGE);
-        int x = px0 + 12, w = pw - 24;
-        g.enableScissor(px0 + 2, ly0, px0 + pw - 2, ly1);
+        // (Part 2C) the admin book's leather and parchment
+        AdminStyle.frame(g, px0, py0, pw, ph);
+        AdminStyle.page(g, px0 + AdminStyle.EDGE, py0 + AdminStyle.EDGE, pw - 2 * AdminStyle.EDGE,
+                ph - 2 * AdminStyle.EDGE);
+        AdminBookScreen.label(g, font, title, px0 + pw / 2, py0);
+        AdminStyle.flourish(g, px0 + 14, ly0 - 8, pw - 28);
+        g.fill(px0 + 14, ly1 + 1, px0 + pw - 14, ly1 + 2, AdminStyle.RULE);
+        int x = px0 + 20, w = pw - 40;
+        g.enableScissor(px0 + 12, ly0, px0 + pw - 12, ly1);
         int y = ly0 - (int) scroll;
         for (Item i : items) {
             if (y + i.h() >= ly0 && y < ly1) drawItem(g, i, x, y, w, mx, my);
@@ -256,7 +264,7 @@ public class CreationScreen extends Screen {
         if (contentH > view) {
             int bh = Math.max(12, view * view / contentH);
             int by = ly0 + (int) ((view - bh) * scroll / (contentH - view));
-            g.fill(px0 + pw - 6, by, px0 + pw - 4, by + bh, 0x80FFFFFF);
+            g.fill(px0 + pw - 14, by, px0 + pw - 12, by + bh, 0xFF8A2A14);
         }
         // the choice now
         MutableComponent now;
@@ -267,7 +275,7 @@ public class CreationScreen extends Screen {
             now = Component.translatable("admin.jj_giants.creation.chosen", draft.label(), draft.count(), d.level(),
                     d.label());
         }
-        g.drawCenteredString(font, now, px0 + pw / 2, ly1 + 8, KEY);
+        g.drawString(font, now, px0 + pw / 2 - font.width(now) / 2, ly1 + 8, KEY, false);
     }
 
     /** the draft's danger rating as it stands */
@@ -280,7 +288,7 @@ public class CreationScreen extends Screen {
     private void drawItem(GuiGraphics g, Item i, int x, int y, int w, int mx, int my) {
         switch (i.kind()) {
             case "head" -> {
-                int nx = g.drawString(font, i.title(), x, y + 5, GOLD, false);
+                int nx = g.drawString(font, i.title(), x, y + 5, AdminStyle.RUBRIC, false);
                 if (!i.sub().isEmpty()) g.drawString(font, i.sub().get(0), nx + 6, y + 5, DIM, false);
             }
             case "note" -> g.drawString(font, i.title(), x + 4, y + 2, GREY, false);
@@ -292,8 +300,8 @@ public class CreationScreen extends Screen {
                         cx = x;
                         cy += 16;
                     }
-                    g.fill(cx, cy, cx + cw, cy + 13, 0x14FFFFFF);
-                    g.renderOutline(cx, cy, cw, 13, 0x30FFFFFF);
+                    g.fill(cx, cy, cx + cw, cy + 13, 0x14503010);
+                    g.renderOutline(cx, cy, cw, 13, 0x50503010);
                     g.drawString(font, s, cx + 5, cy + 3, DIM, false);
                     if (mx >= cx && mx < cx + cw && my >= cy && my < cy + 13 && my >= ly0 && my < ly1)
                         setTooltipForNextRenderPass(font.split(
@@ -304,8 +312,8 @@ public class CreationScreen extends Screen {
             default -> {
                 boolean on = chosen(i), over = mx >= x - 4 && mx < x + w + 4 && my >= y && my < y + i.h() - 2
                         && my >= ly0 && my < ly1;
-                g.fill(x - 4, y, x + w + 4, y + i.h() - 2, on ? 0x30E0B050 : over ? 0x28FFFFFF : 0x14FFFFFF);
-                g.renderOutline(x - 4, y, w + 8, i.h() - 2, on ? GOLD : over ? 0x80FFFFFF : 0x30FFFFFF);
+                g.fill(x - 4, y, x + w + 4, y + i.h() - 2, on ? 0x30E0B050 : over ? 0x30FFF8E0 : 0x18FFF8E0);
+                g.renderOutline(x - 4, y, w + 8, i.h() - 2, on ? AdminStyle.RUBRIC : over ? 0xA0705030 : 0x60705030);
                 // a round mark: filled when chosen
                 int rx = x, ry = y + 4;
                 g.renderOutline(rx, ry, 7, 7, on ? GOLD : GREY);

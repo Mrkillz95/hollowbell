@@ -224,6 +224,11 @@ public final class AdminBook {
         }
         return switch (what) {
             case "set", "reset" -> settingRequest(server, who, what, o);
+            // (Part 2C) one shared setting for every giant at once
+            case "setall" -> AdminJson.str(o, "scope", 16).equals("allworlds")
+                    ? AdminEvery.setDefault(server, who, AdminJson.str(o, "id", 64), AdminJson.str(o, "value", 256))
+                    : AdminEvery.set(server, who, AdminJson.str(o, "id", 64), AdminJson.str(o, "value", 256));
+            case "resetall" -> AdminEvery.reset(server, who, AdminJson.str(o, "id", 64));
             case "summon" -> {
                 AdminServer.Result r = AdminLive.summon(server, p, AdminJson.str(o, "giant", 32),
                         AdminJson.str(o, "size", 16), AdminJson.str(o, "mood", 16));

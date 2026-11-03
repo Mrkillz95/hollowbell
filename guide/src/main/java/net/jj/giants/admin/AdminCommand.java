@@ -47,6 +47,17 @@ public final class AdminCommand {
                                                 .then(Commands.argument("value", StringArgumentType.greedyString())
                                                         .suggests(VALUES)
                                                         .executes(AdminCommand::set)))))
+                        // (Part 2C) one shared setting to the same value for every giant that has it
+                        .then(Commands.literal("setall")
+                                .then(Commands.argument("setting", StringArgumentType.word())
+                                        .suggests(EVERY)
+                                        .then(Commands.argument("value", StringArgumentType.greedyString())
+                                                .executes(AdminCommand::setAll))))
+                        .then(Commands.literal("resetall")
+                                .then(Commands.argument("setting", StringArgumentType.word())
+                                        .suggests(EVERY)
+                                        .executes(c -> say(c, AdminEvery.reset(server(c), who(c),
+                                                word(c, "setting"))))))
                         .then(Commands.literal("reset")
                                 .then(giant("giant", true)
                                         .executes(c -> say(c, AdminServer.reset(
@@ -215,6 +226,8 @@ public final class AdminCommand {
             "/giants admin get <giant|all> [setting]: what this world has set, or one setting.",
             "/giants admin set <giant|all> <setting> <value> [world|allworlds]: a setting for this world (or the"
                     + " server default, for all worlds).",
+            "/giants admin setall <setting> <value> [world|allworlds]: one setting the giants share, the same for"
+                    + " every giant (each kept to his own range); resetall <setting> puts it back.",
             "/giants admin reset <giant|all|everything> [setting]: back to the server defaults.",
             "/giants admin list <giant|all> [category]: every setting there is.",
             "/giants admin log [count]: the recent changes.",
@@ -239,6 +252,32 @@ public final class AdminCommand {
                 ? AdminServer.setDefault(server(c), who(c), giant, id, text)
                 : AdminServer.set(server(c), who(c), giant, id, text));
     }
+
+    /** /giants admin setall <setting> <value> [world|allworlds] (Part 2C, ADMIN_BRIDGE.md 21.4) */
+    private static int setAll(CommandContext<CommandSourceStack> c) {
+        String text = StringArgumentType.getString(c, "value").trim();
+        int sp = text.lastIndexOf(' ');
+        String last = sp < 0 ? "" : text.substring(sp + 1).toLowerCase(java.util.Locale.ROOT);
+        boolean all = last.equals("allworlds");
+        if (all || last.equals("world")) text = text.substring(0, sp).trim();
+        String id = word(c, "setting");
+        return say(c, all
+                ? AdminEvery.setDefault(server(c), who(c), id, text)
+                : AdminEvery.set(server(c), who(c), id, text));
+    }
+
+    /** the settings two or more giants share (the ones setall takes) */
+    private static final SuggestionProvider<CommandSourceStack> EVERY = (c, b) -> {
+        java.util.Map<String, Integer> n = new java.util.LinkedHashMap<>();
+        for (Giant g : AdminServer.giants()) {
+            AdminJson.Report r = AdminServer.report(c.getSource().getServer(), g);
+            if (r == null) continue;
+            for (AdminSetting s : r.settings()) if (AdminEvery.shareable(s.id())) n.merge(s.id(), 1, Integer::sum);
+        }
+        List<String> out = new ArrayList<>();
+        for (var e : n.entrySet()) if (e.getValue() >= 2 || AdminServer.giants().size() < 2) out.add(e.getKey());
+        return SharedSuggestionProvider.suggest(out, b);
+    };
 
     private static MinecraftServer server(CommandContext<CommandSourceStack> c) {
         return c.getSource().getServer();

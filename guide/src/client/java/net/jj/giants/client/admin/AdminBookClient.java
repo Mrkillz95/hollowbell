@@ -237,6 +237,8 @@ public final class AdminBookClient {
         AdminServer.Result r = switch (what) {
             case "set" -> d.set(giant, id, AdminJsonBridge.str(o, "value"));
             case "reset" -> d.reset(giant, id.isEmpty() ? null : id);
+            case "setall" -> net.jj.giants.admin.AdminEvery.set(d, id, AdminJsonBridge.str(o, "value"));
+            case "resetall" -> net.jj.giants.admin.AdminEvery.reset(d, id);
             case "preset", "import" -> {
                 AdminTransfer.Bundle b = what.equals("preset")
                         ? AdminTransfer.preset(AdminJsonBridge.str(o, "name"))
@@ -284,6 +286,23 @@ public final class AdminBookClient {
         o.addProperty("id", id);
         o.addProperty("value", value);
         o.addProperty("scope", allWorlds ? "allworlds" : "world");
+        return send(o);
+    }
+
+    /** (Part 2C) one shared setting to the same value for every giant that has it */
+    static boolean setAll(String id, String value, boolean allWorlds) {
+        JsonObject o = new JsonObject();
+        o.addProperty("do", "setall");
+        o.addProperty("id", id);
+        o.addProperty("value", value);
+        o.addProperty("scope", allWorlds ? "allworlds" : "world");
+        return send(o);
+    }
+
+    static boolean resetAll(String id) {
+        JsonObject o = new JsonObject();
+        o.addProperty("do", "resetall");
+        o.addProperty("id", id);
         return send(o);
     }
 

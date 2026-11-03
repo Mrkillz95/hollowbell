@@ -612,6 +612,7 @@ public final class AdminServer {
         if (c.id().startsWith("preset:") || c.id().startsWith("import") || c.id().equals("snapshot")
                 || c.id().equals("undo") || c.id().equals("sync"))
             return g + ": " + c.name() + " (" + c.now() + ")";
+        if (c.id().startsWith("every:")) return "Every giant: " + c.name() + " → " + c.now();
         if (c.id().startsWith("lock:")) return g + " " + c.name() + " locked " + c.now();
         if (c.id().startsWith("unlock:")) return g + " " + c.name() + " unlocked";
         if (c.id().startsWith("mod:")) return c.name();

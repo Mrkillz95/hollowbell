@@ -1,0 +1,216 @@
+# Part 2C pictures (ADMIN_BRIDGE.md 21): the Create World screen's big Giants button, the picker's See all changes, and
+# every page of the redesigned admin book, at GUI scale 2 then 3. With the eight giants loaded:
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+menu
+wait 60
+guiscale 2
+wait 5
+createworld
+wait 80
+cwname Giants P2C
+mouse 2 2
+wait 20
+shot p2c_s2_cw_game
+press Giants:
+wait 20
+mouse 2 2
+wait 20
+shot p2c_s2_cw_picker
+pick titans
+wait 10
+mouse 2 2
+wait 10
+shot p2c_s2_cw_picker_titans
+press See all changes
+wait 20
+mouse 2 2
+wait 20
+shot p2c_s2_cw_all_changes
+back
+wait 10
+edit
+wait 30
+mouse 2 2
+wait 20
+shot p2c_s2_cw_edit_home
+back
+wait 10
+pick classic
+back
+wait 20
+guiscale 3
+wait 10
+mouse 2 2
+wait 20
+shot p2c_s3_cw_game
+press Giants:
+wait 20
+mouse 2 2
+wait 20
+shot p2c_s3_cw_picker
+back
+wait 10
+guiscale 2
+wait 10
+cwcommands
+press Create New World
+wait 60
+confirmyes
+wait 20
+inworld
+wait 100
+cmd giants admin set wreckback healthMultiplier 2
+cmd giants admin set pitchgut worldScale 0.5
+cmd giants admin set cerberus griefing on
+cmd giants admin set all damage 1.5
+wait 20
+adminintro seen
+adminmode advanced
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_home
+adminbook all
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_all_stats
+adminbook all/x/all
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_all_all
+adminbook all/x/spawning
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_all_spawning
+adminreq {"do":"setall","id":"worldScale","value":"2.5"}
+wait 40
+mouse 2 2
+wait 25
+shot p2c_s2_all_setall
+adminbook all/x/behaviour
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_all_behaviour
+adminbook wreckback/general/stats
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_wreckback_general_stats
+adminbook wreckback/general/all
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_wreckback_general_all
+adminbook wreckback/special/moves
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_wreckback_special_moves
+adminbook wreckback/special/all
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_wreckback_special_all
+adminbook pitchgut/general/spawning
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_pitchgut_general_spawning
+adminbook swarmforge/special/all
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_swarmforge_special
+adminbook gloamwick/special/all
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_gloamwick_special
+adminbook cerberus/general/behaviour
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_cerberus_general_behaviour
+adminbook live
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_live
+adminbook presets
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_presets
+adminreq {"do":"preset","name":"pocket_giants"}
+wait 40
+mouse 2 2
+wait 25
+shot p2c_s2_preview
+adminpressword See all
+wait 20
+mouse 2 2
+wait 25
+shot p2c_s2_preview_all
+close
+adminbook changes
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_changes
+adminbook home 0 heal
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_search_heal
+adminintro 1
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s2_intro
+close
+guiscale 3
+wait 10
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s3_home
+adminbook all/x/spawning
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s3_all_spawning
+adminbook wreckback/general/stats
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s3_wreckback_general_stats
+adminbook wreckback/special/moves
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s3_wreckback_special_moves
+adminbook presets
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s3_presets
+adminbook live
+wait 60
+mouse 2 2
+wait 25
+shot p2c_s3_live
+close
+guiscale 2
+cmd giants adminbook
+wait 20
+hotbar 1
+wait 30
+shot p2c_s2_item_held
+quit

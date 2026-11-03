@@ -361,6 +361,12 @@ public final class AutoTest implements ClientModInitializer {
                     GiantsGuideMod.LOG.warn("autotest: can't send {}", s);
                 continue;
             }
+            // adminpressword WORDS: the open question's button whose words start so (Part 2C: "See all changes")
+            if (s.startsWith("adminpressword ")) {
+                if (!AdminBookScreen.testPressWord(s.substring(15).trim()))
+                    GiantsGuideMod.LOG.warn("autotest: no button {}", s);
+                continue;
+            }
             if (s.equals("adminpress")) {
                 if (!AdminBookScreen.testPress()) GiantsGuideMod.LOG.warn("autotest: nothing to press");
                 continue;
@@ -368,6 +374,11 @@ public final class AutoTest implements ClientModInitializer {
             if (s.startsWith("adminconfirm ")) {
                 String[] a = s.substring(13).trim().split(" +");
                 AdminBookScreen.confirmAt(a[0], a[1]);
+                continue;
+            }
+            // hotbar N: hold what is in hotbar slot N (0-8)
+            if (s.startsWith("hotbar ")) {
+                if (mc.player != null) mc.player.getInventory().selected = Integer.parseInt(s.substring(7).trim());
                 continue;
             }
             if (s.equals("close")) {
