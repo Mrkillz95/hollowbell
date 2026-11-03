@@ -239,7 +239,19 @@ public final class AdminCatalog {
         List<AdminSetting> out = new ArrayList<>(SHARED);
         out.addAll(players());
         out.addAll(servers());
+        // (Part 8) the new systems, with the server's own defaults
+        out.addAll(net.jj.giants.systems.SystemsCatalog.settings());
         return out;
+    }
+
+    /** (Part 8, ADMIN_BRIDGE.md §24.2) a new system's setting: kept with a server default, not a multiplier */
+    public static boolean systems(AdminSetting s) {
+        return s.cat().equals(net.jj.giants.systems.SystemsCatalog.CAT);
+    }
+
+    /** not a multiplier: a player, server tools or (Part 8) systems setting (never shown with an "x") */
+    public static boolean plain(AdminSetting s) {
+        return player(s) || systems(s);
     }
 
     /** the multipliers only (what the giants multiply; the danger rating's numbers) */

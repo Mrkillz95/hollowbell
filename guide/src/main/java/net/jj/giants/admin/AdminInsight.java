@@ -291,6 +291,19 @@ public final class AdminInsight {
         if (manyN > 0 && many / manyN > 1)
             parts.add(new Part(AdminSetting.plain(Math.round(many / manyN * 10) / 10.0) + " of each kind",
                     clamp(0.75 * log2(many / manyN), 0, 0.75)));
+        // (Part 8, ADMIN_BRIDGE.md 24) the new systems that change how hard the giants are
+        if (all.getOrDefault("all.growth", 0.0) >= 0.5)
+            parts.add(new Part("giants that grow", clamp(0.25 + 0.25 * log2(Math.max(1,
+                    all.getOrDefault("all.growthMost", 2.0))), 0, 0.75)));
+        double scaled = all.getOrDefault("all.scalePlayers", 0.0) + all.getOrDefault("all.scaleDays", 0.0)
+                + all.getOrDefault("all.scaleArmour", 0.0);
+        if (scaled > 0) parts.add(new Part("stronger as the server grows", clamp(0.25 + 0.25 * scaled, 0, 0.5)));
+        if (all.getOrDefault("all.moonFrenzy", 1.0) > 1)
+            parts.add(new Part("a full moon frenzy", clamp(0.25 * log2(all.get("all.moonFrenzy")), 0, 0.4)));
+        if (all.getOrDefault("all.weakPoints", 0.0) >= 0.5)
+            parts.add(new Part("weak points to aim for", clamp(-0.25 * log2(Math.max(1,
+                    all.getOrDefault("all.weakHit", 2.5))) + 0.5 * -log2(Math.max(0.1,
+                    all.getOrDefault("all.bodyHit", 1.0))), -0.5, 0.75)));
         double score = 3;
         for (Part p : parts) score += p.by();
         int level = (int) clamp(Math.floor(score + 0.5), 1, 5);
@@ -432,6 +445,10 @@ public final class AdminInsight {
                     c -> c.has("roam") && c.v("roam") > 1.5 && (c.g.on("seekGiants") || c.g.on("raidVillages")),
                     c -> "{who}: " + c.g.nameOf("roam") + " is stay, so " + c.g.nameOf("seekGiants") + " and "
                             + c.g.nameOf("raidVillages") + " do nothing."),
+            // (Part 8) a herd needs more than one of him
+            new Rule("herd_alone",
+                    c -> c.all.getOrDefault("all.herd", 0.0) >= 0.5 && c.has("worldCount") && c.v("worldCount") <= 1,
+                    c -> "{who}: Herds is on, but " + c.g.nameOf("worldCount") + " is 1, so {he} {walks} alone."),
             new Rule("tiny_war",
                     c -> c.has("seekGiants", "worldScale") && c.g.on("seekGiants")
                             && c.v("worldScale") * c.g.hi("spawnSize") * (c.g.uses().contains("all.size")

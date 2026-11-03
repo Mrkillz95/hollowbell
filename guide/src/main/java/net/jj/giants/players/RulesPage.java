@@ -86,6 +86,12 @@ public final class RulesPage {
             if (v != null) out.add("Every giant's " + s.name().toLowerCase(java.util.Locale.ROOT) + " x"
                     + AdminSetting.text(v) + ".");
         }
+        // (Part 8) the new systems that are on (the world's own value, or the server's default)
+        for (AdminSetting s : net.jj.giants.systems.SystemsCatalog.settings()) {
+            JsonElement v = w.values(AdminCatalog.ALL).get(s.id());
+            if (v == null) v = s.def();
+            if (!AdminSetting.same(v, s.jar())) out.add(s.name() + ": " + AdminSetting.text(v) + ".");
+        }
         // each giant's own: id -> (value text -> giant names)
         Map<String, Map<String, List<String>>> by = new LinkedHashMap<>();
         Map<String, AdminSetting> rows = new LinkedHashMap<>();

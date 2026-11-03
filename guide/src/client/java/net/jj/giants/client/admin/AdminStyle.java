@@ -42,6 +42,11 @@ public final class AdminStyle {
             "mix");
     static final ResourceLocation P7 = tex("icons_p7");
 
+    /** (Part 8) the Systems page's pictures, in the order tools/systems_icons.py draws them */
+    public static final List<String> P8_ICONS = List.of("systems", "herds", "growth", "hunger", "loyalty", "grief",
+            "death", "playerdeath", "scaling", "weak", "fear", "seasons");
+    static final ResourceLocation P8 = tex("icons_p8");
+
     /** the section pictures, in the order tools/admin_textures.py draws them */
     public static final List<String> ICON_NAMES = List.of("stats", "moves", "spawning", "behaviour", "healing",
             "taming", "loot", "players", "effects", "worldgen", "misc", "home", "live", "presets", "changes", "all",
@@ -109,6 +114,11 @@ public final class AdminStyle {
         // (Part 7) the Fun and World tools pages' own pictures
         if (i < 0 && P7_ICONS.contains(name)) {
             g.blit(P7, x, y, size, size, P7_ICONS.indexOf(name) * 16, 0, 16, 16, P7_ICONS.size() * 16, 16);
+            return;
+        }
+        // (Part 8) the Systems page's own pictures
+        if (i < 0 && P8_ICONS.contains(name)) {
+            g.blit(P8, x, y, size, size, P8_ICONS.indexOf(name) * 16, 0, 16, 16, P8_ICONS.size() * 16, 16);
             return;
         }
         if (i < 0) i = ICON_NAMES.indexOf("misc");

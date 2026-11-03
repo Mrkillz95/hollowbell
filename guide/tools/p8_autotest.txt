@@ -1,0 +1,187 @@
+# Part 8 pictures (ADMIN_BRIDGE.md 24): the admin book's Systems page (GUI scale 2 and 3), then the systems in action
+# on a flat world: weak points glinting on a giant that fights, a herd walking back to its leader, a Titan beside one
+# of his kind, fear's darkness, a skeleton and a corpse where giants fell.
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamerule doMobSpawning false
+cmd tp @s 0 -60 0 0 10
+wait 20
+# some systems on, so the page shows them working
+cmd giants admin set all growth on
+cmd giants admin set all hunger on
+cmd giants admin set all loyalty on
+cmd giants admin set all seasons on
+cmd giants admin set all scalePlayers 0.25
+cmd giants admin set all scaleDays 0.1
+cmd giants admin set all weakPoints on
+cmd giants admin set all deathRule skeleton
+# two giants for the Each giant list, one of them yours
+cmd wreckback summon calm 0.08
+wait 10
+cmd tp @s 30 -60 0 0 10
+cmd pitchgut summon calm 0.04
+wait 10
+cmd wreckback book
+wait 260
+# the Systems page, top to bottom
+adminbook systems 0
+wait 60
+mouse 2 2
+wait 25
+shot p8_systems_0
+adminbook systems 300
+wait 30
+mouse 2 2
+wait 25
+shot p8_systems_1
+adminbook systems 600
+wait 30
+mouse 2 2
+wait 25
+shot p8_systems_2
+adminbook systems 900
+wait 30
+mouse 2 2
+wait 25
+shot p8_systems_3
+adminbook systems 1300
+wait 30
+mouse 2 2
+wait 25
+shot p8_systems_4
+# all worlds: the systems keep a server default
+adminscope all
+adminbook systems 0
+wait 40
+mouse 2 2
+wait 20
+shot p8_systems_allworlds
+adminscope world
+close
+# GUI scale 3 (a narrow book)
+guiscale 3
+adminbook systems 0
+wait 50
+mouse 2 2
+wait 20
+shot p8_systems_scale3_0
+adminbook systems 400
+wait 30
+mouse 2 2
+wait 20
+shot p8_systems_scale3_1
+close
+guiscale 2
+wait 10
+# the presets: Herds and Evolution
+adminbook presets 700
+wait 50
+mouse 2 2
+wait 20
+shot p8_presets
+close
+# weak points: a hunting giant fighting you glints where he's weak
+cmd tp @s 300 -60 0 0 10
+wait 40
+cmd wreckback summon hunting 0.06
+wait 20
+cmd gamemode survival
+cmd effect give @s resistance 600 4 true
+cmd effect give @s regeneration 600 4 true
+cmd tp @s 300 -60 -14 0 10
+wait 140
+shot p8_weak
+wait 40
+shot p8_weak2
+cmd gamemode creative
+cmd giants admin set all weakPoints off
+cmd wreckback kill
+wait 40
+# fear: a hunting giant near you darkens your sight
+cmd giants admin set all fear strong
+cmd tp @s 500 -60 0 0 10
+wait 40
+cmd cerberus summon hunting 0.06
+wait 20
+cmd gamemode survival
+cmd tp @s 500 -60 -16 0 5
+wait 120
+shot p8_fear
+cmd gamemode creative
+cmd giants admin set all fear off
+cmd cerberus kill
+wait 40
+# a herd: three small ones walk back to their leader
+cmd giants admin set all herd on
+cmd giants admin set all herdRange 24
+cmd tp @s 700 -60 0 0 10
+wait 30
+cmd cerberus summon calm 0.09
+cmd tp @s 760 -60 0 0 10
+wait 20
+cmd cerberus summon calm 0.05
+cmd tp @s 700 -60 60 0 10
+wait 20
+cmd cerberus summon calm 0.05
+cmd tp @s 640 -60 -40 0 10
+wait 20
+cmd cerberus summon calm 0.05
+cmd gamemode spectator
+cmd tp @s 700 -20 -70 0 30
+wait 600
+shot p8_herd
+cmd gamemode creative
+cmd giants admin set all herd off
+cmd cerberus kill
+wait 40
+# growth: a Titan beside one of his kind
+cmd tp @s 900 -60 0 0 10
+wait 30
+cmd gloamwick summon calm 0.05
+cmd tp @s 940 -60 0 0 10
+wait 20
+cmd gloamwick summon calm 0.05
+wait 40
+cmd giants admin set all growthMost 3
+cmd giants admin systems titan gloamwick
+wait 60
+cmd gamemode spectator
+cmd tp @s 920 -40 -60 0 20
+wait 60
+shot p8_titan
+cmd gamemode creative
+cmd gloamwick kill
+wait 40
+# the remains: a skeleton where a Cerberus fell, a corpse where a Wreckback fell
+cmd tp @s 1100 -60 0 0 10
+wait 30
+cmd cerberus summon calm 0.12
+wait 40
+cmd cerberus kill
+wait 200
+cmd gamemode spectator
+cmd tp @s 1100 -35 -30 0 40
+wait 60
+shot p8_skeleton
+cmd gamemode creative
+cmd giants admin set all deathRule corpse
+cmd tp @s 1300 -60 0 0 10
+wait 30
+cmd wreckback summon calm 0.12
+wait 40
+cmd wreckback kill
+wait 200
+cmd gamemode spectator
+cmd tp @s 1300 -35 -30 0 40
+wait 60
+shot p8_corpse
+cmd gamemode creative
+quit

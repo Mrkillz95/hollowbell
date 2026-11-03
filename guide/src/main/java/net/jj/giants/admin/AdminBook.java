@@ -152,6 +152,7 @@ public final class AdminBook {
             watching.remove(p.getUUID());
             liveWatching.remove(p.getUUID());
             net.jj.giants.tools.ToolsAdmin.watch(server, p, false);
+            net.jj.giants.systems.SystemsAdmin.watch(server, p, false);
             return;
         }
         if (AdminBookAskPayload.LIVE_OFF.equals(what)) {
@@ -161,6 +162,11 @@ public final class AdminBook {
         // (Part 6) the Server tools page, looked at or not (admins only: checked there)
         if (what.equals("tools") || what.equals("tools_off")) {
             net.jj.giants.tools.ToolsAdmin.watch(server, p, what.equals("tools"));
+            return;
+        }
+        // (Part 8) the Systems page, looked at or not
+        if (what.equals("systems") || what.equals("systems_off")) {
+            net.jj.giants.systems.SystemsAdmin.watch(server, p, what.equals("systems"));
             return;
         }
         Role r = role(p);
@@ -453,6 +459,9 @@ public final class AdminBook {
         if (every || what.contains("players")) pages.add(net.jj.giants.players.PlayersAdmin.page(server));
         // (Part 6) the Server tools page
         if (every || what.contains(net.jj.giants.tools.ToolsAdmin.KIND)) pages.add(net.jj.giants.tools.ToolsAdmin.page(server));
+        // (Part 8) the Systems page (with the all-giants page: its settings live there)
+        if (every || what.contains(AdminCatalog.ALL) || what.contains(net.jj.giants.systems.SystemsAdmin.KIND))
+            pages.add(net.jj.giants.systems.SystemsAdmin.page(server));
         boolean presets = every || what.contains("presets");
         for (UUID u : List.copyOf(watching)) {
             ServerPlayer p = server.getPlayerList().getPlayer(u);
@@ -509,6 +518,7 @@ public final class AdminBook {
             sender.accept(p, presets(server, p));
             sender.accept(p, net.jj.giants.players.PlayersAdmin.page(server));
             sender.accept(p, net.jj.giants.tools.ToolsAdmin.page(server));
+            sender.accept(p, net.jj.giants.systems.SystemsAdmin.page(server));
             sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
         }
         if (r != Role.NONE) sender.accept(p, live(server));
@@ -550,9 +560,11 @@ public final class AdminBook {
     static Map<String, Double> allValues(AdminWorld w) {
         Map<String, Double> all = new HashMap<>();
         for (AdminSetting s : AdminServer.shared(w))
-            if (!AdminCatalog.player(s)) all.put(s.id(), s.value().getAsDouble());
-            // (Part 5: the player switches as 1/0, for the clash rules)
+            if (!AdminCatalog.plain(s)) all.put(s.id(), s.value().getAsDouble());
+            // (Part 5: the player switches as 1/0, for the clash rules; Part 8: the systems' numbers too)
             else if (s.type() == AdminSetting.Type.BOOL) all.put(s.id(), s.value().getAsBoolean() ? 1.0 : 0.0);
+            else if (s.type() == AdminSetting.Type.FLOAT || s.type() == AdminSetting.Type.INT)
+                all.put(s.id(), s.value().getAsDouble());
         return all;
     }
 

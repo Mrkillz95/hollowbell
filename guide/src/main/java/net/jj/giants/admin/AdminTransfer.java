@@ -208,6 +208,16 @@ public final class AdminTransfer {
                         + " players start with every giant's finder.",
                 "\"all.health\":0.5,\"all.damage\":0.75,\"all.windCost\":0.5,\"all.kitFinders\":\"all\"", "",
                 Map.of()));
+        // Part 8: the new systems (ADMIN_BRIDGE.md 24.7)
+        BUILT_IN.put("herds", retune("herds", "Herds",
+                "Several smaller giants of each kind roam together in packs: four of each, smaller than usual, keeping"
+                        + " close to their leader.",
+                "\"all.herd\":true", "\"spawnSize\":[0.35,0.6],\"worldCount\":4,\"maxInWorld\":6", Map.of()));
+        BUILT_IN.put("evolution", retune("evolution", "Evolution",
+                "Giants start small and grow with each day they survive and each fight they win; one left alone for a"
+                        + " week becomes a Titan.",
+                "\"all.size\":0.4,\"all.growth\":true,\"all.growthPerDay\":0.1,\"all.growthPerWin\":0.25,"
+                        + "\"all.growthMost\":5,\"all.growthTitan\":7", "", Map.of()));
         // (Part 3's two last, after every re-tune one)
         BUILT_IN.put("close_quarters", BUILT_IN.remove("close_quarters"));
         BUILT_IN.put("far_frontier", BUILT_IN.remove("far_frontier"));
@@ -430,7 +440,7 @@ public final class AdminTransfer {
         else return;
         // (Part 5) a player setting a preset names at its default (My Giant off) is the default, not a value of
         // the world's own: nothing to change when the world has none
-        if (now != null && AdminCatalog.player(s) && AdminSetting.same(now, s.def())) now = null;
+        if (now != null && AdminCatalog.plain(s) && AdminSetting.same(now, s.def())) now = null;
         if (old == null && now == null) return;
         if (old != null && now != null && AdminSetting.same(old, now)) return;
         String oldText = AdminServer.shown(s, old == null ? s.def() : old) + (old == null ? " (default)" : "");
@@ -507,14 +517,22 @@ public final class AdminTransfer {
         Map<String, Double> allNow = new HashMap<>(), allThen = new HashMap<>();
         Map<String, JsonElement> chAll = after.getOrDefault(AdminCatalog.ALL, Map.of());
         for (AdminSetting s : AdminServer.shared(w)) {
-            if (AdminCatalog.player(s)) continue; // (Part 5: not a multiplier)
-            allNow.put(s.id(), s.value().getAsDouble());
+            // (Part 5: the player settings are no multipliers; Part 8: the systems' switches and numbers count)
+            if (AdminCatalog.player(s)) continue;
+            if (AdminCatalog.systems(s) && s.type() == AdminSetting.Type.CHOICE) continue;
+            allNow.put(s.id(), number(s.value()));
             if (chAll.containsKey(s.id())) {
                 JsonElement v = chAll.get(s.id());
-                allThen.put(s.id(), v == null ? s.def().getAsDouble() : v.getAsDouble());
-            } else allThen.put(s.id(), s.value().getAsDouble());
+                allThen.put(s.id(), number(v == null ? s.def() : v));
+            } else allThen.put(s.id(), number(s.value()));
         }
         return new AdminInsight.Danger[] {AdminInsight.danger(now, allNow), AdminInsight.danger(then, allThen)};
+    }
+
+    /** a value as the rating reads it: on/off as 1/0 */
+    private static double number(JsonElement v) {
+        if (v.isJsonPrimitive() && v.getAsJsonPrimitive().isBoolean()) return v.getAsBoolean() ? 1 : 0;
+        return v.getAsDouble();
     }
 
     // waiting for /giants admin confirm: one plan per person, for five minutes

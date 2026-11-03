@@ -27,6 +27,8 @@ public final class GuideBridge {
             case "adminworld" -> AdminServer.fromGiant(server, arg);
             // (Part 5) a giant tells what came of a My Giant pick (ADMIN_BRIDGE.md 20.5)
             case "mygiantdone" -> net.jj.giants.players.Players.pickDone(server, arg);
+            // (Part 8) a giant tells what a hit on him did, while Growth or Loyalty needs it (ADMIN_BRIDGE.md 24.4)
+            case "syshurt" -> net.jj.giants.systems.Systems.hurt(server, arg);
             default -> null;
         };
     }
