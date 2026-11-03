@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.9.0 |
-| Pitchgut | 1.35.37 |
-| Furrowmaw | 1.17.34 |
-| Fire & Ice Cerberus | 2.18.34 |
-| Hollowbell | 1.12.36 |
-| Lantern Willow | 1.10.37 |
-| Wreckback | 1.2.42 |
-| The Swarmforge | 1.4.40 |
-| The Gloamwick | 1.2.21 |
+| Giants Guide | 1.10.0 |
+| Pitchgut | 1.35.38 |
+| Furrowmaw | 1.17.35 |
+| Fire & Ice Cerberus | 2.18.35 |
+| Hollowbell | 1.12.37 |
+| Lantern Willow | 1.10.38 |
+| Wreckback | 1.2.43 |
+| The Swarmforge | 1.4.41 |
+| The Gloamwick | 1.2.22 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.11.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.12.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.11.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.12.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -104,6 +104,34 @@ A book about every giant you have. Right-click it to open it.
   set one value for every giant at once, See all changes, a big Giants button on Create World), the Players page
   (My Giant with each player's own book, the player switches, each player's rules, votes, leaderboards and the
   starting kit), the This world page, and the Giants: Challenges advancements.
+- New in the Guide 1.10.0: two more parts of the admin book. Server tools (pause all giants, quiet mode, events,
+  schedules, areas and dimension rules, a map, stats, alerts, respawn timers, per-world profiles and pack mode),
+  and Fun and World tools (watch any giant, play as one, stage a fight, names and titles, custom loot, giant tags,
+  the Biome Brush, arenas and dens, and moving a giant to live somewhere else).
+
+## New in 1.12.0
+
+- **Server tools** in the admin book: **Pause all giants** (every giant stops where he is), **Quiet mode** (no giant
+  chat for players, no chat lines for admins), **events** that run for a while and end by themselves (Giant war,
+  Siege on spawn with griefing on while it lasts, Boss Rush hour), **schedules** that put a preset on at weekends, on chosen days, on full-moon
+  nights or on a date, **areas** where giants aren't allowed or players are left alone, no giants near spawn or in a
+  whole dimension, a **map** of the giants, their grounds and the players (click to go there), **stats** for each
+  giant (falls, players killed, blocks broken, what he costs the server), **alerts** to admins (a fight near spawn,
+  heavy griefing, a player killed; off to start with in single player), **respawn timers** (bring one back now or set the wait), **per-world
+  profiles** and **pack mode** for modpacks. Commands under `/giants admin` (`pause`, `quiet`, `event`, `schedule`,
+  `area`, `respawn`, `stats`, `alerts`, `profile`, `pack`).
+- **Fun and World tools** in the admin book: **watch** any giant with a hidden camera that follows him (or through
+  his eyes), **play as** any giant with no time limit, **stage a fight** between two giants where you stand or look,
+  **names and titles** on his boss bar, **custom loot** for one giant, **giant tags** (like "Event boss", with their
+  own health, damage, speed, size and title), the **Biome Brush** to paint or erase a giant's ground, an **arena**
+  and a **den** for each giant (both can be taken down again), and **moving a giant to live** somewhere else: on land,
+  at sea (Wreckback, Swarmforge, Lantern Willow), in a cave (Furrowmaw) or in the sky (Hollowbell).
+- While all giants are paused nobody can play as one or stage a fight, and anyone playing one steps out. Quiet
+  mode also keeps the fun tools' notes to other admins out of chat (the change log keeps them).
+- Left as shipped, nothing changes: nothing is paused, quiet, scheduled or kept out until an admin sets it.
+
+Inside: Pitchgut 1.35.38, Furrowmaw 1.17.35, Cerberus 2.18.35, Hollowbell 1.12.37, Lantern Willow 1.10.38,
+Wreckback 1.2.43, Swarmforge 1.4.41, Gloamwick 1.2.22, Giants Guide 1.10.0.
 
 ## New in 1.11.0
 
