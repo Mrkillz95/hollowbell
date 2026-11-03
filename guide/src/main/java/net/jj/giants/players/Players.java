@@ -407,6 +407,11 @@ public final class Players {
     /** what a giant's live list says now: how many of him, and who holds his book */
     record Live(int count, @Nullable String owner, @Nullable String ownerId, List<String> ids) {}
 
+    /** who holds his book now, by his live list (null: nobody, or none of him standing) */
+    public static @Nullable String liveOwner(MinecraftServer server, Giant g) {
+        return live(server, g).owner();
+    }
+
     /** how many of him the world holds now (his live list) */
     public static int liveCount(MinecraftServer server, Giant g) {
         return live(server, g).count();
@@ -499,7 +504,10 @@ public final class Players {
             PlayerData.Pick pk = d.s.picks.get(player);
             if (pk == null) return List.of("ok");
             if (outcome.equals("failed")) d.s.picks.remove(player);
-            else pk.outcome = outcome;
+            else {
+                pk.outcome = outcome;
+                pk.spawned = o.has("spawned") && o.get("spawned").getAsBoolean();
+            }
             d.setDirty();
             AdminBook.changed("players");
             ServerPlayer p = server.getPlayerList().getPlayer(UUID.fromString(player));

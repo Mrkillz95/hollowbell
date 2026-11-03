@@ -57,11 +57,23 @@ public class PlayersGameTests implements FabricGameTest {
 
     private static final List<Sent> sent = new ArrayList<>();
 
+    /**
+     * With the real giants loaded (-Pgiants) these stand-in tests are left out: they put the stand-in giant in place
+     * of the real ones and apply whole presets, which would undo the settings of the real-giant tests running beside
+     * them. PlayersGiantsGameTests covers the real giants; the plain run covers these.
+     */
+    static boolean realGiants(GameTestHelper h) {
+        if (net.jj.giants.Giants.installed().isEmpty()) return false;
+        h.succeed();
+        return true;
+    }
+
     static MinecraftServer fresh(GameTestHelper h) {
         MinecraftServer s = h.getLevel().getServer();
         AdminServer.useGiants(List.of(FAKE));
         AdminWorld w = AdminWorld.get(s);
-        for (String g : w.giantsWithValues()) w.clear(g);
+        // (only what these tests touch: other batches run beside them with their own settings)
+        for (String g : List.of("all", "fakeplayers")) w.clear(g);
         w.forgetExtras();
         PlayerData.get(s).s = new PlayerData.State();
         net.jj.fakeplayers.GiantsBridge.reset();
@@ -82,7 +94,8 @@ public class PlayersGameTests implements FabricGameTest {
             s.getPlayerList().remove(p);
         }
         AdminWorld w = AdminWorld.get(s);
-        for (String g : w.giantsWithValues()) w.clear(g);
+        // (only what these tests touch: other batches run beside them with their own settings)
+        for (String g : List.of("all", "fakeplayers")) w.clear(g);
         PlayerData.get(s).s = new PlayerData.State();
         AdminServer.push(s, w);
         Players.sender = (p, page) -> {
@@ -131,6 +144,7 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_settings")
     public void playerSettingsAreWorldSettingsThatPresetsLeaveAlone(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         List<String> ids = new ArrayList<>();
         for (AdminSetting x : AdminCatalog.players()) ids.add(x.id());
@@ -182,6 +196,7 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_pick", timeoutTicks = 100)
     public void pickingTakesYouToHisGroundWithHisBookAndOneOfHim(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         BlockPos home = h.absolutePos(new BlockPos(2, 2, 2));
         net.jj.fakeplayers.GiantsBridge.gx = home.getX() + 0.5;
@@ -234,6 +249,7 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_rules")
     public void rulesArePushedToTheGiantsAndKeptWithTheWorld(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         ServerPlayer a = join(h, "ann", false);
         AdminServer.Result r = Players.setRule(s, "Tester", "ann", "own", false);
@@ -277,6 +293,7 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_kit")
     public void theKitIsWhatTheWorldSays(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         set(h, s, "kitArmour", "iron");
         set(h, s, "kitFinders", "all");
@@ -314,11 +331,17 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_rulespage")
     public void theRulesPageSaysWhatIsDifferent(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         JsonObject r = RulesPage.json(s);
-        h.assertTrue(r.get("preset").getAsString().equals("Classic") && r.get("about").getAsString().contains("usual")
-                && r.getAsJsonObject("danger").get("level").getAsInt() == 3, "Classic: " + r);
-        h.assertTrue(r.getAsJsonArray("rules").get(0).getAsString().contains("as in Classic"), "nothing different");
+        // (with the real giants loaded, other batches may have their own settings in this world just now)
+        if (AdminWorld.get(s).giantsWithValues().isEmpty()) {
+            h.assertTrue(r.get("preset").getAsString().equals("Classic")
+                    && r.get("about").getAsString().contains("usual")
+                    && r.getAsJsonObject("danger").get("level").getAsInt() == 3, "Classic: " + r);
+            h.assertTrue(r.getAsJsonArray("rules").get(0).getAsString().contains("as in Classic"),
+                    "nothing different");
+        }
         AdminTransfer.apply(s, "Tester", AdminTransfer.plan(s, AdminTransfer.preset("titans")));
         set(h, s, "ride", "off");
         r = RulesPage.json(s);
@@ -342,6 +365,7 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_votes")
     public void aVoteOpensCountsAndAppliesTheWinner(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         ServerPlayer a = join(h, "va", false), b = join(h, "vb", false), c = join(h, "vc", false);
         h.assertFalse(Votes.open(s, "Tester", List.of("titans"), 5, true).ok(), "one option is no vote");
@@ -393,6 +417,7 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_boards")
     public void leaderboardsCountAndAreKept(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         ServerPlayer a = join(h, "slayer", false), b = join(h, "keeper", false);
         Players.slain(s, "wreckback", a);
@@ -448,6 +473,7 @@ public class PlayersGameTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5_challenges")
     public void challengesOnlyCountInTheirPreset(GameTestHelper h) {
+        if (realGiants(h)) return;
         MinecraftServer s = fresh(h);
         ServerPlayer a = join(h, "hero", false);
         Players.slain(s, "wreckback", a);

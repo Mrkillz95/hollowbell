@@ -39,6 +39,8 @@ public final class PlayerData extends SavedData {
     public static final class Pick {
         public String giant = "", outcome = "";
         public long time;
+        /** one of him came for them (false: at the world's limit, or no loaded spot for him yet) */
+        public boolean spawned;
     }
 
     /** an admin's rules for one player (ADMIN_BRIDGE.md 20.4) */
