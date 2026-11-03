@@ -637,6 +637,40 @@ public class WorldOne extends SavedData {
         return placed ? new BlockPos(x, 0, z) : null;
     }
 
+    // (Part 6, ADMIN_BRIDGE.md Â§22) the admin book's respawn timers (GiantsRespawn)
+
+    /** standing (the world's own one is out there), gone (fallen, and none comes again), due, or waiting */
+    public String respawnState() {
+        if (alive) return "standing";
+        if (!BellConfig.V.respawn && fell) return "gone";
+        return dueAt >= 0 ? "due" : "waiting";
+    }
+
+    public long respawnDueAt() {
+        return dueAt;
+    }
+
+    /** where he is or comes up, or null while no spot is chosen */
+    public int[] respawnWhere() {
+        return placed ? new int[] {x, z} : null;
+    }
+
+    /** an admin says when the next one comes (game time); a fall that had ended his kind here no longer does */
+    public void respawnAt(long at) {
+        dueAt = at;
+        fell = false;
+        setDirty();
+    }
+
+    /** (the tests) put things as asked; the old {alive, fell, due} back */
+    public long[] respawnTestState(boolean isAlive, boolean fallen, long due) {
+        long[] was = {alive ? 1 : 0, fell ? 1 : 0, dueAt};
+        alive = isAlive;
+        fell = fallen;
+        dueAt = due;
+        return was;
+    }
+
     public boolean aliveNow() {
         return alive;
     }
