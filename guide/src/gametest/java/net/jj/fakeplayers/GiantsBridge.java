@@ -83,6 +83,8 @@ public final class GiantsBridge {
                     out.add(g.toString());
                 }
             }
+            case "info" -> out.add("Fakeplayers: alive" + (holder == null ? "" : ", owned by " + holderName)
+                    + ", health x1, damage x1.");
             case "give" -> {
                 JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
                 String p = o.get("player").getAsString(), what = o.get("what").getAsString();

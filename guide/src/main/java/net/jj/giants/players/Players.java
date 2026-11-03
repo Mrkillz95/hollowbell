@@ -402,11 +402,13 @@ public final class Players {
             AdminSetting cap = r == null ? null : r.setting("maxInWorld");
             int most = cap == null ? 0 : (int) cap.value().getAsDouble();
             boolean full = most > 0 && live.count >= most;
-            boolean other = live.owner != null && !live.owner.equals(viewer.getGameProfile().getName());
+            // (the main book's holder: with My Giant's own books a live line's owner may be an own book's)
+            String holder = mainHolder(server, g, live);
+            boolean other = holder != null && !holder.equals(viewer.getGameProfile().getName());
             // (1.11.0, BOOK_RULE.md's My Giant exception) with room, a picker gets their own book and their own one
             if (!mayOwn) note = "You'd go to his ground; you may not own giants in this world.";
-            else if (other && full) note = "As many as the world allows: you'd share " + live.owner + "'s book.";
-            else if (other) note = live.owner + " has his book: you'd get your own book and your own one of him.";
+            else if (other && full) note = "As many as the world allows: you'd share " + holder + "'s book.";
+            else if (other) note = holder + " has his book: you'd get your own book and your own one of him.";
             else if (full) note = "As many as the world allows: you'd take charge of them.";
             j.addProperty("note", note);
             a.add(j);
@@ -434,6 +436,20 @@ public final class Players {
     /** how many of him the world holds now (his live list) */
     public static int liveCount(MinecraftServer server, Giant g) {
         return live(server, g).count();
+    }
+
+    private static final java.util.regex.Pattern OWNED_BY = java.util.regex.Pattern.compile(", owned by (.+?), health x");
+
+    /** who holds his (main) book: from his /giants info line, else his live list's owner */
+    static @Nullable String mainHolder(MinecraftServer server, Giant g, Live live) {
+        List<String> info = AdminServer.call(server, g, "info", "");
+        if (info != null)
+            for (String l : info) {
+                var m = OWNED_BY.matcher(l);
+                if (m.find()) return m.group(1);
+                if (l.contains(", health x")) return null;
+            }
+        return live.owner;
     }
 
     static Live live(MinecraftServer server, Giant g) {
