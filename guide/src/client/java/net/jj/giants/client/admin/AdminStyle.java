@@ -37,6 +37,11 @@ public final class AdminStyle {
     /** the frame's edge in pixels (its picture is 40x40) */
     public static final int EDGE = 10;
 
+    /** (Part 7) the Fun and World tools pages' pictures, in the order tools/fun_textures.py draws them */
+    public static final List<String> P7_ICONS = List.of("fun", "world", "watch", "fight", "tag", "brush", "build",
+            "mix");
+    static final ResourceLocation P7 = tex("icons_p7");
+
     /** the section pictures, in the order tools/admin_textures.py draws them */
     public static final List<String> ICON_NAMES = List.of("stats", "moves", "spawning", "behaviour", "healing",
             "taming", "loot", "players", "effects", "worldgen", "misc", "home", "live", "presets", "changes", "all",
@@ -99,6 +104,11 @@ public final class AdminStyle {
     /** a section's (or page's) picture, 16x16 at size */
     public static void icon(GuiGraphics g, String name, int x, int y, int size) {
         int i = ICON_NAMES.indexOf(name);
+        // (Part 7) the Fun and World tools pages' own pictures
+        if (i < 0 && P7_ICONS.contains(name)) {
+            g.blit(P7, x, y, size, size, P7_ICONS.indexOf(name) * 16, 0, 16, 16, P7_ICONS.size() * 16, 16);
+            return;
+        }
         if (i < 0) i = ICON_NAMES.indexOf("misc");
         g.blit(ICONS, x, y, size, size, i * 16, 0, 16, 16, ICON_NAMES.size() * 16, 16);
     }

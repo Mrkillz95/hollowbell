@@ -56,6 +56,8 @@ public final class AdminBookClient {
     private static @Nullable JsonObject live, changes, presets, preview;
     /** (Part 5) the Players page: rules, picks, the vote, the leaderboards */
     private static @Nullable JsonObject players;
+    /** (Part 7) the Fun and World tools pages' own state */
+    private static @Nullable JsonObject fun;
     /** goes up with every Live control page (once a second while it is looked at) */
     private static int liveVersion, previewVersion;
     /** the server's last word on a change */
@@ -87,6 +89,7 @@ public final class AdminBookClient {
         said = List.of();
         role = "";
         live = changes = presets = preview = players = null;
+        fun = null;
         version++;
         liveVersion++;
     }
@@ -110,6 +113,15 @@ public final class AdminBookClient {
 
     public static @Nullable JsonObject changes() {
         return changes;
+    }
+
+    public static @Nullable JsonObject fun() {
+        return fun;
+    }
+
+    /** (the picture-taking) the Fun pages as if the server had sent them */
+    public static void funForTests(JsonObject o) {
+        fun = o;
     }
 
     public static @Nullable JsonObject players() {
@@ -380,6 +392,7 @@ public final class AdminBookClient {
             }
             case AdminBookStatePayload.CHANGES -> changes = o;
             case "players" -> players = o;
+            case "fun" -> fun = o;
             case AdminBookStatePayload.PRESETS -> presets = o;
             case AdminBookStatePayload.PREVIEW -> {
                 preview = o;

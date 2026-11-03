@@ -367,6 +367,11 @@ public final class AutoTest implements ClientModInitializer {
                     GiantsGuideMod.LOG.warn("autotest: no button {}", s);
                 continue;
             }
+            // (Part 7) funask name|loot|tagedit: a Fun page question open on the book
+            if (s.startsWith("funask ")) {
+                if (!AdminBookScreen.testFunAsk(s.substring(7).trim())) GiantsGuideMod.LOG.warn("autotest: no {}", s);
+                continue;
+            }
             if (s.equals("adminpress")) {
                 if (!AdminBookScreen.testPress()) GiantsGuideMod.LOG.warn("autotest: nothing to press");
                 continue;
