@@ -30,6 +30,12 @@ public final class SystemsData extends SavedData {
         /** the game time he was first seen */
         public long born;
         public int wins;
+        /**
+         * (1.13.0) an admin set his size (Live control, a giant tag): growth counts from then (0 = from {@link #born})
+         * and only the wins after it ({@link #baseWins} were before); {@link #start} is the admin's size
+         */
+        public long growFrom;
+        public int baseWins;
         /** the game time of his last fight (hurt, or hurting) */
         public long lastFight;
         /** the game time he was last seen standing (dropped a game day after) */

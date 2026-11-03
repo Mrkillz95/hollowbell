@@ -129,9 +129,9 @@ public final class Look {
     private static void growth(MinecraftServer server, Kind k, JsonObject r, LivingEntity e, SystemsData.G g,
             long now) {
         double most = Math.max(1, Systems.num(server, "growthMost"));
-        double days = (now - g.born) / 24000.0;
+        double days = (now - Math.max(g.born, g.growFrom)) / 24000.0;
         double grown = Math.min(most, 1 + Systems.num(server, "growthPerDay") * days
-                + Systems.num(server, "growthPerWin") * g.wins);
+                + Systems.num(server, "growthPerWin") * Math.max(0, g.wins - g.baseWins));
         int titanDays = (int) Systems.num(server, "growthTitan");
         if (!g.titan && titanDays > 0 && now - Math.max(g.lastFight, g.born) >= titanDays * 24000L) {
             g.titan = true;
@@ -171,6 +171,24 @@ public final class Look {
         Giant gk = AdminServer.giant(kind);
         return (gk == null ? kind : AdminServer.nameOf(gk)) + ": a Titan now (size " + AdminSetting.plain(
                 Math.round(FunGiants.sizeOf(e) * 100) / 100.0) + ").";
+    }
+
+    /**
+     * (1.13.0) an admin set this one's size (Live control, a giant tag): Growth goes on from that size instead of
+     * pulling him back to what it worked out. His size now is his new start (a Titan's: his biggest growth is it), and
+     * the days and wins count again from now. Nothing when nobody follows him (he is noted at his size when one does).
+     */
+    static void rebase(MinecraftServer server, String id, double size) {
+        if (!(size > 0) || !Double.isFinite(size)) return;
+        SystemsData d = SystemsData.get(server);
+        SystemsData.G g = d.s.giants.get(id);
+        if (g == null) return;
+        double most = Math.max(1, Systems.num(server, "growthMost"));
+        g.start = g.titan ? size / most : size;
+        g.growFrom = server.overworld().getGameTime();
+        g.baseWins = g.wins;
+        d.setDirty();
+        SystemsAdmin.changed();
     }
 
     /** a giant (or a player) fell to this one: a win, and a fight */

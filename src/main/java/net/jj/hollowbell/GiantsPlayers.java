@@ -31,7 +31,7 @@ public final class GiantsPlayers {
     /** the player switches this mod applies (listed in his admin header's "uses" after the multipliers) */
     public static final String[] USES = {
         "all.sit", "all.ride", "all.stand", "all.armourPowers", "all.bossBars", "all.fightMusic", "all.chatMeetings",
-        "all.chatMoves", "all.chatBackDown", "all.books", "all.bookOrders"
+        "all.chatMoves", "all.chatBackDown", "all.books", "all.bookOrders", GiantsMix.MIX
     };
 
     /** one player's rules: may they own giants (hold a book), and do the giants leave them alone */
@@ -58,6 +58,8 @@ public final class GiantsPlayers {
         JsonElement mg = all.get(MY_GIANT);
         if (mg != null && mg.isJsonPrimitive()) m.put(MY_GIANT, mg.getAsString().toLowerCase(Locale.ROOT));
         switches = Map.copyOf(m);
+        // (JJ answers 2) the dimension rules and giants mixing, for his spawner
+        GiantsMix.receive(all);
     }
 
     /** the Guide's My Giant (all.myGiant, absent = off): every picker gets their own book and one of him */
@@ -69,6 +71,7 @@ public final class GiantsPlayers {
 
     /** the server stopped (and the tests): every switch on, no rules */
     public static void clear() {
+        GiantsMix.clear();
         switches = Map.of();
         rules = Map.of();
     }

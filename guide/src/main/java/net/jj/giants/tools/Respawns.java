@@ -46,6 +46,14 @@ public final class Respawns {
 
     /** "comes back in about 3 days" and the like */
     static String words(JsonObject o) {
+        String held = AdminJson.str(o, "held", 64), in = AdminJson.str(o, "in", 32);
+        Giant other = in.isEmpty() ? null : AdminServer.giant(in);
+        // (JJ answers 2, #13 and #17) held back by a "no giants" world; coming in another giant's ground
+        return plain(o) + (!held.isEmpty() ? " (waits: giants may not be in the " + Watch.dimWord(held) + ")"
+                : other != null ? " in the " + AdminServer.nameOf(other) + "'s ground, once someone is there" : "");
+    }
+
+    private static String plain(JsonObject o) {
         String state = AdminJson.str(o, "state", 16);
         return switch (state) {
             case "standing" -> "out there now";

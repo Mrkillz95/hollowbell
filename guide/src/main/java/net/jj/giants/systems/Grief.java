@@ -76,6 +76,14 @@ public final class Grief {
         };
     }
 
+    /**
+     * (1.13.0) a block broken now drops nothing: grief healing is on and a giant's own entity is ticking (the blocks
+     * he breaks grow back, so their drops would be copies)
+     */
+    public static boolean noDrops(Level level) {
+        return on && net.jj.giants.tools.Stats.current != null && !level.isClientSide();
+    }
+
     /** the mixin: a giant is about to set this block */
     public static void changing(Level level, BlockPos pos, BlockState now) {
         if (!on || level.isClientSide()) return;

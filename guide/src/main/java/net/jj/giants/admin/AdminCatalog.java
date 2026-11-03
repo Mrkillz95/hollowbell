@@ -40,6 +40,25 @@ public final class AdminCatalog {
             mult("all.windCost", "taming", 0, 4, AdminSetting.LIVE, "Wind cost",
                     "What every order from a giant's book costs his wind, times this."));
 
+    /**
+     * (JJ answers 2, #17) the all-giants switches that are neither multipliers nor player/server settings: presets may
+     * name them (and a replace puts them back), they make Home's preset read ", changed" like any giant setting
+     */
+    private static final List<AdminSetting> SWITCHES = List.of(new AdminSetting(ALL, "all.spawnMix", "spawning",
+            Type.BOOL, 0, 1, 1, List.of(), new JsonPrimitive(false), new JsonPrimitive(false), new JsonPrimitive(false),
+            false, AdminSetting.NEW_SPAWNS, "Giants in each other's grounds",
+            "The world's own one of each giant may come on his own in another giant's ground as well as his own,"
+                    + " wherever he can live there (on land, or at sea for those who swim). Each still comes one at a"
+                    + " time, never past Most at once, on his own timer. Off: each comes only in his own ground.",
+            "admin.jj_giants.all.spawnMix", ""));
+
+    /** an all-giants multiplier (shown with an "x"; what the giants multiply) */
+    public static boolean multiplier(AdminSetting s) {
+        if (!s.giant().equals(ALL)) return false;
+        for (AdminSetting m : SHARED) if (m.id().equals(s.id())) return true;
+        return false;
+    }
+
     // (Part 5) the player settings
 
     public static final String PLAYERS = "players";
@@ -145,8 +164,8 @@ public final class AdminCatalog {
 
     private static final String SP_OFF = " Off to start with in a single player game.";
 
-    private static final String DIM_WHAT = "allowed: as always. nogiants: any giant in it is taken away (the world's own"
-            + " one still comes back on his timer, so turn Comes on his own off too if he lives there).";
+    private static final String DIM_WHAT = "allowed: as always. nogiants: any giant in it is taken away, and the world's"
+            + " own ones don't come back there until it's allowed again (then they come as usual).";
 
     private static final List<AdminSetting> SERVER_SETTINGS = List.of(
             tool("all.paused", false, "Pause all giants",
@@ -177,7 +196,11 @@ public final class AdminCatalog {
                             + SP_OFF),
             tool("all.alertAreas", true, "Alert: kept out",
                     "Admins are told when a giant is sent out of an area or a dimension he may not be in."
-                            + SP_OFF));
+                            + SP_OFF),
+            // (JJ answers 2, #15) moderators may watch a giant (Live control's Watch), unless the admins say no
+            tool("all.modWatch", true, "Moderators may watch",
+                    "Moderators can watch any giant from Live control (a hidden camera that follows him). Off: only"
+                            + " admins can."));
 
     /** a server tools setting (Part 6) */
     public static boolean server(AdminSetting s) {
@@ -237,6 +260,7 @@ public final class AdminCatalog {
     /** every all-giants setting (multipliers, then the player settings), at its default */
     public static List<AdminSetting> shared() {
         List<AdminSetting> out = new ArrayList<>(SHARED);
+        out.addAll(SWITCHES);
         out.addAll(players());
         out.addAll(servers());
         // (Part 8) the new systems, with the server's own defaults

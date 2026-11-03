@@ -37,6 +37,11 @@ public final class GiantsRespawn {
         String state = state(w);
         o.addProperty("state", state);
         if (state.equals("due")) o.addProperty("ticks", Math.max(0, w.respawnDueAt() - over.getGameTime()));
+        // (JJ answers 2) held back while giants may not be in his world; coming in another giant's ground
+        String held = GiantsMix.heldIn(over);
+        if (held != null && !state.equals("standing") && !state.equals("off")) o.addProperty("held", held);
+        String in = w.mixIn();
+        if (in != null && !state.equals("standing")) o.addProperty("in", in);
         int[] at = w.respawnWhere();
         if (at != null) {
             o.addProperty("x", at[0]);

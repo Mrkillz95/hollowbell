@@ -372,6 +372,12 @@ public final class AutoTest implements ClientModInitializer {
                 if (!AdminBookScreen.testFunAsk(s.substring(7).trim())) GiantsGuideMod.LOG.warn("autotest: no {}", s);
                 continue;
             }
+            // (JJ answers 2) mapview DX DY TIMES: the open book's map dragged by DX, DY gui pixels and zoomed TIMES
+            if (s.startsWith("mapview ")) {
+                String[] a = s.substring(8).trim().split(" +");
+                AdminBookScreen.testMap(Double.parseDouble(a[0]), Double.parseDouble(a[1]), Double.parseDouble(a[2]));
+                continue;
+            }
             if (s.equals("adminpress")) {
                 if (!AdminBookScreen.testPress()) GiantsGuideMod.LOG.warn("autotest: nothing to press");
                 continue;

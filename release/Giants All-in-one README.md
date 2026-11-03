@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.10.0 |
-| Pitchgut | 1.35.38 |
-| Furrowmaw | 1.17.35 |
-| Fire & Ice Cerberus | 2.18.35 |
-| Hollowbell | 1.12.37 |
-| Lantern Willow | 1.10.38 |
-| Wreckback | 1.2.43 |
-| The Swarmforge | 1.4.41 |
-| The Gloamwick | 1.2.22 |
+| Giants Guide | 1.11.0 |
+| Pitchgut | 1.35.39 |
+| Furrowmaw | 1.17.36 |
+| Fire & Ice Cerberus | 2.18.36 |
+| Hollowbell | 1.12.38 |
+| Lantern Willow | 1.10.39 |
+| Wreckback | 1.2.44 |
+| The Swarmforge | 1.4.42 |
+| The Gloamwick | 1.2.23 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.12.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.13.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.12.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.13.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -108,6 +108,39 @@ A book about every giant you have. Right-click it to open it.
   schedules, areas and dimension rules, a map, stats, alerts, respawn timers, per-world profiles and pack mode),
   and Fun and World tools (watch any giant, play as one, stage a fight, names and titles, custom loot, giant tags,
   the Biome Brush, arenas and dens, and moving a giant to live somewhere else).
+- New in the Guide 1.11.0: the admin book's **Systems** page (herds, growth, hunger, loyalty, grief healing, what
+  is left when a giant falls, dying near a giant, stronger with more players or time, weak points, fear and awe,
+  seasons and the full moon), the presets Herds and Evolution, a map you can drag and zoom, Watch for moderators,
+  giants in each other's grounds, and Home keeping the preset's name during an event.
+
+## New in 1.13.0
+
+- **New systems** in the admin book's new **Systems** page (every one off until an admin turns it on): **Herds**
+  (giants of a kind keep together round the world's own one), **Growth** (they grow with the days and their wins,
+  and one left alone long enough becomes a Titan), **Hunger** (they must eat; hungry ones weaken and hunt, fed ones
+  calm down), **Loyalty** (how an owner treats their giant changes his mood; at none left he can turn on them),
+  **Grief healing** (blocks the giants break grow back, slow to instant; while it's on, those blocks drop nothing),
+  **When a giant falls** (his drops only, or also a corpse that rots or a skeleton you can mine), **Dying near a
+  giant** (normal, keep your things, or he swallows them until he falls), **Stronger with more players, with time
+  or against armour**, **Weak points** on each giant's body (hits there do more), **Fear and awe** (slowness and
+  darkness near a hunting giant, strength beside your own) and **Seasons** and the **full moon**. Two new presets:
+  **Herds** and **Evolution**. `/giants admin systems` shows what's on.
+- An admin's resize from Live control (or a giant tag) now sticks while Growth is on: he grows on from that size.
+- **Follow me** is the same for every giant: he sets off once you're a little past his body and stops just clear of
+  it. Small ones keep close; big ones stay further back (at full size the Lantern Willow stops about 136 blocks off
+  because of his strands, Wreckback about 163). The Willow no longer speeds up to catch up (he is meant to be slow).
+  Wreckback and the Gloamwick no longer wander off while following. The **Swarmforge** has his own Follow me / Stop
+  following, and turning the players' books off also ends **Commander Mode**.
+- Home keeps the preset's name during an event or a schedule ("Classic · Event: Giant war"). Pause all giants also
+  stops the Swarmforge's robots. A dimension set to "no giants" also keeps the world's own giants from coming back
+  there until it's lifted. The **map** drags and zooms (Fit shows the players and spawn). **Moderators may Watch**
+  giants (an admin switch, on to start with). New setting **Giants in each other's grounds** (off; on in Wild Sizes
+  and Nomads): the world's own giants may also come in other giants' grounds, with their companions beside them.
+  The pick screen shows every giant as Normal danger.
+- Left as shipped, nothing about the giants changes except Follow me's distances.
+
+Inside: Pitchgut 1.35.39, Furrowmaw 1.17.36, Cerberus 2.18.36, Hollowbell 1.12.38, Lantern Willow 1.10.39,
+Wreckback 1.2.44, Swarmforge 1.4.42, Gloamwick 1.2.23, Giants Guide 1.11.0.
 
 ## New in 1.12.0
 

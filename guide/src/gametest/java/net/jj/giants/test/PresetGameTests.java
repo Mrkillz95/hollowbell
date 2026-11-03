@@ -147,7 +147,7 @@ public class PresetGameTests implements FabricGameTest {
         for (Giant g : AdminServer.giants()) vs.add(AdminInsight.view(d.report(g)));
         Map<String, Double> all = new HashMap<>();
         for (AdminSetting s : AdminServer.shared(d.world()))
-            if (!AdminCatalog.plain(s)) all.put(s.id(), s.value().getAsDouble());
+            if (AdminCatalog.multiplier(s)) all.put(s.id(), s.value().getAsDouble());
         return AdminInsight.warnings(vs, all);
     }
 

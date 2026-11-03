@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.37
+# Hollowbell (Java mod), version 1.12.38
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,20 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Follow me (JJ's answers): he sets off after you once you're a little past his body and stops just clear of it,
+  the same rule for every giant, so a small one keeps close and a big one stays proportionally further back.
+- New systems in the Giants Admin Book (in the all-in-one jar; every one is off until an admin turns it on): **weak
+  points** on his body (the glowing spots on his bell and his crown): hits there do more, and a glint shows where
+  while he fights. Through the Guide he can also **grow** with the days and his wins, get **hungry**, be **loyal**
+  to his owner (or turn on them), leave a **corpse or skeleton** where he falls, get stronger with more players,
+  **herd** with others of his kind, feel the **seasons** and the **full moon**, and the blocks he breaks can **grow
+  back** (then they drop nothing).
+- Giants in each other's grounds (an admin setting, off unless an admin or a preset turns it on): the world's own
+  Hollowbell may come in another giant's ground where he can live (on land), with his companions beside him. A
+  dimension set to "no giants" now also keeps him from coming back there until it's lifted.
+
+### 1.12.37
 
 - Server tools in the Giants Admin Book (in the all-in-one jar): the Respawn timers page shows when the world's
   own Hollowbell comes back, and an admin can bring him back now or set the wait (`/giants admin respawn hollowbell now`,

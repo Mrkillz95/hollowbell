@@ -1,0 +1,116 @@
+# Pictures of the merged book (1.13.0: Part 8 New systems A + JJ's answers + answers 2): Home during an event, the
+# Systems page, the Server tools map and My Giant's pick screen, at GUI scale 2 then 3. With the eight giants loaded:
+#   set GUIDE_SCRIPT to this file's full path, then withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamerule doMobSpawning false
+cmd tp @s 0 -60 0 0 10
+wait 20
+# some systems on, so the Systems page shows them working
+cmd giants admin set all herd on
+cmd giants admin set all growth on
+cmd giants admin set all weakPoints on
+cmd giants admin set all seasons on
+cmd giants admin set all griefHeal normal
+cmd giants admin set all scalePlayers 0.25
+cmd giants admin set all spawnMix true
+cmd wreckback summon calm 0.06
+wait 10
+cmd tp @s 60 -60 20 0 10
+cmd cerberus summon calm 0.06
+wait 10
+cmd tp @s 0 -60 0 0 10
+cmd wreckback book
+wait 200
+cmd giants admin event war 30
+wait 60
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p8m_s2_home_event
+adminbook systems 0
+wait 60
+mouse 2 2
+wait 25
+shot p8m_s2_systems_0
+adminbook systems 600
+wait 30
+mouse 2 2
+wait 25
+shot p8m_s2_systems_1
+adminbook systems 1300
+wait 30
+mouse 2 2
+wait 25
+shot p8m_s2_systems_2
+adminbook tools/general/t_map
+wait 60
+mouse 2 2
+wait 25
+shot p8m_s2_map
+mapview 40 20 2
+wait 10
+mouse 2 2
+wait 10
+shot p8m_s2_map_zoomed
+close
+cmd giants admin event stop
+cmd giants admin preset my_giant
+cmd giants admin confirm
+wait 10
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p8m_s2_pick
+close
+guiscale 3
+wait 10
+cmd giants admin preset classic
+cmd giants admin confirm
+cmd giants admin set all herd on
+cmd giants admin set all growth on
+cmd giants admin set all weakPoints on
+cmd giants admin set all seasons on
+cmd giants admin event siege 20
+wait 40
+adminbook home
+wait 60
+mouse 2 2
+wait 25
+shot p8m_s3_home_event
+adminbook systems 0
+wait 60
+mouse 2 2
+wait 25
+shot p8m_s3_systems_0
+adminbook systems 600
+wait 30
+mouse 2 2
+wait 25
+shot p8m_s3_systems_1
+adminbook tools/general/t_map
+wait 60
+mouse 2 2
+wait 25
+shot p8m_s3_map
+close
+cmd giants admin event stop
+cmd giants admin preset my_giant
+cmd giants admin confirm
+wait 10
+cmd giants pick
+wait 40
+mouse 2 2
+wait 20
+shot p8m_s3_pick
+close
+quit
