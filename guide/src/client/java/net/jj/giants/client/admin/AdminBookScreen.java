@@ -2893,12 +2893,18 @@ public class AdminBookScreen extends Screen {
         final Component main, sub;
         final int mainColour;
         final List<FormattedCharSequence> tip;
+        /** (Part 7) the grey line wrapped onto as many lines as it needs instead of cut off */
+        final @Nullable List<FormattedCharSequence> subLines;
 
         LineRow(Component main, int mainColour, Component sub, List<Object[]> buttons) {
+            this(main, mainColour, sub, buttons, false);
+        }
+
+        LineRow(Component main, int mainColour, Component sub, List<Object[]> buttons, boolean wrap) {
             this.main = main;
             this.sub = sub;
             this.mainColour = mainColour;
-            h = sub.getString().isEmpty() ? 18 : 26;
+            List<Button> bts = new ArrayList<>();
             int dx = 0;
             for (int i = buttons.size() - 1; i >= 0; i--) {
                 Object[] b = buttons.get(i);
@@ -2908,10 +2914,17 @@ public class AdminBookScreen extends Screen {
                         .build();
                 if (b.length > 2 && b[2] != null) bt.setTooltip(Tooltip.create((Component) b[2]));
                 if (b.length > 3) bt.active = (boolean) b[3];
-                add(bt, dx, (h - 16) / 2, true);
+                bts.add(bt);
                 dx += bt.getWidth() + 3;
             }
             textW = lw - dx - 6;
+            subLines = wrap && !sub.getString().isEmpty() ? font.split(sub, Math.max(40, textW)) : null;
+            h = sub.getString().isEmpty() ? 18 : subLines != null ? 16 + 10 * subLines.size() : 26;
+            int at = 0;
+            for (Button bt : bts) {
+                add(bt, at, (h - 16) / 2, true);
+                at += bt.getWidth() + 3;
+            }
             List<FormattedCharSequence> t = new ArrayList<>(font.split(main, 280));
             if (!sub.getString().isEmpty()) t.addAll(font.split(sub.copy().withStyle(ChatFormatting.GRAY), 280));
             tip = t;
@@ -2923,9 +2936,13 @@ public class AdminBookScreen extends Screen {
         void draw(GuiGraphics g, int x, int y, int w, int mx, int my) {
             String m = cut(main.getString(), textW);
             g.drawString(font, m, x, y + (h == 18 ? 5 : 3), mainColour, false);
-            if (!sub.getString().isEmpty()) g.drawString(font, cut(sub.getString(), textW), x, y + 14, GREY, false);
+            if (subLines != null) {
+                for (int i = 0; i < subLines.size(); i++)
+                    g.drawString(font, subLines.get(i), x, y + 14 + 10 * i, GREY, false);
+            } else if (!sub.getString().isEmpty()) g.drawString(font, cut(sub.getString(), textW), x, y + 14, GREY,
+                    false);
             AdminStyle.dots(g, x, y + h - 1, w);
-            boolean cutOff = !m.equals(main.getString()) || font.width(sub) > textW;
+            boolean cutOff = !m.equals(main.getString()) || (subLines == null && font.width(sub) > textW);
             if (cutOff && mx >= x && mx < x + textW && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
                 setTooltipForNextRenderPass(tip);
         }
@@ -3883,11 +3900,11 @@ public class AdminBookScreen extends Screen {
                 rows.add(new LineRow(tr("fun.you.watching", str(w, "label")), KEY,
                         tr(str(w, "mode").equals("eyes") ? "fun.you.eyes" : "fun.you.free"),
                         List.<Object[]>of(new Object[] {tr("fun.watch.stop"), (Runnable) () -> funRequest(
-                                "spectatestop", new JsonObject()), tr("fun.watch.stop.tip")})));
+                                "spectatestop", new JsonObject()), tr("fun.watch.stop.tip")}), true));
             if (me.get("playing") instanceof JsonObject pl)
                 rows.add(new LineRow(tr("fun.you.playing", str(pl, "label")), KEY, tr("fun.you.playing.sub"),
                         List.<Object[]>of(new Object[] {tr("fun.play.stop"), (Runnable) () -> funRequest(
-                                "playasstop", new JsonObject()), tr("fun.play.stop.tip")})));
+                                "playasstop", new JsonObject()), tr("fun.play.stop.tip")}), true));
         }
         // each giant
         List<JsonObject[]> all = funGiants(false);
@@ -3916,7 +3933,7 @@ public class AdminBookScreen extends Screen {
                                     JsonObject o = new JsonObject();
                                     o.addProperty("name", name);
                                     funRequest("tagdelete", o);
-                                }), tr("fun.tags.delete.tip")})));
+                                }), tr("fun.tags.delete.tip")}), true));
             }
             rows.add(new LineRow(Component.empty(), TEXT, Component.empty(), List.<Object[]>of(new Object[] {
                 tr("fun.tags.new"), (Runnable) () -> openTagEdit(null), tr("fun.tags.new.tip")})));
@@ -3931,7 +3948,9 @@ public class AdminBookScreen extends Screen {
         if (!str(t, "title").isEmpty()) w.add("\"" + str(t, "title") + "\"");
         if (bool(t, "glow")) w.add(tr("fun.tags.glow").getString());
         if (t.get("loot") instanceof JsonObject) w.add(str(t, "lootWords"));
-        w.add(tr("fun.tags.wearing", (int) dbl(t, "wearing", 0)).getString());
+        int wearing = (int) dbl(t, "wearing", 0);
+        w.add(tr(wearing == 0 ? "fun.tags.wearing.none" : wearing == 1 ? "fun.tags.wearing.one" : "fun.tags.wearing",
+                wearing).getString());
         return String.join(" · ", w);
     }
 
@@ -4136,7 +4155,7 @@ public class AdminBookScreen extends Screen {
                     o.add("b", fightSide(fightB, fightSizeB));
                     o.addProperty("spot", fightLook ? "look" : "here");
                     funRequest("fight", o);
-                }, tr("fun.fight.go.tip"), !fightA.equals(fightB) || !fightA.startsWith("id:")})));
+                }, tr("fun.fight.go.tip"), !fightA.equals(fightB) || !fightA.startsWith("id:")}), true));
     }
 
     private static JsonObject fightSide(String pick, double size) {
@@ -4235,7 +4254,7 @@ public class AdminBookScreen extends Screen {
                         JsonObject o = new JsonObject();
                         o.addProperty("spot", "here");
                         funRequest("eraseat", o);
-                    }, tr("world.brush.eraseat.tip")})));
+                    }, tr("world.brush.eraseat.tip")}), true));
         }
         // building
         List<JsonObject> builds = objects(f, "builds");
@@ -4256,7 +4275,7 @@ public class AdminBookScreen extends Screen {
                                 o.addProperty("kind", "arena");
                                 o.addProperty("style", arenaSize);
                                 funRequest("build", o);
-                            }), tr("world.build.go.tip")})));
+                            }), tr("world.build.go.tip")}), true));
             List<String> ks = new ArrayList<>();
             for (JsonObject k : kinds) ks.add(str(k, "key"));
             if (!ks.isEmpty()) {
@@ -4328,7 +4347,7 @@ public class AdminBookScreen extends Screen {
                 else bs.add(new Object[] {tr("world.build.down"), (Runnable) () -> confirm(tr("world.build.down.title",
                         n), tr("world.build.down.body"), tr("world.build.down"), () -> request("takedown", "n", n)),
                     tr("world.build.down.tip"), bool(bj, "undo") && !st.equals("taking down")});
-                rows.add(new LineRow(Component.literal(n + ". " + what), KEY, Component.literal(sub), bs));
+                rows.add(new LineRow(Component.literal(n + ". " + what), KEY, Component.literal(sub), bs, true));
             }
         }
         // mixing
@@ -4388,7 +4407,7 @@ public class AdminBookScreen extends Screen {
                     o.addProperty("where", w);
                     if (w.equals("ground")) o.addProperty("ground", settleWhere.substring(7));
                     funRequest("settle", o);
-                }, tr("world.mix.go.tip"), can})));
+                }, tr("world.mix.go.tip"), can}), true));
     }
 
     private String whereWords(String w) {

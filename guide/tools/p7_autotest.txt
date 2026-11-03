@@ -116,7 +116,7 @@ wait 80
 shot p7_arena
 cmd tp @s 300 -60 0 0 0
 wait 10
-cmd giants admin fight wreckback cerberus here 0.12
+cmd giants admin fight pitchgut cerberus here 0.12
 wait 60
 cmd tp @s 300 -35 -55 0 25
 wait 120
@@ -142,7 +142,7 @@ shot p7_den_cerberus
 # a painted biome (the Lantern Willow's), seen from above
 cmd tp @s 1000 -60 0 0 10
 wait 60
-cmd giants admin paint lanternwillow 40 biome
+cmd giants admin paint lanternwillow 40 full
 wait 300
 cmd tp @s 1000 -25 -70 0 25
 wait 80
@@ -154,7 +154,9 @@ cmd hollowbell summon calm 0.1
 wait 60
 cmd giants admin settle hollowbell sky
 wait 60
-cmd tp @s 1200 -40 -60 0 -20
+cmd gamemode spectator
+cmd tp @s 1200 -5 -40 0 -10
 wait 60
 shot p7_settle_sky
+cmd gamemode creative
 quit

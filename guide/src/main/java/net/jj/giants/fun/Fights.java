@@ -63,21 +63,39 @@ public final class Fights {
         Vec3 pa = mid.subtract(across.scale(gap / 2)), pb = mid.add(across.scale(gap / 2));
         BlockPos ba = BlockPos.containing(pa), bb = BlockPos.containing(pb);
         String who = p.getGameProfile().getName();
+        // (when the land is loaded already this runs at once: a refusal then is the answer itself, not a second line
+        // after "Setting up")
+        boolean[] answered = {false};
+        String[] failed = {null};
         Spots.whenLoaded(l, List.of(ba, bb, at), () -> {
-            UUID ia = place(server, l, a, pa, pb), ib = place(server, l, b, pb, pa);
-            if (ia == null || ib == null) {
-                p.displayClientMessage(Component.literal("The fight couldn't be set up there: "
-                        + (ia == null ? a.name() : b.name()) + " couldn't be put in place."), false);
+            Placing qa = start(server, l, a, pa, pb), qb = start(server, l, b, pb, pa);
+            if (qa == null || qb == null) {
+                Side bad = qa == null ? a : b;
+                String why = "The fight couldn't be set up there: the " + bad.name() + " couldn't be brought there.";
+                if (answered[0]) p.displayClientMessage(Component.literal(why), false);
+                else failed[0] = why;
                 return;
             }
-            meetings.add(new Meeting(l, ia, ib, a.kind().key(), b.kind().key(), new int[] {40}, who));
+            // (a giant's own summon run from inside a command waits for that command to end: look for the fresh ones
+            // on the next tick)
+            placing.add(new Pending(l, a, b, qa, qb, pa, pb, who, p.getUUID(), new int[] {1}));
         }, () -> p.displayClientMessage(Component.literal("The land there isn't ready yet. Try again in a moment."),
                 false));
+        answered[0] = true;
+        if (failed[0] != null) return AdminServer.Result.fail(failed[0]);
         return AdminServer.Result.said(List.of("Setting up the fight: " + a.name() + " against " + b.name() + "…"));
     }
 
-    /** puts one side at its spot facing the other; his id, or null */
-    private static @Nullable UUID place(MinecraftServer server, ServerLevel l, Side s, Vec3 at, Vec3 facing) {
+    /** one side on its way: one out there already moved (his id), or a fresh one asked for (who was there before) */
+    private record Placing(@Nullable UUID id, @Nullable Set<UUID> before) {}
+
+    private record Pending(ServerLevel level, Side a, Side b, Placing qa, Placing qb, Vec3 pa, Vec3 pb, String who,
+            UUID by, int[] ticks) {}
+
+    private static final List<Pending> placing = new ArrayList<>();
+
+    /** sets one side going to its spot facing the other; null when one out there couldn't be moved */
+    private static @Nullable Placing start(MinecraftServer server, ServerLevel l, Side s, Vec3 at, Vec3 facing) {
         double y = Spots.ground(l, Mth.floor(at.x), Mth.floor(at.z));
         if (Double.isNaN(y)) y = at.y;
         if (s.existing() != null) {
@@ -91,7 +109,7 @@ public final class Fights {
             AdminServer.Result r = FunGiants.act(server, s.kind(), s.existing().getStringUUID(), "move", o);
             if (!r.ok()) return null;
             face(s.existing(), facing);
-            return s.existing().getUUID();
+            return new Placing(s.existing().getUUID(), null);
         }
         // a fresh one: his own summon at the spot (nobody named, so exactly there), calm when he has that mood
         Set<UUID> before = new HashSet<>();
@@ -100,10 +118,17 @@ public final class Fights {
         String arg = l.dimension().location() + " " + at.x + " " + y + " " + at.z + " -"
                 + (moods.contains("calm") ? " calm" : "") + " " + AdminSetting.plain(s.size());
         AdminServer.call(server, s.kind(), "summon", arg);
+        return new Placing(null, before);
+    }
+
+    /** the one standing for that side now (a fresh one: the new one nearest his spot, turned to face the other) */
+    private static @Nullable UUID found(MinecraftServer server, ServerLevel l, Side s, Placing q, Vec3 at,
+            Vec3 facing) {
+        if (q.id() != null) return q.id();
         LivingEntity best = null;
         double bd = Double.MAX_VALUE;
         for (LivingEntity e : FunGiants.standing(server, s.kind().key())) {
-            if (before.contains(e.getUUID()) || e.level() != l) continue;
+            if (q.before().contains(e.getUUID()) || e.level() != l) continue;
             double d = e.position().distanceToSqr(at);
             if (d < bd) {
                 bd = d;
@@ -135,6 +160,23 @@ public final class Fights {
 
     /** two seconds after they're in place: each goes for the other */
     static void tick(MinecraftServer server) {
+        for (Pending q : List.copyOf(placing)) {
+            if (--q.ticks()[0] > 0) continue;
+            placing.remove(q);
+            UUID ia = found(server, q.level(), q.a(), q.qa(), q.pa(), q.pb()),
+                    ib = found(server, q.level(), q.b(), q.qb(), q.pb(), q.pa());
+            if (ia == null || ib == null) {
+                Side bad = ia == null ? q.a() : q.b();
+                ServerPlayer p = server.getPlayerList().getPlayer(q.by());
+                if (p != null) p.displayClientMessage(Component.literal("The fight couldn't be set up there: the "
+                        + bad.name() + "'s own summon left none of him standing there (the world may already hold as"
+                        + " many of him as it allows: pick one out there instead).").withStyle(
+                        net.minecraft.ChatFormatting.RED), false);
+                continue;
+            }
+            meetings.add(new Meeting(q.level(), ia, ib, q.a().kind().key(), q.b().kind().key(), new int[] {40},
+                    q.who()));
+        }
         if (meetings.isEmpty()) return;
         for (Meeting m : List.copyOf(meetings)) {
             if (--m.ticks()[0] > 0) continue;
@@ -163,10 +205,11 @@ public final class Fights {
     public static List<String> lastMet = List.of();
 
     public static boolean busy() {
-        return !meetings.isEmpty();
+        return !meetings.isEmpty() || !placing.isEmpty();
     }
 
     static void forget() {
+        placing.clear();
         meetings.clear();
     }
 }

@@ -82,6 +82,8 @@ public class FunGiantsGameTests implements FabricGameTest {
         BlockPos at = pad(h, slot);
         LivingEntity e = summon(h, g, at, 0.15);
         h.assertTrue(e != null, key + ": his summon made one");
+        // (his size as the Guide reads it: fights, settling and dens are sized by it)
+        h.assertTrue(Math.abs(FunGiants.sizeOf(e) - 0.15) < 0.05, key + ": size read as " + FunGiants.sizeOf(e));
         ServerPlayer p = PlayersGameTests.join(h, "fun_" + key.substring(0, 4), true);
         p.teleportTo(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() - 20.5, 0, 0);
         h.runAfterDelay(20, () -> {

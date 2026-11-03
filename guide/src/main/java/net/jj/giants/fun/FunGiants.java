@@ -64,7 +64,7 @@ public final class FunGiants {
 
     /** his size, asked of his own mod (size(), getScale() or scale()), else 1 */
     public static double sizeOf(Entity e) {
-        for (String m : new String[] {"size", "scale", "getScale"}) {
+        for (String m : new String[] {"size", "scale", "bellScale", "mountainScale", "getScale"}) {
             try {
                 Object v = e.getClass().getMethod(m).invoke(e);
                 if (v instanceof Number n) return n.doubleValue();
