@@ -41,14 +41,18 @@ public final class GiantsSystems {
 
     public static final int VERSION = 1;
     /** the all-giants settings he applies (listed in his admin header's "uses") */
-    public static final String[] USES = {"all.weakPoints", "all.weakHit", "all.bodyHit"};
-    static final List<String> DOES = List.of("spots", "mood", "turn", "go");
+    public static final String[] USES = {"all.weakPoints", "all.weakHit", "all.bodyHit", "all.mirror"};
+    static final List<String> DOES = List.of("spots", "mood", "turn", "go", "counter");
     /** his weak points in plain words (the Guide's book and lines) */
     static final List<String> WEAK = List.of("the glowing spots on his bell", "his crown");
     private static final String WHO = "Hollowbell";
     private static final String[] MOODS = {"calm", "hunting", "guardian"};
 
     private static volatile boolean weakOn, report;
+    /** (Part 9) Mirror: on, and what each tactic of players does to him now (melee, arrows, magic, blasts) */
+    private static volatile boolean mirror;
+    private static volatile float[] counters = {1f, 1f, 1f, 1f};
+    public static final List<String> TACTICS = List.of("melee", "arrows", "magic", "blasts");
     private static volatile float weakHit = 2.5f, bodyHit = 1f;
 
     /** the switches out of adminset's "all" (absent: as shipped) */
@@ -57,11 +61,15 @@ public final class GiantsSystems {
         weakHit = num(all.get("all.weakHit"), 2.5f, 1f, 5f);
         bodyHit = num(all.get("all.bodyHit"), 1f, 0.1f, 1f);
         report = bool(all.get("all.sysReport"));
+        mirror = bool(all.get("all.mirror"));
+        if (!mirror) counters = new float[] {1f, 1f, 1f, 1f};
     }
 
     public static void clear() {
         weakOn = false;
         report = false;
+        mirror = false;
+        counters = new float[] {1f, 1f, 1f, 1f};
         weakHit = 2.5f;
         bodyHit = 1f;
     }
@@ -90,7 +98,7 @@ public final class GiantsSystems {
 
     /** anything for the hook to do: weak points on, or the Guide wants his hits told (off: the hook isn't run) */
     public static boolean active() {
-        return weakOn || report;
+        return weakOn || report || mirror;
     }
 
     // the hook
@@ -101,7 +109,7 @@ public final class GiantsSystems {
      * share for the rest of him. Off: the very same number. Told to the Guide while it needs it.
      */
     public static float hit(LivingEntity g, DamageSource src, float amount, boolean weak, @Nullable Vec3 at) {
-        if (!weakOn && !report) return amount;
+        if (!weakOn && !report && !mirror) return amount;
         if (src.is(DamageTypes.GENERIC_KILL)) return amount;
         float dealt = amount;
         if (weakOn) {
@@ -115,7 +123,9 @@ public final class GiantsSystems {
                     sp.displayClientMessage(Component.translatable("message.hollowbell.systems.weak"), true);
             }
         }
-        if (report && g.level() instanceof ServerLevel sl) tell(sl.getServer(), g, src, dealt, weak);
+        // (Part 9) Mirror: the tactic players lean on hurts him less, as the Guide has learned it
+        if (mirror && src.getEntity() instanceof Player) dealt *= counter(tactic(src));
+        if ((report || mirror) && g.level() instanceof ServerLevel sl) tell(sl.getServer(), g, src, dealt, weak);
         return dealt;
     }
 
@@ -187,6 +197,9 @@ public final class GiantsSystems {
         o.addProperty("by", by == null ? "-" : by.getStringUUID());
         o.addProperty("amount", amount);
         o.addProperty("weak", weak);
+        // (Part 9) Mirror: how it was done, and whether by a player
+        o.addProperty("tactic", tactic(src));
+        o.addProperty("player", src.getEntity() instanceof Player);
         try {
             Class<?> c = Class.forName("net.jj.giants.GuideBridge", true, GiantsSystems.class.getClassLoader());
             Method m = c.getMethod("guide", MinecraftServer.class, String.class, String.class);
@@ -224,6 +237,9 @@ public final class GiantsSystems {
     /** "sysact": one thing on one of him; ["ok", line] or ["no", why]; null for what it can't read */
     public static @Nullable List<String> act(@Nullable MinecraftServer server, String arg) {
         if (server == null || arg == null) return null;
+        // (Part 9) Mirror: what every one of him counters now (no one id)
+        List<String> countered = counterAct(arg);
+        if (countered != null) return countered;
         UUID id;
         String what;
         JsonObject o;
@@ -311,6 +327,44 @@ public final class GiantsSystems {
 
     private static List<String> no(String why) {
         return List.of("no", why);
+    }
+
+    // (Part 9, ADMIN_BRIDGE.md 25.8) Mirror
+
+    /** how a hit was done: blasts, arrows (anything shot or thrown), magic, or melee (everything else) */
+    public static String tactic(DamageSource src) {
+        if (src.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) return "blasts";
+        if (src.is(net.minecraft.tags.DamageTypeTags.IS_PROJECTILE)) return "arrows";
+        if (src.is(DamageTypes.MAGIC) || src.is(DamageTypes.INDIRECT_MAGIC) || src.is(DamageTypes.THORNS)
+                || src.is(DamageTypes.SONIC_BOOM) || src.is(DamageTypes.DRAGON_BREATH) || src.is(DamageTypes.WITHER))
+            return "magic";
+        return "melee";
+    }
+
+    /** what a players' tactic does to him now (1: all of it) */
+    public static float counter(String tactic) {
+        int i = TACTICS.indexOf(tactic);
+        return i < 0 ? 1f : counters[i];
+    }
+
+    /**
+     * "sysact" {"do":"counter","counter":{"melee":0.6,...}}: what each tactic does to every one of him from now on
+     * (0.1-1, a missing one 1); null when it isn't this
+     */
+    private static @Nullable List<String> counterAct(String arg) {
+        JsonObject o;
+        try {
+            o = JsonParser.parseString(arg).getAsJsonObject();
+            if (!o.has("do") || !o.get("do").getAsString().equalsIgnoreCase("counter")) return null;
+            if (o.get("sys").getAsInt() > VERSION) return null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+        float[] c = {1f, 1f, 1f, 1f};
+        if (o.get("counter") instanceof JsonObject m)
+            for (int i = 0; i < TACTICS.size(); i++) c[i] = num(m.get(TACTICS.get(i)), 1f, 0.1f, 1f);
+        counters = c;
+        return ok(WHO + ": melee x" + c[0] + ", arrows x" + c[1] + ", magic x" + c[2] + ", blasts x" + c[3] + ".");
     }
 
     /** (the tests) what he holds now */

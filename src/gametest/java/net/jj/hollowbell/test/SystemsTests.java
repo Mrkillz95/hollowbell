@@ -59,7 +59,7 @@ public class SystemsTests implements FabricGameTest {
         JsonObject o = JsonParser.parseString(r.get(0)).getAsJsonObject();
         h.assertTrue(o.get("sys").getAsInt() == 1 && o.get("name").getAsString().equals("Hollowbell")
                 && o.get("giant").getAsString().equals("hollowbell"), "" + o);
-        h.assertTrue(o.getAsJsonArray("does").toString().equals("[\"spots\",\"mood\",\"turn\",\"go\"]"), "" + o);
+        h.assertTrue(o.getAsJsonArray("does").toString().equals("[\"spots\",\"mood\",\"turn\",\"go\",\"counter\"]"), "" + o);
         h.assertTrue(o.getAsJsonArray("weak").size() == 2, "his spots and his crown: " + o);
         h.assertTrue(GiantsBridge.giants(s, "sysact", "nonsense") == null, "unreadable: null");
         h.assertTrue(GiantsBridge.giants(s, "sysact", "{\"sys\":2,\"do\":\"spots\",\"id\":\"" + UUID.randomUUID()
@@ -193,5 +193,40 @@ public class SystemsTests implements FabricGameTest {
             }
             h.succeed();
         });
+    }
+
+    /** (Part 9, ADMIN_BRIDGE.md 25.8) Mirror: what the Guide has learned cuts the players' tactic it names, nothing else */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "sys_mirror")
+    public void mirrorCutsTheTacticPlayersLeanOn(GameTestHelper h) {
+        net.minecraft.server.MinecraftServer s = h.getLevel().getServer();
+        net.minecraft.world.entity.monster.Zombie z = net.minecraft.world.entity.EntityType.ZOMBIE.create(h.getLevel());
+        net.fabricmc.fabric.api.entity.FakePlayer p = net.fabricmc.fabric.api.entity.FakePlayer.get(h.getLevel());
+        net.minecraft.world.damagesource.DamageSource melee = p.damageSources().playerAttack(p),
+                shot = p.damageSources().thrown(p, p), blast = p.damageSources().explosion(p, p),
+                magic = p.damageSources().indirectMagic(p, p), mob = z.damageSources().mobAttack(z);
+        GiantsBridge.giants(s, "adminset", "{\"admin\":1,\"values\":{},\"all\":{}}");
+        h.assertTrue(!GiantsSystems.active(), "off as shipped");
+        h.assertTrue(GiantsSystems.hit(z, melee, 4.3f, false, null) == 4.3f, "off: the very same number");
+        h.assertTrue(GiantsSystems.tactic(melee).equals("melee") && GiantsSystems.tactic(shot).equals("arrows")
+                && GiantsSystems.tactic(blast).equals("blasts") && GiantsSystems.tactic(magic).equals("magic"),
+                "the four tactics");
+        GiantsBridge.giants(s, "adminset", "{\"admin\":1,\"values\":{},\"all\":{\"all.mirror\":true}}");
+        h.assertTrue(GiantsSystems.active(), "Mirror on: the hook runs");
+        h.assertTrue(GiantsSystems.hit(z, melee, 4f, false, null) == 4f, "nothing learned yet: all of it");
+        java.util.List<String> r = GiantsBridge.giants(s, "sysact", "{\"sys\":1,\"do\":\"counter\",\"id\":\"-\","
+                + "\"counter\":{\"melee\":0.5,\"blasts\":0.8}}");
+        h.assertTrue(r != null && r.size() == 2 && r.get(0).equals("ok"), "taken: " + r);
+        h.assertTrue(GiantsSystems.hit(z, melee, 4f, false, null) == 2f, "melee: half");
+        h.assertTrue(GiantsSystems.hit(z, blast, 5f, false, null) == 4f, "blasts x0.8");
+        h.assertTrue(GiantsSystems.hit(z, shot, 4f, false, null) == 4f, "arrows: all of it");
+        h.assertTrue(GiantsSystems.hit(z, mob, 4f, false, null) == 4f, "only players' hits are cut");
+        h.assertTrue(GiantsBridge.giants(s, "sysact", "{\"sys\":2,\"do\":\"counter\",\"id\":\"-\"}") == null,
+                "a newer protocol: null");
+        // Mirror off: all of it again, and what he learned forgotten
+        GiantsBridge.giants(s, "adminset", "{\"admin\":1,\"values\":{},\"all\":{}}");
+        h.assertTrue(!GiantsSystems.active() && GiantsSystems.hit(z, melee, 4.3f, false, null) == 4.3f
+                && GiantsSystems.counter("melee") == 1f, "off again");
+        z.discard();
+        h.succeed();
     }
 }
