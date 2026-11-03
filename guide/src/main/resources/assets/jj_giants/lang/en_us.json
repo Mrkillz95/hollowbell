@@ -1643,7 +1643,7 @@
   "guide.jj_giants.world.top.you": "You: number %s, %s",
   "guide.jj_giants.world.top.yours": "Your giants slain: %s",
   "players.jj_giants.pick.title": "Pick your giant",
-  "players.jj_giants.pick.sub": "My Giant: the giant you pick is yours. You are taken to his ground with his book and finder, and one of him comes to you.",
+  "players.jj_giants.pick.sub": "My Giant: the giant you pick is yours. You are taken to his ground with your own book of him and his finder, and one of him comes to you.",
   "players.jj_giants.pick.already": "You picked your giant already. An admin can let you pick again.",
   "players.jj_giants.pick.later": "Later",
   "players.jj_giants.pick.later.tip": "Pick later from the Giants Guide (This world) or with /giants pick.",

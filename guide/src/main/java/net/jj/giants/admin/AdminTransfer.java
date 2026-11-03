@@ -126,8 +126,8 @@ public final class AdminTransfer {
                 + "\"replace\":true,\"keep\":[\"players\"],\"all\":{\"all.myGiant\":false}}");
         // Part 5: My Giant (ADMIN_BRIDGE.md 20.7)
         BUILT_IN.put("my_giant", retune("my_giant", "My Giant",
-                "Each player picks a giant the first time they join: they are taken to his ground with his book and"
-                        + " finder, and one of him comes to them as their own.",
+                "Each player picks a giant the first time they join: they are taken to his ground with their own book"
+                        + " of him and his finder, and one of him comes to them as their own.",
                 "", "", Map.of()));
         // Part 3: where the giants' grounds go (ADMIN_BRIDGE.md 18.9)
         BUILT_IN.put("close_quarters", forEveryGiant("close_quarters", "Close Quarters",

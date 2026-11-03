@@ -68,8 +68,8 @@ public final class AdminCatalog {
 
     private static final List<AdminSetting> PLAYER_SETTINGS = List.of(
             flag("all.myGiant", false, "My Giant",
-                    "Each player picks a giant the first time they join: they are taken to his ground with his book"
-                            + " and finder, and one of him comes to them."),
+                    "Each player picks a giant the first time they join: they are taken to his ground with their own"
+                            + " book of him and his finder, and one of him comes to them as their own."),
             choice("all.rulesPage", List.of("full", "basic", "hidden"), "Rules page",
                     "What the Guide's Rules page shows players: the preset, how dangerous it is and the rules that"
                             + " differ from Classic (full), only the preset and what it means (basic), or nothing."),
@@ -115,8 +115,8 @@ public final class AdminCatalog {
                     "Players may make and use the giants' own books. Off: books can't be crafted, aren't given,"
                             + " and give no orders."),
             choice("all.bookOrders", List.of("all", "noattacks"), "Book orders",
-                    "noattacks: a book's attack orders (every move, go after, the hunting mood) are refused;"
-                            + " following, going, riding, sleeping and the rest still work."),
+                    "noattacks: a book's attack orders (every move, go after, the hunting mood) and attack moves used"
+                            + " while riding are refused; following, going, riding, sleeping and the rest still work."),
             flag("all.findersCraftable", true, "Finders craftable",
                     "Off: no giant's finder can be crafted (kits, loot and commands still give them)."));
 
