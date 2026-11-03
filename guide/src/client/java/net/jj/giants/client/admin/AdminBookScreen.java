@@ -1456,6 +1456,7 @@ public class AdminBookScreen extends Screen {
             case LIVE -> AdminBookClient.live() != null;
             case PRESETS -> AdminBookClient.presets() != null;
             case CHANGES -> AdminBookClient.changes() != null;
+            case PLAYERS -> AdminBookClient.players() != null && AdminBookClient.page(AdminCatalog.ALL) != null;
             default -> AdminBookClient.home() != null
                     && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
         };

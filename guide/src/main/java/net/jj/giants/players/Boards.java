@@ -36,6 +36,10 @@ public final class Boards {
     public static final List<String> KINDS = List.of("slayers", "owners", "friends");
     public static final Map<String, String> TITLES = Map.of("slayers", "Giant slayers", "owners", "Longest owners",
             "friends", "Most befriended");
+    /** a board's title on a sign (a sign's line is short) */
+    public static final Map<String, String> SIGN_TITLES = Map.of("slayers", "Giant slayers", "owners",
+            "Longest owners", "friends", "Befriended");
+
     /** each board's own switch */
     static final Map<String, String> SWITCH = Map.of("slayers", "boardSlayers", "owners", "boardOwners", "friends",
             "boardFriends");
@@ -241,7 +245,7 @@ public final class Boards {
         BlockPos pos = new BlockPos(s.x, s.y, s.z);
         if (l == null || !(l.getBlockEntity(pos) instanceof SignBlockEntity sign)) return false;
         Component[] lines = new Component[4];
-        lines[0] = Component.literal(TITLES.get(s.kind)).withStyle(net.minecraft.ChatFormatting.BOLD);
+        lines[0] = Component.literal(SIGN_TITLES.get(s.kind));
         if (!shown(server, s.kind)) {
             lines[1] = Component.literal("Turned off");
             lines[2] = Component.empty();

@@ -61,8 +61,10 @@ mouse 2 2
 wait 25
 shot p5_admin_players_vote
 close
-# My Giant: the pick screen
-cmd giants admin set all myGiant on
+# My Giant: the preset (the giants as they come again), then the pick screen
+cmd giants admin preset my_giant
+cmd giants admin confirm
+wait 10
 cmd giants pick
 wait 40
 mouse 2 2
@@ -77,10 +79,10 @@ shot p5_pick_chosen
 close
 # a leaderboard sign at spawn
 cmd tp @s ~ ~ ~ 0 0
-cmd setblock ~ ~1 ~2 minecraft:oak_sign[rotation=8]
-cmd setblock ~1 ~1 ~2 minecraft:oak_sign[rotation=8]
-cmd giants players board set slayers ~ ~1 ~2
-cmd giants players board set owners ~1 ~1 ~2
+cmd setblock ~-1 ~1 ~3 minecraft:oak_sign[rotation=8]
+cmd setblock ~1 ~1 ~3 minecraft:oak_sign[rotation=8]
+cmd giants players board set slayers ~-1 ~1 ~3
+cmd giants players board set owners ~1 ~1 ~3
 wait 40
 gui off
 wait 10

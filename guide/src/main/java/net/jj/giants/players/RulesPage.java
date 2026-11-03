@@ -93,7 +93,8 @@ public final class RulesPage {
         for (var e : reports.entrySet()) {
             String gname = AdminServer.nameOf(e.getKey());
             for (AdminSetting s : e.getValue().settings()) {
-                if (!s.set() || s.cat().equals("worldgen")) continue;
+                // (set for the world, but to his usual value: nothing different)
+                if (!s.set() || s.cat().equals("worldgen") || AdminSetting.same(s.value(), s.def())) continue;
                 if (!s.group().isEmpty()) {
                     if (s.id().endsWith(".on") && !s.value().getAsBoolean())
                         movesOff.add(gname + ": " + s.name().replaceAll(": on$", ""));

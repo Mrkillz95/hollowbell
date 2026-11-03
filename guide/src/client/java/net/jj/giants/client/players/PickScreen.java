@@ -48,6 +48,7 @@ public class PickScreen extends Screen {
             for (JsonElement e : list.getAsJsonArray("giants")) if (e.isJsonObject()) giants.add(e.getAsJsonObject());
         picked = list.has("picked") && list.get("picked").getAsBoolean();
         if (startChosen >= 0 && startChosen < giants.size()) chosen = startChosen;
+        startChosen = -1;
     }
 
     private static String str(JsonObject o, String k) {
@@ -62,7 +63,7 @@ public class PickScreen extends Screen {
         py0 = (height - ph) / 2;
         cols = pw >= 380 ? 2 : 1;
         cardW = (pw - 16 - (cols - 1) * 6) / cols;
-        cardH = 62;
+        cardH = 74;
         gx = px0 + 8;
         gy = py0 + 40;
         gh = py0 + ph - 32 - gy;
@@ -168,12 +169,12 @@ public class PickScreen extends Screen {
         Component line = Language.getInstance().has(lineKey) ? Component.translatable(lineKey) : Component.empty();
         List<FormattedCharSequence> ls = font.split(line, tw);
         String note = str(o, "note");
-        int most = note.isEmpty() ? 4 : 2;
+        int most = note.isEmpty() ? 5 : 3;
         for (int i = 0; i < ls.size() && i < most; i++) g.drawString(font, ls.get(i), tx, y + 25 + i * 9, TEXT, false);
         if (!note.isEmpty()) {
             List<FormattedCharSequence> ns = font.split(Component.literal(note), tw);
             for (int i = 0; i < ns.size() && i < 2; i++)
-                g.drawString(font, ns.get(i), tx, y + 25 + (Math.min(ls.size(), 2) + i) * 9, NOTE, false);
+                g.drawString(font, ns.get(i), tx, y + 25 + (Math.min(ls.size(), most) + i) * 9, NOTE, false);
         }
     }
 

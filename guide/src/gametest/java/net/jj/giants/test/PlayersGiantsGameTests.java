@@ -60,57 +60,6 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         Players.pushRules(s, PlayerData.get(s));
     }
 
-    /** an ignored player is never his target, with a normal player beside them */
-    private void ignoredIsLeftAlone(GameTestHelper h, String key) {
-        MinecraftServer s = h.getLevel().getServer();
-        clean(s);
-        Giant g = Giants.byKey(key);
-        BlockPos o = h.absolutePos(new BlockPos(1, 2, 1));
-        ServerPlayer ign = PlayersGameTests.join(h, "ig_" + key.substring(0, 4), false);
-        ServerPlayer plain = PlayersGameTests.join(h, "pl_" + key.substring(0, 4), false);
-        ign.teleportTo(h.getLevel(), o.getX() + 6, o.getY(), o.getZ(), 0, 0);
-        plain.teleportTo(h.getLevel(), o.getX() - 6, o.getY(), o.getZ(), 0, 0);
-        Players.setRule(s, "Tester", ign.getStringUUID(), "ignored", true);
-        CommandSourceStack src = s.createCommandSourceStack().withPermission(4).withLevel(h.getLevel())
-                .withPosition(Vec3.atBottomCenterOf(o)).withSuppressedOutput();
-        s.getCommands().performPrefixedCommand(src, g.command() + " summon hunting 0.05");
-        String type = Players.MAIN.get(key);
-        boolean[] plainTargeted = {false};
-        // (every one of him hunts, whatever his mood)
-        ign.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
-        plain.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
-        int[] seen = {0};
-        // both players hit him: the plain one makes an enemy of him, the ignored one doesn't
-        h.runAfterDelay(20, () -> {
-            for (Entity e : h.getLevel().getEntities((Entity) null, new AABB(o).inflate(40),
-                    x -> BuiltInRegistries.ENTITY_TYPE.getKey(x.getType()).toString().equals(type)))
-                if (e instanceof net.minecraft.world.entity.LivingEntity le) {
-                    le.hurt(ign.damageSources().playerAttack(ign), 1f);
-                    le.hurt(plain.damageSources().playerAttack(plain), 1f);
-                }
-        });
-        h.onEachTick(() -> {
-            for (Entity e : h.getLevel().getEntities((Entity) null, new AABB(o).inflate(40),
-                    x -> BuiltInRegistries.ENTITY_TYPE.getKey(x.getType()).toString().equals(type)))
-                if (e instanceof Mob m && (seen[0] = Math.max(seen[0], 1)) > 0 && m.getTarget() instanceof Player t) {
-                    if (t == ign) h.fail(key + " went after the ignored player");
-                    if (t == plain) plainTargeted[0] = true;
-                }
-        });
-        h.runAfterDelay(400, () -> {
-            for (Entity e : h.getLevel().getEntities((Entity) null, new AABB(o).inflate(60),
-                    x -> BuiltInRegistries.ENTITY_TYPE.getKey(x.getType()).toString().equals(type))) e.discard();
-            net.jj.giants.GiantsGuideMod.LOG.info("p5 test: {} (one there: {}) went after the other player: {}",
-                    key, seen[0] > 0, plainTargeted[0]);
-            h.assertTrue(seen[0] > 0, key + ": none of him came for the test");
-            noRules(s, ign, plain);
-            clean(s);
-            s.getPlayerList().remove(ign);
-            s.getPlayerList().remove(plain);
-            h.succeed();
-        });
-    }
-
     /** My Giant with him for real: to his ground, his book, one of him (or in charge at the limit) */
     private void pickForReal(GameTestHelper h, String key) {
         MinecraftServer s = h.getLevel().getServer();
@@ -177,6 +126,113 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         s.getCommands().performPrefixedCommand(src, g.command() + " book free");
     }
 
+
+
+    /**
+     * Every giant in turn (one at a time, so one's fight never reaches another's players): a hunting one of him with
+     * two players who both hit him, one of them ignored by giants: he never goes after the ignored one; then one of
+     * him brought down by a player: it counts on the Slayers board for that player and kind.
+     */
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_each", timeoutTicks = 9000)
+    public void everyGiantLeavesAnIgnoredPlayerAloneAndCountsWhenSlain(GameTestHelper h) {
+        MinecraftServer s = h.getLevel().getServer();
+        List<String> keys = new java.util.ArrayList<>();
+        for (String k : List.of("pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow", "wreckback",
+                "swarmforge", "gloamwick")) if (here(k)) keys.add(k);
+        if (keys.isEmpty()) {
+            h.succeed();
+            return;
+        }
+        BlockPos o = h.absolutePos(new BlockPos(1, 2, 1));
+        CommandSourceStack src = s.createCommandSourceStack().withPermission(4).withLevel(h.getLevel())
+                .withPosition(Vec3.atBottomCenterOf(o)).withSuppressedOutput();
+        // the state: which giant, which phase (0 ignored, 1 slain), ticks in it, the one summoned, the players
+        int[] at = {0, 0, 0};
+        java.util.UUID[] his = {null};
+        ServerPlayer[] ps = new ServerPlayer[3];
+        boolean[] plainHit = {false};
+        StringBuilder log = new StringBuilder();
+        h.onEachTick(() -> {
+            if (at[0] >= keys.size()) return;
+            String key = keys.get(at[0]);
+            Giant g = Giants.byKey(key);
+            String type = Players.MAIN.get(key);
+            int t = ++at[2];
+            if (t == 1) {
+                // start a phase: a fresh one of him and fresh players
+                if (at[1] == 0) {
+                    ps[0] = PlayersGameTests.join(h, "ig_" + key.substring(0, 4), false);
+                    ps[1] = PlayersGameTests.join(h, "pl_" + key.substring(0, 4), false);
+                    ps[0].teleportTo(h.getLevel(), o.getX() + 6, o.getY(), o.getZ(), 0, 0);
+                    ps[1].teleportTo(h.getLevel(), o.getX() - 6, o.getY(), o.getZ(), 0, 0);
+                    ps[0].setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                    ps[1].setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                    Players.setRule(s, "Tester", ps[0].getStringUUID(), "ignored", true);
+                    plainHit[0] = false;
+                    s.getCommands().performPrefixedCommand(src, g.command() + " summon hunting 0.05");
+                } else {
+                    ps[2] = PlayersGameTests.join(h, "sl_" + key.substring(0, 4), false);
+                    ps[2].teleportTo(h.getLevel(), o.getX() + 10, o.getY(), o.getZ(), 0, 0);
+                    ps[2].setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                    s.getCommands().performPrefixedCommand(src, g.command() + " summon calm 0.05");
+                }
+                his[0] = null;
+                return;
+            }
+            if (his[0] == null)
+                for (Entity e : h.getLevel().getEntities((Entity) null, new AABB(o).inflate(40),
+                        x -> BuiltInRegistries.ENTITY_TYPE.getKey(x.getType()).toString().equals(type)))
+                    his[0] = e.getUUID();
+            Entity e = his[0] == null ? null : h.getLevel().getEntity(his[0]);
+            boolean next = false;
+            if (at[1] == 0) {
+                if (t == 20 && e instanceof net.minecraft.world.entity.LivingEntity le) {
+                    le.hurt(ps[0].damageSources().playerAttack(ps[0]), 1f);
+                    le.hurt(ps[1].damageSources().playerAttack(ps[1]), 1f);
+                }
+                if (e instanceof Mob m && m.getTarget() instanceof Player tg) {
+                    if (tg == ps[0]) h.fail(key + " went after the ignored player");
+                    if (tg == ps[1]) plainHit[0] = true;
+                }
+                if (t >= 400) {
+                    h.assertTrue(his[0] != null, key + ": none of him came for the test");
+                    log.append(key).append(" went after the other: ").append(plainHit[0]).append("; ");
+                    if (e != null) e.discard();
+                    noRules(s, ps[0], ps[1]);
+                    s.getPlayerList().remove(ps[0]);
+                    s.getPlayerList().remove(ps[1]);
+                    next = true;
+                }
+            } else {
+                if (e instanceof net.minecraft.world.entity.LivingEntity le && le.isAlive() && !le.isRemoved()) {
+                    le.setLastHurtByPlayer(ps[2]);
+                    if (t < 300) le.hurt(ps[2].damageSources().playerAttack(ps[2]), 100000f);
+                    else if (t % 20 == 0) le.kill();
+                }
+                PlayerData.Stats st = PlayerData.get(s).s.stats.get(ps[2].getStringUUID());
+                boolean counted = st != null && st.kills.getOrDefault(key, 0) >= 1;
+                if (counted || t >= 900) {
+                    h.assertTrue(counted, key + ": slain by a player, not counted on the board");
+                    log.append(key).append(" counted after ").append(t).append(" ticks; ");
+                    if (e != null) e.discard();
+                    s.getPlayerList().remove(ps[2]);
+                    next = true;
+                }
+            }
+            if (next) {
+                at[2] = 0;
+                if (++at[1] > 1) {
+                    at[1] = 0;
+                    at[0]++;
+                }
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(at[0] >= keys.size(), "giant " + at[0] + " of " + keys.size());
+            net.jj.giants.GiantsGuideMod.LOG.info("p5 test: {}", log);
+        });
+    }
+
     // one test per giant (each its own batch: they run one after another)
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_rules", timeoutTicks = 40)
@@ -229,53 +285,13 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         }
     }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_pitchgut", timeoutTicks = 460)
-    public void pitchgutLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("pitchgut")) ignoredIsLeftAlone(h, "pitchgut");
-        else h.succeed();
-    }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_furrowmaw", timeoutTicks = 460)
-    public void furrowmawLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("furrowmaw")) ignoredIsLeftAlone(h, "furrowmaw");
-        else h.succeed();
-    }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_cerberus", timeoutTicks = 460)
-    public void cerberusLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("cerberus")) ignoredIsLeftAlone(h, "cerberus");
-        else h.succeed();
-    }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_hollowbell", timeoutTicks = 460)
-    public void hollowbellLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("hollowbell")) ignoredIsLeftAlone(h, "hollowbell");
-        else h.succeed();
-    }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_lanternwillow", timeoutTicks = 460)
-    public void lanternwillowLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("lanternwillow")) ignoredIsLeftAlone(h, "lanternwillow");
-        else h.succeed();
-    }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_wreckback", timeoutTicks = 460)
-    public void wreckbackLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("wreckback")) ignoredIsLeftAlone(h, "wreckback");
-        else h.succeed();
-    }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_swarmforge", timeoutTicks = 460)
-    public void swarmforgeLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("swarmforge")) ignoredIsLeftAlone(h, "swarmforge");
-        else h.succeed();
-    }
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_ig_gloamwick", timeoutTicks = 460)
-    public void gloamwickLeavesAnIgnoredPlayerAlone(GameTestHelper h) {
-        if (here("gloamwick")) ignoredIsLeftAlone(h, "gloamwick");
-        else h.succeed();
-    }
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_pick_pitchgut", timeoutTicks = 12000)
     public void pitchgutPickedForReal(GameTestHelper h) {
@@ -324,4 +340,12 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         if (here("gloamwick")) pickForReal(h, "gloamwick");
         else h.succeed();
     }
+
+
+
+
+
+
+
+
 }

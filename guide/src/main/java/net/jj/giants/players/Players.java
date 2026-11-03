@@ -41,6 +41,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -90,6 +91,13 @@ public final class Players {
                 (p, ctx) -> ctx.server().execute(() -> ask(ctx.server(), ctx.player(), p.json())));
         ServerPlayConnectionEvents.JOIN.register((h, s, server) -> join(h.getPlayer()));
         ServerLivingEntityEvents.AFTER_DEATH.register(Players::died);
+        // (several giants die their own way, with a death of their own and then gone, never through the game's
+        // own death: caught when the one who was dying leaves the world)
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_UNLOAD.register((e, level) -> {
+            if (e instanceof LivingEntity le && e.getRemovalReason() != null && e.getRemovalReason().shouldDestroy()
+                    && kindOf(le) != null && dying(le))
+                fell(le);
+        });
         ServerTickEvents.END_SERVER_TICK.register(Players::tick);
         ServerLifecycleEvents.SERVER_STARTED.register(s -> running = s);
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
@@ -608,12 +616,52 @@ public final class Players {
 
     // a giant falls
 
+    /** the giants counted lately (the game's death and leaving the world after it are the same fall) */
+    private static final java.util.Set<UUID> counted = java.util.Collections.newSetFromMap(
+            new java.util.LinkedHashMap<>() {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<UUID, Boolean> eldest) {
+                    return size() > 256;
+                }
+            });
+
+    private static @Nullable String kindOf(LivingEntity e) {
+        String type = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
+        for (var m : MAIN.entrySet()) if (m.getValue().equals(type)) return m.getKey();
+        return null;
+    }
+
+    /**
+     * he is dying: the game's own word, or his mod's (every giant's solid kit has sitDying(): true while his own
+     * death plays, for the giants whose health is their own)
+     */
+    static boolean dying(LivingEntity e) {
+        if (e.isDeadOrDying()) return true;
+        try {
+            java.lang.reflect.Method m = e.getClass().getMethod("sitDying");
+            return m.getReturnType() == boolean.class && (boolean) m.invoke(e);
+        } catch (ReflectiveOperationException | RuntimeException x) {
+            return false;
+        }
+    }
+
+    /** one who was dying left the world (his own death done): counted once, with whoever last hurt him */
+    private static void fell(LivingEntity e) {
+        if (!(e.level() instanceof ServerLevel sl) || e instanceof Player) return;
+        String kind = kindOf(e);
+        if (kind == null || !counted.add(e.getUUID())) return;
+        ServerPlayer killer = e.getKillCredit() instanceof ServerPlayer sp ? sp
+                : e.getLastHurtByMob() instanceof ServerPlayer sp2 ? sp2 : null;
+        slain(sl.getServer(), kind, killer);
+    }
+
     private static void died(LivingEntity e, net.minecraft.world.damagesource.DamageSource src) {
         if (!(e.level() instanceof ServerLevel sl)) return;
         if (e instanceof ServerPlayer dead) {
             Challenges.playerDied(dead);
             return;
         }
+        if (kindOf(e) != null && !counted.add(e.getUUID())) return;
         String type = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
         String kind = null;
         for (var m : MAIN.entrySet()) if (m.getValue().equals(type)) kind = m.getKey();
