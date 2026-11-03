@@ -228,8 +228,10 @@ public class ToolsGameTests implements FabricGameTest {
         for (AdminWorld.Change c : AdminWorld.get(s).log())
             if (c.id().equals("tools:event") && AdminUndo.undoable(c)) started = true;
         h.assertTrue(started, "logged");
-        h.assertTrue(AdminInsight.presetName(AdminWorld.get(s).log(), true).equals("Custom")
-                || AdminInsight.presetName(AdminWorld.get(s).log(), true).equals("Classic"), "the preset name");
+        List<AdminWorld.Change> log = AdminWorld.get(s).log();
+        List<AdminWorld.Change> without = log.stream().filter(c -> !c.id().startsWith("tools:")).toList();
+        h.assertTrue(AdminInsight.presetName(log, true).equals(AdminInsight.presetName(without, true)),
+                "the preset name: " + AdminInsight.presetName(log, true));
         h.assertTrue(!Events.start(s, "Tester", "party", 5).ok() && !Events.start(s, "Tester", "war", 0).ok(),
                 "nonsense");
         done(h);

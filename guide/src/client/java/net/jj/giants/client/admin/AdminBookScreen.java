@@ -4030,11 +4030,13 @@ public class AdminBookScreen extends Screen {
             rx += b.getWidth() + 3;
         }
         rows.add(bar);
-        int mh = Mth.clamp(Math.min((int) (lw * 0.62), ly1 - ly0 - 60), 120, 340);
+        // (the whole map in view under its bar, at every GUI scale; the notes under it scroll)
+        int mh = Mth.clamp(Math.min((int) (lw * 0.62), ly1 - ly0 - 28), 60, 340);
         rows.add(new MapRow(t, mh));
         rows.add(new Note(tt("map.note", "Click a giant to go to him, his ground's middle to go there; anywhere else"
                 + " moves the map there. Circles: the giants' grounds (their colours), areas (red: no giants, green:"
-                + " safe). ★ spawn, ■ players."), GREY));
+                + " safe). ★ spawn, ■ players; a faded giant is out of the world or not loaded, a red edge fighting, a blue one"
+                + " asleep."), GREY));
     }
 
     /** the map itself: the giants, their grounds, the areas, spawn and the players in one dimension, from above */
@@ -4160,26 +4162,6 @@ public class AdminBookScreen extends Screen {
                 tip.add((safe ? tt("areas.safe", "Safe") : tt("areas.keepout", "No giants")).getVisualOrderText());
                 spots.add(new Spot(ax - x, ay - top, 4, tip, null));
             }
-            if (over) {
-                JsonObject sp = t.get("spawn") instanceof JsonObject s ? s : new JsonObject();
-                int px = sx(dbl(sp, "x", 0), x, w), py = sy(dbl(sp, "z", 0), y);
-                int clear = (int) dbl(sp, "clear", 0);
-                if (clear > 0) circle(g, px, py, (int) (clear / scale), 0x20B82818, 0x90B82818);
-                g.drawString(font, "★", px - 3, py - 4, 0xFFC08A10, false);
-                List<FormattedCharSequence> tip = new ArrayList<>();
-                tip.add(tt("map.spawn", "The world's spawn").withStyle(ChatFormatting.YELLOW).getVisualOrderText());
-                if (clear > 0) tip.add(tt("map.spawn.clear", "No giants within %s blocks", clear).getVisualOrderText());
-                spots.add(new Spot(px - x, py - top, 4, tip, null));
-            }
-            // the players
-            for (JsonObject p : objects(t, "players")) {
-                if (!str(p, "dim").equals(mapDim)) continue;
-                int px = sx(dbl(p, "x", 0), x, w), py = sy(dbl(p, "z", 0), y);
-                g.fill(px - 2, py - 2, px + 3, py + 3, 0xFF202020);
-                g.fill(px - 1, py - 1, px + 2, py + 2, 0xFFFFFFFF);
-                spots.add(new Spot(px - x, py - top, 3, List.of(Component.literal(str(p, "name"))
-                        .withStyle(ChatFormatting.YELLOW).getVisualOrderText()), null));
-            }
             // the giants
             for (JsonObject gi : objects(t, "giants")) {
                 if (!str(gi, "dim").equals(mapDim)) continue;
@@ -4206,6 +4188,26 @@ public class AdminBookScreen extends Screen {
                         .getVisualOrderText());
                 String id = str(gi, "id");
                 spots.add(new Spot(gx - x, gy - top, 7, tip, () -> request("maptp", "giant", key, "id", id)));
+            }
+            if (over) {
+                JsonObject sp = t.get("spawn") instanceof JsonObject s ? s : new JsonObject();
+                int px = sx(dbl(sp, "x", 0), x, w), py = sy(dbl(sp, "z", 0), y);
+                int clear = (int) dbl(sp, "clear", 0);
+                if (clear > 0) circle(g, px, py, (int) (clear / scale), 0x20B82818, 0x90B82818);
+                g.drawString(font, "★", px - 3, py - 4, 0xFFC08A10, false);
+                List<FormattedCharSequence> tip = new ArrayList<>();
+                tip.add(tt("map.spawn", "The world's spawn").withStyle(ChatFormatting.YELLOW).getVisualOrderText());
+                if (clear > 0) tip.add(tt("map.spawn.clear", "No giants within %s blocks", clear).getVisualOrderText());
+                spots.add(new Spot(px - x, py - top, 4, tip, null));
+            }
+            // the players
+            for (JsonObject p : objects(t, "players")) {
+                if (!str(p, "dim").equals(mapDim)) continue;
+                int px = sx(dbl(p, "x", 0), x, w), py = sy(dbl(p, "z", 0), y);
+                g.fill(px - 2, py - 2, px + 3, py + 3, 0xFF202020);
+                g.fill(px - 1, py - 1, px + 2, py + 2, 0xFFFFFFFF);
+                spots.add(new Spot(px - x, py - top, 3, List.of(Component.literal(str(p, "name"))
+                        .withStyle(ChatFormatting.YELLOW).getVisualOrderText()), null));
             }
             g.disableScissor();
             // a scale bar and north

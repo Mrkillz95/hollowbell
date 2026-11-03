@@ -57,10 +57,22 @@ public class ToolsGiantsGameTests implements FabricGameTest {
     }
 
     static boolean frozen(Entity e) {
+        // (each giant keeps it his own way: a field, a frozen() of his, or his orders' frozen())
         try {
             return e.getClass().getField("frozen").getBoolean(e);
         } catch (ReflectiveOperationException x) {
-            throw new IllegalStateException("no frozen field on " + e.getClass().getName());
+            // next way
+        }
+        try {
+            return (boolean) e.getClass().getMethod("frozen").invoke(e);
+        } catch (ReflectiveOperationException x) {
+            // next way
+        }
+        try {
+            Object orders = e.getClass().getMethod("orders").invoke(e);
+            return (boolean) orders.getClass().getMethod("frozen").invoke(orders);
+        } catch (ReflectiveOperationException x) {
+            throw new IllegalStateException("no frozen on " + e.getClass().getName());
         }
     }
 
@@ -116,7 +128,8 @@ public class ToolsGiantsGameTests implements FabricGameTest {
             AdminServer.set(s, "Tester", "all", "paused", "off");
             Watch.lookNow(s);
             for (Entity e : them) h.assertTrue(!frozen(e), "let go: " + e.getType());
-            h.assertTrue(ToolsData.get(s).s.frozen.isEmpty(), "none left");
+            // (other batches' giants may come and go meanwhile: only these are checked)
+            for (Entity e : them) h.assertTrue(!ToolsData.get(s).s.frozen.contains(e.getStringUUID()), "none left");
             for (int i = 0; i < them.size(); i++) removeById(s, which.get(i), them.get(i));
             AdminWorld.get(s).remove("all", "all.paused");
             AdminServer.push(s, AdminWorld.get(s));
