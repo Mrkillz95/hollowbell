@@ -1298,6 +1298,16 @@ public class HollowbellEntity extends Monster implements SitHost {
         return wanderTo;
     }
 
+    /** (Part 8, the Guide's herds) a spot of his own to wander to, held a while as a seek spot is (not an order) */
+    public void wanderToward(Vec3 to) {
+        if (!(level() instanceof ServerLevel sl) || !Double.isFinite(to.x + to.z)) return;
+        Vec3 at = keptIn(to);
+        if (warded(at.x, at.z)) return;
+        wanderTo = new Vec3(at.x, getY(), at.z);
+        roamUntil = sl.getGameTime() + 220;
+        wanderIn = Math.max(wanderIn, 220);
+    }
+
     /** forget the spot he was wandering to (he picks again when he will) */
     public void clearWandering() {
         wanderTo = null;
