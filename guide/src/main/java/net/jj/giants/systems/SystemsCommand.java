@@ -106,9 +106,12 @@ public final class SystemsCommand {
         for (JsonElement e : a) {
             JsonObject j = e.getAsJsonObject();
             StringBuilder s = new StringBuilder("  " + AdminJson.str(j, "name", 32));
-            s.append(": size ").append(AdminSetting.plain(AdminJson.num(j, "size", 0))).append(" (started ")
-                    .append(AdminSetting.plain(AdminJson.num(j, "start", 0))).append("), ")
-                    .append(AdminSetting.plain(AdminJson.num(j, "days", 0))).append(" days, ")
+            // (one out of the world, or gone, has no size to read now: the book says the same)
+            if (j.has("here") && j.get("here").getAsBoolean())
+                s.append(": size ").append(AdminSetting.plain(AdminJson.num(j, "size", 0))).append(" (started ")
+                        .append(AdminSetting.plain(AdminJson.num(j, "start", 0))).append("), ");
+            else s.append(": out of the world now, ");
+            s.append(AdminSetting.plain(AdminJson.num(j, "days", 0))).append(" days, ")
                     .append((int) AdminJson.num(j, "wins", 0)).append(" wins, food ")
                     .append((int) AdminJson.num(j, "food", 100)).append("%");
             int loyal = (int) AdminJson.num(j, "loyalty", -1);
