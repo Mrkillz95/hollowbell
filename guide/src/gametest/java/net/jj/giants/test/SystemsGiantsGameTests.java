@@ -76,6 +76,19 @@ public class SystemsGiantsGameTests implements FabricGameTest {
                 mood.addProperty("value", "hunting");
                 List<String> mr = act(s, g, e, "mood", mood);
                 h.assertTrue(mr != null && mr.get(0).equals("ok"), key + ": mood " + mr);
+                // Fear: a player close by a hunting one slows and the dark closes in
+                AdminServer.set(s, "Tester", "all", "fear", "strong");
+                net.minecraft.server.level.ServerPlayer near = PlayersGameTests.join(h, "fear_" + key.substring(0, 4),
+                        false);
+                near.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                near.teleportTo(h.getLevel(), e.getX() + 4, e.getY(), e.getZ(), 0, 0);
+                net.jj.giants.tools.Watch.forget();
+                net.jj.giants.systems.Fear.tick(s);
+                boolean afraid = near.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS);
+                String row = String.valueOf(net.jj.giants.tools.Watch.rows(s).get(key));
+                s.getPlayerList().remove(near);
+                AdminWorld.get(s).remove("all", "all.fear");
+                h.assertTrue(afraid, key + ": fear near a hunting one: " + row);
                 act(s, g, e, "mood", moodOf("calm"));
                 JsonObject go = new JsonObject();
                 go.addProperty("x", e.getX() + 25);
