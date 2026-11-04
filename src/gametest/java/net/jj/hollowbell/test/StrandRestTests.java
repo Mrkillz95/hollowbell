@@ -66,30 +66,37 @@ public class StrandRestTests implements FabricGameTest {
             e.setStay(true);
             e.goToSleep();
         });
-        // (looked at twice: a strand that has only just touched down, or is lifting off, floats for a moment)
-        Set<String> floating = new HashSet<>();
-        h.runAfterDelay(340, () -> check(e, floating, null));
-        h.runAfterDelay(360, () -> {
-            StringBuilder bad = new StringBuilder();
-            int resting = check(e, floating, bad);
-            HollowbellMod.LOG.info("strand rest: {} resting on the ground;{}", resting, bad);
-            h.assertTrue(resting > 5, "only " + resting + " ends lie on the ground");
-            h.assertTrue(bad.isEmpty(), "ends off the ground (blocks of his):" + bad);
-            release(h, e);
+        // (looked at twice, 40 ticks apart: a strand that has only just touched down, or is lifting off, floats for a
+        // moment; and asleep his arms still curl in and out a little, by the world's time, so an end may go into the
+        // ground a little until its sole is fitted again. Each end's sole is fitted at least once in 40 ticks, so one
+        // still off the ground or in it at the second look is wrong)
+        Set<String> floating = new HashSet<>(), sunk = new HashSet<>();
+        h.runAfterDelay(340, () -> check(e, floating, sunk, null));
+        h.runAfterDelay(380, () -> {
+            try {
+                StringBuilder bad = new StringBuilder();
+                int resting = check(e, floating, sunk, bad);
+                HollowbellMod.LOG.info("strand rest: {} resting on the ground;{}", resting, bad);
+                h.assertTrue(resting > 5, "only " + resting + " ends lie on the ground");
+                h.assertTrue(bad.isEmpty(), "ends off the ground (blocks of his, asleep " + e.asleep() + "):" + bad);
+            } finally {
+                // (gone even when it fails: a giant left standing counts in every later test's world)
+                release(h, e);
+            }
             h.succeed();
         });
     }
 
     /**
-     * Every end near the ground: sunk into it is wrong at once; resting on it but floating over it is wrong if it
-     * floated the time before too (kept in floating). Gives how many rest on the ground.
+     * Every end near the ground: sunk into it, or resting on it but floating over it, is wrong if it was so the time
+     * before too (kept in sunk and floating). Gives how many rest on the ground.
      */
-    static int check(HollowbellEntity e, Set<String> floating, @Nullable StringBuilder bad) {
+    static int check(HollowbellEntity e, Set<String> floating, Set<String> sunk, @Nullable StringBuilder bad) {
         e.ensurePose();
         BellRig rig = e.rig;
         BellModel m = BellModel.get();
         int resting = 0;
-        Set<String> now = new HashSet<>();
+        Set<String> now = new HashSet<>(), sunkNow = new HashSet<>();
         for (int c = 0; c < rig.chains.length; c++) {
             BellRig.Chain ch = rig.chains[c];
             if (!ch.arm && rig.strands[ch.index].hidden()) continue;
@@ -103,7 +110,10 @@ public class StrandRestTests implements FabricGameTest {
             }
             if (Float.isNaN(gap)) continue;
             String name = (ch.arm ? "arm " : "strand ") + ch.index;
-            if (end < -0.75f && bad != null) bad.append(String.format(" %s end sunk %.2f;", name, end));
+            if (end < -0.75f) {
+                sunkNow.add(name);
+                if (sunk.contains(name) && bad != null) bad.append(String.format(" %s end sunk %.2f;", name, end));
+            }
             if (e.chainKnocked(c)) {
                 resting++;
                 if (gap > 1f) {
@@ -115,6 +125,8 @@ public class StrandRestTests implements FabricGameTest {
         }
         floating.clear();
         floating.addAll(now);
+        sunk.clear();
+        sunk.addAll(sunkNow);
         return resting;
     }
 

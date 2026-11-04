@@ -292,7 +292,10 @@ public class BehaviourTests implements FabricGameTest {
         other.addTag(Meeting.KIND + "wreckback");
         h.getLevel().addFreshEntity(other);
         h.runAfterDelay(5, () -> {
+            boolean ok = false;
             try {
+                // (the land there was made live above, waiting on the server's chunk work: the stand-in is in it)
+                h.assertTrue(h.getLevel().getEntity(other.getUUID()) == other, "the stand-in isn't in the world");
                 e.roamLook(h.getLevel());
                 h.assertTrue(e.wandering() == null || e.wandering().distanceTo(other.position()) > 5,
                         "as shipped he doesn't go looking");
@@ -309,8 +312,15 @@ public class BehaviourTests implements FabricGameTest {
                 e.clearWandering();
                 e.roamLook(h.getLevel());
                 h.assertTrue(e.wandering() == null, "staying, he doesn't seek");
+                ok = true;
             } finally {
                 force(h, (int) at.x, (int) at.z, 1, false);
+                // (failed: seekGiants and roam stay are taken off again too, or every test after has them)
+                if (!ok) {
+                    GiantsAdmin.clear();
+                    other.discard();
+                    release(h, e);
+                }
             }
             finish(h, e, other);
         });
@@ -328,23 +338,39 @@ public class BehaviourTests implements FabricGameTest {
         far.setNoAi(true);
         far.setPersistenceRequired();
         h.getLevel().addFreshEntity(far);
+        // (failed anywhere: raidVillages taken off again, or every test after has raiders)
+        Runnable cleanUp = () -> {
+            force(h, (int) a.x, (int) a.z, 1, false);
+            GiantsAdmin.clear();
+            far.discard();
+            near.discard();
+            release(h, e);
+        };
         h.runAfterDelay(5, () -> {
-            e.roamLook(h.getLevel());
-            h.assertTrue(e.wandering() == null || e.wandering().distanceTo(far.position()) > 5,
-                    "as shipped he doesn't raid");
-            set(h, "\"raidVillages\":true");
-            e.roamLook(h.getLevel());
-            Vec3 g = e.wandering();
-            h.assertTrue(g != null && Math.hypot(g.x - far.getX(), g.z - far.getZ()) < 5,
-                    "he didn't make for the village: " + g);
-            near.moveTo(b.x, b.y, b.z, 0f, 0f);
-            near.setNoAi(true);
-            near.setPersistenceRequired();
-            h.getLevel().addFreshEntity(near);
+            try {
+                // (the land there was made live above, waiting on the server's chunk work: the villager is in it)
+                h.assertTrue(h.getLevel().getEntity(far.getUUID()) == far, "the far villager isn't in the world");
+                e.roamLook(h.getLevel());
+                h.assertTrue(e.wandering() == null || e.wandering().distanceTo(far.position()) > 5,
+                        "as shipped he doesn't raid");
+                set(h, "\"raidVillages\":true");
+                e.roamLook(h.getLevel());
+                Vec3 g = e.wandering();
+                h.assertTrue(g != null && Math.hypot(g.x - far.getX(), g.z - far.getZ()) < 5,
+                        "he didn't make for the village: " + g);
+                near.moveTo(b.x, b.y, b.z, 0f, 0f);
+                near.setNoAi(true);
+                near.setPersistenceRequired();
+                h.getLevel().addFreshEntity(near);
+            } catch (RuntimeException ex) {
+                cleanUp.run();
+                throw ex;
+            }
         });
         h.runAfterDelay(120, () -> {
             boolean hit = e.getTarget() == near;
             force(h, (int) a.x, (int) a.z, 1, false);
+            if (!hit) cleanUp.run();
             h.assertTrue(hit, "a villager near a raider wasn't his target: " + e.getTarget());
             finish(h, e, far, near);
         });
@@ -355,24 +381,33 @@ public class BehaviourTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "beh_companions")
     public void companionsComeBesideTheWorldsOwnOneUpToTheCount(GameTestHelper h) {
         ServerLevel l = h.getLevel();
-        // (nobody else of him about: the count is the whole world's)
-        for (ServerLevel ol : l.getServer().getAllLevels())
-            for (HollowbellEntity o : ol.getEntities(ModEntities.HOLLOWBELL, o -> o.isAlive())) o.discard();
-        Away.get(l.getServer()).forgetAll();
         HollowbellEntity e = spawnAway(h, S, HollowbellEntity.CALM, 1409);
         e.markWorldOne();
         List<HollowbellEntity> made = new ArrayList<>();
         h.runAfterDelay(5, () -> {
             try {
+                // (the count is the whole world's, and other tests running now have giants of their own, standing or
+                // out of the world: they're left alone, and the count and the cap are set that many higher. All of
+                // this runs in one tick, so nobody else's come or go in between.)
+                java.util.Set<java.util.UUID> before = new java.util.HashSet<>();
+                for (ServerLevel ol : l.getServer().getAllLevels())
+                    for (HollowbellEntity o : ol.getEntities(ModEntities.HOLLOWBELL, o -> o.isAlive()))
+                        before.add(o.getUUID());
+                int others = WorldOne.standing(l.getServer()) - 1;
+                h.assertTrue(others >= 0 && others <= 5,
+                        "too many other giants about to count up to 3 within the most of 8: " + others);
                 e.companionsTick(l);
-                h.assertTrue(WorldOne.standing(l.getServer()) == 1,
-                        "as shipped none come: " + WorldOne.standing(l.getServer()));
-                set(h, "\"worldCount\":3,\"maxInWorld\":5,\"worldScale\":0.2,\"spawnSize\":[0.5,0.5]");
+                h.assertTrue(WorldOne.standing(l.getServer()) == others + 1,
+                        "as shipped none come: " + WorldOne.standing(l.getServer()) + " with " + others + " others");
+                set(h, "\"worldCount\":" + (others + 3) + ",\"maxInWorld\":" + (others + 5)
+                        + ",\"worldScale\":0.2,\"spawnSize\":[0.5,0.5]");
                 e.companionsTick(l);
-                h.assertTrue(WorldOne.standing(l.getServer()) == 3,
-                        "two companions: " + WorldOne.standing(l.getServer()));
-                for (HollowbellEntity o : l.getEntities(ModEntities.HOLLOWBELL, o -> o != e && o.isAlive()))
+                h.assertTrue(WorldOne.standing(l.getServer()) == others + 3,
+                        "two companions: " + WorldOne.standing(l.getServer()) + " with " + others + " others");
+                for (HollowbellEntity o : l.getEntities(ModEntities.HOLLOWBELL,
+                        o -> o != e && o.isAlive() && !before.contains(o.getUUID())))
                     made.add(o);
+                h.assertTrue(made.size() == 2, "two new ones: " + made.size());
                 for (HollowbellEntity o : made) {
                     h.assertTrue(Math.abs(o.bellScale() - 0.1f) < 1e-4,
                             "a companion's size is worldScale x spread: " + o.bellScale());
@@ -382,15 +417,19 @@ public class BehaviourTests implements FabricGameTest {
                     h.assertTrue(o.arriving() || o.tickCount == 0, "a companion comes down out of the sky");
                 }
                 e.companionsTick(l);
-                h.assertTrue(WorldOne.standing(l.getServer()) == 3, "no more than the count");
+                h.assertTrue(WorldOne.standing(l.getServer()) == others + 3, "no more than the count");
                 // one gone: none again before the wait (a minute at least) has passed
                 made.get(0).discard();
                 e.companionsTick(l);
-                h.assertTrue(WorldOne.standing(l.getServer()) == 2, "replaced before the wait");
+                h.assertTrue(WorldOne.standing(l.getServer()) == others + 2, "replaced before the wait");
                 // the cap: never past Most at once
-                set(h, "\"worldCount\":8,\"maxInWorld\":2,\"worldRespawnDays\":0");
+                set(h, "\"worldCount\":8,\"maxInWorld\":" + (others + 2) + ",\"worldRespawnDays\":0");
                 e.companionsTick(l);
-                h.assertTrue(WorldOne.standing(l.getServer()) == 2, "past the cap");
+                h.assertTrue(WorldOne.standing(l.getServer()) == others + 2, "past the cap");
+            } catch (RuntimeException ex) {
+                GiantsAdmin.clear();
+                release(h, e);
+                throw ex;
             } finally {
                 for (HollowbellEntity o : made) o.discard();
             }
@@ -421,11 +460,15 @@ public class BehaviourTests implements FabricGameTest {
             h.assertTrue(w.dueIn(l) >= 0 && !w.aliveNow(),
                     "one came with respawn off: " + w.dueIn(l) + " " + w.aliveNow());
             // (the world's own one's companions aren't brought back either)
-            set(h, "\"respawn\":false,\"worldCount\":3");
+            // (no cap and as many as may come: giants other tests left standing anywhere in loaded land count in
+            // standing() too, and with the cap of 1 one of those alone would stop any coming before respawn is looked
+            // at; and counted against how many stood before)
+            set(h, "\"respawn\":false,\"worldCount\":8,\"maxInWorld\":0");
             HollowbellEntity lead = ModEntities.HOLLOWBELL.create(l);
             lead.moveTo(here.getX() + 0.5, here.getY(), here.getZ() + 0.5, 0f, 0f);
+            int before = WorldOne.standing(l.getServer());
             lead.companionsTick(l);
-            h.assertTrue(WorldOne.standing(l.getServer()) == 0, "a companion came with respawn off");
+            h.assertTrue(WorldOne.standing(l.getServer()) == before, "a companion came with respawn off");
             // (JJ) and one still standing (a companion, an egg's) isn't made the world's own one: gone for good
             set(h, "\"respawn\":false,\"oneInTheWorld\":true");
             HollowbellEntity left = ModEntities.HOLLOWBELL.create(l);

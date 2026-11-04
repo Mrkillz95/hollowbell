@@ -224,6 +224,8 @@ public class SolidTests implements FabricGameTest {
             int[] frame0 = new int[n];
             boolean[] wasOff = new boolean[n];
             double[] fall = new double[n];
+            // (on top of him in the last ten ticks: a hop off a part that dropped away is over within a few ticks)
+            boolean[] onAtEnd = new boolean[n];
             for (int i = 0; i < n; i++) {
                 rest0[i] = new Vector3f(carries.get(i).rest);
                 frame0[i] = carries.get(i).frame;
@@ -246,19 +248,23 @@ public class SolidTests implements FabricGameTest {
                         // (thrown off: they fall, as their own game would have them, and land on him again if he's
                         // under them)
                         // (gravity as the game has it, kept under 1.5 a tick so they can't fall through a part)
-                        if (!c.riding()) {
+                        // (and in a hop over him too, when the part under them dropped away faster than they're carried:
+                        // their own game pulls them down onto it again, where a test player, not ticked by a game, would
+                        // hang in the air over him for up to 100 ticks and be read as not on him)
+                        if (!c.riding() || c.air > 0) {
                             ServerPlayer pl = ps.get(i);
                             fall[i] = Math.min(1.4, (fall[i] + 0.08) * 0.98);
                             pl.setPos(pl.getX(), pl.getY() - fall[i], pl.getZ());
                             c.step(pl, Solid.bodies(false));
                         }
-                        if (c.riding()) fall[i] = 0;
+                        if (c.riding() && c.air == 0) fall[i] = 0;
                         // (landed on him again after coming off: what it slides is measured from there)
                         if (c.riding() && wasOff[i]) {
                             rest0[i] = new Vector3f(c.rest);
                             frame0[i] = c.frame;
                         }
                         wasOff[i] = !c.riding();
+                        if (kk >= total - 10 && Solid.onTop(e, ps.get(i), 0.9, 1.5)) onAtEnd[i] = true;
                         if (!c.riding() && (kk < bigAt || keep.get(i))) {
                             if (offTicks[i] == 0)
                                 HollowbellMod.LOG.info(
@@ -315,9 +321,10 @@ public class SolidTests implements FabricGameTest {
                                     + sb + ")");
                     if (keep.get(i))
                         h.assertTrue(
-                                Solid.onTop(e, ps.get(i), 0.9, 1.5),
+                                carries.get(i).riding() && (onAtEnd[i] || Solid.onTop(e, ps.get(i), 0.9, 1.5)),
                                 "the player on " + on.get(i) + " is still on him at the end: "
-                                        + ps.get(i).position());
+                                        + ps.get(i).position() + " (in a hop " + carries.get(i).air + " ticks, him at "
+                                        + e.position() + ")");
                 }
                 int standsOn = 0;
                 for (ArmorStand a : stands) if (Solid.onTop(e, a, 0.9, 1.5)) standsOn++;

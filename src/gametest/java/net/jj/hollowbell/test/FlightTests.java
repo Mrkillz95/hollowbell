@@ -178,17 +178,28 @@ public class FlightTests implements FabricGameTest {
                 w.see(e, "tick " + tt);
             });
         }
+        // (his idle sway goes by the world's time, which a test run alone always starts at about the same, and a full
+        // run at any other: kept, so a failure says which sway it came at)
+        long[] t0 = {-1};
+        h.runAfterDelay(21, () -> t0[0] = h.getLevel().getGameTime() % 240000L);
         h.runAfterDelay(400, () -> {
-            HollowbellMod.LOG.info("blend check: worst jerk {} ({}), worst step {}", w.worstJerk, w.where, w.worstStep);
-            h.assertTrue(
-                    w.worstJerk < 7f,
-                    "a part of him lurched: its speed changed by " + w.worstJerk + " model blocks a tick in one tick ("
-                            + w.where + ")" + w.trail());
-            h.assertTrue(
-                    w.worstStep < 30f,
-                    "a part of him jumped " + w.worstStep + " model blocks in one tick (" + w.whereStep + ")");
-            p[0].discard();
-            release(h, e);
+            try {
+                HollowbellMod.LOG.info(
+                        "blend check: worst jerk {} ({}), worst step {}, world time at the slam {}",
+                        w.worstJerk, w.where, w.worstStep, t0[0]);
+                h.assertTrue(
+                        w.worstJerk < 7f,
+                        "a part of him lurched: its speed changed by " + w.worstJerk
+                                + " model blocks a tick in one tick (" + w.where + ", world time at the slam " + t0[0]
+                                + ")" + w.trail());
+                h.assertTrue(
+                        w.worstStep < 30f,
+                        "a part of him jumped " + w.worstStep + " model blocks in one tick (" + w.whereStep + ")");
+            } finally {
+                // (gone even when it fails: a giant left standing counts in every later test's world)
+                if (p[0] != null) p[0].discard();
+                release(h, e);
+            }
             h.succeed();
         });
     }

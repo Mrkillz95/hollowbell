@@ -205,7 +205,7 @@ public class MoveTests implements FabricGameTest {
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "tired")
     public void aHeavyMoveWearsHimOut(GameTestHelper h) {
-        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.HUNTER, 37);
+        HollowbellEntity e = spawnAway(h, S, HollowbellEntity.HUNTER, 1705); // (a slot of its own: 37 is GrabTests' too)
         h.runAfterDelay(20, () -> {
             e.setStay(true);
             h.assertTrue(e.forceMove(Moves.DEEP_TOLL, null), "no deep toll");

@@ -283,7 +283,8 @@ public class OwnBookTests implements FabricGameTest {
             h.assertTrue(hisB != null && CodexItem.carriedBy(b), "b has their own");
             // (b further off than a, so the nearest main book is a's either way)
             b.teleportTo(h.getLevel(), hisB.getX() + 200, b.getY(), hisB.getZ(), 0f, 0f);
-            a.teleportTo(h.getLevel(), hisB.getX() + 10, a.getY(), hisB.getZ(), 0f, 0f);
+            // (at his own height: he can come down off the pad, on the ground 260 blocks under it)
+            a.teleportTo(h.getLevel(), hisB.getX() + 10, hisB.getY(), hisB.getZ(), 0f, 0f);
             h.assertTrue(hisB.bookHolder() == b, "on: b's one answers b alone, though a is nearer: "
                     + hisB.bookHolder());
             all(h, "");

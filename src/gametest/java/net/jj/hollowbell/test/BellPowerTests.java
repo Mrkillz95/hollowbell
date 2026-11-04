@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.ModItems;
 import net.jj.hollowbell.item.GlassBell;
 import net.jj.hollowbell.item.Powers;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,6 +22,7 @@ import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 
 /** The bell glass set's two powers: the Great Toll (R) and the Glass Bell (Sneak + R). */
@@ -113,9 +115,21 @@ public class BellPowerTests implements FabricGameTest {
         ServerPlayer p = player(h, at);
         Zombie in = zombie(h, at.add(2, 0, 0));
         Wolf mine = wolf(h, at.add(0, 0, 1.5));
+        // (the arrow starts 7 blocks off, out past the test's own ground: about one run in four that spot is in the
+        // chunk next door, which isn't yet loaded far enough to move entities, and the arrow hangs still in the air
+        // (the runs that failed were the ones with the test 0 to 3 blocks into its chunk). So that chunk is held
+        // loaded, and the arrow is shot once its spot moves things.)
+        BlockPos from = BlockPos.containing(at.x, at.y + 1, at.z - 7);
+        ChunkPos fromChunk = new ChunkPos(from);
+        boolean forcedHere = h.getLevel().getForcedChunks().contains(fromChunk.toLong());
+        if (!forcedHere) h.getLevel().setChunkForced(fromChunk.x, fromChunk.z, true);
+        h.getLevel().getChunk(fromChunk.x, fromChunk.z);
+        Arrow[] shot = new Arrow[1];
         Runnable clear = () -> {
             in.discard();
             mine.discard();
+            if (shot[0] != null) shot[0].discard();
+            if (!forcedHere) h.getLevel().setChunkForced(fromChunk.x, fromChunk.z, false);
             GlassBell.stop(p);
             drop(p);
         };
@@ -137,33 +151,51 @@ public class BellPowerTests implements FabricGameTest {
                 throw ex;
             }
         });
-        Arrow[] shot = new Arrow[1];
         h.runAfterDelay(5, () -> {
             try {
                 h.assertTrue(in.position().distanceTo(at) >= GlassBell.RADIUS, "the zombie is pushed out of the bell");
                 h.assertTrue(mine.position().distanceTo(at) < GlassBell.RADIUS, "your own wolf may stay in");
                 h.assertTrue(p.getAirSupply() == p.getMaxAirSupply(), "and you breathe in it");
-                // an arrow from outside, flying in at you
-                shot[0] = new Arrow(EntityType.ARROW, h.getLevel());
-                shot[0].setPos(at.x, at.y + 1, at.z - 7);
-                shot[0].setDeltaMovement(0, 0, 1.5);
-                h.getLevel().addFreshEntity(shot[0]);
             } catch (RuntimeException ex) {
                 clear.run();
                 throw ex;
             }
         });
-        h.runAfterDelay(12, () -> {
-            try {
-                h.assertTrue(shot[0].isRemoved(), "the arrow doesn't get through the glass");
-                h.assertTrue(p.getHealth() == p.getMaxHealth(), "and didn't hit you");
-            } catch (RuntimeException ex) {
-                clear.run();
-                throw ex;
-            }
-        });
+        // an arrow from outside, flying in at you (shot once the land there moves things; seven ticks to stop it, as
+        // before)
+        int[] shotAt = {-1};
+        boolean[] checked = {false};
+        for (int k = 6; k <= 80; k++) {
+            int kk = k;
+            h.runAfterDelay(k, () -> {
+                if (checked[0]) return;
+                try {
+                    if (shot[0] == null) {
+                        if (!h.getLevel().isPositionEntityTicking(from)) {
+                            h.assertTrue(kk < 60, "the land the arrow is shot from never got to move things");
+                            return;
+                        }
+                        shot[0] = new Arrow(EntityType.ARROW, h.getLevel());
+                        shot[0].setPos(at.x, at.y + 1, at.z - 7);
+                        shot[0].setDeltaMovement(0, 0, 1.5);
+                        h.getLevel().addFreshEntity(shot[0]);
+                        shotAt[0] = kk;
+                        return;
+                    }
+                    if (!shot[0].isRemoved() && kk < shotAt[0] + 7) return;
+                    checked[0] = true;
+                    h.assertTrue(shot[0].isRemoved(), "the arrow doesn't get through the glass: it's at "
+                            + shot[0].position() + " going " + shot[0].getDeltaMovement());
+                    h.assertTrue(p.getHealth() == p.getMaxHealth(), "and didn't hit you");
+                } catch (RuntimeException ex) {
+                    clear.run();
+                    throw ex;
+                }
+            });
+        }
         h.runAfterDelay(2 + GlassBell.TICKS + 5, () -> {
             try {
+                h.assertTrue(checked[0], "the arrow was shot and looked at");
                 h.assertTrue(!GlassBell.inside(p), "after 20 seconds the bell is gone");
             } finally {
                 clear.run();

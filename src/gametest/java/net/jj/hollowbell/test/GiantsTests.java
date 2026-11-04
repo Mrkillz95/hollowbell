@@ -29,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
 public class GiantsTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "nocarry")
     public void heNeverPicksUpTheGiants(GameTestHelper h) {
-        HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.HUNTER, 70);
+        HollowbellEntity e = spawnAway(h, 0.2f, HollowbellEntity.HUNTER, 1709); // (a slot of its own: 70 is FlightTests' too)
         h.runAfterDelay(20, () -> {
             e.setStay(true);
             Vec3 at = under(e);
