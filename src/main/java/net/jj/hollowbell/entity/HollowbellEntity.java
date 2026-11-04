@@ -1344,13 +1344,21 @@ public class HollowbellEntity extends Monster implements SitHost {
         return 88 * bellScale();
     }
 
-    /** "Follow me": how near you he stops (just past his rim), and how far off you get before he sets off (FollowGap) */
+    /**
+     * "Follow me": how near you he stops (just past his rim and the arms and strands that swing out past it), and how
+     * far off you get before he sets off (FollowGap). His rim is 88 at size 1; with his swinging arms his body reaches
+     * up to about 96, so the gap is worked out from 98 (the rim alone let a swinging strand come within a block).
+     */
+    public double followReach() {
+        return 98 * bellScale();
+    }
+
     public double followStop() {
-        return FollowGap.stop(bellRadius());
+        return FollowGap.stop(followReach());
     }
 
     public double followStart() {
-        return FollowGap.start(bellRadius());
+        return FollowGap.start(followReach());
     }
 
     public double maxSpeed() {
