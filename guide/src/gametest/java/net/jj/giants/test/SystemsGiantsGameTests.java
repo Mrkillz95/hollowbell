@@ -258,6 +258,14 @@ public class SystemsGiantsGameTests implements FabricGameTest {
         h.assertTrue(bigW > his * 0.4 && bigW < his * 2.2, key + ": " + bigW + " wide, he is " + his);
         // and down in the world, a small one: over several ticks, rotting away a stage at a time
         BlockPos at = FunGiantsGameTests.pad(h, 30 + slot);
+        // (the test world is kept between runs: an earlier run's skeleton, left for good, may stand taller than the
+        // pad clears, or reach under it)
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+        for (int dx = -90; dx <= 90; dx++)
+            for (int dz = -90; dz <= 90; dz++)
+                for (int y = 90; y < 260; y++)
+                    if (y != 119 && !l.getBlockState(mp.set(at.getX() + dx, y, at.getZ() + dz)).isAir())
+                        l.setBlock(mp, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
         Systems.forget();
         SystemsData.get(s).s.remains.clear();
         long[] slow = new long[1];
@@ -280,7 +288,9 @@ public class SystemsGiantsGameTests implements FabricGameTest {
             r.fell -= r.rotTicks + 5;
         }).thenWaitUntil(() -> h.assertTrue(SystemsData.get(s).s.remains.isEmpty() && !Remains.busy(),
                 key + ": gone")).thenExecute(() -> {
-            h.assertTrue(Remains.ours(l, r) == 0, key + ": a corpse goes in the end");
+            int left = Remains.ours(l, r);
+            h.assertTrue(left == 0, key + ": a corpse goes in the end: " + left + " left, e.g. " + Remains.anyBlock(l, r)
+                    + " " + (Remains.anyBlock(l, r) == null ? "" : l.getBlockState(Remains.anyBlock(l, r))));
             // the skeleton stays
             Remains.lay(l, key, at.getX(), at.getZ(), at.getY(), 90, 0.2, "skeleton", 3, 4, 6L);
         }).thenWaitUntil(() -> h.assertTrue(!Remains.busy(), key + ": bones going down")).thenExecute(() -> {
