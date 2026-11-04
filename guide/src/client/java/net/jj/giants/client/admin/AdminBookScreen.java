@@ -5891,8 +5891,8 @@ public class AdminBookScreen extends Screen {
                 AdminSetting.plain(dbl(n, "damage", 1)), AdminSetting.plain(dbl(n, "speed", 1)),
                 AdminSetting.plain(dbl(n, "healing", 1))));
         int grief = (int) dbl(n, "grief", 0), rot = (int) dbl(n, "rotting", 0);
-        if (grief > 0) lines.add(tr("systems.now.grief", grief));
-        if (rot > 0) lines.add(tr("systems.now.rot", rot));
+        if (grief > 0) lines.add(tr("systems.now.grief" + (grief == 1 ? ".one" : ""), grief));
+        if (rot > 0) lines.add(tr("systems.now.rot" + (rot == 1 ? ".one" : ""), rot));
         systemsNowB(n, lines);
         List<FormattedCharSequence> split = new ArrayList<>();
         for (Component c : lines) split.addAll(font.split(c, lw - 34));
@@ -5968,9 +5968,9 @@ public class AdminBookScreen extends Screen {
     /** the "Right now" lines for new systems B */
     private void systemsNowB(JsonObject n, List<Component> lines) {
         int weather = (int) dbl(n, "weatherPlayers", -1);
-        if (weather > 0) lines.add(tr("systems.now.weather", weather));
+        if (weather > 0) lines.add(tr("systems.now.weather" + (weather == 1 ? ".one" : ""), weather));
         int followers = (int) dbl(n, "followers", 0);
-        if (followers > 0) lines.add(tr("systems.now.followers", followers));
+        if (followers > 0) lines.add(tr("systems.now.followers" + (followers == 1 ? ".one" : ""), followers));
         if (n.get("underworld") instanceof JsonArray u && !u.isEmpty()) {
             // (grouped: who is there, who comes back when, who fell for good, who waits for a player)
             List<String> there = new ArrayList<>(), back = new ArrayList<>(), never = new ArrayList<>(),

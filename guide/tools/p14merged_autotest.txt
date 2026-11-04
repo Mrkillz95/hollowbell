@@ -1,0 +1,150 @@
+# Pictures of the merged 1.14.0 build (Part 9 + bones + dens): the Systems page, one giant's weather, a den, a
+# skeleton and a corpse, and the Underworld. On deep flat ground (grass at y 36). With the eight giants loaded:
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+deepflat
+wait 60
+guiscale 2
+fov 85
+render 16
+noclouds
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamerule doMobSpawning false
+cmd gamerule randomTickSpeed 0
+cmd difficulty normal
+cmd gamerule sendCommandFeedback false
+cmd giants admin setall maxInWorld 8
+cmd pitchgut away off
+cmd furrowmaw away off
+cmd cerberus away off
+cmd hollowbell away off
+cmd lanternwillow away off
+cmd wreckback away off
+cmd swarmforge away off
+cmd gloamwick away off
+cmd giants admin set all corpseDays 30
+cmd tp @s 0 37 0 0 10
+wait 20
+# some Part 9 systems on, so the page shows them working
+cmd giants admin set all villagers worship
+cmd giants admin set all golems on
+cmd giants admin set all mirror on
+cmd giants admin set all followers on
+cmd giants admin set all chaos on
+cmd wreckback summon calm 0.08
+wait 200
+adminbook systems 0
+wait 60
+mouse 2 2
+wait 25
+shot p14_systems_now
+adminbook systems 2300
+wait 40
+mouse 2 2
+wait 25
+shot p14_systems_b0
+adminbook systems 3100
+wait 30
+mouse 2 2
+wait 25
+shot p14_systems_b1
+close
+cmd giants admin set all chaos off
+cmd giants admin set all followers off
+cmd giants admin set all mirror off
+cmd giants admin set all golems off
+cmd giants admin set all villagers off
+cmd wreckback kill
+wait 40
+# Weather Gods: the Hollowbell's storm round him
+cmd giants admin set all weather on
+cmd tp @s 300 37 0 0 10
+wait 40
+cmd hollowbell summon calm 0.08
+wait 30
+cmd giants freeze
+cmd execute at @e[type=hollowbell:hollowbell,limit=1,sort=nearest] run tp @s ~ 41 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=hollowbell:hollowbell,limit=1,sort=nearest] eyes
+wait 220
+shot p14_weather_storm
+cmd giants unfreeze
+cmd hollowbell kill
+cmd giants admin set all weather off
+wait 60
+gui off
+cmd gamemode spectator
+# a den: the Cerberus's kennel at 0.25, then him in it
+cmd tp @s 4200.5 37 0.5 0 10
+wait 60
+cmd giants admin build den cerberus 0.25
+wait 256
+cmd tp @s 4233.4 73.9 33.4 135 36
+wait 400
+shot p14_den_cerberus_025
+cmd tp @s 4200.5 37 0.5 0 0
+wait 10
+cmd cerberus summon calm 0.25
+wait 60
+cmd giants admin settle cerberus here
+wait 40
+cmd giants freeze
+wait 10
+cmd tp @s 4248.8 82.0 48.8 135 25
+wait 200
+shot p14_den_cerberus_025_giant
+cmd giants remove
+wait 20
+cmd kill @e[type=!minecraft:player]
+wait 20
+cmd giants unfreeze
+# remains: the Cerberus's skeleton and a corpse at full size
+cmd tp @s 10726 37 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 1.0 skeleton
+wait 1
+cmd tp @s 10876.5 160.3 67.1 118.8 27.7
+wait 840
+shot p14_bones_cerberus_skeleton
+cmd tp @s 10589.6 152.8 -129.2 -50.2 25.1
+wait 40
+shot p14_bones_cerberus_skeleton_b
+cmd tp @s 11288 37 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 1.0 corpse 1
+wait 1
+cmd tp @s 11438.5 160.3 67.1 118.8 27.7
+wait 840
+shot p14_bones_cerberus_corpse1
+# the Underworld: one comes near you in the Nether, sized to fit under its roof
+gui on
+cmd gamemode creative
+cmd giants admin set all underworld nether
+cmd effect give @s night_vision 99999 0 true
+cmd execute in minecraft:the_nether run tp @s 0 70 0
+wait 1500
+# (held still, so the camera that keeps up with him isn't carried into the rock as he walks)
+cmd giants freeze
+wait 20
+cmd giants admin spectate pitchgut
+wait 80
+shot p14_underworld_pitchgut
+cmd giants admin spectate cerberus
+wait 80
+shot p14_underworld_cerberus
+cmd giants admin spectate stop
+wait 20
+adminbook systems 0
+wait 60
+mouse 2 2
+wait 25
+shot p14_systems_now_underworld
+close
+cmd giants unfreeze
+cmd giants admin set all underworld off
+wait 40
+quit

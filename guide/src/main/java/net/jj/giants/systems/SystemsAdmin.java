@@ -93,7 +93,7 @@ public final class SystemsAdmin {
         now.addProperty("weatherPlayers", Weather.players());
         now.addProperty("followers", Followers.standing);
         now.add("underworld", Underworld.json(server));
-        now.add("mirror", Mirror.json(server));
+        if (Systems.on(server, "mirror")) now.add("mirror", Mirror.json(server));
         now.add("chaos", Chaos.json(server));
         if (Systems.on(server, "sacred")) {
             JsonArray sacred = new JsonArray();

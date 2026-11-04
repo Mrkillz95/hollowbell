@@ -103,7 +103,7 @@ public final class SystemsCommand {
                 + AdminSetting.plain(AdminJson.num(n, "speed", 1)) + ", healing x"
                 + AdminSetting.plain(AdminJson.num(n, "healing", 1)) + " (on top of the world's own).");
         int grief = (int) AdminJson.num(n, "grief", 0), rot = (int) AdminJson.num(n, "rotting", 0);
-        if (grief > 0) lines.add("  " + grief + " broken blocks wait to grow back.");
+        if (grief > 0) lines.add("  " + grief + (grief == 1 ? " broken block waits" : " broken blocks wait") + " to grow back.");
         if (rot > 0) lines.add("  " + rot + (rot == 1 ? " corpse is" : " corpses are") + " rotting.");
         // (Part 9) new systems B
         partB(server, n, lines);
@@ -117,9 +117,10 @@ public final class SystemsCommand {
 
     /** (Part 9) what the weather, followers, the underworld, sacred ground, Mirror and Random chaos do now */
     static void partB(net.minecraft.server.MinecraftServer server, JsonObject n, List<String> lines) {
-        if (Systems.on(server, "weather"))
-            lines.add("  Weather Gods: " + (int) AdminJson.num(n, "weatherPlayers", 0) + " players in a giant's"
-                    + " weather.");
+        if (Systems.on(server, "weather")) {
+            int wp = (int) AdminJson.num(n, "weatherPlayers", 0);
+            lines.add("  Weather Gods: " + wp + (wp == 1 ? " player" : " players") + " in a giant's weather.");
+        }
         if (Systems.on(server, "followers"))
             lines.add("  Followers: " + (int) AdminJson.num(n, "followers", 0) + " with their giants.");
         if (n.get("underworld") instanceof JsonArray u && !u.isEmpty()) {
