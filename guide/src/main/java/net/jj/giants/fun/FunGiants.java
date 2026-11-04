@@ -44,6 +44,12 @@ public final class FunGiants {
         return Math.max(2, s[0] * size);
     }
 
+    /** (Part 9) his length at this size, in blocks */
+    public static double length(String kind, double size) {
+        int[] s = SIZE.getOrDefault(kind, new int[] {100, 100});
+        return Math.max(2, s[1] * size);
+    }
+
     /** about how far his body reaches from his middle at this size */
     public static double reach(String kind, double size) {
         int[] s = SIZE.getOrDefault(kind, new int[] {100, 100});

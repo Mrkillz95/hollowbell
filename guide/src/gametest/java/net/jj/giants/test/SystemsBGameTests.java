@@ -179,7 +179,7 @@ public class SystemsBGameTests implements FabricGameTest {
             Villages.lookForTests(s);
             h.assertTrue(Villages.tookForTests(a) == Villages.Took.WORSHIPPED, "worshipping");
             h.assertTrue(Villages.offerings == offered + 1 && !l.getEntitiesOfClass(ItemEntity.class,
-                    g.getBoundingBox().inflate(3), it -> it.getItem().is(Items.BREAD)).isEmpty(), "bread at his feet");
+                    g.getBoundingBox().inflate(10), it -> it.getItem().is(Items.BREAD)).isEmpty(), "bread laid before him");
             Villages.lookForTests(s);
             h.assertTrue(Villages.offerings == offered + 1, "once a day");
             // from a hunting one they hide
@@ -277,6 +277,24 @@ public class SystemsBGameTests implements FabricGameTest {
             Followers.hurryForTests();
             Followers.lookForTests(s);
             h.assertTrue(band.get().size() == 1, "one again");
+            // they die with nothing to show for it: no loot, no experience, and a slime of his doesn't split
+            Mob one = band.get().get(0);
+            Vec3 where = one.position();
+            one.hurt(p.damageSources().playerAttack(p), 1000f);
+            h.assertTrue(one.isDeadOrDying(), "it died");
+            AABB round = new AABB(where, where).inflate(4);
+            h.assertTrue(l.getEntitiesOfClass(ItemEntity.class, round).isEmpty()
+                    && l.getEntitiesOfClass(net.minecraft.world.entity.ExperienceOrb.class, round).isEmpty(),
+                    "no loot and no experience");
+            net.minecraft.world.entity.monster.Slime slime = EntityType.SLIME.create(l);
+            slime.setSize(2, true);
+            slime.moveTo(at.getX() + 8.5, at.getY(), at.getZ() + 8.5, 0, 0);
+            slime.addTag(Followers.MARK);
+            l.addFreshEntity(slime);
+            slime.hurt(p.damageSources().playerAttack(p), 1000f);
+            slime.remove(net.minecraft.world.entity.Entity.RemovalReason.KILLED);
+            h.assertTrue(l.getEntitiesOfClass(net.minecraft.world.entity.monster.Slime.class,
+                    new AABB(at).inflate(20), x -> x.isAlive()).isEmpty(), "his slime doesn't split");
             // off: they crumble away
             set(h, s, "followers", "off");
             Followers.tick(s);
@@ -343,15 +361,20 @@ public class SystemsBGameTests implements FabricGameTest {
 
     /** a room under the Nether's roof: solid to y 39, 30 blocks of air, a roof from y 70 (81 blocks across) */
     static BlockPos netherRoom(MinecraftServer s, int x, int z) {
+        return netherRoom(s, x, z, 40);
+    }
+
+    static BlockPos netherRoom(MinecraftServer s, int x, int z, int r) {
         ServerLevel n = s.getLevel(Level.NETHER);
-        for (int cx = (x >> 4) - 3; cx <= (x >> 4) + 3; cx++)
-            for (int cz = (z >> 4) - 3; cz <= (z >> 4) + 3; cz++) {
+        int c = (r >> 4) + 1;
+        for (int cx = (x >> 4) - c; cx <= (x >> 4) + c; cx++)
+            for (int cz = (z >> 4) - c; cz <= (z >> 4) + c; cz++) {
                 n.setChunkForced(cx, cz, true);
                 n.getChunk(cx, cz);
             }
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        for (int dx = -40; dx <= 40; dx++)
-            for (int dz = -40; dz <= 40; dz++)
+        for (int dx = -r; dx <= r; dx++)
+            for (int dz = -r; dz <= r; dz++)
                 for (int y = 1; y <= 104; y++)
                     n.setBlock(m.set(x + dx, y, z + dz), y >= 40 && y < 70 ? Blocks.AIR.defaultBlockState()
                             : Blocks.NETHERRACK.defaultBlockState(), 2);
@@ -382,8 +405,8 @@ public class SystemsBGameTests implements FabricGameTest {
 
     static void unroom(MinecraftServer s, BlockPos at) {
         ServerLevel n = s.getLevel(Level.NETHER);
-        for (int cx = (at.getX() >> 4) - 3; cx <= (at.getX() >> 4) + 3; cx++)
-            for (int cz = (at.getZ() >> 4) - 3; cz <= (at.getZ() >> 4) + 3; cz++) n.setChunkForced(cx, cz, false);
+        for (int cx = (at.getX() >> 4) - 5; cx <= (at.getX() >> 4) + 5; cx++)
+            for (int cz = (at.getZ() >> 4) - 5; cz <= (at.getZ() >> 4) + 5; cz++) n.setChunkForced(cx, cz, false);
     }
 
     @GameTest(template = EMPTY_STRUCTURE, batch = "p9_under", timeoutTicks = 400)
@@ -394,14 +417,14 @@ public class SystemsBGameTests implements FabricGameTest {
         BlockPos at = FunGameTests.spot(h, 33);
         IronGolem own = golem(h, at, 0, 0);
         own.addTag(GiantsBridge.TAG + ".own");
-        BlockPos room = netherRoom(s, 56000, 56000);
+        BlockPos room = netherRoom(s, 56000, 56000, 64);
         ServerPlayer p = PlayersGameTests.join(h, "under9", false);
         h.runAfterDelay(3, () -> {
             sweep(h);
             p.teleportTo(nether, room.getX() + 0.5, room.getY(), room.getZ() + 0.5, 0, 0);
             Underworld.nearMin = 4;
             Underworld.nearMax = 12;
-            String key = "fakesys|" + Underworld.NETHER;
+            String key = "fakesys|" + Underworld.NETHER + "|0";
             try {
                 set(h, s, "underworld", "nether");
                 Underworld.lookForTests(s);
@@ -414,7 +437,7 @@ public class SystemsBGameTests implements FabricGameTest {
                     if (x.level() == nether && x.getTags().contains("fakesys.summoned")) below = x;
                 h.assertTrue(below != null && below.getTags().contains(Underworld.MARK), "one of him below, marked");
                 double size = Double.parseDouble(GiantsBridge.get(below, "size", "9"));
-                h.assertTrue(size <= 30 * 0.9 / 100 + 1e-6 && size >= 0.1, "sized to fit the room: " + size);
+                h.assertTrue(size * 100 <= 30 && size >= 0.1, "sized to fit the room: " + size);
                 h.assertTrue("calm".equals(GiantsBridge.get(below, "mood", "")), "calm");
                 SystemsData.Under u = SystemsData.get(s).s.under.get(key);
                 h.assertTrue(u != null && u.id.equals(below.getStringUUID()), "kept: " + (u == null ? null : u.id));
@@ -422,6 +445,26 @@ public class SystemsBGameTests implements FabricGameTest {
                 GiantsBridge.calls.clear();
                 Underworld.lookForTests(s);
                 h.assertTrue(!GiantsBridge.called("summon"), "no second one");
+                // his own How many come: a second, on a spot of his own well away from the first
+                h.assertTrue(AdminServer.set(s, "Tester", "fakesys", "worldCount", "2").ok(), "count 2");
+                h.assertTrue(AdminServer.set(s, "Tester", "fakesys", "worldScale", "0.1").ok(), "smaller");
+                Underworld.nearMax = 52;
+                for (int i = 0; i < 12 && SystemsData.get(s).s.under.getOrDefault(key.replace("|0", "|1"),
+                        new SystemsData.Under()).id.isEmpty(); i++) Underworld.lookForTests(s);
+                SystemsData.Under second = SystemsData.get(s).s.under.get(key.replace("|0", "|1"));
+                h.assertTrue(second != null && !second.id.isEmpty() && !second.id.equals(u.id), "a second one kept");
+                IronGolem two = null;
+                for (IronGolem x : GiantsBridge.golems(s)) if (x.getStringUUID().equals(second.id)) two = x;
+                h.assertTrue(two != null && two.distanceTo(below) >= 30, "apart: " + (two == null ? -1
+                        : two.distanceTo(below)));
+                two.discard();
+                SystemsData.get(s).s.under.remove(key.replace("|0", "|1"));
+                AdminWorld.get(s).remove("fakesys", "worldCount");
+                AdminWorld.get(s).remove("fakesys", "worldScale");
+                AdminServer.push(s, AdminWorld.get(s));
+                Underworld.nearMax = 12;
+                Systems.forget(); // (his count, looked at every ten seconds, read again)
+                GiantsBridge.calls.clear();
                 // he falls: the next after his own days (a day)
                 below.discard();
                 Underworld.lookForTests(s);

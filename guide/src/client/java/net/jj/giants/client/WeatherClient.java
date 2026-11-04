@@ -149,6 +149,13 @@ public final class WeatherClient {
                 many(level, r, c, ParticleTypes.SOUL, 0.6 * s * rate, 0, 0.02);
                 many(level, r, c, ParticleTypes.ASH, 6 * s * rate, 0, -0.01);
             }
+            // (Hollowbell's storm: sparks of his own glow on the wind, the bell-teal sky)
+            case "storm" -> many(level, r, c, ParticleTypes.ELECTRIC_SPARK, 5 * s * rate, 0.3, -0.05);
+            // (the Wreckback's squall: sea spray blown in off the waves)
+            case "squall" -> {
+                many(level, r, c, ParticleTypes.SPLASH, 8 * s * rate, 0.2, 0);
+                many(level, r, c, ParticleTypes.FALLING_WATER, 4 * s * rate, 0.1, -0.1);
+            }
             default -> {}
         }
     }

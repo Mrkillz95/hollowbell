@@ -74,6 +74,14 @@ public final class Villages {
         long now = sl.getGameTime();
         int worshippers = 0;
         double ring = Math.max(6, Math.min(range - 4, reach * 0.7 + 4));
+        // (worship: a ring round him, evenly spaced, starting from where the first of them stands)
+        near.sort(java.util.Comparator.comparing(Villager::getUUID));
+        double base = Math.atan2(near.get(0).getZ() - giant.getZ(), near.get(0).getX() - giant.getX());
+        double tall = FunGiants.height(FunGiants.kindOf(giant) == null ? "" : FunGiants.kindOf(giant),
+                FunGiants.sizeOf(giant));
+        BlockPos head = BlockPos.containing(giant.getX(), giant.getY() + Math.max(2, tall * 0.85), giant.getZ());
+        List<Vec3> feet = new java.util.ArrayList<>();
+        int index = 0;
         for (Villager v : near) {
             Vec3 away = new Vec3(v.getX() - giant.getX(), 0, v.getZ() - giant.getZ());
             if (away.lengthSqr() < 1e-4) away = new Vec3(1, 0, 0);
@@ -91,29 +99,35 @@ public final class Villages {
                     remember(v, Took.HID);
                 }
                 default -> {
-                    Vec3 spot = giant.position().add(away.scale(ring));
-                    double off = v.position().distanceTo(new Vec3(spot.x, v.getY(), spot.z));
-                    if (off > 3)
-                        v.getBrain().setMemory(MemoryModuleType.WALK_TARGET,
-                                new WalkTarget(BlockPos.containing(spot.x, v.getY(), spot.z), 0.5f, 2));
-                    else {
-                        v.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+                    // his place in the ring, facing him: he walks there, then stays, looking up at his head
+                    double a = base + index++ * Math.PI * 2 / near.size();
+                    Vec3 spot = giant.position().add(Math.cos(a) * ring, 0, Math.sin(a) * ring);
+                    double off = Math.hypot(v.getX() - spot.x, v.getZ() - spot.z);
+                    v.getBrain().setMemory(MemoryModuleType.WALK_TARGET,
+                            new WalkTarget(BlockPos.containing(spot.x, v.getY(), spot.z), 0.5f, 0));
+                    if (off <= 2) {
                         worshippers++;
+                        feet.add(new Vec3(spot.x + (giant.getX() - spot.x) / ring * 1.5, v.getY(),
+                                spot.z + (giant.getZ() - spot.z) / ring * 1.5));
                     }
-                    v.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(giant, true));
-                    v.getLookControl().setLookAt(giant.getX(), giant.getEyeY(), giant.getZ());
-                    if (now % 60 < 20)
-                        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, v.getX(), v.getEyeY() + 0.6, v.getZ(), 3, 0.3,
-                                0.2, 0.3, 0);
+                    v.getBrain().setMemory(MemoryModuleType.LOOK_TARGET,
+                            new net.minecraft.world.entity.ai.behavior.BlockPosTracker(head));
+                    v.getLookControl().setLookAt(head.getX() + 0.5, head.getY(), head.getZ() + 0.5);
+                    if (off <= 2)
+                        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, v.getX(), v.getEyeY() + 0.5, v.getZ(), 2, 0.25,
+                                0.15, 0.25, 0);
                     remember(v, Took.WORSHIPPED);
                 }
             }
         }
-        if (worshippers > 0) offering(server, sl, giant, worshippers);
+        if (worshippers > 0) offering(server, sl, giant, feet);
     }
 
-    /** once a game day the villagers round a giant they worship leave bread at his feet (Hunger: he eats it) */
-    private static void offering(MinecraftServer server, ServerLevel sl, LivingEntity giant, int worshippers) {
+    /**
+     * once a game day the villagers round a giant they worship each lay bread down in front of them, toward him (with
+     * Hunger he eats it)
+     */
+    private static void offering(MinecraftServer server, ServerLevel sl, LivingEntity giant, List<Vec3> feet) {
         SystemsData d = SystemsData.get(server);
         long day = server.overworld().getDayTime() / 24000L;
         Long last = d.s.offered.get(giant.getStringUUID());
@@ -121,12 +135,12 @@ public final class Villages {
         d.s.offered.put(giant.getStringUUID(), day);
         if (d.s.offered.size() > 256) d.s.offered.remove(d.s.offered.keySet().iterator().next());
         d.setDirty();
-        ItemEntity it = new ItemEntity(sl, giant.getX(), giant.getY() + 0.5, giant.getZ(),
-                new ItemStack(Items.BREAD, Math.min(6, Math.max(1, worshippers))));
-        it.setPickUpDelay(40);
-        sl.addFreshEntity(it);
-        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, giant.getX(), giant.getY() + 1, giant.getZ(), 12, 0.8, 0.5,
-                0.8, 0);
+        for (Vec3 at : feet.subList(0, Math.min(8, feet.size()))) {
+            ItemEntity it = new ItemEntity(sl, at.x, at.y + 0.3, at.z, new ItemStack(Items.BREAD, 1), 0, 0.05, 0);
+            it.setPickUpDelay(40);
+            sl.addFreshEntity(it);
+            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, at.x, at.y + 0.5, at.z, 6, 0.3, 0.3, 0.3, 0);
+        }
         offerings++;
     }
 

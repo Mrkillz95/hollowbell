@@ -8,6 +8,8 @@
     "PlayerDeathMixin",
     "PhantomAccess",
     "FollowerSunMixin",
+    "FollowerLootMixin",
+    "FollowerSlimeMixin",
     "GriefDropsMixin"
   ],
   "injectors": {

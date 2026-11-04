@@ -664,7 +664,8 @@ public class AdminBookScreen extends Screen {
             this.size = SIZES.contains(s.id());
             int tw = textW() - (size ? previewW() + 6 : 0);
             List<FormattedCharSequence> wl = what(s).getString().isEmpty() ? List.of() : font.split(what(s), tw);
-            if (wl.size() > 2) {
+            // (Part 9: on the Systems page the whole of it, wrapped: each system needs its words)
+            if (wl.size() > 2 && !pageKey.equals(SYSTEMS)) {
                 // (two lines, the rest on hover)
                 String second = cut(font.split(what(s), tw).subList(1, wl.size()).stream()
                         .map(AdminBookScreen::plainText).reduce("", (a, b) -> a + (a.isEmpty() ? "" : " ") + b), tw);
@@ -5954,12 +5955,13 @@ public class AdminBookScreen extends Screen {
 
     /** the heading the new systems B start under */
     private void systemsB() {
-        int h = 30;
+        List<FormattedCharSequence> note = font.split(tr("systems.b.note"), lw - 30);
+        int h = 20 + note.size() * 10;
         rows.add(new Block(h + 4, (g, x, y, w, mx, my) -> {
             g.fill(x + 2, y + 3, x + w - 2, y + 4, 0x55804020);
             AdminStyle.icon(g, "systems_b", x + 4, y + 8, 16);
             g.drawString(font, tr("systems.b"), x + 25, y + 8, HEAD, false);
-            g.drawString(font, cut(tr("systems.b.note").getString(), w - 30), x + 25, y + 19, GREY, false);
+            for (int i = 0; i < note.size(); i++) g.drawString(font, note.get(i), x + 25, y + 19 + i * 10, GREY, false);
         }));
     }
 

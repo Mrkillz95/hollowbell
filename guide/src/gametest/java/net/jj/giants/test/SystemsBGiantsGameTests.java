@@ -154,7 +154,7 @@ public class SystemsBGiantsGameTests implements FabricGameTest {
             Underworld.onlyForTests = key;
             AdminServer.set(s, "Tester", "all", "underworld", "nether");
             SystemsData.get(s).s.under.clear();
-            String ukey = key + "|" + dim;
+            String ukey = key + "|" + dim + "|0";
             Underworld.lookForTests(s);
             // (his own summon may take a few ticks to bring him up: look again for up to ten seconds; where he stands
             // just after he's put there)

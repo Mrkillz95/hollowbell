@@ -19,9 +19,9 @@ public record WeatherKinds(String id, float rain, float thunder, boolean lightni
     public static final WeatherKinds ASH = new WeatherKinds("ash", 0, 0, false, 0x4f4339, 36);
     public static final WeatherKinds DUST = new WeatherKinds("dust", 0, 0, false, 0x9a7b52, 34);
     public static final WeatherKinds SLEET = new WeatherKinds("sleet", 0, 0, false, 0x6e6476, 56);
-    public static final WeatherKinds STORM = new WeatherKinds("storm", 1, 1, true, 0x4c5466, 88);
+    public static final WeatherKinds STORM = new WeatherKinds("storm", 1, 1, true, 0x2c4f5c, 110);
     public static final WeatherKinds MIST = new WeatherKinds("mist", 0.35f, 0, false, 0x8a9a86, 22);
-    public static final WeatherKinds SQUALL = new WeatherKinds("squall", 1, 0.6f, true, 0x46566a, 64);
+    public static final WeatherKinds SQUALL = new WeatherKinds("squall", 1, 0.6f, true, 0x3b5a52, 80);
     public static final WeatherKinds SMOG = new WeatherKinds("smog", 0, 0, false, 0x7d6448, 40);
     public static final WeatherKinds GLOAMING = new WeatherKinds("gloaming", 0, 0, false, 0x17152b, 30);
     public static final WeatherKinds RAIN = new WeatherKinds("rain", 0.8f, 0, false, 0x6e7886, 80);

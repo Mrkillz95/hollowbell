@@ -80,8 +80,8 @@ public final class Watch {
         if (face.lengthSqr() < 1e-4) face = new Vec3(0, 0, 1);
         face = face.normalize();
         double back = Math.max(10, h * 1.1 + 8), up = Math.max(6, h * 0.6 + 4);
-        Vec3 eye = giant.position().subtract(face.scale(back)).add(0, up, 0);
         Vec3 mid = giant.position().add(0, h * 0.45, 0);
+        Vec3 eye = clearView((ServerLevel) giant.level(), mid, face, back, up - h * 0.45);
         Vec3 d = mid.subtract(eye);
         float yaw = (float) (Mth.atan2(d.z, d.x) * 180 / Math.PI) - 90f;
         float pitch = (float) -(Mth.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)) * 180 / Math.PI);
@@ -208,5 +208,30 @@ public final class Watch {
 
     static void forget() {
         following.clear();
+    }
+
+    /**
+     * (Part 9) where the camera looks from: behind him and above as always; when rock is in the way (a cave, the
+     * Nether), the way round him with the most open space, just short of the rock, so the view is never from inside it
+     */
+    static Vec3 clearView(ServerLevel l, Vec3 mid, Vec3 face, double back, double up) {
+        Vec3 best = null;
+        double bestClear = -1;
+        for (int i = 0; i < 8; i++) {
+            Vec3 dir = face.yRot((float) (i * Math.PI / 4)).scale(-1);
+            Vec3 want = mid.add(dir.scale(back)).add(0, up, 0);
+            net.minecraft.world.phys.BlockHitResult hit = l.clip(new net.minecraft.world.level.ClipContext(mid, want,
+                    net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE,
+                    net.minecraft.world.phys.shapes.CollisionContext.empty()));
+            double full = want.distanceTo(mid);
+            double clear = hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? full
+                    : hit.getLocation().distanceTo(mid);
+            if (clear >= full - 0.01) return want;
+            if (clear > bestClear) {
+                bestClear = clear;
+                best = mid.add(want.subtract(mid).normalize().scale(Math.max(0, clear - 1.5)));
+            }
+        }
+        return best == null ? mid.add(face.scale(-back)).add(0, up, 0) : best;
     }
 }

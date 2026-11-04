@@ -1847,7 +1847,7 @@
   "guide.jj_giants.gloamwick.pick": "A spirit moose of souls, light and darkness. Always hittable, and the most dangerous of all.",
   "admin.jj_giants.book.systems": "Systems",
   "admin.jj_giants.book.systems.tile": "Herds, growth, weather, followers and more",
-  "admin.jj_giants.book.systems.sub": "Herds, growth, hunger, loyalty, grief, remains, scaling, weak points, fear, seasons, villages, followers, weather, underworld, sacred ground, mirror, chaos",
+  "admin.jj_giants.book.systems.sub": "New ways the giants live, each off until you turn it on",
   "admin.jj_giants.book.systems.note": "New ways the giants live: each system is off until you turn it on. Presets put them back to the server default unless they name them (Herds, Evolution, Random Chaos, Underworld, Weather Gods, Sacred Ground, Mirror).",
   "admin.jj_giants.book.systems.on": "on",
   "admin.jj_giants.book.systems.herds": "Herds",

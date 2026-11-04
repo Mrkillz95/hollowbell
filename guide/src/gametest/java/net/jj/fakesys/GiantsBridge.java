@@ -45,6 +45,7 @@ public final class GiantsBridge {
         {"move.slam.on", "{\"cat\":\"moves\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Slam: on\",\"group\":\"slam\"}"},
         {"respawn", "{\"cat\":\"spawning\",\"type\":\"bool\",\"default\":true,\"when\":\"live\",\"name\":\"Comes back after he falls\"}"},
         {"worldRespawnDays", "{\"cat\":\"spawning\",\"type\":\"float\",\"min\":0,\"max\":30,\"step\":0.5,\"default\":1,\"when\":\"live\",\"name\":\"Days before he comes back\"}"},
+        {"worldCount", "{\"cat\":\"spawning\",\"type\":\"int\",\"min\":1,\"max\":8,\"step\":1,\"default\":1,\"when\":\"newSpawns\",\"name\":\"How many come\"}"},
         {"worldScale", "{\"cat\":\"spawning\",\"type\":\"float\",\"min\":0.01,\"max\":4,\"step\":0.01,\"default\":1,\"when\":\"newSpawns\",\"name\":\"Size of the world's own\"}"}
     };
 

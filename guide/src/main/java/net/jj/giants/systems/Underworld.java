@@ -94,6 +94,7 @@ public final class Underworld {
     static void forget() {
         pending.clear();
         tried.clear();
+        counts.clear();
         sentBelow.clear();
         sentBelowCount = 0;
     }
@@ -120,50 +121,74 @@ public final class Underworld {
             if (level == null) continue;
             List<ServerPlayer> there = new ArrayList<>();
             for (ServerPlayer p : level.players()) if (!p.isSpectator()) there.add(p);
+            // (one new one a look in each world at most, so they come one by one, each on a spot of his own)
+            boolean placed = false;
             for (Giant g : AdminServer.giants()) {
                 if (!dimsFor(g.key(), mode).contains(dim)) continue;
                 if (onlyForTests != null && !onlyForTests.equals(g.key())) continue;
-                String key = g.key() + "|" + dim;
-                SystemsData.Under u = d.s.under.computeIfAbsent(key, k -> new SystemsData.Under());
-                if (!u.id.isEmpty()) {
-                    LivingEntity kept = FunGiants.find(server, u.id);
-                    // (under a roof: one who ended up on the roof is put back on his spot below it)
-                    if (kept != null && kept.level() == level && level.dimensionType().hasCeiling() && u.sy > 0
-                            && kept.getY() >= level.getMinBuildHeight() + level.getLogicalHeight() - 0.5) {
-                        kept.teleportTo(u.sx + 0.5, u.sy, u.sz + 0.5);
-                        kept.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-                        Systems.log("the {} in the {} was on the roof: back under it", g.key(), dim);
-                    }
-                    if (kept != null || listed(rows, g.key(), u.id)) continue;
-                    // he fell (or was taken away): the next after his own days, or never
-                    u.id = "";
-                    u.fell = now;
-                    d.setDirty();
-                    Systems.log("the {} in the {} is gone", g.key(), dim);
-                }
-                if (pendingFor(key)) continue;
-                Integer last = tried.get(key);
-                if (last != null && tick - last < 200 && tick >= last && !forced) continue;
-                // (every ten seconds at most: his own "comes back" settings, as they are now)
-                if (u.fell > 0) {
-                    Respawn rs = respawn(server, g);
-                    boolean never = !rs.on();
-                    long due = u.fell + Math.round(rs.days() * 24000);
-                    if (never != u.never || due != u.due) {
-                        u.never = never;
-                        u.due = due;
+                int count = count(server, g);
+                for (int n = 0; n < count; n++) {
+                    String key = g.key() + "|" + dim + "|" + n;
+                    SystemsData.Under u = d.s.under.computeIfAbsent(key, k -> new SystemsData.Under());
+                    if (!u.id.isEmpty()) {
+                        LivingEntity kept = FunGiants.find(server, u.id);
+                        // (under a roof: one who ended up on the roof is put back on his spot below it)
+                        if (kept != null && kept.level() == level && level.dimensionType().hasCeiling() && u.sy > 0
+                                && kept.getY() >= level.getMinBuildHeight() + level.getLogicalHeight() - 0.5) {
+                            kept.teleportTo(u.sx + 0.5, u.sy, u.sz + 0.5);
+                            kept.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                            Systems.log("the {} in the {} was on the roof: back under it", g.key(), dim);
+                        }
+                        if (kept != null || listed(rows, g.key(), u.id)) continue;
+                        // he fell (or was taken away): the next after his own days, or never
+                        u.id = "";
+                        u.fell = now;
                         d.setDirty();
+                        Systems.log("the {} in the {} is gone", g.key(), dim);
                     }
-                    if (u.never || now < u.due) {
-                        tried.put(key, tick);
-                        continue;
+                    if (pendingFor(key) || placed) continue;
+                    Integer last = tried.get(key);
+                    if (last != null && tick - last < 200 && tick >= last && !forced) continue;
+                    // (every ten seconds at most: his own "comes back" settings, as they are now)
+                    if (u.fell > 0) {
+                        Respawn rs = respawn(server, g);
+                        boolean never = !rs.on();
+                        long due = u.fell + Math.round(rs.days() * 24000);
+                        if (never != u.never || due != u.due) {
+                            u.never = never;
+                            u.due = due;
+                            d.setDirty();
+                        }
+                        if (u.never || now < u.due) {
+                            tried.put(key, tick);
+                            continue;
+                        }
                     }
+                    if (there.isEmpty()) continue;
+                    tried.put(key, tick);
+                    placed = place(server, g, key, level, there, rows);
                 }
-                if (there.isEmpty()) continue;
-                tried.put(key, tick);
-                place(server, g, key, level, there.get(level.random.nextInt(there.size())));
             }
         }
+    }
+
+    /** how many of him each world below keeps: his own "How many come" (worldCount), looked at every ten seconds */
+    private static final Map<String, int[]> counts = new HashMap<>();
+
+    static int count(MinecraftServer server, Giant g) {
+        int tick = server.getTickCount();
+        int[] c = counts.get(g.key());
+        if (c != null && tick - c[1] < 200 && tick >= c[1] && !forced) return c[0];
+        int n = 1;
+        AdminJson.Report rep = AdminServer.report(server, g);
+        AdminSetting w = rep == null ? null : rep.setting("worldCount");
+        if (w != null) try {
+            n = Math.max(1, Math.min(8, w.value().getAsInt()));
+        } catch (RuntimeException e) {
+            n = 1;
+        }
+        counts.put(g.key(), new int[] {n, tick});
+        return n;
     }
 
     private static boolean pendingFor(String key) {
@@ -196,24 +221,60 @@ public final class Underworld {
             }
     }
 
-    /** his own summon at a spot near this player, sized to fit */
-    private static void place(MinecraftServer server, Giant g, String key, ServerLevel level, ServerPlayer near) {
-        double want = spawnSize(server, g);
+    /**
+     * his own summon somewhere near a player there, on a spot where all of him fits in the open (his body's box: as
+     * tall as he is, as wide as he is long, clear of rock and lava, with ground under most of it), sized down until
+     * he fits, and well away from every giant standing in that world; false when no such spot is near yet
+     */
+    private static boolean place(MinecraftServer server, Giant g, String key, ServerLevel level,
+            List<ServerPlayer> players, Map<String, List<Watch.Row>> rows) {
         double[] range = sizeRange(server, g);
-        double tall = FunGiants.height(g.key(), 1);
+        double want = Math.min(spawnSize(server, g), range[1]);
         boolean roof = level.dimensionType().hasCeiling();
-        for (int i = 0; i < 16; i++) {
+        // (every giant standing in that world, as his live list has him: where, how big)
+        List<double[]> others = new ArrayList<>();
+        String here = level.dimension().location().toString();
+        for (Map.Entry<String, List<Watch.Row>> e : rows.entrySet())
+            for (Watch.Row r : e.getValue())
+                if ("here".equals(r.state()) && here.equals(r.dim()))
+                    others.add(new double[] {r.x(), r.z(), FunGiants.reach(e.getKey(), AdminJson.num(r.r(), "size", 1))});
+        int[] why = new int[4];
+        for (int i = 0; i < 40; i++) {
+            ServerPlayer near = players.get(level.random.nextInt(players.size()));
             double a = level.random.nextDouble() * Math.PI * 2,
                     dist = nearMin + level.random.nextDouble() * (nearMax - nearMin);
             int x = (int) Math.floor(near.getX() + Math.cos(a) * dist), z = (int) Math.floor(near.getZ()
                     + Math.sin(a) * dist);
-            if (!level.hasChunkAt(new BlockPos(x, near.getBlockY(), z)) || !level.getWorldBorder().isWithinBounds(x, z))
+            if (!level.hasChunkAt(new BlockPos(x, near.getBlockY(), z)) || !level.getWorldBorder().isWithinBounds(x, z)) {
+                why[0]++;
                 continue;
+            }
             int[] col = roof ? roomUnderRoof(level, x, z, near.getBlockY()) : open(level, x, z);
-            if (col == null) continue;
-            double size = Math.min(want, range[1]);
-            if (roof) size = Math.min(size, col[1] * 0.9 / tall);
-            if (size < range[0] || size * tall < 2) continue;
+            if (col == null) {
+                why[1]++;
+                continue;
+            }
+            double size = want;
+            if (roof) size = Math.min(size, col[1] * 0.95 / FunGiants.height(g.key(), 1));
+            boolean fit = false;
+            for (; size >= range[0] && FunGiants.height(g.key(), size) >= 2; size *= 0.8)
+                if (fits(level, x, col[0], z, FunGiants.length(g.key(), size) / 2, FunGiants.height(g.key(), size))) {
+                    fit = true;
+                    break;
+                }
+            if (!fit) {
+                why[2]++;
+                continue;
+            }
+            // (well away from every giant there: they spread out over the land below)
+            double reach = FunGiants.reach(g.key(), size);
+            boolean crowded = false;
+            for (double[] o : others)
+                if (Math.hypot(o[0] - x, o[1] - z) < reach + o[2] + 24) crowded = true;
+            if (crowded) {
+                why[3]++;
+                continue;
+            }
             size = Math.round(size * 1000) / 1000.0;
             Set<UUID> before = new HashSet<>();
             for (LivingEntity e : FunGiants.standing(server, g.key())) before.add(e.getUUID());
@@ -224,8 +285,35 @@ public final class Underworld {
             pending.add(new Pending(key, g.key(), level, new BlockPos(x, col[0], z), before, new int[] {15}));
             Systems.log("bringing a {} into the {} at {} {} {}, size {}: {}", g.key(), level.dimension().location(), x,
                     col[0], z, size, said);
-            return;
+            return true;
         }
+        Systems.log("no spot for a {} in the {} yet (unloaded {}, no floor {}, no room {}, crowded {}; want {})",
+                g.key(), level.dimension().location(), why[0], why[1], why[2], why[3], want);
+        return false;
+    }
+
+    /**
+     * does a body this wide (half its length each way) and this tall fit here standing on y: every block of the box
+     * clear (no rock, no lava), and solid dry ground under most of it (looked at every few blocks for a big one)
+     */
+    static boolean fits(ServerLevel l, int x, int y, int z, double half, double tall) {
+        int hw = (int) Math.ceil(Math.max(1, half)), ht = (int) Math.ceil(Math.max(2, tall));
+        if (l.dimensionType().hasCeiling() && y + ht >= l.getMinBuildHeight() + l.getLogicalHeight()) return false;
+        int step = Math.max(1, Math.min(hw, ht) / 6);
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int under = 0, ground = 0;
+        for (int dx = -hw; dx <= hw; dx += step)
+            for (int dz = -hw; dz <= hw; dz += step) {
+                if (!l.hasChunkAt(p.set(x + dx, y, z + dz))) return false;
+                for (int dy = 0; dy < ht; dy += step) {
+                    BlockState s = l.getBlockState(p.set(x + dx, y + dy, z + dz));
+                    if (!s.getCollisionShape(l, p).isEmpty() || s.getFluidState().is(FluidTags.LAVA)) return false;
+                }
+                under++;
+                BlockState f = l.getBlockState(p.set(x + dx, y - 1, z + dz));
+                if (f.isFaceSturdy(l, p, Direction.UP) && f.getFluidState().isEmpty()) ground++;
+            }
+        return ground * 10 >= under * 6;
     }
 
     /** the summon came to something: the new one near the spot is the one kept there */
@@ -250,7 +338,7 @@ public final class Underworld {
         }
         pending.remove(q);
         // (his own summon looks for the ground its own way: under a roof it may not be the room chosen; put him there)
-        if (best.blockPosition().distSqr(q.at()) > 16) {
+        if (best.blockPosition().distSqr(q.at()) > 4) {
             best.teleportTo(q.at().getX() + 0.5, q.at().getY(), q.at().getZ() + 0.5);
             best.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         }
@@ -379,7 +467,7 @@ public final class Underworld {
         if (!on(server)) return a;
         long now = server.overworld().getGameTime();
         for (var e : SystemsData.get(server).s.under.entrySet()) {
-            String[] k = e.getKey().split("\\|", 2);
+            String[] k = e.getKey().split("\\|", 3);
             if (k.length < 2 || !dimsFor(k[0], Systems.option(server, "underworld")).contains(k[1])) continue;
             JsonObject j = new JsonObject();
             j.addProperty("kind", k[0]);

@@ -91,63 +91,108 @@ cmd giants admin set all sacred off
 cmd giants admin set all mirror off
 cmd wreckback kill
 wait 40
-# Weather Gods: a storm round Hollowbell, ash round Pitchgut, the gloaming round the Gloamwick, mist round the Willow
-# (each held still, you a little way off looking at him)
+# Weather Gods: each giant's own weather round him, seen from a little way off looking at him (held still)
 cmd giants admin set all weather on
 cmd tp @s 300 -60 0 0 10
-wait 30
+wait 40
 cmd hollowbell summon calm 0.08
-wait 20
+wait 30
 cmd giants freeze
-cmd execute at @e[type=hollowbell:hollowbell,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -15
-wait 200
+cmd execute at @e[type=hollowbell:hollowbell,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=hollowbell:hollowbell,limit=1,sort=nearest] eyes
+wait 220
 shot p9_weather_storm
 cmd giants unfreeze
 cmd hollowbell kill
-cmd tp @s 700 -60 0 0 10
 wait 60
+cmd tp @s 700 -60 0 0 10
+wait 40
 cmd pitchgut summon calm 0.08
-wait 20
+wait 30
 cmd giants freeze
-cmd execute at @e[type=mountain_breathes:mountain,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
-wait 200
+cmd execute at @e[type=mountain_breathes:mountain,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=mountain_breathes:mountain,limit=1,sort=nearest] eyes
+wait 220
 shot p9_weather_ash
 cmd giants unfreeze
 cmd pitchgut kill
-cmd tp @s 1100 -60 0 0 10
 wait 60
+cmd tp @s 1100 -60 0 0 10
+wait 40
 cmd gloamwick summon calm 0.08
-wait 20
+wait 30
 cmd giants freeze
-cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
-wait 200
+cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=gloamwick:gloamwick,limit=1,sort=nearest] eyes
+wait 220
 shot p9_weather_gloaming
 cmd giants unfreeze
 cmd gloamwick kill
-cmd tp @s 1500 -60 0 0 10
 wait 60
+cmd tp @s 1500 -60 0 0 10
+wait 40
 cmd lanternwillow summon calm 0.08
-wait 20
+wait 30
 cmd giants freeze
-cmd execute at @e[type=lanternwillow:lanternwillow,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
-wait 200
+cmd execute at @e[type=lanternwillow:lanternwillow,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=lanternwillow:lanternwillow,limit=1,sort=nearest] eyes
+wait 220
 shot p9_weather_mist
 cmd giants unfreeze
 cmd lanternwillow kill
-cmd tp @s 1900 -60 0 0 10
 wait 60
+cmd tp @s 1900 -60 0 0 10
+wait 40
 cmd cerberus summon calm 0.08
-wait 20
+wait 30
 cmd giants freeze
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ -57 ~-26 0 -5
-wait 200
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] eyes
+wait 220
 shot p9_weather_sleet
 cmd giants unfreeze
 cmd cerberus kill
+wait 60
+cmd tp @s 2300 -60 0 0 10
+wait 40
+cmd furrowmaw summon calm 0.08
+wait 30
+cmd giants freeze
+cmd execute at @e[type=furrowmaw:furrowmaw,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=furrowmaw:furrowmaw,limit=1,sort=nearest] eyes
+wait 220
+shot p9_weather_dust
+cmd giants unfreeze
+cmd furrowmaw kill
+wait 60
+cmd tp @s 2700 -60 0 0 10
+wait 40
+cmd wreckback summon calm 0.08
+wait 30
+cmd giants freeze
+cmd execute at @e[type=wreckback:wreckback,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=wreckback:wreckback,limit=1,sort=nearest] eyes
+wait 220
+shot p9_weather_squall
+cmd giants unfreeze
+cmd wreckback kill
+wait 60
+cmd tp @s 3100 -60 0 0 10
+wait 40
+cmd swarmforge summon calm 0.08
+wait 30
+cmd giants freeze
+cmd execute at @e[type=swarmforge:swarmforge,limit=1,sort=nearest] run tp @s ~ -56 ~-30
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=swarmforge:swarmforge,limit=1,sort=nearest] eyes
+wait 220
+shot p9_weather_smog
+cmd giants unfreeze
+cmd swarmforge kill
+wait 60
 cmd giants admin set all weather off
 wait 100
 # villagers worship a calm Cerberus (and leave him bread), then flee a hunting one; golems go for him
-cmd tp @s 2300 -60 0 0 10
+cmd tp @s 3900 -60 0 0 10
 wait 30
 cmd cerberus summon calm 0.05
 wait 20
@@ -159,17 +204,20 @@ cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summ
 cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~12 ~ ~-1
 cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-12 ~ ~0
 cmd gamemode spectator
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ ~12 ~-26 0 25
-wait 400
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~-7 ~4 ~-16
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] feet
+wait 500
 shot p9_villagers_worship
 cmd giants admin set all villagers flee
 cmd giants unfreeze
 cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~14 ~ ~10
 cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~-14 ~ ~12
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ ~12 ~-26 0 25
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ ~10 ~-24 0 20
 wait 120
 shot p9_villagers_flee
-wait 80
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~8 ~3 ~-12
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] feet
+wait 60
 shot p9_golems
 cmd giants admin set all villagers off
 cmd giants admin set all golems off
@@ -182,17 +230,18 @@ wait 40
 cmd giants admin set all followers on
 cmd giants admin set all followerCount 8
 cmd giants admin set all followerEvery 10
-cmd tp @s 2700 -60 0 0 10
+cmd tp @s 4300 -60 0 0 10
 wait 30
 cmd gloamwick summon calm 0.06
 wait 20
 cmd giants freeze
-cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~ -55 ~-22 0 10
+cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~ -56 ~-14
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=gloamwick:gloamwick,limit=1,sort=nearest] feet
 wait 1800
 shot p9_followers_gloamwick
 cmd giants unfreeze
 cmd gloamwick kill
-cmd tp @s 3100 -60 0 0 10
+cmd tp @s 4700 -60 0 0 10
 wait 30
 cmd wreckback summon calm 0.06
 wait 20
@@ -208,20 +257,36 @@ wait 40
 # spectator a little off each)
 cmd giants admin set all underworld nether
 cmd effect give @s night_vision 99999 0 true
+cmd execute in minecraft:the_end run tp @s 100 70 0
+wait 400
+cmd giants admin spectate furrowmaw
+wait 80
+shot p9_underworld_end_furrowmaw
+cmd giants admin spectate stop
+cmd gamemode creative
 cmd execute in minecraft:the_nether run tp @s 0 70 0
-wait 900
+wait 1500
+cmd giants admin spectate hollowbell
+wait 80
+shot p9_underworld_hollowbell
 cmd giants admin spectate pitchgut
 wait 80
 shot p9_underworld_pitchgut
-cmd giants admin spectate cerberus
-wait 80
-shot p9_underworld_cerberus
 cmd giants admin spectate gloamwick
 wait 80
 shot p9_underworld_gloamwick
 cmd giants admin spectate lanternwillow
 wait 80
 shot p9_underworld_lanternwillow
+cmd giants admin spectate cerberus
+wait 80
+shot p9_underworld_cerberus
+cmd giants admin spectate wreckback
+wait 80
+shot p9_underworld_wreckback
+cmd giants admin spectate swarmforge
+wait 80
+shot p9_underworld_swarmforge
 cmd giants admin spectate stop
 wait 20
 cmd gamemode creative

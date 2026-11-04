@@ -171,9 +171,9 @@ public final class Weather {
     private static void lightning(MinecraftServer server, ServerPlayer p, String kind, Watch.Row r, double area,
             int now) {
         Integer last = bolts.get(r.id());
-        if (last != null && now - last < 100 && now >= last) return;
+        if (last != null && now - last < 60 && now >= last) return;
         if (!(p.level() instanceof ServerLevel sl) || sl.dimensionType().hasCeiling()) return;
-        if (sl.random.nextInt(4) != 0) return;
+        if (sl.random.nextInt(2) != 0) return;
         bolts.put(r.id(), now);
         double rad = radius(kind, AdminJson.num(r.r(), "size", 1), area) * 0.6;
         double a = sl.random.nextDouble() * Math.PI * 2, d = sl.random.nextDouble() * rad;
