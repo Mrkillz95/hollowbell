@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.38
+# Hollowbell (Java mod), version 1.12.39
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,21 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- More new systems in the Giants Admin Book (in the all-in-one jar; every one is off until an admin turns it on):
+  **villagers** can flee from him, hide, or gather round him while he's calm and leave him bread, and **iron
+  golems** go for him when he's wild; he can gather a band of his own **followers** (phantoms) that fight beside him
+  and drop nothing; bring his own **weather** to the land round him (a storm: rain, thunder, lightning and sparks of
+  his glow under a bell-teal sky), seen only by players near him; live **below**, in the Nether or the End, sized to
+  fit; make his ground **sacred** (no building or breaking there while he lives); **learn** the tactic players lean
+  on (melee, arrows, magic or blasts) so it hurts him less; and have his size, mood and moves **shuffled** every day
+  (Random chaos).
+- Follow me: he now stops a little further back, clear of the arms and strands that swing out past his rim. Over a
+  lava lake under the Nether's roof he keeps his height instead of jumping onto the roof.
+- When he falls (with corpses or skeletons on), his remains are now made from his own body: a corpse that rots away
+  in stages, or his own skeleton, left for good.
+
+### 1.12.38
 
 - Follow me (JJ's answers): he sets off after you once you're a little past his body and stops just clear of it,
   the same rule for every giant, so a small one keeps close and a big one stays proportionally further back.
