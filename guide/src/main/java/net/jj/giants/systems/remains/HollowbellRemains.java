@@ -60,7 +60,7 @@ final class HollowbellRemains extends Design {
         return b.endsWith("glass") || b.endsWith("_pane");
     }
 
-    private static final double[] SHATTER = {0, 0.22, 0.45, 0.62, 0.66}, DENT = {0, 0.03, 0.07, 0.12, 0.13};
+    private static final double[] SHATTER = {0, 0.25, 0.55, 0.85, 0.9}, DENT = {0, 0.03, 0.08, 0.14, 0.16};
 
     @Override
     String hard(String block, int stage, double n, double fine, int x, int y, int z) {
@@ -82,9 +82,10 @@ final class HollowbellRemains extends Design {
             return block;
         }
         if (b.contains("copper")) {
+            // dents knocked through, the green of old copper spreading over him
             if (stage > 0 && n < DENT[stage]) return "minecraft:air";
-            if (stage >= 1 && b.contains("weathered") && fine < 0.2 * stage)
-                return block.replace("weathered", "oxidized");
+            if (stage >= 2 && b.contains("weathered")) return block.replace("weathered", "oxidized");
+            if (stage == 1 && b.contains("weathered") && fine < 0.4) return block.replace("weathered", "oxidized");
             return block;
         }
         return lightsOut(block);
@@ -92,6 +93,36 @@ final class HollowbellRemains extends Design {
 
     @Override
     void finish(Carcass c, int[][] st) {
+        GiantModel m = c.m;
+        for (int i = 0; i < c.n; i++) {
+            int o = c.owner[i];
+            if (o < 0) continue;
+            String n = m.names[o];
+            if (n.equals("crown")) {
+                // the crown topples off (it lies beside him from stage 2: bones)
+                for (int k = 2; k < Carcass.STAGES; k++) st[k][i] = 0;
+            } else if (n.startsWith("strand_")) {
+                // strands break: past a point of its own each strand is gone, more of them as he rots
+                String[] q = n.split("_");
+                int s = Integer.parseInt(q[1]), j = Integer.parseInt(q[2]);
+                double h = Noise.hash(s, 3, 5, 77);
+                int cut = 1 + (int) (Noise.hash(s, 9, 1, 78) * 4);
+                double gap = Noise.hash(c.cx[i], c.cy[i], c.cz[i], 79);
+                for (int k = 1; k < Carcass.STAGES; k++) {
+                    boolean gone = k == 1 ? h < 0.3 && j >= cut + 1
+                            : k == 2 ? (h < 0.65 && j >= cut) || gap < 0.08
+                            : (j >= cut && h < 0.8) || h < 0.2 || gap < 0.14;
+                    if (gone) st[k][i] = 0;
+                }
+            } else if (n.startsWith("arm_")) {
+                // the arms break apart at the last joints
+                String[] q = n.split("_");
+                int a = Integer.parseInt(q[1]), j = Integer.parseInt(q[2]);
+                double h = Noise.hash(a, 4, 4, 81);
+                for (int k = 2; k < Carcass.STAGES; k++)
+                    if (j >= 3 && h < (k == 2 ? 0.4 : 0.75) || j >= 2 && k >= 3 && h < 0.35) st[k][i] = 0;
+            }
+        }
         // broken glass: what is left beside a hole is a shard (a pane of the same glass)
         for (int k = 2; k < Carcass.STAGES; k++) {
             int[] s = st[k];
@@ -113,8 +144,50 @@ final class HollowbellRemains extends Design {
         }
     }
 
+    private static final String[] SHARDS = {"minecraft:lime_stained_glass_pane", "minecraft:yellow_stained_glass_pane",
+        "minecraft:white_stained_glass_pane", "minecraft:glass_pane", "minecraft:light_gray_stained_glass_pane",
+        "minecraft:cyan_stained_glass_pane"};
+
     @Override
     void bones(GiantModel m, Pose p, Carcass c) {
-        // his bones are his bell and his strands (his own model); nothing drawn
+        // his bones are his bell and his strands (his own model); what is drawn is what falls off him:
+        // the crown, toppled onto the ground beside the bell, and glass shards scattered round him
+        double[] mid = c.w(new double[] {0, 134, 0});
+        double[] fwd = c.wdir(new double[] {0, 0, 1});
+        double rim = 88 * c.s;
+        int crown = m.bone("crown");
+        if (crown >= 0 && m.x[crown].length > 0) {
+            float[] cc = m.centre(crown);
+            double[] cw = c.w(p.at(crown, cc));
+            double tx = cw[0] + fwd[0] * rim * 1.15, tz = cw[2] + fwd[2] * rim * 1.15;
+            double ty = Math.max(1, 15 * c.s);
+            java.util.Map<Long, String> placed = new java.util.HashMap<>();
+            for (int i = 0; i < m.x[crown].length; i++) {
+                // its own shape, tipped over on its side (up becomes forward)
+                double dx = (m.x[crown][i] + 0.5 - cc[0]) * c.s, dy = (m.y[crown][i] + 0.5 - cc[1]) * c.s,
+                        dz = (m.z[crown][i] + 0.5 - cc[2]) * c.s;
+                int x = Carcass.floor(tx + dx), y = Carcass.floor(ty + dz), z = Carcass.floor(tz + dy);
+                String b = hard(m.palette[m.pal[crown][i]], 0, 1, 1, x, y, z);
+                if (b == null || b.endsWith(":air")) continue;
+                placed.putIfAbsent(Carcass.key(x, y, z), b);
+            }
+            for (var e : placed.entrySet()) {
+                long k = e.getKey();
+                int x = (int) ((k >>> 42) & ((1 << 21) - 1)) - (1 << 20), y = (int) ((k >>> 21) & ((1 << 21) - 1))
+                        - (1 << 20), z = (int) (k & ((1 << 21) - 1)) - (1 << 20);
+                String b = e.getValue();
+                String late = Noise.hash(x, y, z, 55) < 0.3 ? null : b;
+                c.extra(x, y, z, null, null, b, late, late);
+            }
+        }
+        // shards of his glass on the ground round him
+        int n = (int) Math.max(12, 260 * c.s * c.s);
+        for (int k = 0; k < n; k++) {
+            double a = Noise.hash(k, 1, 2, 91) * Math.PI * 2, r = rim * (0.75 + Noise.hash(k, 3, 4, 92) * 0.7);
+            int x = Carcass.floor(mid[0] + Math.cos(a) * r), z = Carcass.floor(mid[2] + Math.sin(a) * r);
+            if (c.find(x, 0, z) >= 0) continue;
+            String g = SHARDS[(int) (Noise.hash(k, 5, 6, 93) * SHARDS.length)];
+            c.extra(x, 0, z, null, k % 3 == 0 ? g : null, g, g, g);
+        }
     }
 }

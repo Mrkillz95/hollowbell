@@ -364,13 +364,16 @@ public final class Carcass {
                 for (double th = 8; th <= arc; th += stepDeg) {
                     double a = Math.toRadians(th);
                     double[] dir = add(mul(U, Math.cos(a)), mul(V, side * Math.sin(a)));
+                    // out from the spine to where his flesh this way ends (its outside: a small giant's body is
+                    // a few blocks of solid flesh, a big one's a shell); the rib runs just inside that
                     double hit = -1;
+                    int empty = 0;
                     for (double r = Math.max(1, vw); r < rmax; r += 0.5) {
                         double[] q = add(P, mul(dir, r));
                         if (of(floor(q[0]), floor(q[1]), floor(q[2]), torso)) {
                             hit = r;
-                            break;
-                        }
+                            empty = 0;
+                        } else if (hit > 0 && ++empty >= 3) break;
                     }
                     if (hit < 0) {
                         last = null;
@@ -566,8 +569,10 @@ public final class Carcass {
             int[] e = extra.get(i);
             if (e != null) for (int k = 0; k < STAGES; k++) st[k][i] = e[k];
         }
-        // a corpse only ever loses or changes blocks: nothing comes back where one went
-        for (int k = 1; k < SKELETON; k++) for (int i = 0; i < n; i++) if (st[k - 1][i] == air) st[k][i] = air;
+        // a corpse only ever loses or changes blocks: nothing comes back where one went (but a design's own extras
+        // may come later: a fallen crown, shards on the ground; they go only into free spots)
+        for (int k = 1; k < SKELETON; k++)
+            for (int i = 0; i < n; i++) if (st[k - 1][i] == air && !extra.containsKey(i)) st[k][i] = air;
         d.finish(this, st);
         for (int k = 0; k < STAGES; k++) {
             Blocks.smooth(this, st[k]);

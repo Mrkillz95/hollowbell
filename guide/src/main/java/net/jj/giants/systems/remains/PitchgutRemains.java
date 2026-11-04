@@ -54,8 +54,9 @@ final class PitchgutRemains extends Design {
         String b = Blocks.base(block);
         if (n.startsWith("goo")) return Carcass.HARD;
         if (n.startsWith("eye")) return Carcass.EYE;
-        if (b.equals("minecraft:bone_block")) return Carcass.HARD;
-        if ((n.equals("head") || n.startsWith("cheek")) && b.equals("minecraft:white_concrete")) return Carcass.HARD;
+        // teeth (bone and white in his head and jaws) stay; the bony bits of his skin go with it
+        if ((n.equals("head") || n.startsWith("cheek"))
+                && (b.equals("minecraft:white_concrete") || b.equals("minecraft:bone_block"))) return Carcass.HARD;
         return Carcass.FLESH;
     }
 
@@ -106,26 +107,31 @@ final class PitchgutRemains extends Design {
                     q.get(2).getAsDouble());
         }
         double[] up = Pose.dir(p.abs[b0], 0, 1, 0);
-        c.ribs(spine, up, torso, 14, 6, 135, 1.0, 5, 18, "@bone:{axis}", "@bone:{axis}");
+        c.ribs(spine, up, torso, 17, 5, 140, 1.25, 6, 26, "@bone:{axis}", "@bone:{axis}");
         // arms: long bones, a knob at the elbow, finger bones splayed
+        int ai = 0;
         for (JsonElement e : rig.getAsJsonArray("arms")) {
             JsonObject a = e.getAsJsonObject();
+            // (all seventy would run together over his flanks: a third of them, a sixth when small)
+            if ((ai++ % (c.s < 0.5 ? 6 : 3)) != 0) continue;
             JsonArray bs = a.getAsJsonArray("bones");
             int ab = bs.get(0).getAsInt(), eb = bs.get(1).getAsInt(), wb = bs.get(2).getAsInt();
             double[] base = p.at(ab, m.pivot[ab]), elbow = p.at(eb, m.pivot[eb]), wrist = p.at(wb, m.pivot[wb]);
-            c.lineB(ab, base, eb, elbow, 2.6, 2.2, "@bone:{axis}");
-            c.ballB(eb, elbow, 3, "@bone");
-            c.lineB(eb, elbow, wb, wrist, 2.2, 1.8, "@bone:{axis}");
-            for (JsonElement f : a.getAsJsonArray("fingers")) {
+            c.lineB(ab, base, eb, elbow, 1.1, 0.9, "@bone:{axis}");
+            c.ballB(eb, elbow, 1.8, "@bone");
+            c.lineB(eb, elbow, wb, wrist, 0.9, 0.7, "@bone:{axis}");
+            if (c.s >= 0.4) for (JsonElement f : a.getAsJsonArray("fingers")) {
                 int fb = f.getAsInt();
                 c.lineB(wb, wrist, fb, p.at(fb, tip(m, fb)), 1, 0.6, "@bone:{axis}");
             }
             int th = a.get("thumb").getAsInt();
-            if (th >= 0) c.lineB(wb, wrist, th, p.at(th, tip(m, th)), 1, 0.6, "@bone:{axis}");
+            if (th >= 0 && c.s >= 0.4) c.lineB(wb, wrist, th, p.at(th, tip(m, th)), 1, 0.6, "@bone:{axis}");
         }
         // legs
+        int li = 0;
         for (JsonElement e : rig.getAsJsonArray("legs")) {
             JsonArray bs = e.getAsJsonObject().getAsJsonArray("bones");
+            if (c.s < 0.5 && (li++ % 2) == 1) continue;
             int n = bs.size();
             double[][] j = new double[n + 1][];
             int[] jb = new int[n + 1];
@@ -135,7 +141,7 @@ final class PitchgutRemains extends Design {
             }
             jb[n] = jb[n - 1];
             j[n] = p.at(jb[n], tip(m, jb[n]));
-            double[] r = {2.6, 2.2, 1.8, 1.4, 1.2};
+            double[] r = {1.3, 1.1, 0.9, 0.8, 0.7};
             for (int i = 1; i <= n; i++) {
                 c.lineB(jb[i - 1], j[i - 1], jb[i], j[i], r[Math.min(4, i - 1)] * 0.8, r[Math.min(4, i)] * 0.8,
                         "@bone:{axis}");
@@ -143,15 +149,29 @@ final class PitchgutRemains extends Design {
             }
         }
         // the skull: his head and both jaws (cheeks), pulled in a little; teeth are his own (kept)
-        c.skull(new int[] {m.bone("head")}, 0.86, 0.86, 0.9, blk -> "@bone");
-        c.skull(new int[] {m.bone("cheek_r")}, 0.8, 0.86, 0.86, blk -> "@bone");
-        c.skull(new int[] {m.bone("cheek_l")}, 0.8, 0.86, 0.86, blk -> "@bone");
+        c.skull(new int[] {m.bone("head")}, 0.8, 0.8, 0.86, blk -> "@skull");
+        c.skull(new int[] {m.bone("cheek_r")}, 0.8, 0.86, 0.86, blk -> "@skull");
+        c.skull(new int[] {m.bone("cheek_l")}, 0.8, 0.86, 0.86, blk -> "@skull");
+        // his great mouth gapes open through the skull, the teeth round it his own
+        JsonObject hd = rig.getAsJsonObject("head");
+        JsonArray mo = hd.getAsJsonArray("mouth");
+        int hb = m.bone("head");
+        c.socket(p.at(hb, mo.get(0).getAsDouble(), mo.get(1).getAsDouble(), mo.get(2).getAsDouble() + 8), 34);
+        c.socket(p.at(hb, mo.get(0).getAsDouble(), mo.get(1).getAsDouble() + 30, mo.get(2).getAsDouble() + 14), 18);
         // every eye leaves its socket: a ring of bone where it was (those in his head, a hole through the skull)
         for (JsonElement e : rig.getAsJsonArray("eyes")) {
             JsonObject o = e.getAsJsonObject();
             int eb = o.get("bone").getAsInt();
             JsonArray ce = o.getAsJsonArray("center"), dir = o.getAsJsonArray("dir");
             double r = o.get("radius").getAsDouble();
+            // (head eyes always; the body's, half of them, and only big enough to be a ring)
+            boolean head = m.names[m.parent[eb] < 0 ? eb : m.parent[eb]].startsWith("head")
+                    || m.names[m.parent[eb] < 0 ? eb : m.parent[eb]].startsWith("cheek");
+            if (r * 1.15 * c.s < 1.4 || !head && Noise.hash(eb, 1, 1, 61) < 0.5) {
+                JsonArray cc = o.getAsJsonArray("center");
+                c.socket(p.at(eb, cc.get(0).getAsDouble(), cc.get(1).getAsDouble(), cc.get(2).getAsDouble()), r * 1.1);
+                continue;
+            }
             double[] cen = {ce.get(0).getAsDouble(), ce.get(1).getAsDouble(), ce.get(2).getAsDouble()};
             double[] d = Carcass.unit(new double[] {dir.get(0).getAsDouble(), dir.get(1).getAsDouble(),
                 dir.get(2).getAsDouble()});
@@ -172,6 +192,16 @@ final class PitchgutRemains extends Design {
                 prev = pq;
             }
         }
+    }
+
+    /** his skull: old bone, broken through in patches (so it reads as bone, not a dome) */
+    @Override
+    String token(String token, double t) {
+        if (token.startsWith("@skull")) {
+            if (t < 0.22) return null;
+            return super.token("@bone", (t - 0.22) / 0.78);
+        }
+        return super.token(token, t);
     }
 
     /** the body bone nearest a point at rest */
