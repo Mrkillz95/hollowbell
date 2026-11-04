@@ -161,6 +161,34 @@ public class SolidTests implements FabricGameTest {
         return false;
     }
 
+    /**
+     * A slice along the roots of his arms (arm 2 first, from its third slice on) whose top a player can stand on with
+     * nothing of him in them, nor a block over their head; -1 if none
+     */
+    static int clearArmSpot(GameTestHelper h, HollowbellEntity e) {
+        BellRig rig = e.rig;
+        BellPieces pc = BellPieces.get();
+        for (int a = 0; a < rig.arms.length; a++) {
+            int bone = rig.arms[(a + 2) % rig.arms.length].bones()[0];
+            for (int k = 2; k < pc.num[bone] - 1; k++) {
+                int sl = pc.first[bone] + k;
+                Vec3 at = e.topOfSlice(sl);
+                if (at == null) continue;
+                ServerPlayer p = player(h, at.add(0, 0.01, 0));
+                SolidCarry c = new SolidCarry();
+                c.step(p, Solid.bodies(false));
+                boolean ok = c.riding() && !Solid.inside(e, p, 0.08);
+                if (ok) {
+                    p.setPos(p.getX(), p.getY() + 1, p.getZ());
+                    ok = !Solid.inside(e, p, 0.08);
+                }
+                HollowbellGameTests.drop(p);
+                if (ok) return sl;
+            }
+        }
+        return -1;
+    }
+
     /** players (carried as their own game would) and stands (carried by the server) on his parts while he drifts */
     static void rideCase(GameTestHelper h, float size, int slot, boolean full) {
         HollowbellEntity e = spawnAway(h, size, HollowbellEntity.CALM, slot);
@@ -200,7 +228,16 @@ public class SolidTests implements FabricGameTest {
             List<Double> slideOk = new ArrayList<>();
             List<ArmorStand> stands = new ArrayList<>();
             for (int i = 0; i < slices.length; i++) {
-                Vec3 at = e.topOfSlice(slices[i]);
+                // (the root of an arm: a spot on it with room over it. Where the arm hangs right under his rim the
+                // top of a slice may have the rim a block over it, and a player put there is pushed out of the rim
+                // at once, off the side of the arm, with nothing of him under them; where that is changes with the
+                // arm's slow curl, by the world's time. So the first spot along the arm roots with the player clear
+                // of him and room for a step up)
+                if (full && i == 5) {
+                    slices[i] = clearArmSpot(h, e);
+                    h.assertTrue(slices[i] >= 0, "nowhere clear to stand on the root of an arm");
+                }
+                Vec3 at = slices[i] < 0 ? null : e.topOfSlice(slices[i]);
                 h.assertTrue(at != null || !steady[i], "no spot to stand on " + names[i]);
                 if (at == null) continue;
                 ServerPlayer p = player(h, at.add(0, 0.01, 0));
@@ -241,9 +278,14 @@ public class SolidTests implements FabricGameTest {
                         SolidCarry c = carries.get(i);
                         c.step(ps.get(i), Solid.bodies(false));
                         // (lifted back onto the part that came up into them: what it slides is measured from there)
-                        if (unstickAsTheirGameDoes(ps.get(i), c) && c.riding()) {
-                            rest0[i] = new Vector3f(c.rest);
-                            frame0[i] = c.frame;
+                        if (unstickAsTheirGameDoes(ps.get(i), c)) {
+                            if (c.riding()) {
+                                rest0[i] = new Vector3f(c.rest);
+                                frame0[i] = c.frame;
+                            } else
+                                HollowbellMod.LOG.info(
+                                        "solid ride: {} pushed out of him and off at tick {} to {}",
+                                        on.get(i), kk, ps.get(i).position());
                         }
                         // (thrown off: they fall, as their own game would have them, and land on him again if he's
                         // under them)
