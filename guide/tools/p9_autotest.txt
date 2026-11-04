@@ -75,12 +75,12 @@ shot p9_systems_scale3_2
 close
 guiscale 2
 wait 10
-adminbook presets 900
+adminbook presets 450
 wait 50
 mouse 2 2
 wait 20
 shot p9_presets
-adminbook presets 1300
+adminbook presets 650
 wait 30
 mouse 2 2
 wait 20

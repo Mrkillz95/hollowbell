@@ -1,0 +1,51 @@
+# Part 9: more pictures of the Underworld (giants in the Nether), from the spectate camera that follows each
+wait 60
+guiscale 2
+wait 10
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd gamerule sendCommandFeedback false
+cmd difficulty normal
+cmd giants admin setall maxInWorld 8
+cmd giants admin set all underworld nether
+cmd effect give @s night_vision 99999 0 true
+cmd execute in minecraft:the_nether run tp @s 0 70 0
+wait 900
+cmd giants admin spectate pitchgut
+wait 60
+shot p9_under_pitchgut_a
+wait 100
+shot p9_under_pitchgut_b
+cmd giants admin spectate swarmforge
+wait 60
+shot p9_under_swarmforge_a
+wait 100
+shot p9_under_swarmforge_b
+cmd giants admin spectate cerberus
+wait 60
+shot p9_under_cerberus_a
+wait 100
+shot p9_under_cerberus_b
+cmd giants admin spectate gloamwick
+wait 60
+shot p9_under_gloamwick_a
+wait 100
+shot p9_under_gloamwick_b
+cmd giants admin spectate wreckback
+wait 60
+shot p9_under_wreckback_a
+wait 100
+shot p9_under_wreckback_b
+cmd giants admin spectate hollowbell
+wait 60
+shot p9_under_hollowbell_a
+wait 100
+shot p9_under_hollowbell_b
+cmd giants admin spectate lanternwillow
+wait 60
+shot p9_under_lanternwillow_a
+wait 100
+shot p9_under_lanternwillow_b
+cmd giants admin spectate stop
+cmd giants admin set all underworld off
+quit
