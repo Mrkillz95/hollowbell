@@ -535,6 +535,8 @@ public class BehaviourTests implements FabricGameTest {
         h.assertTrue(e.bellScale() == 0.01f, "the floor is 0.01: " + e.bellScale());
         ServerPlayer[] p = new ServerPlayer[2];
         boolean[] hunted = new boolean[1];
+        // (his sky dive climbs 70 x size + 30 blocks whatever his size, so for a while round one he may be well up)
+        long[] dived = {-1000};
         h.runAfterDelay(10, () -> {
             e.setVariant(HollowbellEntity.HUNTER);
             e.setMoveCooldown(0);
@@ -547,13 +549,17 @@ public class BehaviourTests implements FabricGameTest {
         for (int t = 20; t < 250; t += 10)
             h.runAfterDelay(t, () -> {
                 if (e.getTarget() == p[0] || e.getTarget() == p[1]) hunted[0] = true;
+                if (e.moves().move() == net.jj.hollowbell.entity.Moves.SKY_DIVE) dived[0] = h.getTick();
                 if (p[0] != null) p[0].setHealth(p[0].getMaxHealth());
                 if (p[1] != null) p[1].setHealth(p[1].getMaxHealth());
             });
         h.runAfterDelay(250, () -> {
             double g = e.groundAt(e.getX(), e.getZ());
-            h.assertTrue(e.isAlive() && Double.isFinite(e.getY()) && e.getY() - g > -1 && e.getY() - g < 8,
-                    "he stays just over the ground at 0.01: " + e.position() + " ground " + g);
+            boolean diving = e.moves().move() == net.jj.hollowbell.entity.Moves.SKY_DIVE || h.getTick() - dived[0] <= 80;
+            double most = diving ? 70 * 0.01 + 32 : 8;
+            h.assertTrue(e.isAlive() && Double.isFinite(e.getY()) && e.getY() - g > -1 && e.getY() - g < most,
+                    "he stays just over the ground at 0.01: " + e.position() + " ground " + g
+                            + (diving ? " (sky dive)" : ""));
             h.assertTrue(e.getBbHeight() <= 1.0f, "his box is small: " + e.getBbHeight());
             h.assertTrue(e.healthMax() >= 40f, "his health floor: " + e.healthMax());
             h.assertTrue(hunted[0], "a tiny hunter still hunts: " + e.getTarget());
