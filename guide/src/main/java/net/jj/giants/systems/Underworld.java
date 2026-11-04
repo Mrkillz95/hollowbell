@@ -248,7 +248,10 @@ public final class Underworld {
                     dist = nearMin + level.random.nextDouble() * (nearMax - nearMin);
             int x = (int) Math.floor(near.getX() + Math.cos(a) * dist), z = (int) Math.floor(near.getZ()
                     + Math.sin(a) * dist);
-            if (!level.hasChunkAt(new BlockPos(x, near.getBlockY(), z)) || !level.getWorldBorder().isWithinBounds(x, z)) {
+            // (land whose creatures already run: land that is only just loading, as when a player has just come through
+            // a portal, can drop a giant brought into it straight back out of the world)
+            if (!level.hasChunkAt(new BlockPos(x, near.getBlockY(), z)) || !level.getWorldBorder().isWithinBounds(x, z)
+                    || !level.isPositionEntityTicking(new BlockPos(x, near.getBlockY(), z))) {
                 why[0]++;
                 continue;
             }
