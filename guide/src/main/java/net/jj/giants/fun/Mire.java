@@ -203,10 +203,15 @@ final class Mire extends Plan {
             line(cx, sy, cz, ex, ey, ez, 0, (px, py, pz) -> log(Blocks.MANGROVE_LOG, ax));
             int lx = (int) Math.round(ex), lz = (int) Math.round(ez), ly = (int) Math.round(ey);
             int drop = 1 + (int) (rnd(salt, i + 30, 146) * sc(3, 1));
-            if (i % 2 == 0) hangLantern(lx, ly, lz, drop, false);
+            if (i % 3 == 0) hangLantern(lx, ly, lz, drop, false);
             else {
+                // a glowing lure on a strand, like his
                 for (int k = 1; k <= drop; k++) put(lx, ly - k, lz, b(Blocks.CHAIN));
-                put(lx, ly - drop - 1, lz, b(Blocks.OCHRE_FROGLIGHT));
+                double lr = Math.max(0.5, 0.55 * u);
+                int ly2 = ly - drop - 1 - (int) Math.floor(lr);
+                BlockState glow = i % 3 == 1 ? b(Blocks.OCHRE_FROGLIGHT) : b(Blocks.PEARLESCENT_FROGLIGHT);
+                if (lr < 1) put(lx, ly2, lz, glow);
+                else ball(lx, ly2, lz, lr, lr, lr, (px, py, pz) -> glow);
             }
         }
         // the crown: a low, wide dome
@@ -239,13 +244,13 @@ final class Mire extends Plan {
                 }
                 if (from < 0) continue;
                 int len = 1 + (int) (Math.pow(rnd(px, pz, 152), 1.6) * Math.max(2, (from - 1) * 0.95));
-                boolean berries = rnd(px, pz, 153) < 0.35;
+                boolean berries = rnd(px, pz, 153) < 0.6;
                 for (int k = 1; k <= len; k++) {
                     if (from - k <= 0) break;
                     boolean end = k == len || from - k - 1 <= 0;
                     BlockState v = end ? with(b(Blocks.CAVE_VINES), BlockStateProperties.AGE_25, 25)
                             : b(Blocks.CAVE_VINES_PLANT);
-                    v = with(v, BlockStateProperties.BERRIES, berries && rnd(px, k, pz, 154) < 0.5);
+                    v = with(v, BlockStateProperties.BERRIES, berries && rnd(px, k, pz, 154) < 0.6);
                     soft(px, from - k, pz, v);
                     if (end) break;
                 }

@@ -22,11 +22,13 @@ out = ["# made by tools/dens_script.py", "deepflat", "wait 60", "guiscale 2", "f
 x = 0
 
 
-def shots(name, X, reach, extra=0):
+def shots(name, X, reach, extra=0, night=False):
     d = reach * 0.86 + 6
     out.append(f"cmd tp @s {X + d * 0.7071:.1f} {G + 1 + d * 0.78 + extra:.1f} {d * 0.7071:.1f} 135 36")
     out.append("wait 400")
     out.append(f"shot {name}_34")
+    if night:
+        out.extend(["cmd time set 18000", "wait 60", f"shot {name}_night", "cmd time set 6000", "wait 20"])
     hgt = reach * 1.15 + 8 + extra
     out.append(f"cmd tp @s {X + 0.5} {G + 1 + hgt:.1f} 0.5 180 90")
     out.append("wait 300")
@@ -42,7 +44,11 @@ if not noden:
             name = f"den_{k}_{str(s).replace('.', '')}"
             out += [f"# {k} at {s}: r {r}", f"cmd tp @s {x + 0.5} {G + 1} 0.5 0 10", "wait 60",
                     f"cmd giants admin build den {k} {s}", f"wait {int(200 + r * r * 0.035)}"]
-            shots(name, x, reach, SIZE[k][0] * s * 0.15 if k == "hollowbell" else 0)
+            shots(name, x, reach, SIZE[k][0] * s * 0.15 if k == "hollowbell" else 0, s == 1.0)
+            if k == "furrowmaw":
+                deep = max(5, min(36, round(r * 0.3)))
+                out += [f"cmd tp @s {x + r * 0.05:.1f} {G + 1 - deep + 4} {r * 0.05:.1f} 135 8", "wait 120",
+                        f"shot {name}_inside"]
             if giant:
                 d = max(reach * 1.05, (SIZE[k][0] if k == 'furrowmaw' else max(SIZE[k])) * s * 0.9) + 6
                 if k == 'hollowbell': d = SIZE[k][0] * s * 1.25 + 10

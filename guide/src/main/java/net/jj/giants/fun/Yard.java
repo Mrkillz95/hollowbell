@@ -137,7 +137,8 @@ final class Yard extends Plan {
                 boolean post = Math.floorMod((int) Math.round(along), posts * 2) == 0;
                 int hh = sc(2.5, 2);
                 for (int y = 1; y <= hh; y++) put(x, y, z, post ? b(Blocks.WAXED_WEATHERED_COPPER) : b(Blocks.IRON_BARS));
-                if (post) put(x, hh + 1, z, b(Blocks.LIGHTNING_ROD));
+                if (post) put(x, hh + 1, z, Math.floorMod((int) Math.round(along), posts * 4) == 0
+                        ? lit(Blocks.WAXED_COPPER_BULB) : b(Blocks.LIGHTNING_ROD));
             }
     }
 

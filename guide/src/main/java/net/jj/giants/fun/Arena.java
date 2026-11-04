@@ -116,7 +116,7 @@ final class Arena extends Plan {
             return b(Blocks.SMOOTH_STONE);
         }
         // the ring of the four colours
-        if (Math.abs(d - r * 0.62) < 0.8) return b(colour(side(dx, dz), "terracotta"));
+        if (Math.abs(d - r * 0.62) < 0.8) return b(colour(side(dx, dz), "concrete"));
         if (Math.abs(d - r * 0.62) < 1.8 || Math.abs(d - (r - 1.5)) < 0.7 || Math.abs(d - r * 0.33) < 0.7)
             return b(Blocks.POLISHED_ANDESITE);
         // eight spokes

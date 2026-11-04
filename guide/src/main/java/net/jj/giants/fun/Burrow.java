@@ -134,7 +134,8 @@ final class Burrow extends Plan {
     @Override
     void plan() {
         // the big burrow off the bottom, then smaller tunnel mouths in the walls
-        double a0 = spin + Math.PI;
+        // the big burrow leads off to the north-west, so it opens toward the south-east
+        double a0 = Math.toRadians(225);
         int big = Mth.clamp(sc(3.2, 2), 2, Math.max(2, (level(steps - 2) - level(steps - 1)) / 2 + 1));
         tunnel(a0, inner - 1, -deep + 1, big, Math.min((int) (reach() - inner) - big - 2, sc(14, 6)), 0.15, 0.55, 76);
         int n = Mth.clamp((int) Math.round(1.6 * u), 1, 8);

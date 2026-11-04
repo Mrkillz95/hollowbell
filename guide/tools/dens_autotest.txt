@@ -21,6 +21,11 @@ wait 1008
 cmd tp @s 808.4 156.5 108.4 135 36
 wait 400
 shot den_pitchgut_10_34
+cmd time set 18000
+wait 60
+shot den_pitchgut_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 700.5 241.9 0.5 180 90
 wait 300
 shot den_pitchgut_10_top
@@ -73,9 +78,17 @@ wait 1096
 cmd tp @s 2213.7 162.4 113.7 135 36
 wait 400
 shot den_furrowmaw_10_34
+cmd time set 18000
+wait 60
+shot den_furrowmaw_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 2100.5 252.0 0.5 180 90
 wait 300
 shot den_furrowmaw_10_top
+cmd tp @s 2108.0 5 8.0 135 8
+wait 120
+shot den_furrowmaw_10_inside
 cmd tp @s 2100.5 37 0.5 0 0
 wait 10
 cmd furrowmaw summon calm 1.0
@@ -102,6 +115,9 @@ shot den_furrowmaw_025_34
 cmd tp @s 2800.5 158.4 0.5 180 90
 wait 300
 shot den_furrowmaw_025_top
+cmd tp @s 2804.3 15 4.3 135 8
+wait 120
+shot den_furrowmaw_025_inside
 cmd tp @s 2800.5 37 0.5 0 0
 wait 10
 cmd furrowmaw summon calm 0.25
@@ -125,6 +141,11 @@ wait 1096
 cmd tp @s 3613.7 162.4 113.7 135 36
 wait 400
 shot den_cerberus_10_34
+cmd time set 18000
+wait 60
+shot den_cerberus_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 3500.5 252.0 0.5 180 90
 wait 300
 shot den_cerberus_10_top
@@ -177,6 +198,11 @@ wait 662
 cmd tp @s 4983.6 159.2 83.6 135 36
 wait 400
 shot den_hollowbell_10_34
+cmd time set 18000
+wait 60
+shot den_hollowbell_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 4900.5 225.1 0.5 180 90
 wait 300
 shot den_hollowbell_10_top
@@ -229,6 +255,11 @@ wait 662
 cmd tp @s 6383.6 129.2 83.6 135 36
 wait 400
 shot den_lanternwillow_10_34
+cmd time set 18000
+wait 60
+shot den_lanternwillow_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 6300.5 195.1 0.5 180 90
 wait 300
 shot den_lanternwillow_10_top
@@ -281,6 +312,11 @@ wait 1096
 cmd tp @s 7813.7 162.4 113.7 135 36
 wait 400
 shot den_wreckback_10_34
+cmd time set 18000
+wait 60
+shot den_wreckback_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 7700.5 252.0 0.5 180 90
 wait 300
 shot den_wreckback_10_top
@@ -333,6 +369,11 @@ wait 782
 cmd tp @s 9193.0 139.5 93.0 135 36
 wait 400
 shot den_swarmforge_10_34
+cmd time set 18000
+wait 60
+shot den_swarmforge_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 9100.5 212.8 0.5 180 90
 wait 300
 shot den_swarmforge_10_top
@@ -385,6 +426,11 @@ wait 1084
 cmd tp @s 10613.0 161.7 113.0 135 36
 wait 400
 shot den_gloamwick_10_34
+cmd time set 18000
+wait 60
+shot den_gloamwick_10_night
+cmd time set 6000
+wait 20
 cmd tp @s 10500.5 250.7 0.5 180 90
 wait 300
 shot den_gloamwick_10_top

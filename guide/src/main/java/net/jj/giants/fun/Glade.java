@@ -143,8 +143,18 @@ final class Glade extends Plan {
         int fx = (int) Math.round(sx - nx * (t + 1.5)), fz = (int) Math.round(sz - nz * (t + 1.5));
         if (i % 2 == 0) put(fx, 1, fz, b(Blocks.SOUL_LANTERN));
         else if (i % 4 == 1) {
-            put(fx, 0, fz, b(Blocks.SOUL_SOIL));
-            put(fx, 1, fz, lit(Blocks.SOUL_CAMPFIRE));
+            // a bowl of soul fire: blackstone round soul soil, blue flames on it
+            int br = u >= 1.5 ? 1 : 0;
+            for (int dx = -br - 1; dx <= br + 1; dx++)
+                for (int dz = -br - 1; dz <= br + 1; dz++) {
+                    boolean rim = Math.abs(dx) == br + 1 || Math.abs(dz) == br + 1;
+                    if (rim) {
+                        if (br > 0 || (dx == 0 || dz == 0)) put(fx + dx, 1, fz + dz, slab(Blocks.POLISHED_BLACKSTONE_SLAB, false));
+                    } else {
+                        put(fx + dx, 0, fz + dz, b(Blocks.SOUL_SOIL));
+                        put(fx + dx, 1, fz + dz, b(Blocks.SOUL_FIRE));
+                    }
+                }
         } else put(fx, 1, fz, with(with(b(Blocks.WHITE_CANDLE), BlockStateProperties.CANDLES, 3),
                 BlockStateProperties.LIT, true));
         put((int) Math.round(sx + nx * lean * hh), top + 1, (int) Math.round(sz + nz * lean * hh), b(Blocks.MOSS_CARPET));
