@@ -300,12 +300,18 @@ public class SolidTests implements FabricGameTest {
                             c.step(pl, Solid.bodies(false));
                         }
                         if (c.riding() && c.air == 0) fall[i] = 0;
-                        // (landed on him again after coming off: what it slides is measured from there)
-                        if (c.riding() && wasOff[i]) {
+                        // (landed on him again after coming off, or after a hop: what it slides is measured from
+                        // there. A hop is the part under them dropping away faster than they're carried; they fall
+                        // straight down while it swings on, and land where it is then, which isn't sliding on him)
+                        if (c.riding() && c.air == 0 && wasOff[i]) {
+                            if (frame0[i] == c.frame && c.rest != null && rest0[i] != null)
+                                HollowbellMod.LOG.info(
+                                        "solid ride: {} landed again at tick {}, {} from where they stood",
+                                        on.get(i), kk, String.format("%.2f", c.rest.distance(rest0[i]) * e.bellScale()));
                             rest0[i] = new Vector3f(c.rest);
                             frame0[i] = c.frame;
                         }
-                        wasOff[i] = !c.riding();
+                        wasOff[i] = !c.riding() || c.air > 0;
                         if (kk >= total - 10 && Solid.onTop(e, ps.get(i), 0.9, 1.5)) onAtEnd[i] = true;
                         if (!c.riding() && (kk < bigAt || keep.get(i))) {
                             if (offTicks[i] == 0)
