@@ -69,7 +69,8 @@ public final class SystemsCommand {
         Remains.lay(l, kind, at.x, at.z, y, c.getSource().getRotation().y, size, rule,
                 Systems.num(c.getSource().getServer(), "corpseDays"), stage, l.getGameTime());
         String what = rule.equals("corpse") ? "corpse (stage " + stage + ")" : "skeleton";
-        c.getSource().sendSuccess(() -> Component.literal("The " + kind + "'s " + what + " goes down here."), true);
+        String name = net.jj.giants.admin.AdminServer.nameOf(net.jj.giants.admin.AdminServer.giant(kind));
+        c.getSource().sendSuccess(() -> Component.literal("The " + name + "'s " + what + " goes down here."), true);
         return 1;
     }
 
