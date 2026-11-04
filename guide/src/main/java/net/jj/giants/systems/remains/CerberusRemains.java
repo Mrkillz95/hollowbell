@@ -24,9 +24,10 @@ final class CerberusRemains extends Design {
             p.turn("fore_" + s + "_lower", 1, 0, 0, 58);
             p.turn("fore_" + s + "_foot", 1, 0, 0, 10);
             // hind legs splay out to the side and back
-            p.turn("hind_" + s + "_upper", 0, 0, 1, side * 62).turn("hind_" + s + "_upper", 1, 0, 0, -30);
-            p.turn("hind_" + s + "_lower", 1, 0, 0, -40);
-            p.turn("hind_" + s + "_foot", 1, 0, 0, 30);
+            // hind legs folded as a lying dog's: thigh forward along his flank, shin and paw back on the ground
+            p.turn("hind_" + s + "_upper", 1, 0, 0, 62).turn("hind_" + s + "_upper", 0, 0, 1, side * 30);
+            p.turn("hind_" + s + "_lower", 1, 0, 0, -105);
+            p.turn("hind_" + s + "_foot", 1, 0, 0, 40);
             // the side necks bow down and out
             p.turn("neck_" + s + "_1", 1, 0, 0, -60).turn("neck_" + s + "_1", 0, 1, 0, side * 14);
             p.turn("neck_" + s + "_2", 1, 0, 0, -16);
