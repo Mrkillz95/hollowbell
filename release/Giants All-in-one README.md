@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.11.0 |
-| Pitchgut | 1.35.39 |
-| Furrowmaw | 1.17.36 |
-| Fire & Ice Cerberus | 2.18.36 |
-| Hollowbell | 1.12.38 |
-| Lantern Willow | 1.10.39 |
-| Wreckback | 1.2.44 |
-| The Swarmforge | 1.4.42 |
-| The Gloamwick | 1.2.23 |
+| Giants Guide | 1.12.0 |
+| Pitchgut | 1.35.40 |
+| Furrowmaw | 1.17.37 |
+| Fire & Ice Cerberus | 2.18.37 |
+| Hollowbell | 1.12.39 |
+| Lantern Willow | 1.10.40 |
+| Wreckback | 1.2.45 |
+| The Swarmforge | 1.4.43 |
+| The Gloamwick | 1.2.24 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.13.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.14.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.13.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.14.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -112,6 +112,39 @@ A book about every giant you have. Right-click it to open it.
   is left when a giant falls, dying near a giant, stronger with more players or time, weak points, fear and awe,
   seasons and the full moon), the presets Herds and Evolution, a map you can drag and zoom, Watch for moderators,
   giants in each other's grounds, and Home keeping the preset's name during an event.
+- New in the Guide 1.12.0: seven more systems on the Systems page under "The world around them" (village
+  reactions, mob followers, Weather Gods, the Underworld, sacred ground, Mirror and random chaos), the presets Random
+  Chaos, Underworld, Weather Gods, Sacred Ground and Mirror, remains made from each giant's own body, and dens and
+  arenas built with real detail.
+
+## New in 1.14.0
+
+- **Seven more systems** on the admin book's Systems page, under "The world around them" (every one off until an
+  admin turns it on): **Village reactions** (villagers flee from a wild giant, hide as for a raid, or gather round a
+  calm one, look up at him and leave him bread each day; iron golems can go for wild giants), **Mob followers** (each
+  wild giant gathers a band of his own kind of creature: Pitchgut magma cubes, Furrowmaw husks, Cerberus wither
+  skeletons, Hollowbell phantoms, the Willow slimes, Wreckback drowned, the Swarmforge vindicators, the Gloamwick
+  vexes; they fight beside him and drop nothing), **Weather Gods** (each giant brings his own weather to the land
+  round him, seen only by players near him: ash, dust, sleet and embers, a storm, mist, a squall, smog, gloaming),
+  the **Underworld** (the giants live in the Nether, the End or both instead of the Overworld, one by one, each sized
+  to fit; the Furrowmaw goes to the End, he can't live under a roof), **Sacred ground** (no building or breaking in a
+  living giant's ground, except in creative), **Mirror** (giants learn the tactic players lean on, melee, arrows,
+  magic or blasts, and it hurts them less and less) and **Random chaos** (every game day each giant's size, mood and
+  moves are shuffled). Five new presets: **Random Chaos**, **Underworld**, **Weather Gods**, **Sacred Ground** and
+  **Mirror**. `/giants admin systems` shows them too.
+- **Remains made from each giant's own body**: with corpses or skeletons on, a fallen giant lies where he fell, his
+  real size and heading; a corpse rots away in four stages down to his skeleton, and a skeleton stays for good.
+  Admins can lay one anywhere: `/giants admin systems remains <giant> <size> skeleton|corpse [stage]`.
+- **Dens and arenas with real detail** (World tools): Pitchgut's crater, the Furrowmaw's burrow, the Cerberus's
+  kennel, the Hollowbell's roost, the Willow's mire, Wreckback's cove, the Swarmforge's yard and the Gloamwick's
+  glade, each big enough for him to fit inside, and arenas with seats, banners and a clear floor. Nothing in them
+  traps or slows you, grows, spreads or falls.
+- Under the Nether's roof every giant stands on the floor below, never on the roof.
+- Steadier game tests behind the scenes.
+- Left as shipped, nothing about the giants changes.
+
+Inside: Pitchgut 1.35.40, Furrowmaw 1.17.37, Cerberus 2.18.37, Hollowbell 1.12.39, Lantern Willow 1.10.40,
+Wreckback 1.2.45, Swarmforge 1.4.43, Gloamwick 1.2.24, Giants Guide 1.12.0.
 
 ## New in 1.13.0
 
