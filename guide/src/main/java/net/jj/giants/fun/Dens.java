@@ -12,8 +12,9 @@ import org.jetbrains.annotations.Nullable;
 final class Dens {
     private Dens() {}
 
-    /** the smallest and biggest den radius */
-    static final int LEAST = 10, MOST = 128;
+    /** the smallest and biggest den radius, and how much wider than his body (so he fits, with room to turn) */
+    static final int LEAST = 10, MOST = 160;
+    static final double ROOM = 1.15;
 
     static @Nullable Plan shape(String kind, int r, double h) {
         Plan p = switch (kind) {

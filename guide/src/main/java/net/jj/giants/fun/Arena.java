@@ -145,11 +145,15 @@ final class Arena extends Plan {
                         if (Math.hypot(px + dx, pz + dz) > r + 0.5) put(px + dx, y, pz + dz, y == 1 ? b(Blocks.POLISHED_DEEPSLATE)
                                 : y == wallH - 1 ? b(Blocks.CHISELED_DEEPSLATE)
                                 : y == top ? b(Blocks.POLISHED_DEEPSLATE) : b(Blocks.DEEPSLATE_BRICKS));
-            put(px, top + 1, pz, r >= 60 ? lit(Blocks.CAMPFIRE) : b(Blocks.LANTERN));
-            if (r >= 60) {
-                put(px - 1, top + 1, pz, b(Blocks.LANTERN));
-                put(px, top + 1, pz - 1, b(Blocks.LANTERN));
-            }
+            // a fire bowl (a lantern on the small one) on the pillar, lanterns on its other corners
+            boolean first = true;
+            for (int dx = 0; dx >= -1; dx--)
+                for (int dz = 0; dz >= -1; dz--) {
+                    if (get(px + dx, top, pz + dz) == null) continue;
+                    if (first) put(px + dx, top + 1, pz + dz, r >= 60 ? lit(Blocks.CAMPFIRE) : b(Blocks.LANTERN));
+                    else if (r >= 60 && (dx == 0) != (dz == 0)) put(px + dx, top + 1, pz + dz, b(Blocks.LANTERN));
+                    first = false;
+                }
         }
         // banners and torches on the inside of the wall
         int every = r >= 60 ? 6 : 5;

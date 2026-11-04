@@ -25,7 +25,8 @@ final class Glade extends Plan {
 
     @Override
     public int reach() {
-        return r + 3;
+        // room for the trees' limbs past the edge
+        return r + 3 + sc(9, 4);
     }
 
     @Override
@@ -66,9 +67,9 @@ final class Glade extends Plan {
                 double d = Math.sqrt(x * x + z * z);
                 if (d > r || d <= moon + 0.5) continue;
                 double mist = noise(x, z, Math.max(4, 6 * u), 212), k = rnd(x, z, 213);
-                if (mist > 0.62 && k < (mist - 0.62) * 3) put(x, 1, z, k < (mist - 0.62) * 0.8
-                        ? b(Blocks.WHITE_CARPET) : k < (mist - 0.62) * 2 ? b(Blocks.LIGHT_GRAY_CARPET)
-                        : b(Blocks.GRAY_CARPET));
+                // thick in the middle of a drift, thinning to wisps at its edge
+                if (mist > 0.64 && k < (mist - 0.64) * 3.2) put(x, 1, z, rnd(x, z, 226) < 0.3
+                        ? b(Blocks.WHITE_CARPET) : b(Blocks.LIGHT_GRAY_CARPET));
                 else if (k < 0.07) put(x, 1, z, b(Blocks.MOSS_CARPET));
                 else if (k < 0.11) put(x, 1, z, b(Blocks.FERN));
                 else if (k < 0.13) put(x, 1, z, b(Blocks.SHORT_GRASS));

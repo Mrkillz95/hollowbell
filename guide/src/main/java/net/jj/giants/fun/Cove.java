@@ -143,7 +143,7 @@ final class Cove extends Plan {
                         if (y + hh + 1 <= 0) put(x, y + hh + 1, z, with(b(rnd(x, z, 171) < 0.5 ? fans[c] : plants[c]),
                                 BlockStateProperties.WATERLOGGED, true));
                     } else if (depth >= 4 && k < 0.18 + (depth > 6 ? 0.1 : 0)) {
-                        int len = 1 + (int) (rnd(x, z, 172) * (depth - 2));
+                        int len = 1 + (int) ((0.4 + 0.6 * rnd(x, z, 172)) * (depth - 2));
                         for (int i = 1; i <= len; i++) put(x, y + i, z, i == len
                                 ? with(b(Blocks.KELP), BlockStateProperties.AGE_25, 25) : b(Blocks.KELP_PLANT));
                     } else if (k < 0.3 && depth >= 2) {
@@ -185,6 +185,24 @@ final class Cove extends Plan {
         // the anchor on the beach, its chain into the water
         double a3 = a1 + Math.PI * 0.6;
         anchor(Math.cos(a3) * (shore + (r - shore) * 0.55), Math.sin(a3) * (shore + (r - shore) * 0.55), a3);
+        // sea stacks: rocks standing up out of the water
+        int stacks = Mth.clamp((int) Math.round(1.5 * u), 1, 8);
+        for (var s : ring(stacks, shore * 0.55, 0.9, 189)) {
+            double sr = Math.max(1, 1.6 * u * (0.6 + rnd((int) s[0], 1, 189) * 0.6));
+            int x = (int) Math.round(s[0]), z = (int) Math.round(s[1]);
+            if (!water(x, z)) continue;
+            int hh = sc(3, 1) + (int) (rnd(x, z, 190) * sc(3, 1));
+            for (int dx = (int) -Math.ceil(sr); dx <= Math.ceil(sr); dx++)
+                for (int dz = (int) -Math.ceil(sr); dz <= Math.ceil(sr); dz++) {
+                    double e = Math.hypot(dx, dz) / sr;
+                    if (e > 1) continue;
+                    int top = (int) Math.round(hh * (1 - e * e) + (rnd(x + dx, z + dz, 191) - 0.5));
+                    for (int y = bed(x + dx, z + dz) + 1; y <= top; y++)
+                        put(x + dx, y, z + dz, y >= top - 1 && y > 0 && rnd(x + dx, y, z + dz, 192) < 0.4
+                                ? b(Blocks.MOSSY_COBBLESTONE) : rnd(x + dx, y, z + dz, 193) < 0.5 ? b(Blocks.STONE)
+                                : b(Blocks.ANDESITE));
+                }
+        }
         // driftwood
         int drift = Mth.clamp((int) Math.round(3 * u), 2, 14);
         for (var s : ring(drift, shore + (r - shore) * 0.45, 0.9, 180)) {

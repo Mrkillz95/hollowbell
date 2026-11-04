@@ -130,12 +130,22 @@ abstract class Plan implements Builds.Shape {
         double len = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) + (z1 - z0) * (z1 - z0));
         int n = Math.max(1, (int) Math.ceil(len * 2));
         int t = (int) Math.ceil(thick);
+        int lx = Integer.MIN_VALUE, ly = 0, lz = 0;
         for (int i = 0; i <= n; i++) {
             double k = (double) i / n;
             double x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k, z = z0 + (z1 - z0) * k;
-            if (t == 0) put((int) Math.round(x), (int) Math.round(y), (int) Math.round(z),
-                    p.at((int) Math.round(x), (int) Math.round(y), (int) Math.round(z)));
-            else for (int a = -t; a <= t; a++)
+            if (t == 0) {
+                // one block thick, but every block touching the last face to face (no gaps seen from afar)
+                int cx = (int) Math.round(x), cy = (int) Math.round(y), cz = (int) Math.round(z);
+                if (lx != Integer.MIN_VALUE) {
+                    if (cx != lx && (cy != ly || cz != lz)) put(cx, ly, lz, p.at(cx, ly, lz));
+                    if (cz != lz && cy != ly) put(cx, ly, cz, p.at(cx, ly, cz));
+                }
+                put(cx, cy, cz, p.at(cx, cy, cz));
+                lx = cx;
+                ly = cy;
+                lz = cz;
+            } else for (int a = -t; a <= t; a++)
                 for (int b = -t; b <= t; b++)
                     for (int c = -t; c <= t; c++)
                         if (a * a + b * b + c * c <= thick * thick + 0.3) {

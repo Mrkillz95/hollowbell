@@ -107,7 +107,10 @@ final class Burrow extends Plan {
             return;
         }
         // the face down to the next terrace shows the bands
-        int lo = Math.max(-deep - 1, y - (int) Math.ceil((double) deep / steps) - 2);
+        // the band shows only on the face of each step: elsewhere two blocks are enough
+        double frac = (r - d) / tw - Math.floor((r - d) / tw);
+        boolean face = frac > 1 - 2.0 / tw || d > r - 2;
+        int lo = face ? Math.max(-deep - 1, y - (int) Math.ceil((double) deep / steps) - 2) : y - 2;
         if (d <= inner) lo = y - 2;
         for (int yy = lo; yy < y; yy++) o.set(f + yy, band(dx, yy, dz));
         BlockState s;
@@ -132,14 +135,14 @@ final class Burrow extends Plan {
     void plan() {
         // the big burrow off the bottom, then smaller tunnel mouths in the walls
         double a0 = spin + Math.PI;
-        int big = Mth.clamp(sc(3.2, 2), 2, Math.max(2, deep - 3));
+        int big = Mth.clamp(sc(3.2, 2), 2, Math.max(2, (level(steps - 2) - level(steps - 1)) / 2 + 1));
         tunnel(a0, inner - 1, -deep + 1, big, Math.min((int) (reach() - inner) - big - 2, sc(14, 6)), 0.15, 0.55, 76);
         int n = Mth.clamp((int) Math.round(1.6 * u), 1, 8);
         for (int i = 0; i < n; i++) {
             int k = Mth.clamp((int) (rnd(i, 1, 77) * steps), 0, steps - 1);
             if (k == steps - 1 && steps > 1) k--;
             double a = a0 + Math.PI * 2 * (i + 1) / (n + 1) + (rnd(i, 2, 77) - 0.5) * 0.4;
-            int tr = Mth.clamp(sc(1.8, 1), 1, Math.max(1, (level(k - 1) - level(k) - 1) / 2));
+            int tr = Mth.clamp(sc(1.8, 1), 1, Math.max(1, (level(k - 1) - level(k)) / 2 + 1));
             double d = r - k * tw - 0.5;
             tunnel(a, d, level(k) + 1, tr, sc(6, 3), 0.45 + rnd(i, 3, 77) * 0.4, 0.3, 78 + i);
         }
@@ -186,7 +189,7 @@ final class Burrow extends Plan {
         // lining first, the hollow over it
         for (int i = -1; i <= len; i++) {
             double cx = ax * (d0 + i), cz = az * (d0 + i);
-            double cy = cy0 - Math.max(0, i) * drop;
+            double cy = cy0 - Math.max(0, i - 3) * drop;
             for (int x = (int) Math.floor(cx - tr - 2); x <= Math.ceil(cx + tr + 2); x++)
                 for (int z = (int) Math.floor(cz - tr - 2); z <= Math.ceil(cz + tr + 2); z++)
                     for (int y = (int) Math.floor(cy - tr - 2); y <= Math.ceil(cy + tr + 2); y++) {
@@ -195,14 +198,15 @@ final class Burrow extends Plan {
                         double side = (x - cx) * -az + (z - cz) * ax;
                         double e = Math.hypot(side, (y - cy) * 1.1);
                         if (e <= tr + 1.2 && e > tr - 0.3 && y < top(x, z))
-                            soft(x, y, z, rnd(x, y, z, salt) < 0.45 ? b(Blocks.ROOTED_DIRT)
+                            soft(x, y, z, i <= 1 ? (rnd(x, y, z, salt) < 0.7 ? b(Blocks.DRIPSTONE_BLOCK)
+                                    : b(Blocks.PACKED_MUD)) : rnd(x, y, z, salt) < 0.45 ? b(Blocks.ROOTED_DIRT)
                                     : rnd(x, y, z, salt + 1) < 0.5 ? b(Blocks.MUD) : b(Blocks.PACKED_MUD));
                     }
         }
         int fall = (int) Math.round(len * (1 - caved));
         for (int i = -1; i <= len; i++) {
             double cx = ax * (d0 + i), cz = az * (d0 + i);
-            double cy = cy0 - Math.max(0, i) * drop;
+            double cy = cy0 - Math.max(0, i - 3) * drop;
             for (int x = (int) Math.floor(cx - tr - 1); x <= Math.ceil(cx + tr + 1); x++)
                 for (int z = (int) Math.floor(cz - tr - 1); z <= Math.ceil(cz + tr + 1); z++)
                     for (int y = (int) Math.floor(cy - tr - 1); y <= Math.ceil(cy + tr + 1); y++) {
@@ -216,6 +220,21 @@ final class Burrow extends Plan {
                                 b(Blocks.COBBLESTONE), b(Blocks.ROOTED_DIRT)));
                         else put(x, y, z, floor ? (rnd(x, y, z, salt + 3) < 0.5 ? b(Blocks.COARSE_DIRT)
                                 : b(Blocks.MUD)) : b(Blocks.AIR));
+                    }
+        }
+        // a lip round the mouth, standing out from the wall
+        for (int i = -2; i <= 0; i++) {
+            double cx = ax * (d0 + i + 0.5), cz = az * (d0 + i + 0.5);
+            for (int x = (int) Math.floor(cx - tr - 2); x <= Math.ceil(cx + tr + 2); x++)
+                for (int z = (int) Math.floor(cz - tr - 2); z <= Math.ceil(cz + tr + 2); z++)
+                    for (int y = (int) Math.floor(cy0 - tr - 1); y <= Math.ceil(cy0 + tr + 2); y++) {
+                        double along = (x - cx) * ax + (z - cz) * az;
+                        if (Math.abs(along) > 0.6 || y <= top(x, z) || y < y0) continue;
+                        double side = (x - cx) * -az + (z - cz) * ax;
+                        double e = Math.hypot(side, (y - cy0) * 1.1);
+                        if (e > tr - 0.3 && e <= tr + 0.9 + (i + 2) * 0.3)
+                            soft(x, y, z, rnd(x, y, z, salt + 5) < 0.6 ? b(Blocks.DRIPSTONE_BLOCK)
+                                    : b(Blocks.MUD_BRICKS));
                     }
         }
         // the mouth's teeth (hanging from the top, standing on the floor) and hanging roots further in
@@ -239,14 +258,15 @@ final class Burrow extends Plan {
         }
         for (int i = 2; i < fall; i += 2) {
             int x = (int) Math.round(ax * (d0 + i)), z = (int) Math.round(az * (d0 + i));
-            int y = (int) Math.floor(cy0 - i * drop + tr - 0.8);
+            int y = (int) Math.floor(cy0 - Math.max(0, i - 3) * drop + tr - 0.8);
             if (get(x, y, z) != null && get(x, y, z).isAir() && get(x, y + 1, z) != null && !get(x, y + 1, z).isAir())
                 put(x, y, z, b(Blocks.HANGING_ROOTS));
         }
-        // rubble spilling out in front
-        double hr = Math.max(1.2, tr * 0.9);
-        double rx = ax * (d0 - hr * 0.6), rz = az * (d0 - hr * 0.6);
-        ball(rx, y0 - 0.5, rz, hr, hr * caved * 1.2 + 0.4, hr, (x, y, z) -> y <= top(x, z) ? null
+        // rubble spilling out in front (not in front of the big burrow: he comes and goes there)
+        if (caved < 0.6) return;
+        double hr = Math.max(1.2, tr * 0.75);
+        double rx = ax * (d0 - hr * 1.1), rz = az * (d0 - hr * 1.1);
+        ball(rx, y0 - 1, rz, hr, hr * caved * 0.7 + 0.6, hr * 1.3, (x, y, z) -> y <= top(x, z) ? null
                 : pick(rnd(x, y, z, salt + 4), b(Blocks.TUFF), b(Blocks.COARSE_DIRT), b(Blocks.COBBLESTONE),
                         b(Blocks.ROOTED_DIRT), b(Blocks.PACKED_MUD)));
     }

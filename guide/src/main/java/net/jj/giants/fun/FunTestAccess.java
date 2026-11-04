@@ -38,7 +38,7 @@ public final class FunTestAccess {
 
     /** the den radius Builds gives a giant at a size */
     public static int denRadius(String kind, double size) {
-        return Mth.clamp((int) Math.round(FunGiants.reach(kind, size) * 0.8), Dens.LEAST, Dens.MOST);
+        return Mth.clamp((int) Math.round(FunGiants.reach(kind, size) * Dens.ROOM), Dens.LEAST, Dens.MOST);
     }
 
     /** blocks that would trap or slow a giant, spread or grow out of the build, or fall */
@@ -78,13 +78,18 @@ public final class FunTestAccess {
                 }
             }
         int clutter = 0;
+        List<String> clutterAt = new ArrayList<>();
         for (var e : cols.entrySet()) {
             int x = (int) (e.getKey() >> 32), z = (int) (long) e.getKey();
             if (Math.sqrt((double) x * x + z * z) > r) continue;
             Builds.Col c = e.getValue();
-            for (int i = 0; i < c.ys.size(); i++) if (c.ys.get(i)[0] >= 1 && c.states.get(i).blocksMotion()) clutter++;
+            for (int i = 0; i < c.ys.size(); i++)
+                if (c.ys.get(i)[0] >= 1 && !c.states.get(i).getCollisionShape(net.minecraft.world.level.EmptyBlockGetter.INSTANCE,
+                        net.minecraft.core.BlockPos.ZERO).isEmpty() && clutter++ < 3)
+                    clutterAt.add(c.states.get(i).getBlock() + " " + x + " " + c.ys.get(i)[0] + " " + z);
         }
         out.put("floorClutter", clutter);
+        out.put("clutterAt", clutterAt);
         out.put("blocks", blocks);
         out.put("top", top);
         out.put("kinds", kinds);

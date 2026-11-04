@@ -3,6 +3,7 @@ deepflat
 wait 60
 guiscale 2
 fov 85
+render 26
 noclouds
 gui off
 adminintro seen
@@ -12,18 +13,17 @@ cmd weather clear
 cmd gamerule doMobSpawning false
 cmd gamemode spectator
 wait 10
-# pitchgut at 1.0: r 106
-render 22
+# pitchgut at 1.0: r 152
 cmd tp @s 700.5 37 0.5 0 10
 wait 60
 cmd giants admin build den pitchgut 1.0
-wait 593
+wait 1008
 cmd tp @s 5700 200 0
 wait 40
-cmd tp @s 782.7 128.2 82.7 135 36
+cmd tp @s 808.4 156.5 108.4 135 36
 wait 220
 shot den_pitchgut_10_34
-cmd tp @s 700.5 183.7 0.5 180 90
+cmd tp @s 700.5 241.9 0.5 180 90
 wait 300
 shot den_pitchgut_10_top
 cmd tp @s 700.5 37 0.5 0 0
@@ -34,25 +34,26 @@ cmd giants admin settle pitchgut here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 941.3 207.6 241.3 135 20
-wait 160
+cmd tp @s 5700 200 0
+wait 40
+cmd tp @s 872.9 203.5 172.9 135 26
+wait 200
 shot den_pitchgut_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# pitchgut at 0.25: r 26
-render 12
+# pitchgut at 0.25: r 38
 cmd tp @s 1400.5 37 0.5 0 10
 wait 60
 cmd giants admin build den pitchgut 0.25
-wait 223
+wait 250
 cmd tp @s 6400 200 0
 wait 40
-cmd tp @s 1425.4 65.1 25.4 135 36
+cmd tp @s 1432.1 72.4 32.1 135 36
 wait 220
 shot den_pitchgut_025_34
-cmd tp @s 1400.5 82.5 0.5 180 90
+cmd tp @s 1400.5 97.7 0.5 180 90
 wait 300
 shot den_pitchgut_025_top
 cmd tp @s 1400.5 37 0.5 0 0
@@ -63,25 +64,26 @@ cmd giants admin settle pitchgut here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 1465.6 83.4 65.6 135 21
-wait 160
+cmd tp @s 6400 200 0
+wait 40
+cmd tp @s 1446.4 78.6 46.4 135 25
+wait 200
 shot den_pitchgut_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# furrowmaw at 1.0: r 128
-render 24
+# furrowmaw at 1.0: r 160
 cmd tp @s 2100.5 37 0.5 0 10
 wait 60
 cmd giants admin build den furrowmaw 1.0
-wait 773
+wait 1096
 cmd tp @s 7100 200 0
 wait 40
-cmd tp @s 2198.4 145.6 98.4 135 36
+cmd tp @s 2213.7 162.4 113.7 135 36
 wait 220
 shot den_furrowmaw_10_34
-cmd tp @s 2100.5 211.5 0.5 180 90
+cmd tp @s 2100.5 252.0 0.5 180 90
 wait 300
 shot den_furrowmaw_10_top
 cmd tp @s 2100.5 37 0.5 0 0
@@ -92,25 +94,26 @@ cmd giants admin settle furrowmaw here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 2240.2 136.1 140.2 135 24
-wait 160
+cmd tp @s 7100 200 0
+wait 40
+cmd tp @s 2237.9 134.5 137.9 135 24
+wait 200
 shot den_furrowmaw_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# furrowmaw at 0.25: r 60
-render 14
+# furrowmaw at 0.25: r 86
 cmd tp @s 2800.5 37 0.5 0 10
 wait 60
 cmd giants admin build den furrowmaw 0.25
-wait 326
+wait 458
 cmd tp @s 7800 200 0
 wait 40
-cmd tp @s 2849.8 91.9 49.8 135 36
+cmd tp @s 2864.2 107.8 64.2 135 36
 wait 220
 shot den_furrowmaw_025_34
-cmd tp @s 2800.5 125.5 0.5 180 90
+cmd tp @s 2800.5 158.4 0.5 180 90
 wait 300
 shot den_furrowmaw_025_top
 cmd tp @s 2800.5 37 0.5 0 0
@@ -121,25 +124,26 @@ cmd giants admin settle furrowmaw here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 2871.4 87.5 71.4 135 25
-wait 160
+cmd tp @s 7800 200 0
+wait 40
+cmd tp @s 2877.4 91.8 77.4 135 25
+wait 200
 shot den_furrowmaw_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# cerberus at 1.0: r 112
-render 23
+# cerberus at 1.0: r 160
 cmd tp @s 3500.5 37 0.5 0 10
 wait 60
 cmd giants admin build den cerberus 1.0
-wait 639
+wait 1096
 cmd tp @s 8500 200 0
 wait 40
-cmd tp @s 3587.0 133.0 87.0 135 36
+cmd tp @s 3613.7 162.4 113.7 135 36
 wait 220
 shot den_cerberus_10_34
-cmd tp @s 3500.5 191.3 0.5 180 90
+cmd tp @s 3500.5 252.0 0.5 180 90
 wait 300
 shot den_cerberus_10_top
 cmd tp @s 3500.5 37 0.5 0 0
@@ -150,25 +154,26 @@ cmd giants admin settle cerberus here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 3754.6 217.0 254.6 135 20
-wait 160
+cmd tp @s 8500 200 0
+wait 40
+cmd tp @s 3682.4 217.0 182.4 135 27
+wait 200
 shot den_cerberus_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# cerberus at 0.25: r 28
-render 12
+# cerberus at 0.25: r 40
 cmd tp @s 4200.5 37 0.5 0 10
 wait 60
 cmd giants admin build den cerberus 0.25
-wait 227
+wait 256
 cmd tp @s 9200 200 0
 wait 40
-cmd tp @s 4226.9 66.7 26.9 135 36
+cmd tp @s 4233.4 73.9 33.4 135 36
 wait 220
 shot den_cerberus_025_34
-cmd tp @s 4200.5 85.0 0.5 180 90
+cmd tp @s 4200.5 100.2 0.5 180 90
 wait 300
 shot den_cerberus_025_top
 cmd tp @s 4200.5 37 0.5 0 0
@@ -179,25 +184,26 @@ cmd giants admin settle cerberus here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 4268.9 85.8 68.9 135 20
-wait 160
+cmd tp @s 9200 200 0
+wait 40
+cmd tp @s 4248.8 82.0 48.8 135 25
+wait 200
 shot den_cerberus_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# hollowbell at 1.0: r 80
-render 17
+# hollowbell at 1.0: r 115
 cmd tp @s 4900.5 37 0.5 0 10
 wait 60
 cmd giants admin build den hollowbell 1.0
-wait 424
+wait 662
 cmd tp @s 9900 200 0
 wait 40
-cmd tp @s 4964.1 137.7 64.1 135 36
+cmd tp @s 4983.6 159.2 83.6 135 36
 wait 220
 shot den_hollowbell_10_34
-cmd tp @s 4900.5 180.8 0.5 180 90
+cmd tp @s 4900.5 225.1 0.5 180 90
 wait 300
 shot den_hollowbell_10_top
 cmd tp @s 4900.5 37 0.5 0 0
@@ -208,25 +214,26 @@ cmd giants admin settle hollowbell here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 5083.8 217.0 183.8 135 27
-wait 160
+cmd tp @s 9900 200 0
+wait 40
+cmd tp @s 5133.3 217.0 233.3 135 22
+wait 200
 shot den_hollowbell_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# hollowbell at 0.25: r 20
-render 12
+# hollowbell at 0.25: r 29
 cmd tp @s 5600.5 37 0.5 0 10
 wait 60
 cmd giants admin build den hollowbell 0.25
-wait 214
+wait 229
 cmd tp @s 10600 200 0
 wait 40
-cmd tp @s 5621.2 67.8 21.2 135 36
+cmd tp @s 5626.1 73.3 26.1 135 36
 wait 220
 shot den_hollowbell_025_34
-cmd tp @s 5600.5 82.4 0.5 180 90
+cmd tp @s 5600.5 93.8 0.5 180 90
 wait 300
 shot den_hollowbell_025_top
 cmd tp @s 5600.5 37 0.5 0 0
@@ -237,25 +244,26 @@ cmd giants admin settle hollowbell here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 5651.3 82.0 51.3 135 24
-wait 160
+cmd tp @s 10600 200 0
+wait 40
+cmd tp @s 5663.6 82.0 63.6 135 20
+wait 200
 shot den_hollowbell_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# lanternwillow at 1.0: r 80
-render 17
+# lanternwillow at 1.0: r 115
 cmd tp @s 6300.5 37 0.5 0 10
 wait 60
 cmd giants admin build den lanternwillow 1.0
-wait 424
+wait 662
 cmd tp @s 11300 200 0
 wait 40
-cmd tp @s 6364.1 107.7 64.1 135 36
+cmd tp @s 6383.6 129.2 83.6 135 36
 wait 220
 shot den_lanternwillow_10_34
-cmd tp @s 6300.5 150.8 0.5 180 90
+cmd tp @s 6300.5 195.1 0.5 180 90
 wait 300
 shot den_lanternwillow_10_top
 cmd tp @s 6300.5 37 0.5 0 0
@@ -266,25 +274,26 @@ cmd giants admin settle lanternwillow here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 6483.8 217.0 183.8 135 27
-wait 160
+cmd tp @s 11300 200 0
+wait 40
+cmd tp @s 6431.5 217.0 131.5 135 35
+wait 200
 shot den_lanternwillow_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# lanternwillow at 0.25: r 20
-render 12
+# lanternwillow at 0.25: r 29
 cmd tp @s 7000.5 37 0.5 0 10
 wait 60
 cmd giants admin build den lanternwillow 0.25
-wait 214
+wait 229
 cmd tp @s 12000 200 0
 wait 40
-cmd tp @s 7021.2 60.3 21.2 135 36
+cmd tp @s 7026.1 65.8 26.1 135 36
 wait 220
 shot den_lanternwillow_025_34
-cmd tp @s 7000.5 74.9 0.5 180 90
+cmd tp @s 7000.5 86.3 0.5 180 90
 wait 300
 shot den_lanternwillow_025_top
 cmd tp @s 7000.5 37 0.5 0 0
@@ -295,25 +304,26 @@ cmd giants admin settle lanternwillow here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 7051.3 82.0 51.3 135 24
-wait 160
+cmd tp @s 12000 200 0
+wait 40
+cmd tp @s 7036.1 82.0 36.1 135 33
+wait 200
 shot den_lanternwillow_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# wreckback at 1.0: r 128
-render 24
+# wreckback at 1.0: r 160
 cmd tp @s 7700.5 37 0.5 0 10
 wait 60
 cmd giants admin build den wreckback 1.0
-wait 773
+wait 1096
 cmd tp @s 12700 200 0
 wait 40
-cmd tp @s 7798.4 145.6 98.4 135 36
+cmd tp @s 7813.7 162.4 113.7 135 36
 wait 220
 shot den_wreckback_10_34
-cmd tp @s 7700.5 211.5 0.5 180 90
+cmd tp @s 7700.5 252.0 0.5 180 90
 wait 300
 shot den_wreckback_10_top
 cmd tp @s 7700.5 37 0.5 0 0
@@ -324,25 +334,26 @@ cmd giants admin settle wreckback here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 7992.6 243.9 292.6 135 21
-wait 160
+cmd tp @s 12700 200 0
+wait 40
+cmd tp @s 7909.8 224.2 209.8 135 24
+wait 200
 shot den_wreckback_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# wreckback at 0.25: r 32
-render 12
+# wreckback at 0.25: r 46
 cmd tp @s 8400.5 37 0.5 0 10
 wait 60
 cmd giants admin build den wreckback 0.25
-wait 235
+wait 274
 cmd tp @s 13400 200 0
 wait 40
-cmd tp @s 8429.7 69.8 29.7 135 36
+cmd tp @s 8437.4 78.3 37.4 135 36
 wait 220
 shot den_wreckback_025_34
-cmd tp @s 8400.5 90.1 0.5 180 90
+cmd tp @s 8400.5 107.8 0.5 180 90
 wait 300
 shot den_wreckback_025_top
 cmd tp @s 8400.5 37 0.5 0 0
@@ -353,25 +364,26 @@ cmd giants admin settle wreckback here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 8478.4 92.5 78.4 135 21
-wait 160
+cmd tp @s 13400 200 0
+wait 40
+cmd tp @s 8455.6 83.8 55.6 135 23
+wait 200
 shot den_wreckback_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# swarmforge at 1.0: r 90
-render 19
+# swarmforge at 1.0: r 129
 cmd tp @s 9100.5 37 0.5 0 10
 wait 60
 cmd giants admin build den swarmforge 1.0
-wait 483
+wait 782
 cmd tp @s 14100 200 0
 wait 40
-cmd tp @s 9171.2 115.6 71.2 135 36
+cmd tp @s 9193.0 139.5 93.0 135 36
 wait 220
 shot den_swarmforge_10_34
-cmd tp @s 9100.5 163.4 0.5 180 90
+cmd tp @s 9100.5 212.8 0.5 180 90
 wait 300
 shot den_swarmforge_10_top
 cmd tp @s 9100.5 37 0.5 0 0
@@ -382,25 +394,26 @@ cmd giants admin settle swarmforge here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 9305.9 182.6 205.9 135 20
-wait 160
+cmd tp @s 14100 200 0
+wait 40
+cmd tp @s 9247.4 173.8 147.4 135 25
+wait 200
 shot den_swarmforge_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# swarmforge at 0.25: r 22
-render 12
+# swarmforge at 0.25: r 32
 cmd tp @s 9800.5 37 0.5 0 10
 wait 60
 cmd giants admin build den swarmforge 0.25
-wait 216
+wait 235
 cmd tp @s 14800 200 0
 wait 40
-cmd tp @s 9822.6 61.9 22.6 135 36
+cmd tp @s 9828.1 68.0 28.1 135 36
 wait 220
 shot den_swarmforge_025_34
-cmd tp @s 9800.5 77.4 0.5 180 90
+cmd tp @s 9800.5 90.1 0.5 180 90
 wait 300
 shot den_swarmforge_025_top
 cmd tp @s 9800.5 37 0.5 0 0
@@ -411,25 +424,26 @@ cmd giants admin settle swarmforge here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 9856.8 77.2 56.8 135 21
-wait 160
+cmd tp @s 14800 200 0
+wait 40
+cmd tp @s 9840.0 71.2 40.0 135 24
+wait 200
 shot den_swarmforge_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# gloamwick at 1.0: r 111
-render 23
+# gloamwick at 1.0: r 159
 cmd tp @s 10500.5 37 0.5 0 10
 wait 60
 cmd giants admin build den gloamwick 1.0
-wait 631
+wait 1084
 cmd tp @s 15500 200 0
 wait 40
-cmd tp @s 10586.3 132.2 86.3 135 36
+cmd tp @s 10613.0 161.7 113.0 135 36
 wait 220
 shot den_gloamwick_10_34
-cmd tp @s 10500.5 190.0 0.5 180 90
+cmd tp @s 10500.5 250.7 0.5 180 90
 wait 300
 shot den_gloamwick_10_top
 cmd tp @s 10500.5 37 0.5 0 0
@@ -440,25 +454,26 @@ cmd giants admin settle gloamwick here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 10751.9 217.0 251.9 135 20
-wait 160
+cmd tp @s 15500 200 0
+wait 40
+cmd tp @s 10680.5 217.0 180.5 135 27
+wait 200
 shot den_gloamwick_10_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-# gloamwick at 0.25: r 28
-render 12
+# gloamwick at 0.25: r 40
 cmd tp @s 11200.5 37 0.5 0 10
 wait 60
 cmd giants admin build den gloamwick 0.25
-wait 227
+wait 256
 cmd tp @s 16200 200 0
 wait 40
-cmd tp @s 11226.9 66.7 26.9 135 36
+cmd tp @s 11233.4 73.9 33.4 135 36
 wait 220
 shot den_gloamwick_025_34
-cmd tp @s 11200.5 85.0 0.5 180 90
+cmd tp @s 11200.5 100.2 0.5 180 90
 wait 300
 shot den_gloamwick_025_top
 cmd tp @s 11200.5 37 0.5 0 0
@@ -469,21 +484,22 @@ cmd giants admin settle gloamwick here
 wait 40
 cmd giants freeze
 wait 10
-cmd tp @s 11268.3 85.3 68.3 135 20
-wait 160
+cmd tp @s 16200 200 0
+wait 40
+cmd tp @s 11248.3 82.0 48.3 135 25
+wait 200
 shot den_gloamwick_025_giant
 cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
-render 12
 cmd tp @s 11900.5 37 0.5 0 10
 wait 60
 cmd giants admin build arena small
 wait 248
 cmd tp @s 16900 200 0
 wait 40
-cmd tp @s 11940.7 81.9 40.7 135 36
+cmd tp @s 11938.3 79.2 38.3 135 36
 wait 220
 shot arena_small_34
 cmd tp @s 11900.5 109.4 0.5 180 90
@@ -492,14 +508,13 @@ shot arena_small_top
 cmd tp @s 11900.5 48 50.0 180 12
 wait 60
 shot arena_small_stands
-render 16
 cmd tp @s 12600.5 37 0.5 0 10
 wait 60
 cmd giants admin build arena medium
 wait 322
 cmd tp @s 17600 200 0
 wait 40
-cmd tp @s 12657.6 100.5 57.6 135 36
+cmd tp @s 12654.1 96.7 54.1 135 36
 wait 220
 shot arena_medium_34
 cmd tp @s 12600.5 139.3 0.5 180 90
@@ -508,14 +523,13 @@ shot arena_medium_top
 cmd tp @s 12600.5 48 74.0 180 12
 wait 60
 shot arena_medium_stands
-render 21
 cmd tp @s 13300.5 37 0.5 0 10
 wait 60
 cmd giants admin build arena large
 wait 476
 cmd tp @s 18300 200 0
 wait 40
-cmd tp @s 13379.7 124.9 79.7 135 36
+cmd tp @s 13374.8 119.5 74.8 135 36
 wait 220
 shot arena_large_34
 cmd tp @s 13300.5 178.4 0.5 180 90

@@ -121,7 +121,7 @@ public final class Builds {
     public static AdminServer.Result den(MinecraftServer server, String who, ServerPlayer p, String kind, double size) {
         Giant g = AdminServer.giant(kind);
         if (g == null) return AdminServer.Result.fail("No giant called " + kind + ".");
-        int r = Mth.clamp((int) Math.round(FunGiants.reach(g.key(), size) * 0.8), Dens.LEAST, Dens.MOST);
+        int r = Mth.clamp((int) Math.round(FunGiants.reach(g.key(), size) * Dens.ROOM), Dens.LEAST, Dens.MOST);
         Shape s = Dens.shape(g.key(), r, FunGiants.height(g.key(), size));
         if (s == null) return AdminServer.Result.fail("There's no den for the " + AdminServer.nameOf(g) + " yet.");
         return start(server, who, p, "den", g.key(), g.key(), r, s);

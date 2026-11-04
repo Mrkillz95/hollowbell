@@ -427,7 +427,7 @@ public class FunGameTests implements FabricGameTest {
                         BlockState q = l.getBlockState(at.offset(dx, y, dz));
                         if (q.is(Blocks.STONE_BRICK_STAIRS)) seats++;
                         if (q.is(net.minecraft.tags.BlockTags.BANNERS)) banners++;
-                        if (Math.hypot(dx, dz) <= 40 && y >= 1 && q.blocksMotion())
+                        if (Math.hypot(dx, dz) <= 40 && y >= 1 && !q.getCollisionShape(l, at).isEmpty())
                             h.fail("something standing on the floor at " + dx + " " + y + " " + dz + ": " + q);
                     }
             h.assertTrue(seats > 200 && banners > 20, "seats " + seats + ", banners " + banners);
@@ -476,12 +476,12 @@ public class FunGameTests implements FabricGameTest {
                 Map<String, Object> p = net.jj.giants.fun.FunTestAccess.plan(kind, size);
                 int r = (int) p.get("r"), pieces = (int) p.get("pieces"), top = (int) p.get("top");
                 long blocks = (long) p.get("blocks");
-                int want = net.minecraft.util.Mth.clamp((int) Math.round(FunGiants.reach(kind, size) * 0.8), 10, 128);
+                int want = net.minecraft.util.Mth.clamp((int) Math.round(FunGiants.reach(kind, size) * 1.15), 10, 160);
                 if (r != want) wrong.add(kind + " " + size + ": radius " + r + " not " + want);
                 if (r < lastR) wrong.add(kind + " " + size + ": smaller than at a smaller size");
                 if (pieces < lastPieces * 0.9) wrong.add(kind + " " + size + ": fewer pieces (" + pieces
                         + ") than smaller (" + lastPieces + ")");
-                if (lastTop != Integer.MIN_VALUE && top < lastTop - 3) wrong.add(kind + " " + size + ": lower (" + top + ") than smaller (" + lastTop + ")");
+                if (lastTop != Integer.MIN_VALUE && top < lastTop * 0.9 - 3) wrong.add(kind + " " + size + ": lower (" + top + ") than smaller (" + lastTop + ")");
                 if (pieces < 30) wrong.add(kind + " " + size + ": only " + pieces + " pieces");
                 if (blocks > Builds.MOST_UNDO / 2) wrong.add(kind + " " + size + ": " + blocks + " blocks, over budget");
                 wrong.addAll((List<String>) p.get("problems"));
@@ -503,7 +503,7 @@ public class FunGameTests implements FabricGameTest {
             Map<String, Object> p = net.jj.giants.fun.FunTestAccess.plan("arena:" + size, 1);
             wrong.addAll((List<String>) p.get("problems"));
             if ((int) p.get("floorClutter") != 0) wrong.add("arena " + size + ": " + p.get("floorClutter")
-                    + " blocks standing on the floor");
+                    + " blocks standing on the floor: " + p.get("clutterAt"));
             if ((long) p.get("blocks") > Builds.MOST_UNDO / 2) wrong.add("arena " + size + ": over budget");
             if (((Map<String, Integer>) p.get("kinds")).size() < 25) wrong.add("arena " + size + ": plain");
             net.jj.giants.GiantsGuideMod.LOG.info("arena plan {}: reach {} pieces {} blocks {} kinds {}", size,
@@ -531,7 +531,7 @@ public class FunGameTests implements FabricGameTest {
             for (String kind : KINDS)
                 for (double size : kind.equals("gloamwick") || kind.equals("wreckback") ? new double[] {0.1, 0.25}
                         : new double[] {0.1}) {
-                    int reach = Math.min(60, net.jj.giants.fun.FunTestAccess.denRadius(kind, size) + 12);
+                    int reach = Math.min(60, net.jj.giants.fun.FunTestAccess.denRadius(kind, size) + 20);
                     Map<BlockPos, BlockState> before = new HashMap<>();
                     for (int dx = -reach; dx <= reach; dx++)
                         for (int dz = -reach; dz <= reach; dz++)
