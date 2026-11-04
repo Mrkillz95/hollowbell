@@ -20,6 +20,7 @@ into his hollow dome and see what he's caught.
   lava lake under the Nether's roof he keeps his height instead of jumping onto the roof.
 - When he falls (with corpses or skeletons on), his remains are now made from his own body: a corpse that rots away
   in stages, or his own skeleton, left for good.
+- The ends of his arms fit the ground better, and a rider's press up lifts him sooner.
 
 ### 1.12.38
 

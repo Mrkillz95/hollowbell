@@ -139,9 +139,13 @@ A book about every giant you have. Right-click it to open it.
   kennel, the Hollowbell's roost, the Willow's mire, Wreckback's cove, the Swarmforge's yard and the Gloamwick's
   glade, each big enough for him to fit inside, and arenas with seats, banners and a clear floor. Nothing in them
   traps or slows you, grows, spreads or falls.
-- Under the Nether's roof every giant stands on the floor below, never on the roof.
+- Under the Nether's roof every giant stands on the floor below, never on the roof. Fixes: Wreckback's shots burst
+  where they hit and getting off him sets you clear of his body; the Swarmforge's brutes hit what they swing at; the
+  Willow's Nether shrine stands on the floor; the Hollowbell stops a little further back when following you and a
+  rider's press up lifts him sooner; two gaps in the Furrowmaw's body are closed and jumping up from a seat sets you
+  right on him; standing up from a seat on the Cerberus sets you clear of his edge.
 - Steadier game tests behind the scenes.
-- Left as shipped, nothing about the giants changes.
+- Left as shipped, every new system is off and the giants play as in 1.13.0 apart from these fixes.
 
 Inside: Pitchgut 1.35.40, Furrowmaw 1.17.37, Cerberus 2.18.37, Hollowbell 1.12.39, Lantern Willow 1.10.40,
 Wreckback 1.2.45, Swarmforge 1.4.43, Gloamwick 1.2.24, Giants Guide 1.12.0.
