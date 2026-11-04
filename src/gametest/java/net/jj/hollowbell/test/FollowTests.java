@@ -32,7 +32,7 @@ public class FollowTests implements FabricGameTest {
 
     static final int WALK_TICKS = (int) Math.ceil(WALK / STEP);
 
-    /** how near he comes while following before he stops (BellFlight.followSpot, FollowGap: just past his rim) */
+    /** how near he comes while following before he stops (BellFlight.followSpot, FollowGap: just past his body) */
     static double keep(HollowbellEntity e) {
         return e.followStop();
     }

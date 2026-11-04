@@ -114,13 +114,22 @@ public class GrabTests implements FabricGameTest {
                 e.applyDamage(e.damageSources().generic(), 200f, e.rig.pods[pod].bone(), false);
             h.assertTrue(e.isPodPopped(pod), "the pod wouldn't pop");
         });
+        // (where he drops you is checked the first tick you're out, as he left you: after that his strands and the
+        // other pods sway on, and one may swing into a test player, who has no game of its own to step out of it and
+        // doesn't even fall; a real player's game moves them out at once, which SolidTests checks)
+        String[] dropped = {null};
+        for (int k = 1; k <= 3; k++)
+            h.runAfterDelay(at + k, () -> {
+                if (dropped[0] != null || e.moves().isInside(pl[0]) || pl[0].isPassenger()) return;
+                dropped[0] = Solid.inside(e, pl[0], 0.3)
+                        ? "dropped inside his body at " + pl[0].position() + " "
+                                + SolidTests.runs(e, pl[0].getX(), pl[0].getZ(), pl[0].getY() - 1, pl[0].getY() + 3)
+                        : "";
+            });
         h.runAfterDelay(at + 3, () -> {
             h.assertTrue(!e.moves().isInside(pl[0]) && !pl[0].isPassenger(), "still held once the pod popped");
             h.assertTrue(pl[0].hasEffect(MobEffects.SLOW_FALLING), "dropped with no slow fall");
-            h.assertTrue(
-                    !Solid.inside(e, pl[0], 0.3),
-                    "dropped inside his body at " + pl[0].position() + " "
-                            + SolidTests.runs(e, pl[0].getX(), pl[0].getZ(), pl[0].getY() - 1, pl[0].getY() + 3));
+            h.assertTrue(dropped[0] != null && dropped[0].isEmpty(), dropped[0] == null ? "never let go" : dropped[0]);
             drop(pl[0]);
             release(h, e);
             h.succeed();

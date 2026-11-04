@@ -265,7 +265,11 @@ final class BellFlight {
         if (!down && e > climbAt) {
             double u = Mth.clamp(e / (30 * s + 10), 0, 1);
             int period = (int) Mth.lerp(u, 62, 24);
-            if (now >= hb.nextPulse) {
+            // (a rider pressing up: no later than a climbing beat after the last pulse of any kind, or a slow idle
+            // breath can have put the next one nearly six seconds off, and he'd hang there not rising all that time.
+            // Only then: his own climbs keep their beat)
+            boolean pressed = hb.rider != null && hb.driveUp > 0 && now >= hb.pulseStartedAt() + period;
+            if (now >= hb.nextPulse || pressed) {
                 hb.pulse((float) (1.05 + 0.6 * u));
                 hb.nextPulse = now + period;
             }

@@ -715,10 +715,21 @@ public final class BellAnim {
     public void fitSoles(Matrix4f[] slices, BellPieces pieces, BellModel m) {
         int nc = rig.chains.length;
         Vector3f v = new Vector3f();
+        if (sinkingIn > 0f) return;
+        // (his arms every time: there are few of them, and asleep they still curl in and out, so an arm end lying
+        // on the ground, fitted only once in the 30 ticks it takes to come round to it among all his strands, went
+        // a block into the ground in between and stayed there while the curl kept pressing it down)
+        for (int c = 0; c < nc; c++) if (rig.chains[c].arm) fitChain(c, slices, pieces, m, v);
+        // (the strands a few at a time)
         for (int k = 0; k < 12; k++) {
             int c = fitNext++ % nc;
             if (fitNext >= nc) fitNext = 0;
-            if (sinkingIn > 0f) continue;
+            if (!rig.chains[c].arm) fitChain(c, slices, pieces, m, v);
+        }
+    }
+
+    private void fitChain(int c, Matrix4f[] slices, BellPieces pieces, BellModel m, Vector3f v) {
+        {
             BellRig.Chain ch = rig.chains[c];
             int nb = ch.bones.length;
             for (int i = Math.max(0, nb - 2); i < nb; i++) {

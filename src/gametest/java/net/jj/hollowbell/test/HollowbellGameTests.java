@@ -152,6 +152,28 @@ public class HollowbellGameTests implements FabricGameTest {
         return p;
     }
 
+    /** every setting in V as it is now, a copy (see putSettings) */
+    static BellConfig.Values settingsNow() {
+        com.google.gson.Gson g = new com.google.gson.Gson();
+        return g.fromJson(g.toJson(BellConfig.V), BellConfig.Values.class);
+    }
+
+    /**
+     * V back to a copy settingsNow() took. (For a test that reads the settings file again: that puts V back to the
+     * file, and loses what the other tests running at the same time had set in V for themselves.)
+     */
+    static void putSettings(BellConfig.Values was) {
+        for (Field f : BellConfig.Values.class.getFields()) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+            try {
+                f.set(BellConfig.V, f.get(was));
+            } catch (IllegalAccessException e) {
+                // (public fields only)
+            }
+        }
+        BellConfig.compose();
+    }
+
     static void drop(ServerPlayer p) {
         p.getServer().getPlayerList().remove(p);
     }

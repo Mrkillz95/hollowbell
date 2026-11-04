@@ -161,6 +161,34 @@ public class SolidTests implements FabricGameTest {
         return false;
     }
 
+    /**
+     * A slice along the roots of his arms (arm 2 first, from its third slice on) whose top a player can stand on with
+     * nothing of him in them, nor a block over their head; -1 if none
+     */
+    static int clearArmSpot(GameTestHelper h, HollowbellEntity e) {
+        BellRig rig = e.rig;
+        BellPieces pc = BellPieces.get();
+        for (int a = 0; a < rig.arms.length; a++) {
+            int bone = rig.arms[(a + 2) % rig.arms.length].bones()[0];
+            for (int k = 2; k < pc.num[bone] - 1; k++) {
+                int sl = pc.first[bone] + k;
+                Vec3 at = e.topOfSlice(sl);
+                if (at == null) continue;
+                ServerPlayer p = player(h, at.add(0, 0.01, 0));
+                SolidCarry c = new SolidCarry();
+                c.step(p, Solid.bodies(false));
+                boolean ok = c.riding() && !Solid.inside(e, p, 0.08);
+                if (ok) {
+                    p.setPos(p.getX(), p.getY() + 1, p.getZ());
+                    ok = !Solid.inside(e, p, 0.08);
+                }
+                HollowbellGameTests.drop(p);
+                if (ok) return sl;
+            }
+        }
+        return -1;
+    }
+
     /** players (carried as their own game would) and stands (carried by the server) on his parts while he drifts */
     static void rideCase(GameTestHelper h, float size, int slot, boolean full) {
         HollowbellEntity e = spawnAway(h, size, HollowbellEntity.CALM, slot);
@@ -200,7 +228,16 @@ public class SolidTests implements FabricGameTest {
             List<Double> slideOk = new ArrayList<>();
             List<ArmorStand> stands = new ArrayList<>();
             for (int i = 0; i < slices.length; i++) {
-                Vec3 at = e.topOfSlice(slices[i]);
+                // (the root of an arm: a spot on it with room over it. Where the arm hangs right under his rim the
+                // top of a slice may have the rim a block over it, and a player put there is pushed out of the rim
+                // at once, off the side of the arm, with nothing of him under them; where that is changes with the
+                // arm's slow curl, by the world's time. So the first spot along the arm roots with the player clear
+                // of him and room for a step up)
+                if (full && i == 5) {
+                    slices[i] = clearArmSpot(h, e);
+                    h.assertTrue(slices[i] >= 0, "nowhere clear to stand on the root of an arm");
+                }
+                Vec3 at = slices[i] < 0 ? null : e.topOfSlice(slices[i]);
                 h.assertTrue(at != null || !steady[i], "no spot to stand on " + names[i]);
                 if (at == null) continue;
                 ServerPlayer p = player(h, at.add(0, 0.01, 0));
@@ -224,6 +261,8 @@ public class SolidTests implements FabricGameTest {
             int[] frame0 = new int[n];
             boolean[] wasOff = new boolean[n];
             double[] fall = new double[n];
+            // (on top of him in the last ten ticks: a hop off a part that dropped away is over within a few ticks)
+            boolean[] onAtEnd = new boolean[n];
             for (int i = 0; i < n; i++) {
                 rest0[i] = new Vector3f(carries.get(i).rest);
                 frame0[i] = carries.get(i).frame;
@@ -239,26 +278,41 @@ public class SolidTests implements FabricGameTest {
                         SolidCarry c = carries.get(i);
                         c.step(ps.get(i), Solid.bodies(false));
                         // (lifted back onto the part that came up into them: what it slides is measured from there)
-                        if (unstickAsTheirGameDoes(ps.get(i), c) && c.riding()) {
-                            rest0[i] = new Vector3f(c.rest);
-                            frame0[i] = c.frame;
+                        if (unstickAsTheirGameDoes(ps.get(i), c)) {
+                            if (c.riding()) {
+                                rest0[i] = new Vector3f(c.rest);
+                                frame0[i] = c.frame;
+                            } else
+                                HollowbellMod.LOG.info(
+                                        "solid ride: {} pushed out of him and off at tick {} to {}",
+                                        on.get(i), kk, ps.get(i).position());
                         }
                         // (thrown off: they fall, as their own game would have them, and land on him again if he's
                         // under them)
                         // (gravity as the game has it, kept under 1.5 a tick so they can't fall through a part)
-                        if (!c.riding()) {
+                        // (and in a hop over him too, when the part under them dropped away faster than they're carried:
+                        // their own game pulls them down onto it again, where a test player, not ticked by a game, would
+                        // hang in the air over him for up to 100 ticks and be read as not on him)
+                        if (!c.riding() || c.air > 0) {
                             ServerPlayer pl = ps.get(i);
                             fall[i] = Math.min(1.4, (fall[i] + 0.08) * 0.98);
                             pl.setPos(pl.getX(), pl.getY() - fall[i], pl.getZ());
                             c.step(pl, Solid.bodies(false));
                         }
-                        if (c.riding()) fall[i] = 0;
-                        // (landed on him again after coming off: what it slides is measured from there)
-                        if (c.riding() && wasOff[i]) {
+                        if (c.riding() && c.air == 0) fall[i] = 0;
+                        // (landed on him again after coming off, or after a hop: what it slides is measured from
+                        // there. A hop is the part under them dropping away faster than they're carried; they fall
+                        // straight down while it swings on, and land where it is then, which isn't sliding on him)
+                        if (c.riding() && c.air == 0 && wasOff[i]) {
+                            if (frame0[i] == c.frame && c.rest != null && rest0[i] != null)
+                                HollowbellMod.LOG.info(
+                                        "solid ride: {} landed again at tick {}, {} from where they stood",
+                                        on.get(i), kk, String.format("%.2f", c.rest.distance(rest0[i]) * e.bellScale()));
                             rest0[i] = new Vector3f(c.rest);
                             frame0[i] = c.frame;
                         }
-                        wasOff[i] = !c.riding();
+                        wasOff[i] = !c.riding() || c.air > 0;
+                        if (kk >= total - 10 && Solid.onTop(e, ps.get(i), 0.9, 1.5)) onAtEnd[i] = true;
                         if (!c.riding() && (kk < bigAt || keep.get(i))) {
                             if (offTicks[i] == 0)
                                 HollowbellMod.LOG.info(
@@ -315,9 +369,10 @@ public class SolidTests implements FabricGameTest {
                                     + sb + ")");
                     if (keep.get(i))
                         h.assertTrue(
-                                Solid.onTop(e, ps.get(i), 0.9, 1.5),
+                                carries.get(i).riding() && (onAtEnd[i] || Solid.onTop(e, ps.get(i), 0.9, 1.5)),
                                 "the player on " + on.get(i) + " is still on him at the end: "
-                                        + ps.get(i).position());
+                                        + ps.get(i).position() + " (in a hop " + carries.get(i).air + " ticks, him at "
+                                        + e.position() + ")");
                 }
                 int standsOn = 0;
                 for (ArmorStand a : stands) if (Solid.onTop(e, a, 0.9, 1.5)) standsOn++;
@@ -559,15 +614,43 @@ public class SolidTests implements FabricGameTest {
         h.assertTrue(!ps.isEmpty(), "nowhere deep enough in him to put anyone (" + when + ")");
         // (moved out within ten ticks; a moving part may come back onto them after, and they're moved out again)
         boolean[] out = new boolean[ps.size()];
+        // (for the message if one isn't: how deep in him the server reads them each tick, as its push-out does, and
+        // whether it pushed anyone out at all: it moves a player out only after 8 ticks running in him, and a tick
+        // read as not in him starts the count again)
+        StringBuilder[] depths = new StringBuilder[ps.size()];
+        for (int i = 0; i < depths.length; i++) depths[i] = new StringBuilder();
+        int unstuck0 = Solid.unstuckServer;
         for (int k = 1; k <= 10; k++)
             after(h, k, () -> {
-                for (int i = 0; i < ps.size(); i++) out[i] |= !Solid.inside(e, ps.get(i), 0.3);
+                for (int i = 0; i < ps.size(); i++) {
+                    out[i] |= !Solid.inside(e, ps.get(i), 0.3);
+                    depths[i].append(String.format(" %.2f", Solid.depthIn(e, ps.get(i).getBoundingBox(), 0.08, null, true)));
+                }
             });
         after(h, 11, () -> {
+            // (failed: the players and he are gone too, or they stand in every later test's world)
+            boolean ok = false;
+            try {
+                check(h, e, when, ps, out, depths, unstuck0);
+                ok = true;
+            } finally {
+                if (!ok) {
+                    for (ServerPlayer p : ps) HollowbellGameTests.drop(p);
+                    release(h, e);
+                }
+            }
+        });
+    }
+
+    private static void check(GameTestHelper h, HollowbellEntity e, String when, List<ServerPlayer> ps, boolean[] out,
+            StringBuilder[] depths, int unstuck0) {
+        {
             for (int i = 0; i < ps.size(); i++) {
                 ServerPlayer p = ps.get(i);
                 h.assertTrue(
-                        out[i], "a player put in him " + when + " wasn't moved out within 10 ticks: " + p.position());
+                        out[i], "a player put in him " + when + " wasn't moved out within 10 ticks: " + p.position()
+                                + " (depth each tick" + depths[i] + "; the server pushed out "
+                                + (Solid.unstuckServer - unstuck0) + " in that time; him at " + e.position() + ")");
                 // (his own moves may hit them; being moved out never hurts)
                 var last = p.getLastDamageSource();
                 h.assertTrue(
@@ -575,7 +658,7 @@ public class SolidTests implements FabricGameTest {
                         "and was hurt by it: " + last);
                 HollowbellGameTests.drop(p);
             }
-        });
+        }
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "push_out_tiny")

@@ -395,19 +395,32 @@ public class CarryTests implements FabricGameTest {
             h.assertTrue(e.possess(pl[0]), "couldn't get on him");
         });
         // up a way first, so he has to come down for it
-        for (int i = 25; i < 85; i += 5) h.runAfterDelay(i, () -> e.drive(pl[0], 0f, 0f, 0f, 1));
-        h.runAfterDelay(90, () -> {
-            h.assertTrue(
-                    e.getY() > e.groundAt(e.getX(), e.getZ()) + 3 * s + 1,
-                    "he didn't go up: y " + e.getY() + " ground " + e.groundAt(e.getX(), e.getZ()) + " rider "
-                            + (e.rider() == pl[0]) + " asleep " + e.asleep() + " sunk " + e.sunk() + " move "
-                            + e.moveNow() + " setting down " + e.moves().settingDown());
-            e.setMeDown(pl[0]);
-            h.assertTrue(e.moves().settingDown(), "he isn't setting the player down");
-        });
+        // (driven up from tick 25 and asked to set the player down once he's up, from tick 90, at the latest at 150: he
+        // climbs on the push of his pulses, and the first may come a while after the rider presses up)
+        int[] downAt = {-1};
+        for (int i = 25; i < 150; i += 5)
+            h.runAfterDelay(i, () -> {
+                if (downAt[0] < 0) e.drive(pl[0], 0f, 0f, 0f, 1);
+            });
+        for (int i = 90; i <= 150; i++) {
+            int ii = i;
+            h.runAfterDelay(i, () -> {
+                if (downAt[0] >= 0) return;
+                boolean up = e.getY() > e.groundAt(e.getX(), e.getZ()) + 3 * s + 1;
+                if (!up && ii < 150) return;
+                h.assertTrue(
+                        up,
+                        "he didn't go up: y " + e.getY() + " ground " + e.groundAt(e.getX(), e.getZ()) + " rider "
+                                + (e.rider() == pl[0]) + " asleep " + e.asleep() + " sunk " + e.sunk() + " move "
+                                + e.moveNow() + " setting down " + e.moves().settingDown());
+                e.setMeDown(pl[0]);
+                h.assertTrue(e.moves().settingDown(), "he isn't setting the player down");
+                downAt[0] = ii;
+            });
+        }
         h.onEachTick(() -> {
             ServerPlayer p = pl[0];
-            if (p == null || h.getTick() < 90) return;
+            if (p == null || downAt[0] < 0 || h.getTick() < downAt[0]) return;
             if (st[2] >= 0 && e.moveNow() == Moves.GRAB) {
                 float[] l = ropeLook(e, st[2]);
                 look[0] = Math.max(look[0], l[0]);
@@ -422,7 +435,7 @@ public class CarryTests implements FabricGameTest {
                 h.assertTrue(e.rider() == p, "fell off before the strand came");
                 prev[0] = now;
                 if (e.moveNow() == Moves.GRAB) st[2] = e.moveArg();
-                h.assertTrue(h.getTick() < 90 + 1600, "the strand never came for the player");
+                h.assertTrue(h.getTick() < downAt[0] + 1600, "the strand never came for the player");
                 return;
             }
             if (st[0] == 0) st[0] = 1;

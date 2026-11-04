@@ -742,7 +742,8 @@ public class OrdersTests implements FabricGameTest {
             h.fail("no settings file: " + ex);
             return;
         }
-        var was = BellConfig.V;
+        // (a copy: V stays the same object, so keeping V itself kept nothing)
+        BellConfig.Values was = settingsNow();
         try {
             Files.writeString(file, "{ this is not json");
             h.assertTrue(!BellConfig.load(), "a broken file read as fine");
@@ -763,7 +764,8 @@ public class OrdersTests implements FabricGameTest {
                 HollowbellMod.LOG.warn("Couldn't put the settings file back: {}", e.toString());
             }
             BellConfig.load();
-            BellConfig.V = was;
+            // (reading the file again put V back to the file, losing what other tests running now set for themselves)
+            putSettings(was);
         }
         h.succeed();
     }
