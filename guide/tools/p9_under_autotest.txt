@@ -1,51 +1,65 @@
-# Part 9: more pictures of the Underworld (giants in the Nether), from the spectate camera that follows each
+# Part 9: the Underworld pictures alone (as in p9_autotest.txt)
 wait 60
 guiscale 2
 wait 10
+adminintro seen
+adminmode simple
+adminscope world
 cmd time set 6000
 cmd gamerule doDaylightCycle false
-cmd gamerule sendCommandFeedback false
+cmd weather clear
+cmd gamerule doMobSpawning false
 cmd difficulty normal
+cmd gamerule sendCommandFeedback false
 cmd giants admin setall maxInWorld 8
+cmd pitchgut away off
+cmd furrowmaw away off
+cmd cerberus away off
+cmd hollowbell away off
+cmd lanternwillow away off
+cmd wreckback away off
+cmd swarmforge away off
+cmd gloamwick away off
+wait 20
+wait 200
+wait 60
+wait 25
+# the Underworld: one of each comes near you in the Nether, sized to fit under its roof (seen with night vision, from
+# spectator a little off each)
 cmd giants admin set all underworld nether
 cmd effect give @s night_vision 99999 0 true
-cmd execute in minecraft:the_nether run tp @s 0 70 0
-wait 900
-cmd giants admin spectate pitchgut
-wait 60
-shot p9_under_pitchgut_a
-wait 100
-shot p9_under_pitchgut_b
-cmd giants admin spectate swarmforge
-wait 60
-shot p9_under_swarmforge_a
-wait 100
-shot p9_under_swarmforge_b
-cmd giants admin spectate cerberus
-wait 60
-shot p9_under_cerberus_a
-wait 100
-shot p9_under_cerberus_b
-cmd giants admin spectate gloamwick
-wait 60
-shot p9_under_gloamwick_a
-wait 100
-shot p9_under_gloamwick_b
-cmd giants admin spectate wreckback
-wait 60
-shot p9_under_wreckback_a
-wait 100
-shot p9_under_wreckback_b
-cmd giants admin spectate hollowbell
-wait 60
-shot p9_under_hollowbell_a
-wait 100
-shot p9_under_hollowbell_b
-cmd giants admin spectate lanternwillow
-wait 60
-shot p9_under_lanternwillow_a
-wait 100
-shot p9_under_lanternwillow_b
+cmd execute in minecraft:the_end run tp @s 100 70 0
+wait 400
+cmd giants admin spectate furrowmaw
+wait 80
+shot p9_underworld_end_furrowmaw
 cmd giants admin spectate stop
+cmd gamemode creative
+cmd execute in minecraft:the_nether run tp @s 0 70 0
+wait 1500
+cmd giants admin spectate hollowbell
+wait 80
+shot p9_underworld_hollowbell
+cmd giants admin spectate pitchgut
+wait 80
+shot p9_underworld_pitchgut
+cmd giants admin spectate gloamwick
+wait 80
+shot p9_underworld_gloamwick
+cmd giants admin spectate lanternwillow
+wait 80
+shot p9_underworld_lanternwillow
+cmd giants admin spectate cerberus
+wait 80
+shot p9_underworld_cerberus
+cmd giants admin spectate wreckback
+wait 80
+shot p9_underworld_wreckback
+cmd giants admin spectate swarmforge
+wait 80
+shot p9_underworld_swarmforge
+cmd giants admin spectate stop
+wait 20
+
 cmd giants admin set all underworld off
 quit

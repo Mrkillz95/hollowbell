@@ -118,10 +118,9 @@ public final class SystemsCatalog {
             num("all.seasonDays", Type.INT, 7, 1, 60, 1, "Season length", "Game days each season lasts."),
             // (Part 9, ADMIN_BRIDGE.md 25.2) new systems B
             choice("all.villagers", List.of("off", "flee", "hide", "worship"), "Villagers",
-                    "How villagers take a giant near them: off (as always), flee (they run from a wild or hunting"
-                            + " one), hide (they shut themselves in, as for a raid), worship (they gather round a"
-                            + " calm one, look up at him and leave him food once a day; from a hunting one they"
-                            + " hide)."),
+                    "off: as always. flee: they run from a wild or hunting one. hide: they shut themselves in, as for"
+                            + " a raid. worship: they ring a calm one, look up at him and leave him bread each day (from"
+                            + " a hunting one they hide)."),
             flag("all.golems", false, "Golems fight wild giants",
                     "Iron golems go for a wild giant who hunts or fights near them, or who walks into their"
                             + " village."),

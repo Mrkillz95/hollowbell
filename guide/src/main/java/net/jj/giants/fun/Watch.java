@@ -79,7 +79,8 @@ public final class Watch {
         Vec3 face = Vec3.directionFromRotation(0, giant.getYRot()).multiply(1, 0, 1);
         if (face.lengthSqr() < 1e-4) face = new Vec3(0, 0, 1);
         face = face.normalize();
-        double back = Math.max(10, h * 1.1 + 8), up = Math.max(6, h * 0.6 + 4);
+        // (a long one, the worm, is seen whole: from as far back as he is long)
+        double back = Math.max(10, Math.max(h * 1.1, FunGiants.reach(kind, size)) + 8), up = Math.max(6, h * 0.6 + 4);
         Vec3 mid = giant.position().add(0, h * 0.45, 0);
         Vec3 eye = clearView((ServerLevel) giant.level(), mid, face, back, up - h * 0.45);
         Vec3 d = mid.subtract(eye);

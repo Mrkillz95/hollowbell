@@ -384,14 +384,14 @@ public class SystemsBGameTests implements FabricGameTest {
     /** a room under the Nether's roof (netherRoom), or in a world with no roof a floor (y 50-59) with air over it */
     static BlockPos room(MinecraftServer s, ServerLevel l, int x, int z) {
         if (l.dimensionType().hasCeiling()) return netherRoom(s, x, z);
-        for (int cx = (x >> 4) - 2; cx <= (x >> 4) + 2; cx++)
-            for (int cz = (z >> 4) - 2; cz <= (z >> 4) + 2; cz++) {
+        for (int cx = (x >> 4) - 3; cx <= (x >> 4) + 3; cx++)
+            for (int cz = (z >> 4) - 3; cz <= (z >> 4) + 3; cz++) {
                 l.setChunkForced(cx, cz, true);
                 l.getChunk(cx, cz);
             }
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        for (int dx = -16; dx <= 16; dx++)
-            for (int dz = -16; dz <= 16; dz++)
+        for (int dx = -40; dx <= 40; dx++)
+            for (int dz = -40; dz <= 40; dz++)
                 for (int y = 50; y <= 120; y++)
                     l.setBlock(m.set(x + dx, y, z + dz), y < 60 ? Blocks.END_STONE.defaultBlockState()
                             : Blocks.AIR.defaultBlockState(), 2);
@@ -399,8 +399,8 @@ public class SystemsBGameTests implements FabricGameTest {
     }
 
     static void unroom(MinecraftServer s, ServerLevel l, BlockPos at) {
-        for (int cx = (at.getX() >> 4) - 2; cx <= (at.getX() >> 4) + 2; cx++)
-            for (int cz = (at.getZ() >> 4) - 2; cz <= (at.getZ() >> 4) + 2; cz++) l.setChunkForced(cx, cz, false);
+        for (int cx = (at.getX() >> 4) - 5; cx <= (at.getX() >> 4) + 5; cx++)
+            for (int cz = (at.getZ() >> 4) - 5; cz <= (at.getZ() >> 4) + 5; cz++) l.setChunkForced(cx, cz, false);
     }
 
     static void unroom(MinecraftServer s, BlockPos at) {
@@ -491,7 +491,7 @@ public class SystemsBGameTests implements FabricGameTest {
                 h.assertTrue(!GiantsBridge.all.has("all.dimOverworld"), "not held");
             } finally {
                 Underworld.nearMin = 48;
-                Underworld.nearMax = 128;
+                Underworld.nearMax = 160;
                 AdminWorld.get(s).clear("fakesys");
                 for (IronGolem x : GiantsBridge.golems(s)) if (x.level() == nether) x.discard();
                 SystemsData.get(s).s.under.clear();

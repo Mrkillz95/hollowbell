@@ -193,7 +193,7 @@ public class SystemsBGiantsGameTests implements FabricGameTest {
                     one.discard();
                 } finally {
                     Underworld.nearMin = 48;
-                    Underworld.nearMax = 128;
+                    Underworld.nearMax = 160;
                     AdminWorld.get(s).remove("all", "all.underworld");
                     AdminServer.push(s, AdminWorld.get(s));
                     for (LivingEntity x : FunGiants.standing(s, null)) if (x.level() != l) x.discard();

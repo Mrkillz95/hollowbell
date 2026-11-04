@@ -15,6 +15,15 @@ cmd gamerule doMobSpawning false
 cmd difficulty normal
 cmd gamerule sendCommandFeedback false
 cmd giants admin setall maxInWorld 8
+# (the giants stay in the world with only a spectator near them: the pictures are taken from spectator)
+cmd pitchgut away off
+cmd furrowmaw away off
+cmd cerberus away off
+cmd hollowbell away off
+cmd lanternwillow away off
+cmd wreckback away off
+cmd swarmforge away off
+cmd gloamwick away off
 cmd tp @s 0 -60 0 0 10
 wait 20
 # some of them on, so the page shows them
@@ -90,6 +99,42 @@ cmd giants admin set all underworld off
 cmd giants admin set all sacred off
 cmd giants admin set all mirror off
 cmd wreckback kill
+wait 40
+# villagers worship a calm Cerberus (and leave him bread), then flee a hunting one; golems go for him
+cmd tp @s 300 -60 -800 0 10
+wait 30
+cmd cerberus summon calm 0.05
+wait 20
+cmd giants freeze
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~10 ~ ~4
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-10 ~ ~6
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~8 ~ ~-9
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-9 ~ ~-8
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~12 ~ ~-1
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-12 ~ ~0
+cmd gamemode spectator
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~-7 ~4 ~-16
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] feet
+wait 500
+shot p9_villagers_worship
+cmd giants admin set all villagers flee
+cmd giants unfreeze
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~14 ~ ~10
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~-14 ~ ~12
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ ~10 ~-24 0 20
+wait 120
+shot p9_villagers_flee
+wait 60
+cmd execute at @e[type=iron_golem,limit=1,sort=nearest] run tp @s ~-3 ~2 ~-5
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] feet
+wait 10
+shot p9_golems
+cmd giants admin set all villagers off
+cmd giants admin set all golems off
+cmd kill @e[type=villager]
+cmd kill @e[type=iron_golem]
+cmd giants freeze
+cmd gamemode creative
 wait 40
 # Weather Gods: each giant's own weather round him, seen from a little way off looking at him (held still)
 cmd giants admin set all weather on
@@ -191,41 +236,6 @@ cmd swarmforge kill
 wait 60
 cmd giants admin set all weather off
 wait 100
-# villagers worship a calm Cerberus (and leave him bread), then flee a hunting one; golems go for him
-cmd tp @s 3900 -60 0 0 10
-wait 30
-cmd cerberus summon calm 0.05
-wait 20
-cmd giants freeze
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~10 ~ ~4
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-10 ~ ~6
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~8 ~ ~-9
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-9 ~ ~-8
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~12 ~ ~-1
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-12 ~ ~0
-cmd gamemode spectator
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~-7 ~4 ~-16
-cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] feet
-wait 500
-shot p9_villagers_worship
-cmd giants admin set all villagers flee
-cmd giants unfreeze
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~14 ~ ~10
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon iron_golem ~-14 ~ ~12
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~ ~10 ~-24 0 20
-wait 120
-shot p9_villagers_flee
-cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ~8 ~3 ~-12
-cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] feet
-wait 60
-shot p9_golems
-cmd giants admin set all villagers off
-cmd giants admin set all golems off
-cmd kill @e[type=villager]
-cmd kill @e[type=iron_golem]
-cmd cerberus kill
-cmd gamemode creative
-wait 40
 # a band of followers: vexes round the Gloamwick, drowned round the Wreckback
 cmd giants admin set all followers on
 cmd giants admin set all followerCount 8
@@ -235,9 +245,10 @@ wait 30
 cmd gloamwick summon calm 0.06
 wait 20
 cmd giants freeze
-cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~ -56 ~-14
-cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=gloamwick:gloamwick,limit=1,sort=nearest] feet
 wait 1800
+cmd execute at @e[type=gloamwick:gloamwick,limit=1,sort=nearest] run tp @s ~-10 -58 ~-14
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=gloamwick:gloamwick,limit=1,sort=nearest] feet
+wait 10
 shot p9_followers_gloamwick
 cmd giants unfreeze
 cmd gloamwick kill

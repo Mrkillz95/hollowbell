@@ -82,7 +82,7 @@ public final class Underworld {
 
     private static final List<Pending> pending = new ArrayList<>();
     /** how far from a player there he comes (the tests bring it nearer) */
-    public static double nearMin = 48, nearMax = 128;
+    public static double nearMin = 48, nearMax = 160;
     /** (the tests) only this kind is brought below (null: every kind) */
     public static @Nullable String onlyForTests;
     /** the server tick each one was last tried (a try every ten seconds at most) */
@@ -239,7 +239,10 @@ public final class Underworld {
                 if ("here".equals(r.state()) && here.equals(r.dim()))
                     others.add(new double[] {r.x(), r.z(), FunGiants.reach(e.getKey(), AdminJson.num(r.r(), "size", 1))});
         int[] why = new int[4];
-        for (int i = 0; i < 40; i++) {
+        // (the spot of these where the biggest of him fits wins: a small cave makes a small giant)
+        double bestSize = 0;
+        int bx = 0, by = 0, bz = 0;
+        for (int i = 0; i < 60; i++) {
             ServerPlayer near = players.get(level.random.nextInt(players.size()));
             double a = level.random.nextDouble() * Math.PI * 2,
                     dist = nearMin + level.random.nextDouble() * (nearMax - nearMin);
@@ -256,9 +259,10 @@ public final class Underworld {
             }
             double size = want;
             if (roof) size = Math.min(size, col[1] * 0.95 / FunGiants.height(g.key(), 1));
+            if (size <= bestSize) continue;
             boolean fit = false;
-            for (; size >= range[0] && FunGiants.height(g.key(), size) >= 2; size *= 0.8)
-                if (fits(level, x, col[0], z, FunGiants.length(g.key(), size) / 2, FunGiants.height(g.key(), size))) {
+            for (; size > bestSize && size >= range[0] && FunGiants.height(g.key(), size) >= 2; size *= 0.85)
+                if (fits(level, x, col[0], z, footprint(g.key(), size), FunGiants.height(g.key(), size))) {
                     fit = true;
                     break;
                 }
@@ -275,21 +279,38 @@ public final class Underworld {
                 why[3]++;
                 continue;
             }
-            size = Math.round(size * 1000) / 1000.0;
+            bestSize = size;
+            bx = x;
+            by = col[0];
+            bz = z;
+        }
+        // (never a tiny one squeezed into a crack: at least about eight blocks tall, or his own size if smaller)
+        double least = Math.max(range[0], Math.min(want, 8 / FunGiants.height(g.key(), 1)));
+        if (bestSize >= least) {
+            double size = Math.round(bestSize * 1000) / 1000.0;
             Set<UUID> before = new HashSet<>();
             for (LivingEntity e : FunGiants.standing(server, g.key())) before.add(e.getUUID());
             List<String> moods = moods(server, g);
-            String arg = level.dimension().location() + " " + (x + 0.5) + " " + col[0] + " " + (z + 0.5) + " -"
+            String arg = level.dimension().location() + " " + (bx + 0.5) + " " + by + " " + (bz + 0.5) + " -"
                     + (moods.isEmpty() || moods.contains("calm") ? " calm" : "") + " " + AdminSetting.plain(size);
             List<String> said = AdminServer.call(server, g, "summon", arg);
-            pending.add(new Pending(key, g.key(), level, new BlockPos(x, col[0], z), before, new int[] {15}));
-            Systems.log("bringing a {} into the {} at {} {} {}, size {}: {}", g.key(), level.dimension().location(), x,
-                    col[0], z, size, said);
+            pending.add(new Pending(key, g.key(), level, new BlockPos(bx, by, bz), before, new int[] {15}));
+            Systems.log("bringing a {} into the {} at {} {} {}, size {}: {}", g.key(), level.dimension().location(), bx,
+                    by, bz, size, said);
             return true;
         }
-        Systems.log("no spot for a {} in the {} yet (unloaded {}, no floor {}, no room {}, crowded {}; want {})",
-                g.key(), level.dimension().location(), why[0], why[1], why[2], why[3], want);
+        Systems.log("no spot for a {} in the {} yet (unloaded {}, no floor {}, no room {}, crowded {}; best {} of {})",
+                g.key(), level.dimension().location(), why[0], why[1], why[2], why[3], bestSize, want);
         return false;
+    }
+
+    /**
+     * half the width of the ground he needs: half his length, but a long one (a worm) curls up, so never more than
+     * one and a half times his height
+     */
+    static double footprint(String kind, double size) {
+        double h = FunGiants.height(kind, size), len = FunGiants.length(kind, size);
+        return Math.max(h / 2, Math.min(len / 2, h * 1.5));
     }
 
     /**
@@ -299,19 +320,29 @@ public final class Underworld {
     static boolean fits(ServerLevel l, int x, int y, int z, double half, double tall) {
         int hw = (int) Math.ceil(Math.max(1, half)), ht = (int) Math.ceil(Math.max(2, tall));
         if (l.dimensionType().hasCeiling() && y + ht >= l.getMinBuildHeight() + l.getLogicalHeight()) return false;
+        // (his feet and legs find their own footing on rough ground: the bumps of the floor under the lowest fifth of
+        // him are ground, not rock in his way; the rest of him must be in the open)
+        int legs = Math.max(1, (int) Math.ceil(ht * 0.2));
         int step = Math.max(1, Math.min(hw, ht) / 6);
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         int under = 0, ground = 0;
         for (int dx = -hw; dx <= hw; dx += step)
             for (int dz = -hw; dz <= hw; dz += step) {
                 if (!l.hasChunkAt(p.set(x + dx, y, z + dz))) return false;
-                for (int dy = 0; dy < ht; dy += step) {
+                for (int dy = legs; dy < ht; dy += step) {
                     BlockState s = l.getBlockState(p.set(x + dx, y + dy, z + dz));
                     if (!s.getCollisionShape(l, p).isEmpty() || s.getFluidState().is(FluidTags.LAVA)) return false;
                 }
                 under++;
-                BlockState f = l.getBlockState(p.set(x + dx, y - 1, z + dz));
-                if (f.isFaceSturdy(l, p, Direction.UP) && f.getFluidState().isEmpty()) ground++;
+                // (ground: something solid and dry from a little under his feet up to his knees)
+                for (int dy = -4; dy < legs; dy++) {
+                    BlockState f = l.getBlockState(p.set(x + dx, y + dy, z + dz));
+                    if (f.getFluidState().is(FluidTags.LAVA)) break;
+                    if (f.isFaceSturdy(l, p, Direction.UP) && f.getFluidState().isEmpty()) {
+                        ground++;
+                        break;
+                    }
+                }
             }
         return ground * 10 >= under * 6;
     }
