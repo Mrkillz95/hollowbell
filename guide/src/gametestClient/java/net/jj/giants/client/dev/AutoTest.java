@@ -45,7 +45,7 @@ import net.minecraft.world.level.levelgen.presets.WorldPresets;
  * HOST:PORT (a real server instead), wait N, cmd ... (as an operator, own world only), chat /..., guiscale N, gui
  * on|off, guide KEY TAB [SCROLL], perf [SCROLL] [SEARCH], controls [SCROLL] [SEARCH], bind KEYNAME KEY, vanillacontrols, gesturedemo GIANT, mouse X Y, close, shot NAME, quit,
  * adminbook [PAGE] [SCROLL] [SEARCH], adminmode simple|advanced, adminscope world|all, adminintro N|seen|unseen,
- * adminconfirm GIANT ID.
+ * adminconfirm GIANT ID, render N (chunks), fov N, noclouds, deepflat (a flat world with deep ground, read when it is made).
  */
 public final class AutoTest implements ClientModInitializer {
     private static List<String> script;
@@ -127,10 +127,28 @@ public final class AutoTest implements ClientModInitializer {
                                 "guidetest" + System.currentTimeMillis() % 100000,
                                 ls,
                                 new WorldOptions(20261001L, false, false),
-                                ra -> ra.registryOrThrow(Registries.WORLD_PRESET)
-                                        .getHolderOrThrow(WorldPresets.FLAT)
-                                        .value()
-                                        .createWorldDimensions(),
+                                ra -> {
+                                    var dims = ra.registryOrThrow(Registries.WORLD_PRESET)
+                                            .getHolderOrThrow(WorldPresets.FLAT)
+                                            .value()
+                                            .createWorldDimensions();
+                                    // "deepflat": a flat world with deep ground (grass at y 36) for the dens
+                                    if (!script.stream().anyMatch(l -> l.trim().equals("deepflat"))) return dims;
+                                    var flat = (net.minecraft.world.level.levelgen.FlatLevelSource) dims.overworld();
+                                    var layers = List.of(
+                                            new net.minecraft.world.level.levelgen.flat.FlatLayerInfo(
+                                                    1, net.minecraft.world.level.block.Blocks.BEDROCK),
+                                            new net.minecraft.world.level.levelgen.flat.FlatLayerInfo(
+                                                    96, net.minecraft.world.level.block.Blocks.STONE),
+                                            new net.minecraft.world.level.levelgen.flat.FlatLayerInfo(
+                                                    3, net.minecraft.world.level.block.Blocks.DIRT),
+                                            new net.minecraft.world.level.levelgen.flat.FlatLayerInfo(
+                                                    1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK));
+                                    var set = flat.settings().withBiomeAndLayers(
+                                            layers, flat.settings().structureOverrides(), flat.settings().getBiome());
+                                    return dims.replaceOverworldGenerator(
+                                            ra, new net.minecraft.world.level.levelgen.FlatLevelSource(set));
+                                },
                                 mc.screen);
             }
             return;
@@ -258,6 +276,19 @@ public final class AutoTest implements ClientModInitializer {
             if (s.startsWith("guiscale ")) {
                 mc.options.guiScale().set(Integer.parseInt(s.substring(9).trim()));
                 mc.resizeDisplay();
+                continue;
+            }
+            if (s.startsWith("render ")) {
+                mc.options.renderDistance().set(Integer.parseInt(s.substring(7).trim()));
+                continue;
+            }
+            if (s.startsWith("fov ")) {
+                mc.options.fov().set(Integer.parseInt(s.substring(4).trim()));
+                continue;
+            }
+            if (s.equals("deepflat")) continue;
+            if (s.equals("noclouds")) {
+                mc.options.cloudStatus().set(net.minecraft.client.CloudStatus.OFF);
                 continue;
             }
             if (s.startsWith("gui ")) {

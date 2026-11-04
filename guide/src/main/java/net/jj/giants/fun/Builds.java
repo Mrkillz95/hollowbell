@@ -49,7 +49,7 @@ public final class Builds {
     private Builds() {}
 
     /** most blocks written down for taking a build down */
-    static final int MOST_UNDO = 2_000_000;
+    public static final int MOST_UNDO = 2_000_000;
     public static final Map<String, Integer> ARENAS = Map.of("small", 40, "medium", 64, "large", 96);
 
     /** what one column gets: blocks set (absolute y), everything above a height cleared, a support under it */
@@ -121,7 +121,7 @@ public final class Builds {
     public static AdminServer.Result den(MinecraftServer server, String who, ServerPlayer p, String kind, double size) {
         Giant g = AdminServer.giant(kind);
         if (g == null) return AdminServer.Result.fail("No giant called " + kind + ".");
-        int r = Mth.clamp((int) Math.round(FunGiants.reach(g.key(), size) * 0.8), 10, 64);
+        int r = Mth.clamp((int) Math.round(FunGiants.reach(g.key(), size) * Dens.ROOM), Dens.LEAST, Dens.MOST);
         Shape s = Dens.shape(g.key(), r, FunGiants.height(g.key(), size));
         if (s == null) return AdminServer.Result.fail("There's no den for the " + AdminServer.nameOf(g) + " yet.");
         return start(server, who, p, "den", g.key(), g.key(), r, s);
@@ -293,7 +293,8 @@ public final class Builds {
             int y = col.ys.get(i)[0];
             if (y < l.getMinBuildHeight() || y >= l.getMaxBuildHeight()) continue;
             put(j, l, m.set(x, y, z), col.states.get(i), players);
-            if (!col.states.get(i).isAir()) lowest = Math.min(lowest, y);
+            // (air it was told to put counts too: the support never fills a hollow the build dug on purpose)
+            lowest = Math.min(lowest, y);
         }
         if (col.support != null && lowest != Integer.MAX_VALUE)
             for (int y = lowest - 1, k = 0; y > l.getMinBuildHeight() && k < 24; y--, k++) {
@@ -446,61 +447,6 @@ public final class Builds {
     }
 
     static Shape arena(int r) {
-        return new Shape() {
-            @Override
-            public int reach() {
-                return r + 9;
-            }
-
-            @Override
-            public void column(int dx, int dz, double d, int f, Col out) {
-                boolean gate = Math.abs(dx) <= 2 || Math.abs(dz) <= 2;
-                double ang = Math.atan2(dz, dx);
-                if (d <= r) {
-                    BlockState s = d < 2.5 ? b(Blocks.CHISELED_STONE_BRICKS)
-                            : Math.abs(d - r / 2.0) < 0.7 || Math.abs(d - (r - 2)) < 0.7 ? b(Blocks.POLISHED_ANDESITE)
-                            : hash(dx, dz, 1) < 0.06 ? b(Blocks.CRACKED_STONE_BRICKS)
-                            : hash(dx, dz, 2) < 0.04 ? b(Blocks.MOSSY_STONE_BRICKS) : b(Blocks.STONE_BRICKS);
-                    out.set(f, s);
-                    out.clearAbove(f + 1);
-                    out.support = b(Blocks.STONE_BRICKS);
-                } else if (d <= r + 2) {
-                    out.set(f, b(Blocks.STONE_BRICKS));
-                    out.support = b(Blocks.STONE_BRICKS);
-                    if (gate) {
-                        out.clearAbove(f + 1);
-                        return;
-                    }
-                    // a pillar every 30 degrees (between the gates), with a lantern on top
-                    boolean pillar = false;
-                    for (int k = 0; k < 12; k++) {
-                        double a = Math.toRadians(15 + 30 * k);
-                        double px = Math.cos(a) * (r + 1), pz = Math.sin(a) * (r + 1);
-                        if ((dx - px) * (dx - px) + (dz - pz) * (dz - pz) < 1.6) pillar = true;
-                    }
-                    if (pillar) {
-                        for (int y = f + 1; y <= f + 8; y++) out.set(y, b(Blocks.DEEPSLATE_BRICKS));
-                        out.set(f + 9, b(Blocks.LANTERN));
-                        out.clearAbove(f + 10);
-                        return;
-                    }
-                    for (int y = f + 1; y <= f + 4; y++) out.set(y, b(Blocks.STONE_BRICKS));
-                    int along = (int) Math.floor((ang + Math.PI) * (r + 1));
-                    if ((along & 1) == 0) out.set(f + 5, b(Blocks.STONE_BRICK_WALL));
-                    out.clearAbove(f + 6);
-                } else if (d <= r + 8) {
-                    out.support = b(Blocks.STONE_BRICKS);
-                    if (gate) {
-                        out.set(f, b(Blocks.STONE_BRICKS));
-                        out.clearAbove(f + 1);
-                        return;
-                    }
-                    int tier = Math.min(3, (int) ((d - (r + 2)) / 2) + 1);
-                    for (int y = f; y < f + tier; y++) out.set(y, b(Blocks.STONE_BRICKS));
-                    out.set(f + tier, b(Blocks.POLISHED_ANDESITE));
-                    out.clearAbove(f + tier + 1);
-                }
-            }
-        };
+        return new Arena(r).made();
     }
 }
