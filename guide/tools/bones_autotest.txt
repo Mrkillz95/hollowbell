@@ -1,0 +1,868 @@
+# Remains pictures (bones pass): set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamerule doMobSpawning false
+cmd gamerule randomTickSpeed 0
+cmd giants admin set all corpseDays 30
+gui off
+cmd gamemode spectator
+wait 20
+cmd tp @s 574 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 1.0 skeleton
+wait 1
+cmd tp @s 733.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_pitchgut_1_skeleton
+cmd tp @s 433.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_pitchgut_1_skeleton_b
+cmd tp @s 574.0 170.0 0.0 0 90
+wait 50
+shot bones_pitchgut_1_skeleton_top
+cmd tp @s 1148 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 1.0 corpse 0
+wait 1
+cmd tp @s 1307.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_pitchgut_1_corpse0
+cmd tp @s 1007.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_pitchgut_1_corpse0_b
+cmd tp @s 1148.0 170.0 0.0 0 90
+wait 50
+shot bones_pitchgut_1_corpse0_top
+cmd tp @s 1722 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 1.0 corpse 1
+wait 1
+cmd tp @s 1881.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_pitchgut_1_corpse1
+cmd tp @s 2296 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 1.0 corpse 2
+wait 1
+cmd tp @s 2454.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_pitchgut_1_corpse2
+cmd tp @s 2870 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 1.0 corpse 3
+wait 1
+cmd tp @s 3028.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_pitchgut_1_corpse3
+cmd tp @s 3181 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 0.25 skeleton
+wait 1
+cmd tp @s 3228.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_pitchgut_025_skeleton
+cmd tp @s 3139.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_pitchgut_025_skeleton_b
+cmd tp @s 3181.0 20.8 0.0 0 90
+wait 50
+shot bones_pitchgut_025_skeleton_top
+cmd tp @s 3492 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 0.25 corpse 0
+wait 1
+cmd tp @s 3539.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_pitchgut_025_corpse0
+cmd tp @s 3450.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_pitchgut_025_corpse0_b
+cmd tp @s 3492.0 20.8 0.0 0 90
+wait 50
+shot bones_pitchgut_025_corpse0_top
+cmd tp @s 3803 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 0.25 corpse 1
+wait 1
+cmd tp @s 3850.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_pitchgut_025_corpse1
+cmd tp @s 4114 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 0.25 corpse 2
+wait 1
+cmd tp @s 4161.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_pitchgut_025_corpse2
+cmd tp @s 4425 -60 0 0 0
+wait 30
+cmd giants admin systems remains pitchgut 0.25 corpse 3
+wait 1
+cmd tp @s 4472.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_pitchgut_025_corpse3
+cmd tp @s 4736 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd pitchgut summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 4786.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_pitchgut_025_alive
+cmd giants unfreeze
+cmd pitchgut kill
+wait 20
+cmd tp @s 5310 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 1.0 skeleton
+wait 1
+cmd tp @s 5468.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_furrowmaw_1_skeleton
+cmd tp @s 5169.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_furrowmaw_1_skeleton_b
+cmd tp @s 5310.0 170.0 0.0 0 90
+wait 50
+shot bones_furrowmaw_1_skeleton_top
+cmd tp @s 5884 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 1.0 corpse 0
+wait 1
+cmd tp @s 6042.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_furrowmaw_1_corpse0
+cmd tp @s 5743.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_furrowmaw_1_corpse0_b
+cmd tp @s 5884.0 170.0 0.0 0 90
+wait 50
+shot bones_furrowmaw_1_corpse0_top
+cmd tp @s 6458 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 1.0 corpse 1
+wait 1
+cmd tp @s 6616.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_furrowmaw_1_corpse1
+cmd tp @s 7032 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 1.0 corpse 2
+wait 1
+cmd tp @s 7190.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_furrowmaw_1_corpse2
+cmd tp @s 7606 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 1.0 corpse 3
+wait 1
+cmd tp @s 7764.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_furrowmaw_1_corpse3
+cmd tp @s 7917 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 0.25 skeleton
+wait 1
+cmd tp @s 7964.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_furrowmaw_025_skeleton
+cmd tp @s 7875.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_furrowmaw_025_skeleton_b
+cmd tp @s 7917.0 20.8 0.0 0 90
+wait 50
+shot bones_furrowmaw_025_skeleton_top
+cmd tp @s 8228 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 0.25 corpse 0
+wait 1
+cmd tp @s 8275.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_furrowmaw_025_corpse0
+cmd tp @s 8186.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_furrowmaw_025_corpse0_b
+cmd tp @s 8228.0 20.8 0.0 0 90
+wait 50
+shot bones_furrowmaw_025_corpse0_top
+cmd tp @s 8539 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 0.25 corpse 1
+wait 1
+cmd tp @s 8586.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_furrowmaw_025_corpse1
+cmd tp @s 8850 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 0.25 corpse 2
+wait 1
+cmd tp @s 8897.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_furrowmaw_025_corpse2
+cmd tp @s 9161 -60 0 0 0
+wait 30
+cmd giants admin systems remains furrowmaw 0.25 corpse 3
+wait 1
+cmd tp @s 9208.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_furrowmaw_025_corpse3
+cmd tp @s 9472 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd furrowmaw summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 9522.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_furrowmaw_025_alive
+cmd giants unfreeze
+cmd furrowmaw kill
+wait 20
+cmd tp @s 10046 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 1.0 skeleton
+wait 1
+cmd tp @s 10205.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_cerberus_1_skeleton
+cmd tp @s 9905.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_cerberus_1_skeleton_b
+cmd tp @s 10046.0 170.0 0.0 0 90
+wait 50
+shot bones_cerberus_1_skeleton_top
+cmd tp @s 10620 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 1.0 corpse 0
+wait 1
+cmd tp @s 10779.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_cerberus_1_corpse0
+cmd tp @s 10479.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_cerberus_1_corpse0_b
+cmd tp @s 10620.0 170.0 0.0 0 90
+wait 50
+shot bones_cerberus_1_corpse0_top
+cmd tp @s 11194 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 1.0 corpse 1
+wait 1
+cmd tp @s 11353.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_cerberus_1_corpse1
+cmd tp @s 11768 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 1.0 corpse 2
+wait 1
+cmd tp @s 11927.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_cerberus_1_corpse2
+cmd tp @s 12342 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 1.0 corpse 3
+wait 1
+cmd tp @s 12501.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_cerberus_1_corpse3
+cmd tp @s 12653 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 0.25 skeleton
+wait 1
+cmd tp @s 12700.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_cerberus_025_skeleton
+cmd tp @s 12611.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_cerberus_025_skeleton_b
+cmd tp @s 12653.0 20.8 0.0 0 90
+wait 50
+shot bones_cerberus_025_skeleton_top
+cmd tp @s 12964 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 0.25 corpse 0
+wait 1
+cmd tp @s 13011.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_cerberus_025_corpse0
+cmd tp @s 12922.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_cerberus_025_corpse0_b
+cmd tp @s 12964.0 20.8 0.0 0 90
+wait 50
+shot bones_cerberus_025_corpse0_top
+cmd tp @s 13275 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 0.25 corpse 1
+wait 1
+cmd tp @s 13322.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_cerberus_025_corpse1
+cmd tp @s 13586 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 0.25 corpse 2
+wait 1
+cmd tp @s 13633.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_cerberus_025_corpse2
+cmd tp @s 13897 -60 0 0 0
+wait 30
+cmd giants admin systems remains cerberus 0.25 corpse 3
+wait 1
+cmd tp @s 13944.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_cerberus_025_corpse3
+cmd tp @s 14208 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd cerberus summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 14258.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_cerberus_025_alive
+cmd giants unfreeze
+cmd cerberus kill
+wait 20
+cmd tp @s 14782 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 1.0 skeleton
+wait 1
+cmd tp @s 14941.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_hollowbell_1_skeleton
+cmd tp @s 14641.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_hollowbell_1_skeleton_b
+cmd tp @s 14782.0 170.0 0.0 0 90
+wait 50
+shot bones_hollowbell_1_skeleton_top
+cmd tp @s 15356 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 1.0 corpse 0
+wait 1
+cmd tp @s 15515.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_hollowbell_1_corpse0
+cmd tp @s 15215.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_hollowbell_1_corpse0_b
+cmd tp @s 15356.0 170.0 0.0 0 90
+wait 50
+shot bones_hollowbell_1_corpse0_top
+cmd tp @s 15930 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 1.0 corpse 1
+wait 1
+cmd tp @s 16089.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_hollowbell_1_corpse1
+cmd tp @s 16504 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 1.0 corpse 2
+wait 1
+cmd tp @s 16663.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_hollowbell_1_corpse2
+cmd tp @s 17078 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 1.0 corpse 3
+wait 1
+cmd tp @s 17237.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_hollowbell_1_corpse3
+cmd tp @s 17389 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 0.25 skeleton
+wait 1
+cmd tp @s 17436.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_hollowbell_025_skeleton
+cmd tp @s 17347.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_hollowbell_025_skeleton_b
+cmd tp @s 17389.0 20.8 0.0 0 90
+wait 50
+shot bones_hollowbell_025_skeleton_top
+cmd tp @s 17700 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 0.25 corpse 0
+wait 1
+cmd tp @s 17747.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_hollowbell_025_corpse0
+cmd tp @s 17658.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_hollowbell_025_corpse0_b
+cmd tp @s 17700.0 20.8 0.0 0 90
+wait 50
+shot bones_hollowbell_025_corpse0_top
+cmd tp @s 18011 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 0.25 corpse 1
+wait 1
+cmd tp @s 18058.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_hollowbell_025_corpse1
+cmd tp @s 18322 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 0.25 corpse 2
+wait 1
+cmd tp @s 18369.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_hollowbell_025_corpse2
+cmd tp @s 18633 -60 0 0 0
+wait 30
+cmd giants admin systems remains hollowbell 0.25 corpse 3
+wait 1
+cmd tp @s 18680.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_hollowbell_025_corpse3
+cmd tp @s 18944 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd hollowbell summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 18994.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_hollowbell_025_alive
+cmd giants unfreeze
+cmd hollowbell kill
+wait 20
+cmd tp @s 19518 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 1.0 skeleton
+wait 1
+cmd tp @s 19677.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_lanternwillow_1_skeleton
+cmd tp @s 19377.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_lanternwillow_1_skeleton_b
+cmd tp @s 19518.0 170.0 0.0 0 90
+wait 50
+shot bones_lanternwillow_1_skeleton_top
+cmd tp @s 20092 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 1.0 corpse 0
+wait 1
+cmd tp @s 20251.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_lanternwillow_1_corpse0
+cmd tp @s 19951.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_lanternwillow_1_corpse0_b
+cmd tp @s 20092.0 170.0 0.0 0 90
+wait 50
+shot bones_lanternwillow_1_corpse0_top
+cmd tp @s 20666 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 1.0 corpse 1
+wait 1
+cmd tp @s 20825.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_lanternwillow_1_corpse1
+cmd tp @s 21240 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 1.0 corpse 2
+wait 1
+cmd tp @s 21399.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_lanternwillow_1_corpse2
+cmd tp @s 21814 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 1.0 corpse 3
+wait 1
+cmd tp @s 21973.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_lanternwillow_1_corpse3
+cmd tp @s 22125 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 0.25 skeleton
+wait 1
+cmd tp @s 22172.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_lanternwillow_025_skeleton
+cmd tp @s 22083.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_lanternwillow_025_skeleton_b
+cmd tp @s 22125.0 20.8 0.0 0 90
+wait 50
+shot bones_lanternwillow_025_skeleton_top
+cmd tp @s 22436 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 0.25 corpse 0
+wait 1
+cmd tp @s 22483.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_lanternwillow_025_corpse0
+cmd tp @s 22394.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_lanternwillow_025_corpse0_b
+cmd tp @s 22436.0 20.8 0.0 0 90
+wait 50
+shot bones_lanternwillow_025_corpse0_top
+cmd tp @s 22747 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 0.25 corpse 1
+wait 1
+cmd tp @s 22794.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_lanternwillow_025_corpse1
+cmd tp @s 23058 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 0.25 corpse 2
+wait 1
+cmd tp @s 23105.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_lanternwillow_025_corpse2
+cmd tp @s 23369 -60 0 0 0
+wait 30
+cmd giants admin systems remains lanternwillow 0.25 corpse 3
+wait 1
+cmd tp @s 23416.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_lanternwillow_025_corpse3
+cmd tp @s 23680 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd lanternwillow summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 23730.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_lanternwillow_025_alive
+cmd giants unfreeze
+cmd lanternwillow kill
+wait 20
+cmd tp @s 24254 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 1.0 skeleton
+wait 1
+cmd tp @s 24413.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_wreckback_1_skeleton
+cmd tp @s 24113.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_wreckback_1_skeleton_b
+cmd tp @s 24254.0 170.0 0.0 0 90
+wait 50
+shot bones_wreckback_1_skeleton_top
+cmd tp @s 24828 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 1.0 corpse 0
+wait 1
+cmd tp @s 24987.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_wreckback_1_corpse0
+cmd tp @s 24687.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_wreckback_1_corpse0_b
+cmd tp @s 24828.0 170.0 0.0 0 90
+wait 50
+shot bones_wreckback_1_corpse0_top
+cmd tp @s 25402 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 1.0 corpse 1
+wait 1
+cmd tp @s 25561.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_wreckback_1_corpse1
+cmd tp @s 25976 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 1.0 corpse 2
+wait 1
+cmd tp @s 26135.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_wreckback_1_corpse2
+cmd tp @s 26550 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 1.0 corpse 3
+wait 1
+cmd tp @s 26709.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_wreckback_1_corpse3
+cmd tp @s 26861 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 0.25 skeleton
+wait 1
+cmd tp @s 26908.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_wreckback_025_skeleton
+cmd tp @s 26819.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_wreckback_025_skeleton_b
+cmd tp @s 26861.0 20.8 0.0 0 90
+wait 50
+shot bones_wreckback_025_skeleton_top
+cmd tp @s 27172 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 0.25 corpse 0
+wait 1
+cmd tp @s 27219.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_wreckback_025_corpse0
+cmd tp @s 27130.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_wreckback_025_corpse0_b
+cmd tp @s 27172.0 20.8 0.0 0 90
+wait 50
+shot bones_wreckback_025_corpse0_top
+cmd tp @s 27483 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 0.25 corpse 1
+wait 1
+cmd tp @s 27530.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_wreckback_025_corpse1
+cmd tp @s 27794 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 0.25 corpse 2
+wait 1
+cmd tp @s 27841.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_wreckback_025_corpse2
+cmd tp @s 28105 -60 0 0 0
+wait 30
+cmd giants admin systems remains wreckback 0.25 corpse 3
+wait 1
+cmd tp @s 28152.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_wreckback_025_corpse3
+cmd tp @s 28416 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd wreckback summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 28466.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_wreckback_025_alive
+cmd giants unfreeze
+cmd wreckback kill
+wait 20
+cmd tp @s 28990 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 1.0 skeleton
+wait 1
+cmd tp @s 29149.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_swarmforge_1_skeleton
+cmd tp @s 28849.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_swarmforge_1_skeleton_b
+cmd tp @s 28990.0 170.0 0.0 0 90
+wait 50
+shot bones_swarmforge_1_skeleton_top
+cmd tp @s 29564 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 1.0 corpse 0
+wait 1
+cmd tp @s 29723.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_swarmforge_1_corpse0
+cmd tp @s 29423.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_swarmforge_1_corpse0_b
+cmd tp @s 29564.0 170.0 0.0 0 90
+wait 50
+shot bones_swarmforge_1_corpse0_top
+cmd tp @s 30138 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 1.0 corpse 1
+wait 1
+cmd tp @s 30297.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_swarmforge_1_corpse1
+cmd tp @s 30712 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 1.0 corpse 2
+wait 1
+cmd tp @s 30871.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_swarmforge_1_corpse2
+cmd tp @s 31286 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 1.0 corpse 3
+wait 1
+cmd tp @s 31445.0 42.9 84.2 117.9 23.4
+wait 840
+shot bones_swarmforge_1_corpse3
+cmd tp @s 31597 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 0.25 skeleton
+wait 1
+cmd tp @s 31644.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_swarmforge_025_skeleton
+cmd tp @s 31555.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_swarmforge_025_skeleton_b
+cmd tp @s 31597.0 20.8 0.0 0 90
+wait 50
+shot bones_swarmforge_025_skeleton_top
+cmd tp @s 31908 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 0.25 corpse 0
+wait 1
+cmd tp @s 31955.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_swarmforge_025_corpse0
+cmd tp @s 31866.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_swarmforge_025_corpse0_b
+cmd tp @s 31908.0 20.8 0.0 0 90
+wait 50
+shot bones_swarmforge_025_corpse0_top
+cmd tp @s 32219 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 0.25 corpse 1
+wait 1
+cmd tp @s 32266.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_swarmforge_025_corpse1
+cmd tp @s 32530 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 0.25 corpse 2
+wait 1
+cmd tp @s 32577.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_swarmforge_025_corpse2
+cmd tp @s 32841 -60 0 0 0
+wait 30
+cmd giants admin systems remains swarmforge 0.25 corpse 3
+wait 1
+cmd tp @s 32888.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_swarmforge_025_corpse3
+cmd tp @s 33152 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd swarmforge summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 33202.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_swarmforge_025_alive
+cmd giants unfreeze
+cmd swarmforge kill
+wait 20
+cmd tp @s 33726 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 1.0 skeleton
+wait 1
+cmd tp @s 33884.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_gloamwick_1_skeleton
+cmd tp @s 33585.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_gloamwick_1_skeleton_b
+cmd tp @s 33726.0 170.0 0.0 0 90
+wait 50
+shot bones_gloamwick_1_skeleton_top
+cmd tp @s 34300 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 1.0 corpse 0
+wait 1
+cmd tp @s 34458.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_gloamwick_1_corpse0
+cmd tp @s 34159.8 33.5 -112.2 -51.3 20.9
+wait 40
+shot bones_gloamwick_1_corpse0_b
+cmd tp @s 34300.0 170.0 0.0 0 90
+wait 50
+shot bones_gloamwick_1_corpse0_top
+cmd tp @s 34874 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 1.0 corpse 1
+wait 1
+cmd tp @s 35032.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_gloamwick_1_corpse1
+cmd tp @s 35448 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 1.0 corpse 2
+wait 1
+cmd tp @s 35606.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_gloamwick_1_corpse2
+cmd tp @s 36022 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 1.0 corpse 3
+wait 1
+cmd tp @s 36180.9 42.9 84.2 117.9 23.4
+wait 840
+shot bones_gloamwick_1_corpse3
+cmd tp @s 36333 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 0.25 skeleton
+wait 1
+cmd tp @s 36380.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_gloamwick_025_skeleton
+cmd tp @s 36291.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_gloamwick_025_skeleton_b
+cmd tp @s 36333.0 20.8 0.0 0 90
+wait 50
+shot bones_gloamwick_025_skeleton_top
+cmd tp @s 36644 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 0.25 corpse 0
+wait 1
+cmd tp @s 36691.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_gloamwick_025_corpse0
+cmd tp @s 36602.2 -32.1 -33.4 -51.3 22.0
+wait 40
+shot bones_gloamwick_025_corpse0_b
+cmd tp @s 36644.0 20.8 0.0 0 90
+wait 50
+shot bones_gloamwick_025_corpse0_top
+cmd tp @s 36955 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 0.25 corpse 1
+wait 1
+cmd tp @s 37002.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_gloamwick_025_corpse1
+cmd tp @s 37266 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 0.25 corpse 2
+wait 1
+cmd tp @s 37313.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_gloamwick_025_corpse2
+cmd tp @s 37577 -60 0 0 0
+wait 30
+cmd giants admin systems remains gloamwick 0.25 corpse 3
+wait 1
+cmd tp @s 37624.4 -29.3 25.1 117.9 24.5
+wait 183
+shot bones_gloamwick_025_corpse3
+cmd tp @s 37888 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd gloamwick summon calm 0.25
+wait 40
+cmd giants freeze
+cmd gamemode spectator
+cmd tp @s 37938.2 -26.6 27.9 119.1 17.8
+wait 80
+shot bones_gloamwick_025_alive
+cmd giants unfreeze
+cmd gloamwick kill
+wait 20
+quit
