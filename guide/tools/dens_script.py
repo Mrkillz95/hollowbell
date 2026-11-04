@@ -16,19 +16,16 @@ noden = "--nodens" in sys.argv
 giant = "--nogiant" not in sys.argv
 
 G = 36  # the ground
-out = ["# made by tools/dens_script.py", "deepflat", "wait 60", "guiscale 2", "fov 85", "render 26", "noclouds", "gui off",
+out = ["# made by tools/dens_script.py", "deepflat", "wait 60", "guiscale 2", "fov 85", "render 20", "noclouds", "gui off",
        "adminintro seen", "cmd time set 6000", "cmd gamerule doDaylightCycle false", "cmd weather clear",
        "cmd gamerule doMobSpawning false", "cmd gamemode spectator", "wait 10"]
 x = 0
 
 
 def shots(name, X, reach, extra=0):
-    # away and back, so the client takes the land again as it is now
-    out.append(f"cmd tp @s {X + 5000} 200 0")
-    out.append("wait 40")
     d = reach * 0.86 + 6
     out.append(f"cmd tp @s {X + d * 0.7071:.1f} {G + 1 + d * 0.78 + extra:.1f} {d * 0.7071:.1f} 135 36")
-    out.append("wait 220")
+    out.append("wait 400")
     out.append(f"shot {name}_34")
     hgt = reach * 1.15 + 8 + extra
     out.append(f"cmd tp @s {X + 0.5} {G + 1 + hgt:.1f} 0.5 180 90")
@@ -48,12 +45,11 @@ if not noden:
             shots(name, x, reach, SIZE[k][0] * s * 0.15 if k == "hollowbell" else 0)
             if giant:
                 d = max(reach * 1.05, (SIZE[k][0] if k == 'furrowmaw' else max(SIZE[k])) * s * 0.9) + 6
-                if k == 'hollowbell': d = SIZE[k][0] * s * 1.6 + 10
+                if k == 'hollowbell': d = SIZE[k][0] * s * 1.25 + 10
                 hy = max(d * 0.5, SIZE[k][0] * s * 0.9)
                 pitch = math.degrees(math.atan2(hy - SIZE[k][0] * s * 0.25, d))
                 out += [f"cmd tp @s {x + 0.5} {G + 1} 0.5 0 0", "wait 10", f"cmd {k} summon calm {s}", "wait 60",
                         f"cmd giants admin settle {k} here", "wait 40", "cmd giants freeze", "wait 10"]
-                out += [f"cmd tp @s {x + 5000} 200 0", "wait 40"]
                 out.append(f"cmd tp @s {x + d * 0.7071:.1f} {G + 1 + hy:.1f} {d * 0.7071:.1f} 135 {pitch:.0f}")
                 out += ["wait 200", f"shot {name}_giant", "cmd giants remove", "wait 20",
                         "cmd kill @e[type=!minecraft:player]", "wait 20"]

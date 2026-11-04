@@ -431,10 +431,12 @@ public class FunGameTests implements FabricGameTest {
                             h.fail("something standing on the floor at " + dx + " " + y + " " + dz + ": " + q);
                     }
             h.assertTrue(seats > 200 && banners > 20, "seats " + seats + ", banners " + banners);
-            h.assertTrue(l.getBlockState(at.offset(-30, -1, 2)).is(Blocks.STONE_BRICKS)
-                    || l.getBlockState(at.offset(-30, -1, 2)).is(Blocks.POLISHED_ANDESITE)
-                    || l.getBlockState(at.offset(-30, -1, 2)).is(Blocks.CRACKED_STONE_BRICKS)
-                    || l.getBlockState(at.offset(-30, -1, 2)).is(Blocks.MOSSY_STONE_BRICKS), "the hole filled");
+            BlockState hole = l.getBlockState(at.offset(-30, -1, 2));
+            h.assertTrue(hole.isSolidRender(l, at) && (hole.is(Blocks.STONE_BRICKS) || hole.is(Blocks.SMOOTH_STONE)
+                    || hole.is(Blocks.POLISHED_ANDESITE) || hole.is(Blocks.CRACKED_STONE_BRICKS)
+                    || hole.is(Blocks.MOSSY_STONE_BRICKS)), "the hole filled: " + hole);
+            h.assertTrue(l.getBlockState(at.offset(-30, -2, 2)).is(Blocks.STONE_BRICKS)
+                    || !l.getBlockState(at.offset(-30, -2, 2)).isAir(), "held up under the floor");
             h.assertTrue(Builds.takeDown(s, "builder", b.n).ok(), "taking it down");
         });
         h.runAfterDelay(800, () -> {

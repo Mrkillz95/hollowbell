@@ -293,7 +293,8 @@ public final class Builds {
             int y = col.ys.get(i)[0];
             if (y < l.getMinBuildHeight() || y >= l.getMaxBuildHeight()) continue;
             put(j, l, m.set(x, y, z), col.states.get(i), players);
-            if (!col.states.get(i).isAir()) lowest = Math.min(lowest, y);
+            // (air it was told to put counts too: the support never fills a hollow the build dug on purpose)
+            lowest = Math.min(lowest, y);
         }
         if (col.support != null && lowest != Integer.MAX_VALUE)
             for (int y = lowest - 1, k = 0; y > l.getMinBuildHeight() && k < 24; y--, k++) {
