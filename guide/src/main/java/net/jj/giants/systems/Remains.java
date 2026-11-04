@@ -1,14 +1,26 @@
 package net.jj.giants.systems;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.BitSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import net.jj.giants.GiantsGuideMod;
 import net.jj.giants.admin.AdminServer;
 import net.jj.giants.fun.FunGiants;
+import net.jj.giants.systems.remains.Carcass;
+import net.jj.giants.systems.remains.Design;
+import net.jj.giants.systems.remains.Designs;
+import net.jj.giants.systems.remains.GiantModel;
+import net.jj.giants.systems.remains.GiantModels;
+import net.jj.giants.systems.remains.Simple;
+import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -18,356 +30,248 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
 
 /**
- * (Part 8, ADMIN_BRIDGE.md §24.3, §24.5) What stays where a giant fell: his skeleton (bone, left for good, mined like
- * any block) or his corpse (flesh in his colours over the bones, rotting away in four stages). Each kind has his own
- * body plan, sized to him. Built a few hundred blocks a tick, only in loaded land, only into air or plants, never
- * where a player stands.
+ * (Part 8, ADMIN_BRIDGE.md §24.3, §24.5) What stays where a giant fell: his skeleton (left for good, mined like any
+ * block) or his corpse (his own body, rotting in four stages over the corpse days, then gone). Each kind has his own
+ * design (package remains) made from his real model, at his size, lying the way he faced. The blocks are worked out
+ * off the server thread, then put down a few thousand a tick (at most a few ms), chunk by chunk, only into air,
+ * plants or water (never bedrock, a block entity, a player's block or where a player stands). Each rot stage changes
+ * only the blocks still as the last stage left them. What is kept per remains is how to make it again (kind, size,
+ * heading, seed) and which blocks it couldn't have; the blocks are worked out again when they change.
  */
 public final class Remains {
     private Remains() {}
 
-    public static final int PER_TICK = 400, MOST_BLOCKS = 60000;
-    /** layers: bones last; inner flesh; outer flesh (rots first) */
+    /** the most blocks one remains may have (bigger giants leave their remains a little smaller) */
+    public static final int MOST_BLOCKS = 1_500_000;
+    /** each tick: at most this long and this many blocks */
+    static final long TICK_NANOS = 4_000_000L;
+    static final int TICK_MOST = 8000;
+    /** a corpse's last change: everything goes */
+    static final int GONE = 5, PLACE = -2;
+    /** the designs' version: blocks worked out by another version aren't told apart by number (only by look) */
+    public static final int VERSION = 1;
+
+    /** (the old plain plan's stages, for remains from before) layers: bones, inner flesh, outer flesh */
     static final int BONE = 0, INNER = 1, OUTER = 2;
 
-    /** the remains still being put down: index of the next block to place */
-    private static final Map<SystemsData.Remains, Integer> building = new LinkedHashMap<>();
+    private static final ExecutorService WORK = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "jj_giants remains");
+        t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
+        return t;
+    });
+
+    /** a remains' blocks, worked out: the plan, the order to go through them (chunk by chunk), their states */
+    record Planned(Carcass.Out out, int[] order, BlockState[] states) {}
+
+    static final class Job {
+        final SystemsData.Remains r;
+        Future<Planned> plan;
+        Planned p;
+        BitSet skip = new BitSet(), wet = new BitSet();
+        int waited;
+        long chunk = Long.MIN_VALUE;
+
+        Job(SystemsData.Remains r) {
+            this.r = r;
+            for (int i : r.skip) skip.set(i);
+            for (int i : r.wet) wet.set(i);
+        }
+    }
+
+    private static final Map<SystemsData.Remains, Job> jobs = new LinkedHashMap<>();
+    /** keeps the land a remains goes down on loaded while it does (half a minute) */
+    static final net.minecraft.server.level.TicketType<ChunkPos> LAND = net.minecraft.server.level.TicketType.create(
+            "jj_giants_remains", java.util.Comparator.comparingLong(ChunkPos::toLong), 600);
 
     static void forget() {
-        building.clear();
+        for (Job j : jobs.values()) if (j.plan != null) j.plan.cancel(true);
+        jobs.clear();
     }
 
-    /** one kind's body: his frame, his colours */
-    record Plan(double ribH, double ribW, int legs, double legLen, boolean ring, int heads, double neck, double skull,
-            double tail, boolean antlers, boolean wings, boolean shell, boolean roots, BlockState bone,
-            BlockState frame, BlockState flesh, BlockState flesh2, BlockState inner, BlockState rotten) {}
-
-    static Plan plan(String kind) {
-        BlockState bone = Blocks.BONE_BLOCK.defaultBlockState();
-        return switch (kind) {
-            case "pitchgut" -> new Plan(0.24, 0.2, 4, 0.22, false, 1, 0.12, 0.09, 0.15, false, false, false, false,
-                    bone, bone, Blocks.BLACK_TERRACOTTA.defaultBlockState(), Blocks.BLACK_TERRACOTTA.defaultBlockState(),
-                    Blocks.NETHER_WART_BLOCK.defaultBlockState(), Blocks.MUD.defaultBlockState());
-            case "furrowmaw" -> new Plan(0.05, 0.05, 0, 0, true, 1, 0.0, 0.06, 0.05, false, false, false, false,
-                    bone, bone, Blocks.BROWN_TERRACOTTA.defaultBlockState(), Blocks.BROWN_TERRACOTTA.defaultBlockState(),
-                    Blocks.NETHER_WART_BLOCK.defaultBlockState(), Blocks.ROOTED_DIRT.defaultBlockState());
-            case "cerberus" -> new Plan(0.16, 0.13, 4, 0.25, false, 3, 0.16, 0.06, 0.25, false, false, false, false,
-                    bone, bone, Blocks.RED_TERRACOTTA.defaultBlockState(), Blocks.LIGHT_BLUE_TERRACOTTA.defaultBlockState(),
-                    Blocks.NETHER_WART_BLOCK.defaultBlockState(), Blocks.SOUL_SOIL.defaultBlockState());
-            case "hollowbell" -> new Plan(0.12, 0.1, 2, 0.2, false, 1, 0.22, 0.05, 0.12, false, true, false, false,
-                    bone, bone, Blocks.WHITE_TERRACOTTA.defaultBlockState(), Blocks.WHITE_TERRACOTTA.defaultBlockState(),
-                    Blocks.PINK_TERRACOTTA.defaultBlockState(), Blocks.MUD.defaultBlockState());
-            case "lanternwillow" -> new Plan(0.14, 0.12, 0, 0, false, 1, 0.1, 0.06, 0.0, false, false, false, true,
-                    bone, Blocks.STRIPPED_OAK_LOG.defaultBlockState(), Blocks.MOSS_BLOCK.defaultBlockState(),
-                    Blocks.MOSS_BLOCK.defaultBlockState(), Blocks.MUDDY_MANGROVE_ROOTS.defaultBlockState(),
-                    Blocks.MUD.defaultBlockState());
-            case "wreckback" -> new Plan(0.14, 0.2, 8, 0.2, false, 1, 0.02, 0.06, 0.05, false, false, true, false,
-                    bone, Blocks.DARK_OAK_PLANKS.defaultBlockState(), Blocks.WARPED_WART_BLOCK.defaultBlockState(),
-                    Blocks.WARPED_WART_BLOCK.defaultBlockState(), Blocks.PRISMARINE.defaultBlockState(),
-                    Blocks.MUD.defaultBlockState());
-            case "swarmforge" -> new Plan(0.18, 0.16, 4, 0.22, false, 1, 0.06, 0.07, 0.0, false, false, false, false,
-                    Blocks.IRON_BLOCK.defaultBlockState(), Blocks.IRON_BARS.defaultBlockState(),
-                    Blocks.WEATHERED_COPPER.defaultBlockState(), Blocks.WEATHERED_COPPER.defaultBlockState(),
-                    Blocks.CUT_COPPER.defaultBlockState(), Blocks.OXIDIZED_COPPER.defaultBlockState());
-            case "gloamwick" -> new Plan(0.16, 0.12, 4, 0.3, false, 1, 0.16, 0.07, 0.04, true, false, false, false,
-                    bone, bone, Blocks.SCULK.defaultBlockState(), Blocks.SCULK.defaultBlockState(),
-                    Blocks.SOUL_SOIL.defaultBlockState(), Blocks.SOUL_SAND.defaultBlockState());
-            default -> new Plan(0.15, 0.12, 4, 0.2, false, 1, 0.1, 0.06, 0.1, false, false, false, false, bone, bone,
-                    Blocks.BROWN_TERRACOTTA.defaultBlockState(), Blocks.BROWN_TERRACOTTA.defaultBlockState(),
-                    Blocks.NETHER_WART_BLOCK.defaultBlockState(), Blocks.MUD.defaultBlockState());
-        };
+    /** any remains being put down or rotting right now */
+    public static boolean busy() {
+        return !jobs.isEmpty();
     }
 
-    /** his body as blocks, in the world, lying where he fell facing the way he faced */
-    static final class Body {
-        final Map<Long, BlockState> state = new LinkedHashMap<>();
-        final Map<Long, Integer> layer = new HashMap<>();
-        final double ox, oz, fx, fz, rx, rz;
-        final int baseY;
+    // ---------------------------------------------------------------- a giant falls
 
-        Body(double ox, int baseY, double oz, float yaw) {
-            this.ox = ox;
-            this.oz = oz;
-            this.baseY = baseY;
-            double r = Math.toRadians(yaw);
-            fx = -Math.sin(r);
-            fz = Math.cos(r);
-            rx = Math.cos(r);
-            rz = Math.sin(r);
-        }
-
-        BlockPos at(double a, double b, double y) {
-            return BlockPos.containing(ox + fx * a + rx * b, baseY + y, oz + fz * a + rz * b);
-        }
-
-        /** a block of this layer (bones win over flesh: a lower layer is never covered by a higher one) */
-        void put(double a, double b, double y, BlockState s, int lay) {
-            if (y < 0) return;
-            long k = at(a, b, y).asLong();
-            Integer was = layer.get(k);
-            if (was != null && was <= lay) return;
-            state.put(k, s);
-            layer.put(k, lay);
-        }
-
-        /** a line of blocks, this thick, along its own way (bone blocks turned to lie along it) */
-        void line(double a1, double b1, double y1, double a2, double b2, double y2, double thick, BlockState s,
-                int lay) {
-            double da = a2 - a1, db = b2 - b1, dy = y2 - y1;
-            double len = Math.sqrt(da * da + db * db + dy * dy);
-            int steps = Math.max(1, (int) Math.ceil(len * 2));
-            BlockState t = s;
-            if (s.hasProperty(RotatedPillarBlock.AXIS)) {
-                double wx = Math.abs(fx * da + rx * db), wz = Math.abs(fz * da + rz * db), wy = Math.abs(dy);
-                Direction.Axis ax = wy >= wx && wy >= wz ? Direction.Axis.Y : wx >= wz ? Direction.Axis.X
-                        : Direction.Axis.Z;
-                t = s.setValue(RotatedPillarBlock.AXIS, ax);
-            }
-            int r = (int) Math.floor(thick / 2);
-            for (int i = 0; i <= steps; i++) {
-                double f = i / (double) steps;
-                double a = a1 + da * f, b = b1 + db * f, y = y1 + dy * f;
-                for (int x = -r; x <= r; x++)
-                    for (int z = -r; z <= r; z++)
-                        for (int h = -r; h <= r; h++)
-                            if (x * x + z * z + h * h <= r * r + 0.5) put(a + x, b + z, y + h, t, lay);
-            }
-        }
-
-        void ball(double a, double b, double y, double r, BlockState s, int lay) {
-            int R = (int) Math.ceil(r);
-            for (int x = -R; x <= R; x++)
-                for (int z = -R; z <= R; z++)
-                    for (int h = -R; h <= R; h++)
-                        if (x * x + z * z + h * h <= r * r) put(a + x, b + z, y + h, s, lay);
-        }
-    }
-
-    /** the body plan, at this length (blocks along his spine) */
-    static Body body(String kind, double len, double ox, int baseY, double oz, float yaw, boolean corpse) {
-        Plan p = plan(kind);
-        Body b = new Body(ox, baseY, oz, yaw);
-        double L = len, half = L / 2;
-        double th = L >= 40 ? 2 : 1;
-        double H = Math.max(2, p.ribH() * L), W = Math.max(1.5, p.ribW() * L);
-        BlockState bone = p.bone(), frame = p.frame();
-        if (p.ring()) {
-            // a long worm: the spine down the middle, a ring of ribs round it all the way, a ring of teeth at the front
-            double R = Math.max(1.5, Math.max(H, W));
-            b.line(-half, 0, R, half, 0, R, th, bone, BONE);
-            double gap = Math.max(3, L / 24);
-            for (double a = -half + gap / 2; a < half - 1; a += gap)
-                for (int i = 0; i < 24; i++) {
-                    double t = i / 24.0 * Math.PI * 2;
-                    b.put(a, Math.cos(t) * R, R + Math.sin(t) * R, bone, BONE);
-                }
-            for (int i = 0; i < 12; i++) {
-                double t = i / 12.0 * Math.PI * 2;
-                b.line(half, Math.cos(t) * R * 1.2, R + Math.sin(t) * R * 1.2, half + R * 0.6, Math.cos(t) * R * 0.5,
-                        R + Math.sin(t) * R * 0.5, 1, bone, BONE);
-            }
-            if (corpse) shell(b, p, 0, R, half, R * 1.2, R * 1.2);
-            return b;
-        }
-        // the spine
-        b.line(-half, 0, H, half, 0, H, th, frame == bone ? bone : frame, BONE);
-        // the ribs, arching down to the ground each side
-        double gap = Math.max(2, L / 12);
-        for (double a = -half * 0.6; a <= half * 0.5; a += gap) {
-            int n = (int) Math.max(8, Math.PI * (H + W));
-            double pa = 0, pb = W, py = 0;
-            for (int i = 1; i <= n; i++) {
-                double t = Math.PI * i / n;
-                double nb = W * Math.cos(t), ny = H * Math.sin(t);
-                b.line(a, pb, py, a, nb, ny, 1, frame, BONE);
-                pb = nb;
-                py = ny;
-            }
-        }
-        // a crab's shell: timbers and bone over the ribs
-        if (p.shell()) {
-            for (double a = -half * 0.7; a <= half * 0.7; a += 1)
-                for (int i = 0; i <= 16; i++) {
-                    double t = Math.PI * i / 16;
-                    if ((int) Math.round(a) % 3 == 0 || i % 4 == 0)
-                        b.put(a, W * 1.15 * Math.cos(t), H * 1.25 * Math.sin(t), (int) Math.round(a) % 6 == 0 ? bone
-                                : frame, BONE);
-                }
-        }
-        // legs (or a willow's roots), splayed out on the ground
-        if (p.roots()) {
-            for (int i = 0; i < 8; i++) {
-                double t = i / 8.0 * Math.PI * 2;
-                double ca = -half * 0.8, len2 = L * 0.35;
-                b.line(ca, 0, H * 0.6, ca + Math.cos(t) * len2, Math.sin(t) * len2, 0, 1, frame, BONE);
-            }
-        }
-        if (p.legs() > 0) {
-            double legL = Math.max(3, p.legLen() * L);
-            int pairs = p.legs() / 2;
-            for (int i = 0; i < pairs; i++) {
-                double a = pairs == 1 ? half * 0.3 : -half * 0.55 + i * (half * 1.1 / (pairs - 1));
-                for (int s : new int[] {-1, 1}) {
-                    double kneeB = s * (W + legL * 0.5), footB = s * (W + legL);
-                    b.line(a, s * W * 0.6, H * 0.4, a + legL * 0.1, kneeB, H * 0.5, th, bone, BONE);
-                    b.line(a + legL * 0.1, kneeB, H * 0.5, a + legL * 0.3, footB, 0, 1, bone, BONE);
-                }
-            }
-        }
-        // wings: long arms laid out to the sides, finger bones fanning back
-        if (p.wings()) {
-            double wl = L * 0.7;
-            for (int s : new int[] {-1, 1}) {
-                double ea = half * 0.2, eb = s * (W + wl * 0.5);
-                b.line(half * 0.3, s * W * 0.5, H * 0.8, ea, eb, H * 0.3, th, bone, BONE);
-                b.line(ea, eb, H * 0.3, ea - wl * 0.1, s * (W + wl), 0, 1, bone, BONE);
-                for (int f = 0; f < 4; f++)
-                    b.line(ea, eb, H * 0.3, ea - wl * (0.3 + f * 0.15), s * (W + wl * (0.8 - f * 0.18)), 0, 1, bone,
-                            BONE);
-            }
-        }
-        // the tail
-        if (p.tail() > 0) {
-            double tl = p.tail() * L;
-            b.line(-half, 0, H, -half - tl * 0.5, 0, H * 0.4, th, bone, BONE);
-            b.line(-half - tl * 0.5, 0, H * 0.4, -half - tl, 0, 0, 1, bone, BONE);
-        }
-        // the neck(s) and skull(s); a moose's antlers
-        double nl = Math.max(1, p.neck() * L), sk = Math.max(1.2, p.skull() * L);
-        for (int hIdx = 0; hIdx < p.heads(); hIdx++) {
-            double spread = p.heads() == 1 ? 0 : (hIdx - 1) * W * 0.9;
-            double na = half + nl, nb = spread, ny = H + nl * 0.4;
-            b.line(half, 0, H, na, nb, ny, th, bone, BONE);
-            b.ball(na + sk * 0.6, nb, ny, sk, bone, BONE);
-            // the jaw, open on the ground
-            b.line(na + sk * 0.2, nb, ny - sk, na + sk * 2.2, nb, Math.max(0, ny - sk * 1.8), 1, bone, BONE);
-            if (p.antlers()) {
-                double aw = L * 0.25;
-                for (int s : new int[] {-1, 1}) {
-                    double ta = na + sk * 0.3, tb = nb + s * sk, ty = ny + sk;
-                    double ea = ta - aw * 0.2, eb = tb + s * aw, ey = ty + aw * 0.5;
-                    b.line(ta, tb, ty, ea, eb, ey, 1, bone, BONE);
-                    for (int t = 1; t <= 4; t++) {
-                        double f = t / 5.0;
-                        double pa = ta + (ea - ta) * f, pb = tb + (eb - tb) * f, py = ty + (ey - ty) * f;
-                        b.line(pa, pb, py, pa + aw * 0.12, pb + s * aw * 0.1, py + aw * 0.3, 1, bone, BONE);
-                    }
-                }
-            }
-        }
-        if (corpse) shell(b, p, 0, H, half, W * 1.15, H * 1.2);
-        return b;
-    }
-
-    /** a corpse's flesh: an outer and an inner layer round his middle (half of each colour for the Cerberus) */
-    private static void shell(Body b, Plan p, double ca, double cy, double ra, double rb, double ry) {
-        int A = (int) Math.ceil(ra), B = (int) Math.ceil(rb), Y = (int) Math.ceil(cy + ry);
-        for (int a = -A; a <= A; a++)
-            for (int s = -B; s <= B; s++)
-                for (int y = 0; y <= Y; y++) {
-                    double d = (a * a) / (ra * ra) + (s * s) / (rb * rb) + ((y - cy) * (y - cy)) / (ry * ry);
-                    if (d > 1) continue;
-                    double rad = Math.sqrt(d);
-                    if (rad > 0.8) b.put(ca + a, s, y, s < 0 ? p.flesh2() : p.flesh(), OUTER);
-                    else if (rad > 0.6) b.put(ca + a, s, y, p.inner(), INNER);
-                }
-    }
-
-    /** he fell: his remains go down where he lies */
+    /** he fell: his remains go down where he lies, facing the way he faced */
     static void build(ServerLevel l, String kind, LivingEntity e, String rule, double corpseDays) {
-        double size = FunGiants.sizeOf(e);
-        double len = Math.max(6, Math.min(96, Math.max(FunGiants.height(kind, size), 2 * FunGiants.reach(kind, size))
-                * (kind.equals("furrowmaw") ? 0.6 : 0.55)));
-        int bx = e.getBlockX(), bz = e.getBlockZ();
-        int ground = l.isLoaded(e.blockPosition())
-                ? l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz) : e.getBlockY();
-        int baseY = Math.min(ground, e.getBlockY() + 2);
-        if (baseY < l.getMinBuildHeight() + 1) baseY = e.getBlockY();
         boolean corpse = rule.equals("corpse");
-        Body b = body(kind, len, e.getX(), baseY, e.getZ(), e.getYRot(), corpse);
+        lay(l, kind, e.getX(), e.getZ(), ground(l, e.getBlockX(), e.getBlockY(), e.getBlockZ(),
+                FunGiants.reach(kind, FunGiants.sizeOf(e))), e.getYRot(), FunGiants.sizeOf(e), corpse ? "corpse"
+                        : "skeleton", corpseDays, corpse ? 0 : Carcass.SKELETON,
+                e.getUUID().getMostSignificantBits() ^ l.getGameTime());
+        String name = AdminServer.giant(kind) == null ? kind : AdminServer.nameOf(AdminServer.giant(kind));
+        Systems.log("a {} fell at {}: his {} goes down", name, e.blockPosition().toShortString(), rule);
+    }
+
+    /**
+     * Remains of this kind at this spot (x z where he stood, y the first free block over the ground), facing this
+     * yaw, this size; rule corpse (from this stage 0-3, rotting on from there) or skeleton (stage 4, left for good).
+     */
+    public static SystemsData.Remains lay(ServerLevel l, String kind, double x, double z, int y, float yaw,
+            double size, String rule, double corpseDays, int stage, long seed) {
         SystemsData.Remains r = new SystemsData.Remains();
         r.kind = kind;
         r.dim = l.dimension().location().toString();
-        r.rule = corpse ? "corpse" : "skeleton";
-        r.x = bx;
-        r.y = baseY;
-        r.z = bz;
-        r.fell = l.getGameTime();
+        r.rule = rule.equals("corpse") ? "corpse" : "skeleton";
+        r.x = (int) Math.floor(x);
+        r.y = y;
+        r.z = (int) Math.floor(z);
+        r.size = size;
+        r.yaw = yaw;
+        r.seed = seed;
+        r.ver = VERSION;
         r.rotTicks = (long) (Math.max(0.5, corpseDays) * 24000);
-        int n = 0;
-        for (var en : b.state.entrySet()) {
-            if (n++ >= MOST_BLOCKS) break;
-            r.pos.add(en.getKey());
-            r.layer.add(b.layer.get(en.getKey()));
-            r.block.add(NbtUtils.writeBlockState(en.getValue()).toString());
-        }
+        int first = r.rule.equals("corpse") ? Math.max(0, Math.min(3, stage)) : Carcass.SKELETON;
+        // a corpse shown at a later stage has been lying there that long
+        r.fell = l.getGameTime() - (r.rule.equals("corpse") ? r.rotTicks * first / 4 : 0);
+        r.stage = -1;
+        r.from = PLACE;
+        r.to = first;
+        r.at = 0;
         SystemsData d = SystemsData.get(l.getServer());
         d.s.remains.add(r);
         d.setDirty();
-        building.put(r, 0);
-        String name = AdminServer.giant(kind) == null ? kind : AdminServer.nameOf(AdminServer.giant(kind));
-        Systems.log("a {} fell at {}: his {} goes down ({} blocks)", name, e.blockPosition().toShortString(), r.rule,
-                r.pos.size());
+        slowest = 0;
+        start(r);
         SystemsAdmin.changed();
+        return r;
     }
 
-    /** a placed block, read back */
-    private static BlockState state(ServerLevel l, String s) {
-        try {
-            CompoundTag t = TagParser.parseTag(s);
-            return NbtUtils.readBlockState(l.holderLookup(Registries.BLOCK), t);
-        } catch (Exception bad) {
-            return Blocks.AIR.defaultBlockState();
+    /** where he lies: the ground round the spot (the middle of a few samples, so a tree or a pit doesn't count) */
+    static int ground(ServerLevel l, int x, int y, int z, double reach) {
+        List<Integer> hs = new ArrayList<>();
+        int r = (int) Math.min(48, Math.max(2, reach * 0.3));
+        for (int i = -1; i <= 1; i++)
+            for (int k = -1; k <= 1; k++) {
+                int px = x + i * r, pz = z + k * r;
+                if (!l.isLoaded(new BlockPos(px, y, pz))) continue;
+                hs.add(l.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, px, pz));
+            }
+        if (hs.isEmpty()) return y;
+        hs.sort(Integer::compare);
+        int g = hs.get(hs.size() / 2);
+        if (g < l.getMinBuildHeight() + 1) g = y;
+        return g;
+    }
+
+    // ---------------------------------------------------------------- working the blocks out
+
+    private static void start(SystemsData.Remains r) {
+        Job j = new Job(r);
+        String kind = r.kind;
+        double size = r.size;
+        float yaw = r.yaw;
+        long seed = r.seed;
+        int ox = r.x, oz = r.z;
+        double len = plainLength(kind, size);
+        j.plan = WORK.submit(() -> plan(kind, size, yaw, seed, ox, oz, len));
+        jobs.put(r, j);
+    }
+
+    static double plainLength(String kind, double size) {
+        return Math.max(6, Math.min(96, Math.max(FunGiants.height(kind, size), 2 * FunGiants.reach(kind, size))
+                * (kind.equals("furrowmaw") ? 0.6 : 0.55)));
+    }
+
+    /** his remains' blocks (his own design from his model, else the plain plan), in the order they go down */
+    static Planned plan(String kind, double size, float yaw, long seed, int ox, int oz, double plainLen) {
+        Carcass.Out o = blocks(kind, size, yaw, seed, plainLen);
+        // chunk by chunk, bottom up in each
+        int n = o.n;
+        int minCx = Integer.MAX_VALUE, minCz = Integer.MAX_VALUE, maxCz = Integer.MIN_VALUE;
+        for (int i = 0; i < n; i++) {
+            minCx = Math.min(minCx, (ox + o.x[i]) >> 4);
+            minCz = Math.min(minCz, (oz + o.z[i]) >> 4);
+            maxCz = Math.max(maxCz, (oz + o.z[i]) >> 4);
         }
+        long w = maxCz - minCz + 1;
+        long[] keys = new long[n];
+        for (int i = 0; i < n; i++) {
+            long rank = (long) (((ox + o.x[i]) >> 4) - minCx) * w + (((oz + o.z[i]) >> 4) - minCz);
+            keys[i] = (rank << 34) | ((long) (o.y[i] + 2048) << 22) | i;
+        }
+        Arrays.sort(keys);
+        int[] order = new int[n];
+        for (int i = 0; i < n; i++) order[i] = (int) (keys[i] & ((1 << 22) - 1));
+        BlockState[] states = new BlockState[o.mats.length];
+        // (a bone's tone tokens are only names on the way: never a block)
+        for (int i = 0; i < states.length; i++)
+            states[i] = o.mats[i].startsWith("@") ? Blocks.AIR.defaultBlockState() : parse(o.mats[i]);
+        return new Planned(o, order, states);
     }
 
-    private static boolean free(ServerLevel l, BlockPos p) {
-        BlockState s = l.getBlockState(p);
-        return (s.isAir() || s.canBeReplaced()) && !s.hasBlockEntity();
+    /** the blocks, unordered (stage arrays 0-4) */
+    public static Carcass.Out blocks(String kind, double size, float yaw, long seed, double plainLen) {
+        Design d = Designs.of(kind);
+        GiantModel m = d == null ? null : GiantModels.get(kind);
+        if (m == null) return Simple.plan(kind, plainLen, yaw, true);
+        double s = size;
+        // (his biggest: no more than the most blocks; about his model's own block count at size 1, times size^2)
+        double cap = Math.sqrt(MOST_BLOCKS / (double) Math.max(1, m.total()) / 1.3);
+        if (s > cap) s = cap;
+        s = Math.max(0.04, s);
+        return Designs.plan(d, m, s, yaw, seed);
     }
 
-    /** every tick: remains going down; once a second, corpses rotting */
+    private static final Map<String, BlockState> PARSED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static BlockState parse(String s) {
+        return PARSED.computeIfAbsent(s, k -> {
+            try {
+                return BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK.asLookup(), k, false).blockState();
+            } catch (Exception bad) {
+                GiantsGuideMod.LOG.warn("Giants remains: no block {}", k);
+                return Blocks.AIR.defaultBlockState();
+            }
+        });
+    }
+
+    // ---------------------------------------------------------------- each tick
+
+    /** every tick: remains going down or changing; once a second, corpses rotting on */
     public static void tick(MinecraftServer server) {
-        if (!building.isEmpty()) place(server);
+        SystemsData d = null;
+        if (!jobs.isEmpty()) work(server);
         if (server.getTickCount() % 20 != 0) return;
-        SystemsData d = SystemsData.get(server);
+        d = SystemsData.get(server);
         if (d.s.remains.isEmpty()) return;
-        // (after a restart: what wasn't down yet carries on)
-        for (SystemsData.Remains r : d.s.remains) if (r.stage < 0) building.putIfAbsent(r, -r.stage - 1);
         boolean changed = false;
         for (SystemsData.Remains r : new ArrayList<>(d.s.remains)) {
-            if (!r.rule.equals("corpse") || building.containsKey(r)) continue;
+            if (jobs.containsKey(r)) continue;
+            if (!r.pos.isEmpty()) {
+                changed |= oldRot(server, d, r);
+                continue;
+            }
+            // (after a restart: what was going on carries on)
+            if (r.to != -1) {
+                start(r);
+                continue;
+            }
+            if (!r.rule.equals("corpse") || r.stage < 0) continue;
             ServerLevel l = level(server, r.dim);
             if (l == null) continue;
             int want = (int) Math.min(4, 4 * (l.getGameTime() - r.fell) / Math.max(1, r.rotTicks));
             if (want <= r.stage) continue;
             if (!l.isLoaded(new BlockPos(r.x, r.y, r.z))) continue;
-            Plan p = plan(r.kind);
-            BlockState rotten = p.rotten();
-            while (r.stage < want) {
-                r.stage++;
-                for (int i = 0; i < r.pos.size(); i++) {
-                    BlockPos pos = BlockPos.of(r.pos.get(i));
-                    if (!l.isLoaded(pos)) continue;
-                    int lay = r.layer.get(i);
-                    BlockState cur = l.getBlockState(pos), was = state(l, r.block.get(i));
-                    boolean ours = cur == was || r.stage >= 2 && lay == OUTER && cur == rotten;
-                    if (!ours) continue;
-                    if (r.stage == 1 && lay == OUTER) l.setBlock(pos, rotten, Block.UPDATE_CLIENTS);
-                    else if (r.stage == 2 && lay == OUTER || r.stage == 3 && lay == INNER || r.stage == 4 && lay == BONE)
-                        l.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
-                }
-            }
-            if (r.stage >= 4) d.s.remains.remove(r);
+            r.from = r.stage;
+            r.to = want >= 4 ? GONE : r.stage + 1;
+            r.at = 0;
+            start(r);
             changed = true;
         }
         if (changed) {
@@ -376,53 +280,158 @@ public final class Remains {
         }
     }
 
-    private static void place(MinecraftServer server) {
-        int budget = PER_TICK;
+    /** the longest a tick spent on remains since the last were laid (the tests) */
+    private static long slowest;
+
+    private static void work(MinecraftServer server) {
+        long t0 = System.nanoTime();
+        try {
+            work(server, t0);
+        } finally {
+            slowest = Math.max(slowest, System.nanoTime() - t0);
+        }
+    }
+
+    private static void work(MinecraftServer server, long t0) {
+        long until = t0 + TICK_NANOS;
+        int budget = TICK_MOST;
         SystemsData d = SystemsData.get(server);
-        for (var it = building.entrySet().iterator(); it.hasNext() && budget > 0; ) {
-            var en = it.next();
-            SystemsData.Remains r = en.getKey();
-            ServerLevel l = level(server, r.dim);
+        for (var it = jobs.values().iterator(); it.hasNext() && budget > 0 && System.nanoTime() < until; ) {
+            Job j = it.next();
+            if (j.p == null) {
+                if (!j.plan.isDone()) continue;
+                try {
+                    j.p = j.plan.get();
+                } catch (Exception e) {
+                    GiantsGuideMod.LOG.warn("Giants remains: couldn't work out the {} remains", j.r.kind, e);
+                    it.remove();
+                    d.s.remains.remove(j.r);
+                    d.setDirty();
+                    continue;
+                }
+            }
+            ServerLevel l = level(server, j.r.dim);
             if (l == null) {
                 it.remove();
                 continue;
             }
-            List<ServerPlayer> near = l.getEntitiesOfClass(ServerPlayer.class,
-                    new AABB(r.x, r.y, r.z, r.x + 1, r.y + 1, r.z + 1).inflate(120));
-            int i = en.getValue();
-            for (; i < r.pos.size() && budget > 0; i++, budget--) {
-                BlockPos pos = BlockPos.of(r.pos.get(i));
-                if (!l.isLoaded(pos) || !free(l, pos)) {
-                    r.block.set(i, "");
-                    continue;
-                }
-                AABB box = new AABB(pos);
-                boolean player = false;
-                for (ServerPlayer p : near) if (p.getBoundingBox().intersects(box)) player = true;
-                if (player) {
-                    r.block.set(i, "");
-                    continue;
-                }
-                l.setBlock(pos, state(l, r.block.get(i)), Block.UPDATE_CLIENTS);
-            }
-            if (i >= r.pos.size()) {
-                // (what couldn't go down isn't ours to take away later)
-                for (int k = r.pos.size() - 1; k >= 0; k--)
-                    if (r.block.get(k).isEmpty()) {
-                        r.pos.remove(k);
-                        r.layer.remove(k);
-                        r.block.remove(k);
-                    }
-                r.stage = 0;
+            budget = step(l, j, budget, until);
+            if (j.r.at >= j.p.out().n) {
+                finish(d, j);
                 it.remove();
-                if (r.rule.equals("skeleton")) d.s.remains.remove(r);
-                SystemsAdmin.changed();
-            } else {
-                en.setValue(i);
-                r.stage = -i - 1;
             }
             d.setDirty();
         }
+    }
+
+    /** this job's blocks, as many as the tick allows */
+    private static int step(ServerLevel l, Job j, int budget, long until) {
+        SystemsData.Remains r = j.r;
+        Planned p = j.p;
+        Carcass.Out o = p.out();
+        List<AABB> players = new ArrayList<>();
+        for (ServerPlayer pl : l.players()) players.add(pl.getBoundingBox().deflate(0.01));
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        int[] target = r.to == GONE ? null : o.st[r.to];
+        int[] from = r.from >= 0 && r.from < Carcass.STAGES ? o.st[r.from] : null;
+        boolean placing = r.from == PLACE;
+        boolean sameVersion = r.ver == VERSION;
+        int n = 0;
+        while (r.at < o.n && budget > 0) {
+            if ((n++ & 63) == 0 && System.nanoTime() > until) break;
+            int i = p.order()[r.at];
+            int a = from == null ? 0 : from[i], b = target == null ? 0 : target[i];
+            if (placing ? b == 0 : a == b) {
+                r.at++;
+                continue;
+            }
+            if (!placing && sameVersion && j.skip.get(i)) {
+                r.at++;
+                continue;
+            }
+            int x = r.x + o.x[i], y = r.y + o.y[i], z = r.z + o.z[i];
+            if (y < l.getMinBuildHeight() || y >= l.getMaxBuildHeight()) {
+                skip(j, i);
+                r.at++;
+                continue;
+            }
+            // its chunk: asked for, waited on a little, else passed by
+            long ck = ChunkPos.asLong(x >> 4, z >> 4);
+            if (!l.hasChunk(x >> 4, z >> 4)) {
+                if (ck != j.chunk) {
+                    j.chunk = ck;
+                    j.waited = 0;
+                    ChunkPos cp = new ChunkPos(x >> 4, z >> 4);
+                    l.getChunkSource().addRegionTicket(LAND, cp, 1, cp);
+                }
+                if (++j.waited < 200) return budget;
+                skip(j, i);
+                r.at++;
+                continue;
+            }
+            m.set(x, y, z);
+            BlockState cur = l.getBlockState(m);
+            boolean ours;
+            if (placing || a == 0) ours = free(cur) && !onPlayer(players, m);
+            else ours = cur == p.states()[a];
+            if (!ours) {
+                if (placing) skip(j, i);
+                r.at++;
+                continue;
+            }
+            if (placing && wetSource(cur)) {
+                j.wet.set(i);
+                r.wet.add(i);
+            }
+            BlockState now = b == 0 ? (j.wet.get(i) ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState())
+                    : p.states()[b];
+            l.setBlock(m, now, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+            budget--;
+            r.at++;
+        }
+        return budget;
+    }
+
+    private static void skip(Job j, int i) {
+        if (!j.skip.get(i)) {
+            j.skip.set(i);
+            j.r.skip.add(i);
+        }
+    }
+
+    private static void finish(SystemsData d, Job j) {
+        SystemsData.Remains r = j.r;
+        Systems.log("the {} remains at {} {} {}: now stage {} ({} blocks worked through, {} kept out)", r.kind, r.x,
+                r.y, r.z, r.to == GONE ? "gone" : r.to, j.p.out().n, r.skip.size());
+        r.stage = r.to == GONE ? 4 : r.to;
+        boolean placed = r.from == PLACE;
+        r.to = -1;
+        r.from = -1;
+        r.at = 0;
+        if (placed && r.rule.equals("skeleton") || r.stage >= 4 && r.rule.equals("corpse")) d.s.remains.remove(r);
+        d.setDirty();
+        SystemsAdmin.changed();
+    }
+
+    /** may remains go here: air, a plant, snow, water; never bedrock or a block entity */
+    static boolean free(BlockState s) {
+        if (s.isAir()) return true;
+        if (s.is(Blocks.BEDROCK) || s.hasBlockEntity()) return false;
+        FluidState f = s.getFluidState();
+        if (!f.isEmpty() && !f.is(FluidTags.WATER)) return false;
+        return s.canBeReplaced();
+    }
+
+    private static boolean wetSource(BlockState s) {
+        FluidState f = s.getFluidState();
+        return f.is(FluidTags.WATER) && f.isSource();
+    }
+
+    private static boolean onPlayer(List<AABB> players, BlockPos p) {
+        if (players.isEmpty()) return false;
+        AABB box = new AABB(p);
+        for (AABB b : players) if (b.intersects(box)) return true;
+        return false;
     }
 
     private static ServerLevel level(MinecraftServer server, String dim) {
@@ -437,8 +446,88 @@ public final class Remains {
         return n;
     }
 
-    /** (the tests) a body's blocks, as it would go down */
-    public static Map<Long, BlockState> bodyForTests(String kind, double len, boolean corpse) {
-        return body(kind, len, 0.5, 64, 0.5, 0, corpse).state;
+    // ---------------------------------------------------------------- remains from before (the plain plan's lists)
+
+    private static BlockState state(ServerLevel l, String s) {
+        try {
+            CompoundTag t = TagParser.parseTag(s);
+            return NbtUtils.readBlockState(l.holderLookup(Registries.BLOCK), t);
+        } catch (Exception bad) {
+            return Blocks.AIR.defaultBlockState();
+        }
+    }
+
+    /** a corpse laid down by 1.13.0 (its blocks listed): it rots as it always did */
+    private static boolean oldRot(MinecraftServer server, SystemsData d, SystemsData.Remains r) {
+        if (!r.rule.equals("corpse") || r.stage < 0) {
+            d.s.remains.remove(r);
+            return true;
+        }
+        ServerLevel l = level(server, r.dim);
+        if (l == null) return false;
+        int want = (int) Math.min(4, 4 * (l.getGameTime() - r.fell) / Math.max(1, r.rotTicks));
+        if (want <= r.stage || !l.isLoaded(new BlockPos(r.x, r.y, r.z))) return false;
+        BlockState rotten = Blocks.MUD.defaultBlockState();
+        while (r.stage < want) {
+            r.stage++;
+            for (int i = 0; i < r.pos.size(); i++) {
+                BlockPos pos = BlockPos.of(r.pos.get(i));
+                if (!l.isLoaded(pos)) continue;
+                int lay = r.layer.get(i);
+                BlockState cur = l.getBlockState(pos), was = state(l, r.block.get(i));
+                boolean ours = cur == was || r.stage >= 2 && lay == OUTER && cur.is(Blocks.MUD);
+                if (!ours) continue;
+                if (r.stage == 1 && lay == OUTER) l.setBlock(pos, rotten, Block.UPDATE_CLIENTS);
+                else if (r.stage == 2 && lay == OUTER || r.stage == 3 && lay == INNER || r.stage == 4 && lay == BONE)
+                    l.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+            }
+        }
+        if (r.stage >= 4) d.s.remains.remove(r);
+        return true;
+    }
+
+    // ---------------------------------------------------------------- the tests
+
+    /** (the tests) a kind's remains blocks, worked out now: his own design when his mod is here, else the plain one */
+    public static Carcass.Out planForTests(String kind, double size, float yaw) {
+        return blocks(kind, size, yaw, 1234L, plainLength(kind, size));
+    }
+
+    /** (the tests) the longest a tick spent on remains since the last were laid, in ms */
+    public static double slowestTickMs() {
+        return slowest / 1e6;
+    }
+
+    /** (the tests) how many of its blocks (as its stage left them) are there now */
+    public static int ours(ServerLevel l, SystemsData.Remains r) {
+        Carcass.Out o = blocks(r.kind, r.size, r.yaw, r.seed, plainLength(r.kind, r.size));
+        int k = r.rule.equals("corpse") ? Math.max(0, Math.min(3, r.stage)) : Carcass.SKELETON;
+        int n = 0;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int i = 0; i < o.n; i++) {
+            int v = o.st[k][i];
+            if (v == 0) continue;
+            BlockState want = parse(o.mats[v]);
+            if (l.getBlockState(m.set(r.x + o.x[i], r.y + o.y[i], r.z + o.z[i])) == want) n++;
+        }
+        return n;
+    }
+
+    /** (the tests) one of its blocks there now, or null */
+    public static BlockPos anyBlock(ServerLevel l, SystemsData.Remains r) {
+        Carcass.Out o = blocks(r.kind, r.size, r.yaw, r.seed, plainLength(r.kind, r.size));
+        int k = r.rule.equals("corpse") ? Math.max(0, Math.min(3, r.stage)) : Carcass.SKELETON;
+        for (int i = 0; i < o.n; i++) {
+            int v = o.st[k][i];
+            if (v == 0) continue;
+            BlockPos p = new BlockPos(r.x + o.x[i], r.y + o.y[i], r.z + o.z[i]);
+            if (l.getBlockState(p) == parse(o.mats[v]) && !l.getBlockState(p).isAir()) return p;
+        }
+        return null;
+    }
+
+    /** (the tests) does this kind have his own design from his model here */
+    public static boolean ownDesign(String kind) {
+        return Designs.of(kind) != null && GiantModels.get(kind) != null;
     }
 }

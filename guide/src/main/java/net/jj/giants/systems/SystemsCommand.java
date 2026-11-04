@@ -4,6 +4,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import java.util.ArrayList;
@@ -32,7 +34,43 @@ public final class SystemsCommand {
                                 .then(Commands.literal("giants").executes(SystemsCommand::giants))
                                 .then(Commands.literal("titan")
                                         .then(Commands.argument("giant", StringArgumentType.greedyString())
-                                                .executes(SystemsCommand::titan))))));
+                                                .executes(SystemsCommand::titan)))
+                                .then(Commands.literal("remains")
+                                        .then(Commands.argument("kind", StringArgumentType.word())
+                                                .suggests((c, b) -> net.minecraft.commands.SharedSuggestionProvider
+                                                        .suggest(net.jj.giants.admin.AdminCatalog.KEYS, b))
+                                                .then(Commands.argument("size", DoubleArgumentType.doubleArg(0.02, 2))
+                                                        .then(Commands.literal("skeleton").executes(c -> remains(c,
+                                                                "skeleton", 4)))
+                                                        .then(Commands.literal("corpse").executes(c -> remains(c,
+                                                                "corpse", 0))
+                                                                .then(Commands.argument("stage", IntegerArgumentType
+                                                                        .integer(0, 3)).executes(c -> remains(c,
+                                                                                "corpse", IntegerArgumentType
+                                                                                        .getInteger(c, "stage")))))))))));
+    }
+
+    /**
+     * /giants admin systems remains <kind> <size> skeleton|corpse [stage]: his remains, here, facing the way you face
+     * (to see them without a giant falling; a corpse at a later stage rots on from there)
+     */
+    private static int remains(CommandContext<CommandSourceStack> c, String rule, int stage) {
+        String kind = StringArgumentType.getString(c, "kind");
+        if (!net.jj.giants.admin.AdminCatalog.KEYS.contains(kind)) {
+            c.getSource().sendFailure(Component.literal("No giant called " + kind + ": one of "
+                    + String.join(", ", net.jj.giants.admin.AdminCatalog.KEYS) + "."));
+            return 0;
+        }
+        double size = DoubleArgumentType.getDouble(c, "size");
+        net.minecraft.server.level.ServerLevel l = c.getSource().getLevel();
+        net.minecraft.world.phys.Vec3 at = c.getSource().getPosition();
+        int y = Remains.ground(l, (int) Math.floor(at.x), (int) Math.floor(at.y), (int) Math.floor(at.z),
+                net.jj.giants.fun.FunGiants.reach(kind, size));
+        Remains.lay(l, kind, at.x, at.z, y, c.getSource().getRotation().y, size, rule,
+                Systems.num(c.getSource().getServer(), "corpseDays"), stage, l.getGameTime());
+        String what = rule.equals("corpse") ? "corpse (stage " + stage + ")" : "skeleton";
+        c.getSource().sendSuccess(() -> Component.literal("The " + kind + "'s " + what + " goes down here."), true);
+        return 1;
     }
 
     /** the systems that are on, and what they do now */

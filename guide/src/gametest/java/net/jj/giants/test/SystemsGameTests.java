@@ -508,48 +508,138 @@ public class SystemsGameTests implements FabricGameTest {
 
     // remains
 
-    @GameTest(template = EMPTY_STRUCTURE, batch = "p8_remains", timeoutTicks = 300)
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p8_remains", timeoutTicks = 900)
     public void aSkeletonStaysAndACorpseRotsAway(GameTestHelper h) {
         if (PlayersGameTests.realGiants(h)) return;
         MinecraftServer s = fresh(h);
         BlockPos at = FunGameTests.spot(h, 25);
         ServerLevel l = h.getLevel();
-        IronGolem a = golem(h, at, -25, 0), b = golem(h, at, 25, 0);
-        h.runAfterDelay(3, () -> {
+        IronGolem a = golem(h, at, -25, 0), b = golem(h, at, 25, -30), c = golem(h, at, -20, 35);
+        int[] flesh = new int[1];
+        h.startSequence().thenExecuteAfter(3, () -> {
             sweep(h);
-            // each kind's body plan has bones; a corpse has flesh too
+            // each kind has remains (here the plain plan: the giants' own models aren't loaded): bones for the
+            // skeleton, more for a fresh corpse
             for (String k : AdminCatalog.KEYS) {
-                Map<Long, net.minecraft.world.level.block.state.BlockState> sk = Remains.bodyForTests(k, 40, false),
-                        co = Remains.bodyForTests(k, 40, true);
-                h.assertTrue(sk.size() > 40 && co.size() > sk.size(), k + ": " + sk.size() + " / " + co.size());
+                net.jj.giants.systems.remains.Carcass.Out o = Remains.planForTests(k, 0.2, 0);
+                h.assertTrue(o.count(4) > 40 && o.count(0) > o.count(4), k + ": " + o.count(4) + " / " + o.count(0));
             }
             Systems.fell(a);
             h.assertTrue(SystemsData.get(s).s.remains.isEmpty(), "drops only: no remains");
             set(h, s, "deathRule", "skeleton");
             Systems.fell(b);
-        });
-        h.runAfterDelay(40, () -> {
+            h.assertTrue(SystemsData.get(s).s.remains.size() == 1 && Remains.busy(), "his bones go down");
+        }).thenWaitUntil(() -> h.assertTrue(!Remains.busy(), "still going down")).thenExecute(() -> {
             int bones = count(l, b.blockPosition(), 40, Blocks.BONE_BLOCK);
             h.assertTrue(bones > 20, "his bones lie there: " + bones);
             h.assertTrue(SystemsData.get(s).s.remains.isEmpty(), "a skeleton is left for good (not kept)");
             set(h, s, "deathRule", "corpse");
-            IronGolem c = golem(h, at, 0, 30);
             Systems.fell(c);
-        });
-        h.runAfterDelay(80, () -> {
+        }).thenWaitUntil(() -> h.assertTrue(!Remains.busy(), "corpse going down")).thenExecute(() -> {
             sweep(h);
             List<SystemsData.Remains> rs = SystemsData.get(s).s.remains;
-            h.assertTrue(rs.size() == 1 && rs.get(0).rule.equals("corpse"), "a corpse rotting: " + rs.size());
-            int flesh = 0;
-            for (int i = 0; i < rs.get(0).pos.size(); i++) if (rs.get(0).layer.get(i) > 0) flesh++;
-            h.assertTrue(flesh > 20, "flesh over his bones: " + flesh);
-            // a long time later: rotted away
+            h.assertTrue(rs.size() == 1 && rs.get(0).rule.equals("corpse") && rs.get(0).stage == 0,
+                    "a corpse rotting: " + rs.size());
+            flesh[0] = count(l, c.blockPosition(), 40, Blocks.NETHER_WART_BLOCK);
+            h.assertTrue(flesh[0] > 20, "flesh over his bones: " + flesh[0]);
+            // a long time later: rotted away, a stage at a time
             rs.get(0).fell -= rs.get(0).rotTicks + 10;
-        });
-        h.runAfterDelay(120, () -> {
-            h.assertTrue(SystemsData.get(s).s.remains.isEmpty(), "rotted away");
+        }).thenWaitUntil(() -> h.assertTrue(SystemsData.get(s).s.remains.isEmpty() && !Remains.busy(),
+                "rotting")).thenExecute(() -> {
+            h.assertTrue(count(l, c.blockPosition(), 25, Blocks.NETHER_WART_BLOCK) == 0, "his flesh is gone");
+            h.assertTrue(count(l, c.blockPosition(), 25, Blocks.BONE_BLOCK) < 3, "and his bones");
+            FunGameTests.unspot(h, at);
             done(h);
         });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p8_remains_safe", timeoutTicks = 600)
+    public void remainsNeverTakeWhatIsAlreadyThere(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = FunGameTests.spot(h, 27);
+        ServerLevel l = h.getLevel();
+        // a player's things in the way: a stone wall, a chest with something in it, bedrock, a player standing there
+        for (int dx = -8; dx <= 8; dx++)
+            for (int y = 0; y < 6; y++) l.setBlock(at.offset(dx, y, 3), Blocks.STONE.defaultBlockState(), 2);
+        l.setBlock(at.offset(2, 0, -2), Blocks.CHEST.defaultBlockState(), 2);
+        ((net.minecraft.world.level.block.entity.ChestBlockEntity) l.getBlockEntity(at.offset(2, 0, -2)))
+                .setItem(0, new ItemStack(Items.DIAMOND, 3));
+        l.setBlock(at.offset(-2, 1, -1), Blocks.BEDROCK.defaultBlockState(), 2);
+        ServerPlayer p = PlayersGameTests.join(h, "remains_in_way", false);
+        p.teleportTo(l, at.getX() + 0.5, at.getY(), at.getZ() - 4.5, 0, 0);
+        l.setBlock(at.offset(5, 0, -5), Blocks.WATER.defaultBlockState(), 2);
+        SystemsData.Remains r = Remains.lay(l, "cerberus", at.getX(), at.getZ(), at.getY(), 0, 0.4, "corpse", 3, 0,
+                7L);
+        h.startSequence().thenWaitUntil(() -> h.assertTrue(!Remains.busy(), "going down")).thenExecute(() -> {
+            for (int dx = -8; dx <= 8; dx++)
+                for (int y = 0; y < 6; y++)
+                    h.assertTrue(l.getBlockState(at.offset(dx, y, 3)).is(Blocks.STONE), "the wall stays");
+            var chest = (net.minecraft.world.level.block.entity.ChestBlockEntity) l.getBlockEntity(at.offset(2, 0, -2));
+            h.assertTrue(chest != null && chest.getItem(0).getCount() == 3, "the chest and its things stay");
+            h.assertTrue(l.getBlockState(at.offset(-2, 1, -1)).is(Blocks.BEDROCK), "the bedrock stays");
+            BlockPos feet = p.blockPosition();
+            h.assertTrue(l.getBlockState(feet).isAir() && l.getBlockState(feet.above()).isAir(),
+                    "nothing where the player stands");
+            h.assertTrue(!r.skip.isEmpty(), "what it could not have is noted");
+            // it rots away and the water comes back where it was
+            r.fell -= r.rotTicks + 10;
+        }).thenWaitUntil(() -> h.assertTrue(SystemsData.get(s).s.remains.isEmpty() && !Remains.busy(), "rotting"))
+                .thenExecute(() -> {
+                    h.assertTrue(l.getBlockState(at.offset(2, 0, -2)).is(Blocks.CHEST), "the chest is still there");
+                    h.assertTrue(l.getBlockState(at.offset(5, 0, -5)).is(Blocks.WATER), "the water is back");
+                    s.getPlayerList().remove(p);
+                    FunGameTests.unspot(h, at);
+                    done(h);
+                });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p8_remains_mine", timeoutTicks = 400)
+    public void remainsAreMinedLikeAnyBlock(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        fresh(h);
+        BlockPos at = FunGameTests.spot(h, 28);
+        ServerLevel l = h.getLevel();
+        Remains.lay(l, "gloamwick", at.getX(), at.getZ(), at.getY(), 0, 0.3, "skeleton", 3, 4, 9L);
+        h.startSequence().thenWaitUntil(() -> h.assertTrue(!Remains.busy(), "going down")).thenExecute(() -> {
+            BlockPos bone = null;
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-30, 0, -30), at.offset(30, 30, 30)))
+                if (l.getBlockState(q).is(Blocks.BONE_BLOCK)) {
+                    bone = q.immutable();
+                    break;
+                }
+            h.assertTrue(bone != null, "a bone lies there");
+            h.assertTrue(l.destroyBlock(bone, true), "mined");
+            h.assertTrue(l.getBlockState(bone).isAir(), "gone once mined");
+            boolean dropped = !l.getEntitiesOfClass(ItemEntity.class, new AABB(bone).inflate(2),
+                    it -> it.getItem().is(Items.BONE_BLOCK)).isEmpty();
+            h.assertTrue(dropped, "and it dropped");
+            for (ItemEntity it : l.getEntitiesOfClass(ItemEntity.class, new AABB(bone).inflate(3))) it.discard();
+            FunGameTests.unspot(h, at);
+            done(h);
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p8_remains_scale", timeoutTicks = 100)
+    public void remainsAreSizedToHim(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        // the plain plan: longer for a bigger giant, turned to his heading
+        var small = Remains.planForTests("wreckback", 0.1, 0);
+        var big = Remains.planForTests("wreckback", 0.3, 0);
+        h.assertTrue(big.count(4) > small.count(4) * 2, "bigger: " + small.count(4) + " / " + big.count(4));
+        var turned = Remains.planForTests("wreckback", 0.3, 90);
+        int sx = 0, sz = 0, tx = 0, tz = 0;
+        for (int i = 0; i < big.n; i++) {
+            sx = Math.max(sx, Math.abs(big.x[i]));
+            sz = Math.max(sz, Math.abs(big.z[i]));
+        }
+        for (int i = 0; i < turned.n; i++) {
+            tx = Math.max(tx, Math.abs(turned.x[i]));
+            tz = Math.max(tz, Math.abs(turned.z[i]));
+        }
+        h.assertTrue(Math.abs(sx - tz) <= 2 && Math.abs(sz - tx) <= 2, "turned with him: " + sx + "," + sz + " / " + tx
+                + "," + tz);
+        h.succeed();
     }
 
     /** a stand-in giant for the rating: every setting at his jar's value but these */

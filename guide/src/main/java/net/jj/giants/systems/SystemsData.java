@@ -58,15 +58,29 @@ public final class SystemsData extends SavedData {
         public List<String> belly = new ArrayList<>();
     }
 
-    /** remains lying where a giant fell: the blocks the systems put there, by layer (0 bones, 1-3 flesh outside in) */
+    /**
+     * remains lying where a giant fell: how to work its blocks out again (his kind, size, heading and the seed of its
+     * rot), how far it has rotted, what it is changing to now, and which of its blocks it couldn't have (or put into
+     * water). Remains from 1.13.0 list their blocks instead (pos, layer, block).
+     */
     public static final class Remains {
         public String kind = "", dim = "minecraft:overworld", rule = "skeleton";
+        /** where he stood (x z) and the first free block over the ground there (y) */
         public int x, y, z;
         /** the game time he fell, and how long the corpse takes to rot away (ticks) */
         public long fell, rotTicks;
-        /** how far it has rotted (0 fresh .. 4 gone) */
+        /** how far it has rotted (0 fresh .. 4 gone; -1 still going down) */
         public int stage;
-        /** each block placed: packed position, its layer and the block (as text) */
+        public double size = 1;
+        public float yaw;
+        public long seed;
+        /** the designs' version its blocks were worked out by */
+        public int ver;
+        /** what it is changing from and to now (from -2: going down; to -1: nothing; 5: all gone) and how far */
+        public int from = -1, to = -1, at;
+        /** its blocks (by number) it couldn't have, and those that went into water (water comes back) */
+        public List<Integer> skip = new ArrayList<>(), wet = new ArrayList<>();
+        /** (1.13.0) each block placed: packed position, its layer and the block (as text) */
         public List<Long> pos = new ArrayList<>();
         public List<Integer> layer = new ArrayList<>();
         public List<String> block = new ArrayList<>();
@@ -132,6 +146,13 @@ public final class SystemsData extends SavedData {
             }
             remains.removeIf(r -> r == null || r.pos == null || r.layer == null || r.block == null
                     || r.pos.size() != r.layer.size() || r.pos.size() != r.block.size());
+            for (Remains r : remains) {
+                if (r.skip == null) r.skip = new ArrayList<>();
+                if (r.wet == null) r.wet = new ArrayList<>();
+                if (r.kind == null) r.kind = "";
+                if (r.rule == null) r.rule = "skeleton";
+                if (r.dim == null) r.dim = "minecraft:overworld";
+            }
         }
     }
 

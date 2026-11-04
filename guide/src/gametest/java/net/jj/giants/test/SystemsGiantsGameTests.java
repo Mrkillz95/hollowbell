@@ -9,6 +9,9 @@ import net.jj.giants.admin.AdminServer;
 import net.jj.giants.admin.AdminWorld;
 import net.jj.giants.fun.FunGiants;
 import net.jj.giants.systems.Look;
+import net.jj.giants.systems.Remains;
+import net.jj.giants.systems.Systems;
+import net.jj.giants.systems.remains.Carcass;
 import net.jj.giants.systems.SystemsData;
 import net.jj.giants.systems.SystemsTags;
 import net.jj.giants.systems.Weak;
@@ -16,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
@@ -226,5 +230,125 @@ public class SystemsGiantsGameTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "p8_real_gloamwick")
     public void gloamwick(GameTestHelper h) {
         everything(h, "gloamwick", 7);
+    }
+
+    // his remains, from his own model (the bones pass)
+
+    private void remains(GameTestHelper h, String key, int slot) {
+        if (!here(key)) {
+            h.succeed();
+            return;
+        }
+        MinecraftServer s = h.getLevel().getServer();
+        ServerLevel l = h.getLevel();
+        h.assertTrue(Remains.ownDesign(key), key + ": his remains are made from his own model");
+        Carcass.Out big = Remains.planForTests(key, 1, 0), small = Remains.planForTests(key, 0.25, 0);
+        // built: a fresh corpse is a lot of him; the skeleton less; each stage less again
+        h.assertTrue(big.count(0) > 40000 && big.count(4) > 4000, key + ": " + big.count(0) + " / " + big.count(4));
+        h.assertTrue(big.count(0) >= big.count(1) && big.count(1) > big.count(2) && big.count(2) >= big.count(3) * 0.95,
+                key + ": rots stage by stage " + big.count(0) + " " + big.count(1) + " " + big.count(2) + " "
+                        + big.count(3));
+        // scaled: a quarter the size is about a sixteenth of the blocks, a quarter as long
+        double ratio = small.count(0) / (double) big.count(0);
+        h.assertTrue(ratio > 1 / 40.0 && ratio < 1 / 6.0, key + ": scaled blocks " + ratio);
+        int bigW = width(big), smallW = width(small);
+        h.assertTrue(smallW > bigW / 6 && smallW < bigW / 2.5, key + ": scaled width " + smallW + " / " + bigW);
+        // as wide as he is (lying, give or take)
+        double his = 2 * FunGiants.reach(key, 1);
+        h.assertTrue(bigW > his * 0.4 && bigW < his * 2.2, key + ": " + bigW + " wide, he is " + his);
+        // and down in the world, a small one: over several ticks, rotting away a stage at a time
+        BlockPos at = FunGiantsGameTests.pad(h, 30 + slot);
+        // (the test world is kept between runs: an earlier run's skeleton, left for good, may stand taller than the
+        // pad clears, or reach under it)
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+        for (int dx = -90; dx <= 90; dx++)
+            for (int dz = -90; dz <= 90; dz++)
+                for (int y = 90; y < 260; y++)
+                    if (y != 119 && !l.getBlockState(mp.set(at.getX() + dx, y, at.getZ() + dz)).isAir())
+                        l.setBlock(mp, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+        Systems.forget();
+        SystemsData.get(s).s.remains.clear();
+        long[] slow = new long[1];
+        SystemsData.Remains r = Remains.lay(l, key, at.getX(), at.getZ(), at.getY(), 0, 0.2, "corpse", 3, 0, 5L);
+        int[] counted = new int[5];
+        h.startSequence().thenWaitUntil(() -> h.assertTrue(!Remains.busy(), key + ": going down")).thenExecute(() -> {
+            counted[0] = Remains.ours(l, r);
+            h.assertTrue(counted[0] > 500, key + ": his corpse lies there: " + counted[0]);
+            h.assertTrue(Remains.slowestTickMs() < 60, key + ": no tick held up: " + Remains.slowestTickMs() + " ms");
+            // mined like any block
+            BlockPos one = Remains.anyBlock(l, r);
+            h.assertTrue(one != null && l.destroyBlock(one, false) && l.getBlockState(one).isAir(), key + ": mined");
+            r.fell -= r.rotTicks / 4 + 5;
+        }).thenWaitUntil(() -> h.assertTrue(r.stage == 1 && !Remains.busy(), key + ": stage 1")).thenExecute(() -> {
+            counted[1] = Remains.ours(l, r);
+            r.fell -= r.rotTicks / 4 + 5;
+        }).thenWaitUntil(() -> h.assertTrue(r.stage == 2 && !Remains.busy(), key + ": stage 2")).thenExecute(() -> {
+            counted[2] = Remains.ours(l, r);
+            h.assertTrue(counted[2] < counted[0], key + ": rotting " + counted[0] + " -> " + counted[2]);
+            r.fell -= r.rotTicks + 5;
+        }).thenWaitUntil(() -> h.assertTrue(SystemsData.get(s).s.remains.isEmpty() && !Remains.busy(),
+                key + ": gone")).thenExecute(() -> {
+            int left = Remains.ours(l, r);
+            h.assertTrue(left == 0, key + ": a corpse goes in the end: " + left + " left, e.g. " + Remains.anyBlock(l, r)
+                    + " " + (Remains.anyBlock(l, r) == null ? "" : l.getBlockState(Remains.anyBlock(l, r))));
+            // the skeleton stays
+            Remains.lay(l, key, at.getX(), at.getZ(), at.getY(), 90, 0.2, "skeleton", 3, 4, 6L);
+        }).thenWaitUntil(() -> h.assertTrue(!Remains.busy(), key + ": bones going down")).thenExecute(() -> {
+            h.assertTrue(SystemsData.get(s).s.remains.isEmpty(), key + ": a skeleton is left for good");
+            FunGiantsGameTests.unpad(h, at);
+            h.succeed();
+        });
+    }
+
+    static int width(Carcass.Out o) {
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE, lz = Integer.MAX_VALUE, hz = Integer.MIN_VALUE;
+        for (int i = 0; i < o.n; i++) {
+            if (o.st[0][i] == 0) continue;
+            lo = Math.min(lo, o.x[i]);
+            hi = Math.max(hi, o.x[i]);
+            lz = Math.min(lz, o.z[i]);
+            hz = Math.max(hz, o.z[i]);
+        }
+        return Math.max(hi - lo, hz - lz) + 1;
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_pitchgut")
+    public void pitchgutRemains(GameTestHelper h) {
+        remains(h, "pitchgut", 0);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_furrowmaw")
+    public void furrowmawRemains(GameTestHelper h) {
+        remains(h, "furrowmaw", 1);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_cerberus")
+    public void cerberusRemains(GameTestHelper h) {
+        remains(h, "cerberus", 2);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_hollowbell")
+    public void hollowbellRemains(GameTestHelper h) {
+        remains(h, "hollowbell", 3);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_lanternwillow")
+    public void lanternwillowRemains(GameTestHelper h) {
+        remains(h, "lanternwillow", 4);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_wreckback")
+    public void wreckbackRemains(GameTestHelper h) {
+        remains(h, "wreckback", 5);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_swarmforge")
+    public void swarmforgeRemains(GameTestHelper h) {
+        remains(h, "swarmforge", 6);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_gloamwick")
+    public void gloamwickRemains(GameTestHelper h) {
+        remains(h, "gloamwick", 7);
     }
 }
