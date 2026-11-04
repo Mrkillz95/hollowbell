@@ -24,6 +24,40 @@ wait 20
 wait 200
 wait 60
 wait 25
+# worship up close: the ring round a calm Cerberus, each looking up at him, a loaf laid toward him
+cmd giants admin set all villagers worship
+cmd tp @s 300 -60 -800 0 10
+wait 30
+cmd cerberus summon calm 0.05
+wait 20
+cmd giants freeze
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~10 ~ ~4
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-10 ~ ~6
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~8 ~ ~-9
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-9 ~ ~-8
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~12 ~ ~-1
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run summon villager ~-12 ~ ~0
+cmd gamemode spectator
+wait 500
+cmd execute at @e[type=villager,limit=1,sort=nearest] run tp @s ~ ~2.5 ~
+cmd execute at @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] run tp @s ^ ^4 ^-15
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] feet
+wait 20
+shot p9_villagers_worship_ring
+cmd execute at @e[type=villager,limit=1,sort=nearest] run tp @s ^1.2 ^1.2 ^-2.5
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=fire_ice_cerberus:cerberus,limit=1,sort=nearest] eyes
+wait 20
+shot p9_villagers_worship_close
+cmd execute at @e[type=item,limit=1,sort=nearest] run tp @s ~1 ~2.2 ~1.5
+cmd execute as @s at @s run tp @s ~ ~ ~ facing entity @e[type=item,limit=1,sort=nearest] feet
+wait 20
+shot p9_villagers_offering
+cmd giants unfreeze
+cmd giants admin set all villagers off
+cmd kill @e[type=villager]
+cmd cerberus kill
+cmd gamemode creative
+wait 40
 # the Underworld: one of each comes near you in the Nether, sized to fit under its roof (seen with night vision, from
 # spectator a little off each)
 cmd giants admin set all underworld nether

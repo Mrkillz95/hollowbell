@@ -120,7 +120,8 @@ public final class Villages {
                 }
             }
         }
-        if (worshippers > 0) offering(server, sl, giant, feet);
+        // (the offering once most of the ring stands in place, so it is laid all round him)
+        if (worshippers > 0 && worshippers * 5 >= near.size() * 3) offering(server, sl, giant, feet);
     }
 
     /**
@@ -137,7 +138,8 @@ public final class Villages {
         d.setDirty();
         for (Vec3 at : feet.subList(0, Math.min(8, feet.size()))) {
             ItemEntity it = new ItemEntity(sl, at.x, at.y + 0.3, at.z, new ItemStack(Items.BREAD, 1), 0, 0.05, 0);
-            it.setPickUpDelay(40);
+            // (left lying a while: the villagers themselves would pick bread straight back up)
+            it.setPickUpDelay(2400);
             sl.addFreshEntity(it);
             sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, at.x, at.y + 0.5, at.z, 6, 0.3, 0.3, 0.3, 0);
         }

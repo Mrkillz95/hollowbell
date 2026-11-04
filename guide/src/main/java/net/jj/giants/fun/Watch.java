@@ -82,7 +82,8 @@ public final class Watch {
         // (a long one, the worm, is seen whole: from as far back as he is long)
         double back = Math.max(10, Math.max(h * 1.1, FunGiants.reach(kind, size)) + 8), up = Math.max(6, h * 0.6 + 4);
         Vec3 mid = giant.position().add(0, h * 0.45, 0);
-        Vec3 eye = clearView((ServerLevel) giant.level(), mid, face, back, up - h * 0.45);
+        Vec3 eye = clearView((ServerLevel) giant.level(), giant.position(), h, FunGiants.reach(kind, size), face, back,
+                up - h * 0.45);
         Vec3 d = mid.subtract(eye);
         float yaw = (float) (Mth.atan2(d.z, d.x) * 180 / Math.PI) - 90f;
         float pitch = (float) -(Mth.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)) * 180 / Math.PI);
@@ -212,27 +213,54 @@ public final class Watch {
     }
 
     /**
-     * (Part 9) where the camera looks from: behind him and above as always; when rock is in the way (a cave, the
-     * Nether), the way round him with the most open space, just short of the rock, so the view is never from inside it
+     * (Part 9) where the camera looks from: behind him and above as always; when rock (or lava) is in the way (a cave,
+     * the Nether), the place round him (16 ways, a little, as usual and well above) from which most of him is seen: his middle, head,
+     * feet and both sides, out of his body and just short of the rock, so the view is never from inside the rock or him
      */
-    static Vec3 clearView(ServerLevel l, Vec3 mid, Vec3 face, double back, double up) {
+    static Vec3 clearView(ServerLevel l, Vec3 feet, double h, double reach, Vec3 face, double back, double up) {
+        Vec3 mid = feet.add(0, h * 0.45, 0);
+        Vec3 first = mid.add(face.scale(-back)).add(0, up, 0);
+        if (clear(l, mid, first) >= first.distanceTo(mid) - 0.01 && seen(l, first, feet, h, reach, face) >= 4) return first;
         Vec3 best = null;
-        double bestClear = -1;
-        for (int i = 0; i < 8; i++) {
-            Vec3 dir = face.yRot((float) (i * Math.PI / 4)).scale(-1);
-            Vec3 want = mid.add(dir.scale(back)).add(0, up, 0);
-            net.minecraft.world.phys.BlockHitResult hit = l.clip(new net.minecraft.world.level.ClipContext(mid, want,
-                    net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE,
-                    net.minecraft.world.phys.shapes.CollisionContext.empty()));
-            double full = want.distanceTo(mid);
-            double clear = hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? full
-                    : hit.getLocation().distanceTo(mid);
-            if (clear >= full - 0.01) return want;
-            if (clear > bestClear) {
-                bestClear = clear;
-                best = mid.add(want.subtract(mid).normalize().scale(Math.max(0, clear - 1.5)));
+        double bestScore = -1;
+        double[] lifts = {up, up * 0.3, up * 1.8};
+        for (double lift : lifts)
+            for (int i = 0; i < 16; i++) {
+                Vec3 dir = face.yRot((float) (i * Math.PI / 8)).scale(-1);
+                Vec3 want = mid.add(dir.scale(back)).add(0, lift, 0);
+                double full = want.distanceTo(mid), c = clear(l, mid, want);
+                double dist = c >= full - 0.01 ? full : Math.max(0, c - 1.5);
+                Vec3 at = mid.add(want.subtract(mid).normalize().scale(dist));
+                // (inside his own body is no view: at least out past his reach)
+                double out = Math.min(1, dist / Math.max(1, reach + 2));
+                double score = seen(l, at, feet, h, reach, dir.scale(-1)) * 2 + out * 3 + (i == 0 ? 0.2 : 0);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = at;
+                }
             }
-        }
-        return best == null ? mid.add(face.scale(-back)).add(0, up, 0) : best;
+        return best == null ? first : best;
+    }
+
+    static double clear(ServerLevel l, Vec3 from, Vec3 to) {
+        net.minecraft.world.phys.BlockHitResult hit = l.clip(new net.minecraft.world.level.ClipContext(from, to,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.ANY,
+                net.minecraft.world.phys.shapes.CollisionContext.empty()));
+        return hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? to.distanceTo(from)
+                : hit.getLocation().distanceTo(from);
+    }
+
+    /** how many of his middle, head, feet and two sides can be seen from here (0-5) */
+    static int seen(ServerLevel l, Vec3 eye, Vec3 feet, double h, double reach, Vec3 look) {
+        Vec3 side = new Vec3(-look.z, 0, look.x);
+        if (side.lengthSqr() < 1e-4) side = new Vec3(1, 0, 0);
+        side = side.normalize().scale(Math.min(reach, h) * 0.6);
+        Vec3 mid = feet.add(0, h * 0.45, 0);
+        Vec3[] parts = {mid, feet.add(0, h * 0.9, 0), feet.add(0, Math.min(1.5, h * 0.2), 0), mid.add(side),
+                mid.subtract(side)};
+        int n = 0;
+        for (Vec3 t : parts)
+            if (clear(l, eye, t) >= t.distanceTo(eye) - 0.6) n++;
+        return n;
     }
 }
