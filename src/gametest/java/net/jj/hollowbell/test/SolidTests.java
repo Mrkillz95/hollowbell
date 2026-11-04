@@ -614,15 +614,43 @@ public class SolidTests implements FabricGameTest {
         h.assertTrue(!ps.isEmpty(), "nowhere deep enough in him to put anyone (" + when + ")");
         // (moved out within ten ticks; a moving part may come back onto them after, and they're moved out again)
         boolean[] out = new boolean[ps.size()];
+        // (for the message if one isn't: how deep in him the server reads them each tick, as its push-out does, and
+        // whether it pushed anyone out at all: it moves a player out only after 8 ticks running in him, and a tick
+        // read as not in him starts the count again)
+        StringBuilder[] depths = new StringBuilder[ps.size()];
+        for (int i = 0; i < depths.length; i++) depths[i] = new StringBuilder();
+        int unstuck0 = Solid.unstuckServer;
         for (int k = 1; k <= 10; k++)
             after(h, k, () -> {
-                for (int i = 0; i < ps.size(); i++) out[i] |= !Solid.inside(e, ps.get(i), 0.3);
+                for (int i = 0; i < ps.size(); i++) {
+                    out[i] |= !Solid.inside(e, ps.get(i), 0.3);
+                    depths[i].append(String.format(" %.2f", Solid.depthIn(e, ps.get(i).getBoundingBox(), 0.08, null, true)));
+                }
             });
         after(h, 11, () -> {
+            // (failed: the players and he are gone too, or they stand in every later test's world)
+            boolean ok = false;
+            try {
+                check(h, e, when, ps, out, depths, unstuck0);
+                ok = true;
+            } finally {
+                if (!ok) {
+                    for (ServerPlayer p : ps) HollowbellGameTests.drop(p);
+                    release(h, e);
+                }
+            }
+        });
+    }
+
+    private static void check(GameTestHelper h, HollowbellEntity e, String when, List<ServerPlayer> ps, boolean[] out,
+            StringBuilder[] depths, int unstuck0) {
+        {
             for (int i = 0; i < ps.size(); i++) {
                 ServerPlayer p = ps.get(i);
                 h.assertTrue(
-                        out[i], "a player put in him " + when + " wasn't moved out within 10 ticks: " + p.position());
+                        out[i], "a player put in him " + when + " wasn't moved out within 10 ticks: " + p.position()
+                                + " (depth each tick" + depths[i] + "; the server pushed out "
+                                + (Solid.unstuckServer - unstuck0) + " in that time; him at " + e.position() + ")");
                 // (his own moves may hit them; being moved out never hurts)
                 var last = p.getLastDamageSource();
                 h.assertTrue(
@@ -630,7 +658,7 @@ public class SolidTests implements FabricGameTest {
                         "and was hurt by it: " + last);
                 HollowbellGameTests.drop(p);
             }
-        });
+        }
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "push_out_tiny")
