@@ -417,8 +417,20 @@ public class FunGameTests implements FabricGameTest {
             BlockPos floor = at.below();
             h.assertTrue(l.getBlockState(floor).is(Blocks.CHISELED_STONE_BRICKS), "the middle marked");
             h.assertTrue(l.getBlockState(at.offset(5, 0, 5)).isAir(), "cleared over the floor");
-            h.assertTrue(l.getBlockState(at.offset(41, 2, 3)).is(
-                    Blocks.STONE_BRICKS), "the wall");
+            BlockState wall = l.getBlockState(at.offset(36, 2, 21));
+            h.assertTrue(wall.is(Blocks.STONE_BRICKS) || wall.is(Blocks.CRACKED_STONE_BRICKS)
+                    || wall.is(Blocks.MOSSY_STONE_BRICKS), "the wall: " + wall);
+            int seats = 0, banners = 0;
+            for (int dx = -51; dx <= 51; dx++)
+                for (int dz = -51; dz <= 51; dz++)
+                    for (int y = 0; y <= 12; y++) {
+                        BlockState q = l.getBlockState(at.offset(dx, y, dz));
+                        if (q.is(Blocks.STONE_BRICK_STAIRS)) seats++;
+                        if (q.is(net.minecraft.tags.BlockTags.BANNERS)) banners++;
+                        if (Math.hypot(dx, dz) <= 40 && y >= 1 && q.blocksMotion())
+                            h.fail("something standing on the floor at " + dx + " " + y + " " + dz + ": " + q);
+                    }
+            h.assertTrue(seats > 200 && banners > 20, "seats " + seats + ", banners " + banners);
             h.assertTrue(l.getBlockState(at.offset(-30, -1, 2)).is(Blocks.STONE_BRICKS)
                     || l.getBlockState(at.offset(-30, -1, 2)).is(Blocks.POLISHED_ANDESITE)
                     || l.getBlockState(at.offset(-30, -1, 2)).is(Blocks.CRACKED_STONE_BRICKS)
@@ -437,6 +449,125 @@ public class FunGameTests implements FabricGameTest {
             done(h, p);
         });
     }
+
+    // dens
+
+    /** each den's own blocks, to know it was built */
+    static final Map<String, List<net.minecraft.world.level.block.Block>> DEN_MARKS = Map.of(
+            "pitchgut", List.of(Blocks.OCHRE_FROGLIGHT, Blocks.BLACK_STAINED_GLASS, Blocks.BONE_BLOCK),
+            "furrowmaw", List.of(Blocks.POINTED_DRIPSTONE, Blocks.ORANGE_TERRACOTTA),
+            "cerberus", List.of(Blocks.BLUE_ICE, Blocks.MAGMA_BLOCK, Blocks.CHAIN),
+            "hollowbell", List.of(Blocks.LIME_STAINED_GLASS, Blocks.BONE_BLOCK, Blocks.CHAIN),
+            "lanternwillow", List.of(Blocks.MANGROVE_ROOTS, Blocks.LANTERN, Blocks.WATER),
+            "wreckback", List.of(Blocks.WATER, Blocks.DARK_OAK_PLANKS, Blocks.SAND),
+            "swarmforge", List.of(Blocks.IRON_BLOCK, Blocks.CAMPFIRE, Blocks.BRICKS),
+            "gloamwick", List.of(Blocks.SOUL_LANTERN, Blocks.CHISELED_DEEPSLATE, Blocks.DARK_OAK_LOG));
+
+    static final List<String> KINDS = List.of("pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow",
+            "wreckback", "swarmforge", "gloamwick");
+
+    @SuppressWarnings("unchecked")
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "p7_denplans")
+    public void densAreScaledSafeAndInBudget(GameTestHelper h) {
+        List<String> wrong = new ArrayList<>();
+        for (String kind : KINDS) {
+            int lastR = 0, lastPieces = 0, lastTop = Integer.MIN_VALUE;
+            for (double size : new double[] {0.1, 0.25, 1, 2}) {
+                Map<String, Object> p = net.jj.giants.fun.FunTestAccess.plan(kind, size);
+                int r = (int) p.get("r"), pieces = (int) p.get("pieces"), top = (int) p.get("top");
+                long blocks = (long) p.get("blocks");
+                int want = net.minecraft.util.Mth.clamp((int) Math.round(FunGiants.reach(kind, size) * 0.8), 10, 128);
+                if (r != want) wrong.add(kind + " " + size + ": radius " + r + " not " + want);
+                if (r < lastR) wrong.add(kind + " " + size + ": smaller than at a smaller size");
+                if (pieces < lastPieces * 0.9) wrong.add(kind + " " + size + ": fewer pieces (" + pieces
+                        + ") than smaller (" + lastPieces + ")");
+                if (lastTop != Integer.MIN_VALUE && top < lastTop - 3) wrong.add(kind + " " + size + ": lower (" + top + ") than smaller (" + lastTop + ")");
+                if (pieces < 30) wrong.add(kind + " " + size + ": only " + pieces + " pieces");
+                if (blocks > Builds.MOST_UNDO / 2) wrong.add(kind + " " + size + ": " + blocks + " blocks, over budget");
+                wrong.addAll((List<String>) p.get("problems"));
+                Map<String, Integer> kinds = (Map<String, Integer>) p.get("kinds");
+                if (kinds.size() < 18) wrong.add(kind + " " + size + ": only " + kinds.size() + " kinds of block");
+                net.jj.giants.GiantsGuideMod.LOG.info("den plan {} {}: r {} reach {} pieces {} blocks {} top {} kinds {}",
+                        kind, size, r, p.get("reach"), pieces, blocks, top, kinds.size());
+                lastR = r;
+                lastPieces = pieces;
+                lastTop = top;
+            }
+            // the roost is as high as a quarter of him
+            if (kind.equals("hollowbell")) {
+                int top = (int) net.jj.giants.fun.FunTestAccess.plan(kind, 1).get("top");
+                if (top < FunGiants.height(kind, 1) * 0.25 - 1) wrong.add("hollowbell: roost only " + top + " high");
+            }
+        }
+        for (String size : List.of("small", "medium", "large")) {
+            Map<String, Object> p = net.jj.giants.fun.FunTestAccess.plan("arena:" + size, 1);
+            wrong.addAll((List<String>) p.get("problems"));
+            if ((int) p.get("floorClutter") != 0) wrong.add("arena " + size + ": " + p.get("floorClutter")
+                    + " blocks standing on the floor");
+            if ((long) p.get("blocks") > Builds.MOST_UNDO / 2) wrong.add("arena " + size + ": over budget");
+            if (((Map<String, Integer>) p.get("kinds")).size() < 25) wrong.add("arena " + size + ": plain");
+            net.jj.giants.GiantsGuideMod.LOG.info("arena plan {}: reach {} pieces {} blocks {} kinds {}", size,
+                    p.get("reach"), p.get("pieces"), p.get("blocks"), ((Map<String, Integer>) p.get("kinds")).size());
+        }
+        for (String w : wrong) net.jj.giants.GiantsGuideMod.LOG.warn("den plan wrong: {}", w);
+        h.assertTrue(wrong.isEmpty(), wrong.size() + " wrong: " + wrong.subList(0, Math.min(8, wrong.size())));
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "p7_dens")
+    public void everyDenIsBuiltAroundThePlayerAndTakenDown(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        List<Giant> kinds = new ArrayList<>();
+        for (String k : KINDS) kinds.add(new Giant(k, k, k, "net.jj.fakefun.GiantsBridge", List.of(), Set.of()));
+        AdminServer.useGiants(kinds);
+        BlockPos at = spot(h, 9);
+        ServerLevel l = h.getLevel();
+        l.setBlock(at.offset(4, 0, 3), Blocks.OAK_LOG.defaultBlockState(), 2);
+        ServerPlayer p = op(h, "denner", at);
+        h.runAfterDelay(3, () -> {
+            List<String> wrong = new ArrayList<>();
+            int n = 0;
+            for (String kind : KINDS)
+                for (double size : kind.equals("gloamwick") || kind.equals("wreckback") ? new double[] {0.1, 0.25}
+                        : new double[] {0.1}) {
+                    int reach = Math.min(60, net.jj.giants.fun.FunTestAccess.denRadius(kind, size) + 12);
+                    Map<BlockPos, BlockState> before = new HashMap<>();
+                    for (int dx = -reach; dx <= reach; dx++)
+                        for (int dz = -reach; dz <= reach; dz++)
+                            for (int y = -20; y <= 60; y++) {
+                                BlockPos q = at.offset(dx, y, dz);
+                                before.put(q, l.getBlockState(q));
+                            }
+                    var r = Builds.den(s, "denner", p, kind, size);
+                    if (!r.ok()) {
+                        wrong.add(kind + ": " + r.lines());
+                        continue;
+                    }
+                    for (int i = 0; i < 4000 && Builds.busy(); i++) net.jj.giants.fun.FunTestAccess.buildTick(s);
+                    FunWorld.Build b = FunWorld.get(s).s.builds.get(n++);
+                    if (!b.state.equals("built") || !b.undo) wrong.add(kind + " " + size + ": " + b.state + " " + b.undo);
+                    if (b.r != net.jj.giants.fun.FunTestAccess.denRadius(kind, size)) wrong.add(kind + ": radius " + b.r);
+                    // his own blocks there, and nothing put where the player stands
+                    Set<net.minecraft.world.level.block.Block> found = new java.util.HashSet<>();
+                    for (var e : before.keySet()) found.add(l.getBlockState(e).getBlock());
+                    for (var m : DEN_MARKS.get(kind)) if (!found.contains(m)) wrong.add(kind + " " + size + ": no " + m);
+                    if (l.getBlockState(at).blocksMotion() || l.getBlockState(at.above()).blocksMotion())
+                        wrong.add(kind + ": built into the player: " + l.getBlockState(at));
+                    h.assertTrue(Builds.takeDown(s, "denner", b.n).ok(), kind + ": taking down");
+                    for (int i = 0; i < 4000 && Builds.busy(); i++) net.jj.giants.fun.FunTestAccess.buildTick(s);
+                    int bad = 0;
+                    for (var e : before.entrySet())
+                        if (l.getBlockState(e.getKey()) != e.getValue() && bad++ < 3) wrong.add(kind + " " + size + ": "
+                                + e.getKey().subtract(at).toShortString() + " " + l.getBlockState(e.getKey()) + " was "
+                                + e.getValue());
+                }
+            h.assertTrue(wrong.isEmpty(), wrong.size() + " wrong: " + wrong.subList(0, Math.min(8, wrong.size())));
+            unspot(h, at);
+            done(h, p);
+        });
+    }
+
 
     // mixing
 
