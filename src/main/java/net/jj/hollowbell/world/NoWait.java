@@ -104,7 +104,8 @@ public final class NoWait {
                     || !c.getFluidState(m).isEmpty()) continue;
             if (c.getBlockState(m.set(x, y + 1, z)).getCollisionShape(l, m).isEmpty()) return y;
         }
-        return top;
+        // (no floor under the roof here, a lava lake: he keeps his height, never the roof; Part 9's Underworld)
+        return Math.min(nearY, from);
     }
 
     /**
