@@ -60,7 +60,17 @@ public class KillTests implements FabricGameTest {
                     at = new Vec3(tip.x, e.groundAt(tip.x, tip.z), tip.z);
                 }
                 if (move == Moves.SWEEP) {
-                    at = under(e).add(e.bellRadius() * 0.8, 0, 0);
+                    // (where his strand ends drag through: inside the ring they hang in, which is narrower than his
+                    // rim by an amount that changes with how high he hangs when it starts; at 0.8 of his rim the
+                    // zombie stood right at its edge and a run came no nearer than 7.6 to it)
+                    double[] reach = new double[e.rig.strands.length];
+                    for (int i = 0; i < reach.length; i++) {
+                        Vec3 tip = e.strandTipWorld(i);
+                        reach[i] = Math.hypot(tip.x - e.getX(), tip.z - e.getZ());
+                    }
+                    java.util.Arrays.sort(reach);
+                    double in = Math.min(e.bellRadius() * 0.8, reach[reach.length / 2] * 0.8);
+                    at = under(e).add(in, 0, 0);
                     // (on the ground where it stands, not at the height of the ground under his middle)
                     at = new Vec3(at.x, e.groundAt(at.x, at.z), at.z);
                 }
