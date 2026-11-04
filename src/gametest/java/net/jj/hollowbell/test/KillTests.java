@@ -43,27 +43,57 @@ public class KillTests implements FabricGameTest {
         HollowbellEntity e = spawnAway(h, 1f, HollowbellEntity.HUNTER, slot);
         Mob[] m = new Mob[1];
         float[] hp = new float[1];
-        h.runAfterDelay(30, () -> {
-            e.setStay(true);
-            Vec3 at = under(e);
-            if (move == Moves.SLAM) {
-                Vec3 tip = e.armTipWorld(0);
-                at = new Vec3(tip.x, e.groundAt(tip.x, tip.z), tip.z);
-            }
-            if (move == Moves.SWEEP) at = under(e).add(e.bellRadius() * 0.8, 0, 0);
-            m[0] = mob(h, type, at);
-            hp[0] = m[0].getHealth();
-            e.moves().restNow();
-            h.assertTrue(e.forceMove(move, m[0]), "couldn't start " + Moves.NAMES[move]);
-        });
-        h.runAfterDelay(30 + within, () -> {
-            h.assertTrue(
-                    !m[0].isAlive(),
-                    "the " + type.getDescription().getString() + " (" + hp[0] + " health) lived through "
-                            + Moves.NAMES[move] + " with " + m[0].getHealth() + " left");
-            m[0].discard();
+        // (what the move did, for the message if it lives: the nearest a strand end came to it, his move each tick)
+        double[] nearest = {Double.MAX_VALUE};
+        StringBuilder moves = new StringBuilder();
+        Runnable cleanUp = () -> {
+            if (m[0] != null) m[0].discard();
             e.moves().letGoOfEverything(false);
             release(h, e);
+        };
+        h.runAfterDelay(30, () -> {
+            try {
+                e.setStay(true);
+                Vec3 at = under(e);
+                if (move == Moves.SLAM) {
+                    Vec3 tip = e.armTipWorld(0);
+                    at = new Vec3(tip.x, e.groundAt(tip.x, tip.z), tip.z);
+                }
+                if (move == Moves.SWEEP) {
+                    at = under(e).add(e.bellRadius() * 0.8, 0, 0);
+                    // (on the ground where it stands, not at the height of the ground under his middle)
+                    at = new Vec3(at.x, e.groundAt(at.x, at.z), at.z);
+                }
+                m[0] = mob(h, type, at);
+                hp[0] = m[0].getHealth();
+                e.moves().restNow();
+                h.assertTrue(e.forceMove(move, m[0]), "couldn't start " + Moves.NAMES[move]);
+            } catch (RuntimeException ex) {
+                cleanUp.run();
+                throw ex;
+            }
+        });
+        for (int k = 31; k < 30 + within; k++) {
+            int kk = k;
+            h.runAfterDelay(k, () -> {
+                if (m[0] == null || !m[0].isAlive()) return;
+                if (kk % 5 == 0) moves.append(kk - 30).append(':').append(e.moveNow()).append(' ');
+                for (int i = 0; i < e.rig.strands.length; i++)
+                    nearest[0] = Math.min(nearest[0], e.strandTipWorld(i).distanceTo(m[0].position()));
+            });
+        }
+        h.runAfterDelay(30 + within, () -> {
+            try {
+                h.assertTrue(
+                        !m[0].isAlive(),
+                        "the " + type.getDescription().getString() + " (" + hp[0] + " health) lived through "
+                                + Moves.NAMES[move] + " with " + m[0].getHealth() + " left (it at "
+                                + m[0].position() + ", him at " + e.position() + ", the nearest a strand end came "
+                                + String.format("%.1f", nearest[0]) + ", his moves " + moves + "difficulty "
+                                + h.getLevel().getDifficulty() + ")");
+            } finally {
+                cleanUp.run();
+            }
             h.succeed();
         });
     }
