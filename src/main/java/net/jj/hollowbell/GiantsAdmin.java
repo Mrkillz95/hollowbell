@@ -383,6 +383,8 @@ public final class GiantsAdmin {
         for (String u : GiantsPlayers.USES) uses.add(u);
         // (Part 8) the weak points (ADMIN_BRIDGE.md 24.4)
         for (String u : GiantsSystems.USES) uses.add(u);
+        // (Part 10B) the giant-fight settings (ADMIN_BRIDGE.md §27)
+        for (String u : GiantsFight.USES) uses.add(u);
         head.add("uses", uses);
         JsonObject a = new JsonObject();
         for (var e : all.entrySet()) a.addProperty(e.getKey(), e.getValue());
@@ -489,6 +491,8 @@ public final class GiantsAdmin {
             GiantsPlayers.receiveAll(al);
             // (Part 8) the weak points and whether the Guide wants his hits told
             GiantsSystems.receiveAll(al);
+            // (Part 10B) the giant-fight settings
+            GiantsFight.receiveAll(al);
             for (Map.Entry<String, JsonElement> e : al.entrySet()) {
                 if (!List.of(USES).contains(e.getKey())) continue; // (one he doesn't apply)
                 try {
@@ -582,6 +586,7 @@ public final class GiantsAdmin {
         put(Map.of(), Map.of());
         GiantsPlayers.clear();
         GiantsSystems.clear();
+        GiantsFight.clear();
     }
 
     /** his full-size health as it is in use now: the setting times his own multiplier and the all-giants one */
