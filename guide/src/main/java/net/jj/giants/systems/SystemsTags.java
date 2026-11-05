@@ -45,12 +45,36 @@ public final class SystemsTags {
         };
     }
 
-    /** the systems' factor for a stat, and the tag the giant reads written again (fun x systems) */
+    /** the systems' factor for a stat, and the tag the giant reads written again (fun x systems x fight) */
     public static void set(MinecraftServer server, LivingEntity e, String what, double v) {
         for (String t : List.copyOf(e.getTags())) if (t.startsWith(SYS + what + "=")) e.removeTag(t);
         double r = Math.round(v * 1000) / 1000.0;
         if (Math.abs(r - 1) > 1e-9) e.addTag(SYS + what + "=" + AdminSetting.plain(r));
-        write(e, what, fun(server, e, what) * sys(e, what));
+        write(e, what, fun(server, e, what) * sys(e, what) * fightOf(e, what));
+    }
+
+    /** (Part 10B) a staged fight's own factor (a chase: the loser slower, the winner faster), kept apart */
+    public static final String FIGHT = "jj_giants.fightx.";
+
+    public static double fightOf(LivingEntity e, String what) {
+        String head = FIGHT + what + "=";
+        for (String t : e.getTags())
+            if (t.startsWith(head))
+                try {
+                    double v = Double.parseDouble(t.substring(head.length()));
+                    return Double.isFinite(v) && v > 0 ? v : 1;
+                } catch (NumberFormatException bad) {
+                    return 1;
+                }
+        return 1;
+    }
+
+    /** (Part 10B) the fight's factor for a stat (1: none), and the tag the giant reads written again */
+    public static void fight(MinecraftServer server, LivingEntity e, String what, double v) {
+        for (String t : List.copyOf(e.getTags())) if (t.startsWith(FIGHT + what + "=")) e.removeTag(t);
+        double r = Math.round(v * 1000) / 1000.0;
+        if (Math.abs(r - 1) > 1e-9) e.addTag(FIGHT + what + "=" + AdminSetting.plain(r));
+        write(e, what, fun(server, e, what) * sys(e, what) * fightOf(e, what));
     }
 
     /** the tag the giant reads: this value (none at 1) */
@@ -64,7 +88,7 @@ public final class SystemsTags {
     /** every stat's tag written again from the two parts (after the fun tools took his tag off) */
     public static void rewrite(MinecraftServer server, LivingEntity e) {
         for (String w : STATS) {
-            double s = sys(e, w);
+            double s = sys(e, w) * fightOf(e, w);
             if (Math.abs(s - 1) > 1e-9) write(e, w, fun(server, e, w) * s);
         }
     }

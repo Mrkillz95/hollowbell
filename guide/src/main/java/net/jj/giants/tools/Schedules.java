@@ -86,8 +86,12 @@ public final class Schedules {
             String when) {
         String no = PackMode.refusal();
         if (no != null) return AdminServer.Result.fail(no);
-        AdminTransfer.Bundle b = AdminTransfer.preset(preset);
-        if (b == null) return AdminServer.Result.fail("No preset called " + preset + ".");
+        // (Part 10B) "fight:<setup>": a saved fight setup, staged where it was saved when the day comes
+        boolean fight = preset.toLowerCase(Locale.ROOT).startsWith("fight:");
+        AdminTransfer.Bundle b = fight ? null : AdminTransfer.preset(preset);
+        if (fight && net.jj.giants.fights.FightData.get(server).saved(preset.substring(6)) == null)
+            return AdminServer.Result.fail("No fight setup called " + preset.substring(6) + ".");
+        if (!fight && b == null) return AdminServer.Result.fail("No preset called " + preset + ".");
         ToolsData d = ToolsData.get(server);
         if (d.s.schedules.size() >= MOST) return AdminServer.Result.fail("This world has " + MOST + " schedules.");
         ToolsData.Schedule s = new ToolsData.Schedule();
@@ -123,9 +127,9 @@ public final class Schedules {
                 return AdminServer.Result.fail("A schedule is weekends, days <which>, fullmoon or date <MM-DD>.");
             }
         }
-        String id = AdminTransfer.builtInId(preset);
+        String id = fight ? null : AdminTransfer.builtInId(preset);
         s.preset = id != null ? id : preset;
-        s.name = AdminTransfer.title(b);
+        s.name = fight ? "Staged fight " + preset.substring(6) : AdminTransfer.title(b);
         s.by = who;
         s.id = d.newId("s");
         d.s.schedules.add(s);
@@ -225,14 +229,31 @@ public final class Schedules {
             d.s.schedule = null;
             d.setDirty();
             int n = Timed.restore(server, "Schedule", r.puts, "schedule-end", "Schedule ended: " + r.name);
-            Tools.tellEveryone(server, Tools.gold("The " + r.name + " schedule is over: the giants are back as they"
-                    + " were."));
+            if (!r.name.startsWith("Staged fight "))
+                Tools.tellEveryone(server, Tools.gold("The " + r.name + " schedule is over: the giants are back as"
+                        + " they were."));
             net.jj.giants.GiantsGuideMod.LOG.info("Giants schedule {} ended ({} put back)", r.name, n);
             ToolsAdmin.changed();
         }
         if (PackMode.refusal() != null) return;
         for (ToolsData.Schedule s : d.s.schedules) {
             if (!due(server, s)) continue;
+            // (Part 10B) a staged fight: started once while its day lasts
+            if (s.preset.startsWith("fight:")) {
+                ToolsData.Running run = new ToolsData.Running();
+                run.id = s.id;
+                run.name = s.name;
+                run.by = s.by;
+                run.started = System.currentTimeMillis();
+                run.puts = new ArrayList<>();
+                d.s.schedule = run;
+                d.setDirty();
+                AdminServer.Result fr = net.jj.giants.fights.FightScript.replay(server, "Schedule",
+                        new java.util.UUID(0, 0), s.preset.substring(6));
+                net.jj.giants.GiantsGuideMod.LOG.info("Giants schedule {}: {}", s.name, fr.lines());
+                ToolsAdmin.changed();
+                return;
+            }
             AdminTransfer.Bundle b = AdminTransfer.preset(s.preset);
             if (b == null) continue;
             ToolsData.Running run = new ToolsData.Running();

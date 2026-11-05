@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.giants.fightsmixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "FightBlocksMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

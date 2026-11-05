@@ -115,6 +115,8 @@ public final class AdminStyle {
     public static void icon(GuiGraphics g, String name, int x, int y, int size) {
         // (Part 6) the Server tools page's own pictures
         if (ToolsArt.icon(g, name, x, y, size)) return;
+        // (Part 10B) the giant fights' groups draw the fight picture
+        if (name.equals("wildfights") || name.equals("ownedfights") || name.equals("everyfight")) name = "fight";
         int i = ICON_NAMES.indexOf(name);
         // (Part 7) the Fun and World tools pages' own pictures
         if (i < 0 && P7_ICONS.contains(name)) {

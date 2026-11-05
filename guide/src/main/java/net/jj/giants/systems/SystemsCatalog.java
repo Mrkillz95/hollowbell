@@ -50,7 +50,8 @@ public final class SystemsCatalog {
     }
 
     /** every system's settings, in the book's order (the group each starts is in {@link #GROUPS}) */
-    static final List<AdminSetting> SETTINGS = List.of(
+    // (Part 10B) the giant fights' settings come after the systems' (net.jj.giants.fights.FightCatalog)
+    static final List<AdminSetting> SETTINGS = net.jj.giants.fights.FightCatalog.after(List.of(
             flag("all.herd", false, "Herds",
                     "Giants of the same kind keep together: the rest follow the world's own one (or the biggest) and"
                             + " walk back to him when they stray. Needs How many come above 1 (the Herds preset sets"
@@ -157,10 +158,10 @@ public final class SystemsCatalog {
                     "Every game day each giant's size, mood and moves are shuffled: a new size, a new mood (wild"
                             + " ones), and only some of his moves that day."),
             num("all.chaosDays", Type.INT, 1, 1, 10, 1, "Shuffle every",
-                    "Game days between shuffles."));
+                    "Game days between shuffles.")));
 
     /** the book's groups: a name key and the settings in it */
-    public static final String[][] GROUPS = {
+    public static final String[][] GROUPS = net.jj.giants.fights.FightCatalog.after(new String[][] {
         {"herds", "all.herd", "all.herdRange"},
         {"growth", "all.growth", "all.growthPerDay", "all.growthPerWin", "all.growthMost", "all.growthTitan"},
         {"hunger", "all.hunger", "all.hungerDays", "all.hungerWeak"},
@@ -179,7 +180,7 @@ public final class SystemsCatalog {
         {"underworld", "all.underworld"},
         {"sacred", "all.sacred"},
         {"mirror", "all.mirror", "all.mirrorMost"},
-        {"chaos", "all.chaos", "all.chaosDays"}};
+        {"chaos", "all.chaos", "all.chaosDays"}});
 
     /** (Part 9) the first group of new systems B (the book starts them under their own heading) */
     public static final String FIRST_B = "villages";

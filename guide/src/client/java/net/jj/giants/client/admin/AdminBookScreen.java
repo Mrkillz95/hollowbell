@@ -4878,6 +4878,20 @@ public class AdminBookScreen extends Screen {
     /** (the picture-taking) a Fun page question open: "name" or "loot" (the first giant's), "tagedit" (the first tag) */
     public static boolean testFunAsk(String what) {
         if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b)) return false;
+        // (Part 10B) the fight script's questions: side A1's moves and more, and Save as
+        if (what.startsWith("fight")) {
+            JsonObject fs = b.fights();
+            if (fs == null || !(fs.get("script") instanceof JsonObject sc)) return false;
+            List<JsonObject> fighters = objects(sc, "fighters");
+            if (what.equals("fightsave")) {
+                b.openScriptSave(str(sc, "name"));
+                return true;
+            }
+            if (fighters.isEmpty()) return false;
+            if (what.equals("fightmoves")) b.openScriptMoves(fs, "a", 1, fighters.get(0));
+            else b.openScriptMore(fs, "a", 1, fighters.get(0));
+            return true;
+        }
         if (what.equals("tagedit")) {
             List<JsonObject> tags = objects(AdminBookClient.fun(), "tags");
             if (tags.isEmpty()) return false;
@@ -4978,6 +4992,12 @@ public class AdminBookScreen extends Screen {
         Head fight = new Head(tr("fun.fight"), tr("fun.fight.note"), null).folding(FUN + "/fight", "fight", -1);
         rows.add(fight);
         if (!fight.shut()) fightRows();
+        // (Part 10B) the fight script
+        Head script = new Head(lit("Fight script"), lit("Script a staged fight: who wins and how the loser ends, how"
+                + " long, rounds, the arena, players and the show. Save it by name to fight it here again."), null)
+                .folding(FUN + "/script", "fight", -1);
+        rows.add(script);
+        if (!script.shut()) scriptRows();
         // giant tags
         List<JsonObject> tags = objects(f, "tags");
         Head th = new Head(tr("fun.tags"), tr("fun.tags.note"), null).folding(FUN + "/tags", "tag", tags.size());
@@ -5229,6 +5249,552 @@ public class AdminBookScreen extends Screen {
             o.addProperty("size", size);
         }
         return o;
+    }
+
+    // (Part 10B, ADMIN_BRIDGE.md §27.6) the Fight script on the Fun page: the giants on each side (one or two), who
+    // wins and how the loser ends, the length, rounds, arena, players, the show and what comes after; start, save,
+    // the saved setups, the staged fight now (with Stop) and the giant fights going on
+
+    /** the fight script's spot: where I stand or where I look */
+    private static boolean scriptLook;
+
+    private static MutableComponent lit(String s) {
+        return Component.literal(s);
+    }
+
+    private @Nullable JsonObject fights() {
+        JsonObject f = AdminBookClient.fun();
+        return f != null && f.get("fights") instanceof JsonObject j ? j : null;
+    }
+
+    private void scriptRequest(JsonObject o) {
+        funRequest("fightscript", o);
+    }
+
+    private void scriptSet(String key, String value) {
+        JsonObject o = new JsonObject();
+        o.addProperty("key", key);
+        o.addProperty("value", value);
+        scriptRequest(o);
+    }
+
+    /** an option's words as the server's FightEdit says them */
+    private static String scriptWords(JsonObject s, String key) {
+        return switch (key) {
+            case "winner" -> switch (str(s, "winner")) {
+                case "a" -> "Side A wins";
+                case "b" -> "Side B wins";
+                default -> "Let them fight";
+            };
+            case "ending" -> switch (str(s, "ending")) {
+                case "escape" -> "Flees and escapes";
+                case "caught" -> "Flees, is caught and killed";
+                case "bow" -> "Surrenders and bows out";
+                default -> "To the death";
+            };
+            case "break" -> Math.round(dbl(s, "breakAt", 0.25) * 100) + "%";
+            case "length" -> switch (str(s, "length")) {
+                case "quick" -> "Quick clash";
+                case "epic" -> "Epic";
+                default -> "Normal";
+            };
+            case "rounds" -> (int) dbl(s, "rounds", 1) == 1 ? "One fight" : "Best of " + (int) dbl(s, "rounds", 1);
+            case "rest" -> (int) dbl(s, "rest", 20) + " s";
+            case "roundheal" -> Math.round(dbl(s, "roundHeal", 0.25) * 100) + "%";
+            case "arena" -> switch (str(s, "arena")) {
+                case "off" -> "No blocks broken";
+                case "some" -> "Half the blocks";
+                case "little" -> "A quarter of the blocks";
+                default -> "As their griefing says";
+            };
+            case "spectators" -> str(s, "spectators").equals("danger") ? "In the danger zone" : "Safe";
+            case "after" -> switch (str(s, "after")) {
+                case "stay" -> "Roars and stays";
+                case "turn" -> "Roars, turns on the players";
+                default -> "Roars and goes home";
+            };
+            case "remains" -> switch (str(s, "remains")) {
+                case "corpse" -> "A corpse";
+                case "skeleton" -> "A skeleton";
+                case "drops" -> "Drops only";
+                default -> "The world's rule";
+            };
+            case "healblocks" -> bool(s, "healBlocks") ? "Grow back after" : "Stay broken";
+            default -> bool(s, key) ? "On" : "Off";
+        };
+    }
+
+    /** the values each option cycles through (the next one is sent) */
+    private static List<String> scriptValues(String key) {
+        return switch (key) {
+            case "winner" -> List.of("fight", "a", "b");
+            case "ending" -> List.of("death", "escape", "caught", "bow");
+            case "break" -> List.of("0.1", "0.15", "0.2", "0.25", "0.3", "0.4", "0.5");
+            case "length" -> List.of("quick", "normal", "epic");
+            case "rounds" -> List.of("1", "3", "5");
+            case "rest" -> List.of("10", "20", "30", "60");
+            case "roundheal" -> List.of("0", "0.1", "0.25", "0.5");
+            case "arena" -> List.of("usual", "off", "some", "little");
+            case "spectators" -> List.of("safe", "danger");
+            case "after" -> List.of("home", "stay", "turn");
+            case "remains" -> List.of("rule", "corpse", "skeleton", "drops");
+            default -> List.of("on", "off");
+        };
+    }
+
+    /** the script's value of an option in the form scriptValues uses */
+    private static String scriptNow(JsonObject s, String key) {
+        return switch (key) {
+            case "break" -> AdminSetting.plain(dbl(s, "breakAt", 0.25));
+            case "rounds" -> String.valueOf((int) dbl(s, "rounds", 1));
+            case "rest" -> String.valueOf((int) dbl(s, "rest", 20));
+            case "roundheal" -> AdminSetting.plain(dbl(s, "roundHeal", 0.25));
+            case "winner", "ending", "length", "arena", "spectators", "after", "remains" -> str(s, key);
+            case "healblocks" -> bool(s, "healBlocks") ? "on" : "off";
+            default -> bool(s, key) ? "on" : "off";
+        };
+    }
+
+    private Row scriptOption(JsonObject s, String key, String label, String what) {
+        List<String> vs = scriptValues(key);
+        String now = scriptNow(s, key);
+        int i = vs.indexOf(now);
+        String next = vs.get((i + 1) % vs.size());
+        return new LineRow(lit(label), TEXT, lit(what), List.<Object[]>of(new Object[] {lit(scriptWords(s, key)),
+            (Runnable) () -> scriptSet(key, next), lit("Click for the next: " + label.toLowerCase(java.util.Locale.ROOT)
+                    + ".")}));
+    }
+
+    /** a small heading inside the script */
+    private Row scriptSub(String title) {
+        return new Block(16, (g, x, y, w, mx, my) -> {
+            g.drawString(font, title, x + 2, y + 6, KEY, false);
+            g.fill(x + 2 + font.width(title) + 4, y + 10, x + w, y + 11, 0x40503010);
+        });
+    }
+
+    /** the Fight script section */
+    private void scriptRows() {
+        JsonObject fs = fights();
+        if (fs == null) {
+            rows.add(new Note(lit("This server's Giants Guide has no fight script yet."), GREY));
+            return;
+        }
+        JsonObject s = fs.get("script") instanceof JsonObject j ? j : new JsonObject();
+        // the staged fight now: the score, each giant's health, Stop
+        if (fs.get("now") instanceof JsonObject now) scriptNowCard(now);
+        List<JsonObject> kinds = objects(AdminBookClient.live(), "giants").stream().filter(k -> bool(k, "speaks"))
+                .toList();
+        if (kinds.isEmpty()) {
+            rows.add(new Note(tr("live.empty"), GREY));
+            return;
+        }
+        rows.add(scriptSub("The giants (two a side for a tag team)"));
+        List<JsonObject> fighters = objects(s, "fighters");
+        for (String side : List.of("a", "b"))
+            for (int slot = 1; slot <= 2; slot++) {
+                List<JsonObject> on = fighters.stream().filter(f -> str(f, "side").equals(side)).toList();
+                if (slot == 2 && on.isEmpty()) continue;
+                JsonObject f = slot <= on.size() ? on.get(slot - 1) : null;
+                rows.add(scriptFighter(fs, kinds, side, slot, f));
+            }
+        rows.add(scriptSub("The outcome"));
+        rows.add(scriptOption(s, "winner", "Winner", "Side A, side B, or let them fight it out."));
+        rows.add(scriptOption(s, "ending", "Loser's ending", "How the loser's end comes."));
+        rows.add(scriptOption(s, "break", "Break point", "The loser breaks at this much of his health."));
+        rows.add(scriptOption(s, "length", "Length", "Quick clash (half a minute), normal (a minute and a half), epic"
+                + " (four minutes): the winner's blows are paced to fit."));
+        rows.add(scriptOption(s, "rounds", "Rounds", "One fight, or best of 3 or 5 with a rest between."));
+        if (dbl(s, "rounds", 1) > 1) {
+            rows.add(scriptOption(s, "rest", "Rest between rounds", "How long they rest."));
+            rows.add(scriptOption(s, "roundheal", "Healing between rounds", "The share of their health each gets"
+                    + " back."));
+        }
+        rows.add(scriptSub("The arena"));
+        rows.add(scriptOption(s, "arena", "Blocks broken", "What the fight may break."));
+        rows.add(scriptOption(s, "healblocks", "Afterwards", "What was broken grows back after the fight, or not."));
+        rows.add(scriptSub("Players"));
+        rows.add(scriptOption(s, "spectators", "Spectators", "Safe from stray blows near the fight, or not."));
+        rows.add(scriptOption(s, "join", "Join a side", "Players may join a side mid-fight (/giants fight join a|b):"
+                + " that side's blows pass them by."));
+        rows.add(scriptOption(s, "bets", "Bets", "Players bet emeralds on a side before it starts; the winners share"
+                + " the pot. A betting board keeps score."));
+        rows.add(scriptSub("The show"));
+        rows.add(scriptOption(s, "music", "Fight music", "Fight music for every player near."));
+        rows.add(scriptOption(s, "countdown", "Countdown", "3, 2, 1, Fight! before each round."));
+        rows.add(scriptOption(s, "announcer", "Announcer", "Lines in chat: who is hurt, rounds, the end."));
+        rows.add(scriptOption(s, "slowmo", "Slow-motion end", "The final blow in slow motion."));
+        rows.add(scriptOption(s, "bars", "Both bars", "Each giant's health on a bar of his own, with his name and"
+                + " title."));
+        rows.add(scriptSub("After"));
+        rows.add(scriptOption(s, "after", "The winner", "What the winner does once it is over."));
+        rows.add(scriptOption(s, "remains", "The loser's remains", "If he falls: as the world's rule (When a giant"
+                + " falls), or this."));
+        rows.add(scriptOption(s, "grow", "Winner grows", "With Growth on (Systems), the win makes him grow."));
+        // go
+        boolean paused = allPaused();
+        rows.add(new LineRow(lit(scriptLook ? "Where I look" : "Where I stand"), TEXT, lit("Side A on your left,"
+                + " side B on your right."), List.<Object[]>of(
+                new Object[] {lit("Spot"), (Runnable) () -> {
+                    scriptLook = !scriptLook;
+                    build();
+                }, lit("Where I stand, or where I look (256 blocks at most).")},
+                new Object[] {lit("Start the fight"), (Runnable) () -> {
+                    JsonObject o = new JsonObject();
+                    o.addProperty("spot", scriptLook ? "look" : "here");
+                    funRequest("fightstart", o);
+                }, paused ? tt("paused.fun", PAUSED_FUN) : lit("Stage it now, as scripted."),
+                    !paused && fs.get("now") == null && !fighters.isEmpty()}), true));
+        rows.add(new LineRow(lit(str(s, "name").isEmpty() ? "Not saved" : "Loaded: " + str(s, "name")), GREY,
+                Component.empty(), List.<Object[]>of(
+                new Object[] {lit("Save as…"), (Runnable) () -> openScriptSave(str(s, "name")),
+                    lit("Keep it by name, to be fought here again (Replay) or on a schedule (fight:<name>)."),
+                    !fighters.isEmpty()},
+                new Object[] {lit("Fresh"), (Runnable) () -> {
+                    JsonObject o = new JsonObject();
+                    o.addProperty("reset", true);
+                    scriptRequest(o);
+                }, lit("Start a new script from nothing.")})));
+        // the saved setups
+        List<JsonObject> saved = objects(fs, "saved");
+        if (!saved.isEmpty()) {
+            rows.add(scriptSub("Saved setups"));
+            for (JsonObject sv : saved) {
+                String name = str(sv, "name");
+                rows.add(new LineRow(lit(name), KEY, lit(str(sv, "about")), List.<Object[]>of(
+                        new Object[] {lit("Load"), (Runnable) () -> scriptNamed("fightload", name),
+                            lit("Into the script above, to change or start.")},
+                        new Object[] {lit("Replay"), (Runnable) () -> scriptNamed("fightreplay", name),
+                            lit("Stage it now where it was saved."), fs.get("now") == null && !paused},
+                        new Object[] {lit("Delete"), (Runnable) () -> confirm(lit("Delete " + name + "?"),
+                                lit("The setup \"" + name + "\" goes for good (a schedule naming it stops working)."),
+                                lit("Delete"), () -> scriptNamed("fightdelete", name)), lit("Delete this setup.")}),
+                        true));
+            }
+        }
+        // ordinary giant fights going on (followed while a giant-fight setting needs it)
+        List<JsonObject> going = objects(fs, "goingList");
+        if (!going.isEmpty()) {
+            rows.add(scriptSub("Giant fights going on"));
+            for (JsonObject gf : going) {
+                String id = str(gf, "a");
+                rows.add(new LineRow(lit(str(gf, "text")), TEXT, Component.empty(), List.<Object[]>of(new Object[] {
+                    lit("Stand down"), (Runnable) () -> {
+                        JsonObject o = new JsonObject();
+                        o.addProperty("id", id);
+                        funRequest("fightstanddown", o);
+                    }, lit("Both stand down: the fight is over.")})));
+            }
+        }
+    }
+
+    private void scriptNamed(String what, String name) {
+        JsonObject o = new JsonObject();
+        o.addProperty("name", name);
+        funRequest(what, o);
+    }
+
+    /** one giant of the script: side and slot, his kind (fresh, at a size) or one out there, Moves… and More… */
+    private Row scriptFighter(JsonObject fs, List<JsonObject> kinds, String side, int slot, @Nullable JsonObject f) {
+        // the choices: nobody (slot 2), each kind fresh, then each one standing out there
+        List<String[]> opts = new ArrayList<>();
+        if (slot == 2) opts.add(new String[] {"none", "Nobody", "", ""});
+        for (JsonObject k : kinds) opts.add(new String[] {str(k, "key"), str(k, "name") + " (fresh)", "",
+            str(k, "key")});
+        for (JsonObject[] g : funGiants(true)) opts.add(new String[] {str(g[1], "id"), str(g[1], "label"),
+            str(g[1], "id"), str(g[0], "key")});
+        String now = f == null ? (slot == 2 ? "none" : "") : str(f, "id").isEmpty() ? str(f, "kind") : str(f, "id");
+        int idx = 0;
+        for (int i = 0; i < opts.size(); i++) if (opts.get(i)[0].equals(now)) idx = i;
+        String[] pick = f == null && slot == 1 ? new String[] {"", "Pick a giant", "", ""} : opts.get(idx);
+        int at = idx;
+        String label = side.toUpperCase(java.util.Locale.ROOT) + slot;
+        int colour = side.equals("a") ? 0xFFB02A1A : 0xFF1A5AA0;
+        Block b = new Block(22, (g, x, y, w, mx, my) -> {
+            g.fill(x, y + 4, x + 3, y + 18, colour);
+            g.drawString(font, label, x + 6, y + 7, colour, false);
+        });
+        int x0 = 26;
+        int kw = Mth.clamp(lw / 3, 90, 140);
+        Button kb = Button.builder(lit(cut(pick[1], kw - 10)), x -> {
+                    String next = opts.get((f == null && slot == 1 ? 0 : at + 1) % opts.size())[0];
+                    JsonObject o = new JsonObject();
+                    o.addProperty("side", side);
+                    o.addProperty("slot", slot);
+                    o.addProperty("giant", next);
+                    o.addProperty("size", f == null ? 0.5 : dbl(f, "size", 0.5));
+                    scriptRequest(o);
+                })
+                .bounds(0, 0, kw, 16)
+                .build();
+        kb.setTooltip(Tooltip.create(lit("Click for the next giant: each kind fresh (summoned), or one out there.")));
+        b.add(kb, x0, 3, false);
+        if (f != null) {
+            String kind = str(f, "kind");
+            int rx = 0;
+            Button more = Button.builder(lit("More…"), x -> openScriptMore(fs, side, slot, f)).bounds(0, 0,
+                    font.width("More…") + 12, 16).build();
+            more.setTooltip(Tooltip.create(lit("His starting health and his finisher.")));
+            b.add(more, rx, 3, true);
+            rx += more.getWidth() + 3;
+            List<String> mv = strings(f, "moves");
+            Button moves = Button.builder(lit(mv.isEmpty() ? "All moves" : mv.size() + " moves"), x -> openScriptMoves(fs,
+                    side, slot, f)).bounds(0, 0, 70, 16).build();
+            moves.setTooltip(Tooltip.create(lit("Which of his moves he may use.")));
+            b.add(moves, rx, 3, true);
+            rx += moves.getWidth() + 3;
+            if (str(f, "id").isEmpty()) {
+                JsonObject k = kinds.stream().filter(q -> str(q, "key").equals(kind)).findFirst().orElse(kinds.get(0));
+                List<String> sz = strings(k, "size");
+                double lo = sz.size() == 2 ? Double.parseDouble(sz.get(0)) : 0.1,
+                        hi = Math.min(2, sz.size() == 2 ? Double.parseDouble(sz.get(1)) : 2);
+                double cur = Mth.clamp(dbl(f, "size", 0.5), lo, hi);
+                int sw = Mth.clamp(lw - x0 - kw - rx - 10, 50, 130);
+                AbstractSliderButton sl = new AbstractSliderButton(0, 0, sw, 16, Component.empty(),
+                        (cur - lo) / Math.max(1e-6, hi - lo)) {
+                    {
+                        updateMessage();
+                    }
+
+                    double v() {
+                        double v = lo + value * (hi - lo);
+                        return Mth.clamp(Math.round(v * 20) / 20.0, lo, hi);
+                    }
+
+                    @Override
+                    protected void updateMessage() {
+                        setMessage(tr("live.summon.size", AdminSetting.plain(v())));
+                    }
+
+                    @Override
+                    protected void applyValue() {
+                    }
+
+                    @Override
+                    public void onRelease(double mx, double my) {
+                        super.onRelease(mx, my);
+                        JsonObject o = new JsonObject();
+                        o.addProperty("side", side);
+                        o.addProperty("slot", slot);
+                        o.addProperty("size", v());
+                        scriptRequest(o);
+                    }
+                };
+                sl.setTooltip(Tooltip.create(tr("fun.fight.size.tip")));
+                b.add(sl, x0 + kw + 4, 3, false);
+            }
+        }
+        return b;
+    }
+
+    /** a fighter's starting health and finisher */
+    private void openScriptMore(JsonObject fs, String side, int slot, JsonObject f) {
+        String kind = str(f, "kind");
+        Form fm = new Form(lit(giantName(kind) + ": side " + side.toUpperCase(java.util.Locale.ROOT) + slot),
+                lit("How much of his health he starts with, and the move he finishes the loser with."));
+        double[] hp = {dbl(f, "health", 1) * 100};
+        fm.slider(lit("Starting health %"), 5, 100, 5, hp, false);
+        JsonObject mv = fs.get("moves") instanceof JsonObject m ? m : new JsonObject();
+        List<String> his = new ArrayList<>(List.of(""));
+        his.addAll(strings(mv, kind));
+        String own = str(mv, kind + ".finisher");
+        String[] fin = {str(f, "finisher")};
+        fm.cycle(lit("Finisher"), () -> lit(fin[0].isEmpty() ? "His own: " + own.replace('_', ' ')
+                : fin[0].replace('_', ' ')), () -> fin[0] = his.get((his.indexOf(fin[0]) + 1) % his.size()));
+        fm.button(lit("Save"), () -> {
+            closeModal();
+            JsonObject o = new JsonObject();
+            o.addProperty("side", side);
+            o.addProperty("slot", slot);
+            o.addProperty("health", Math.round(hp[0]) / 100.0);
+            scriptRequest(o);
+            o = new JsonObject();
+            o.addProperty("side", side);
+            o.addProperty("slot", slot);
+            o.addProperty("finisher", fin[0].isEmpty() ? "own" : fin[0]);
+            scriptRequest(o);
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
+    }
+
+    /** which of his moves a fighter may use: a button for each, on or off */
+    private void openScriptMoves(JsonObject fs, String side, int slot, JsonObject f) {
+        String kind = str(f, "kind");
+        JsonObject mv = fs.get("moves") instanceof JsonObject m ? m : new JsonObject();
+        List<String> his = strings(mv, kind);
+        java.util.Set<String> on = new java.util.LinkedHashSet<>(strings(f, "moves"));
+        if (on.isEmpty()) on.addAll(his);
+        modal = new MovePick(lit(giantName(kind) + ": his moves"), lit("Click a move to let him use it or not. His"
+                + " finisher is always his."), his, on, chosen -> {
+            JsonObject o = new JsonObject();
+            o.addProperty("side", side);
+            o.addProperty("slot", slot);
+            o.addProperty("moves", chosen.size() == his.size() ? "all" : String.join(",", chosen));
+            scriptRequest(o);
+        });
+        place();
+    }
+
+    /** a button for each of a giant's moves, on (✔) or off (✘); Save, All, Cancel */
+    private final class MovePick extends Modal {
+        final Component title, body;
+        final List<String> all;
+        final java.util.Set<String> on;
+        final List<Button> moves = new ArrayList<>();
+
+        MovePick(Component title, Component body, List<String> all, java.util.Set<String> on,
+                java.util.function.Consumer<List<String>> save) {
+            this.title = title;
+            this.body = body;
+            this.all = all;
+            this.on = on;
+            for (String m : all) {
+                Button[] b = new Button[1];
+                b[0] = Button.builder(word(m), x -> {
+                    if (!this.on.remove(m)) this.on.add(m);
+                    x.setMessage(word(m));
+                }).bounds(0, 0, font.width("✔ " + m.replace('_', ' ')) + 10, 14).build();
+                moves.add(b[0]);
+                buttons.add(b[0]);
+            }
+            button(lit("Save"), () -> {
+                if (this.on.isEmpty()) return;
+                closeModal();
+                List<String> out = new ArrayList<>();
+                for (String m : all) if (this.on.contains(m)) out.add(m);
+                save.accept(out);
+            });
+            button(lit("All"), () -> {
+                this.on.addAll(all);
+                for (int i = 0; i < moves.size(); i++) moves.get(i).setMessage(word(all.get(i)));
+            });
+            button(tr("cancel"), this::cancel);
+            layout(0);
+        }
+
+        Component word(String m) {
+            boolean y = on.contains(m);
+            return lit((y ? "✔ " : "✘ ") + m.replace('_', ' ')).withStyle(y ? ChatFormatting.DARK_GREEN
+                    : ChatFormatting.GRAY);
+        }
+
+        @Override
+        int modalW() {
+            return Math.min(pw - 40, 420);
+        }
+
+        @Override
+        void layout(int ignored) {
+            mw = modalW();
+            List<FormattedCharSequence> bl = body();
+            int top = 26 + bl.size() * 10 + 4;
+            int x = 8, y = top, rowsN = 1;
+            for (Button b : moves) {
+                if (x > 8 && x + b.getWidth() > mw - 8) {
+                    x = 8;
+                    y += 17;
+                    rowsN++;
+                }
+                x += b.getWidth() + 3;
+            }
+            mh = top + rowsN * 17 + 30;
+            mx0 = (width - mw) / 2;
+            my0 = (height - mh) / 2;
+            x = 8;
+            y = top;
+            for (Button b : moves) {
+                if (x > 8 && x + b.getWidth() > mw - 8) {
+                    x = 8;
+                    y += 17;
+                }
+                b.setX(mx0 + x);
+                b.setY(my0 + y);
+                x += b.getWidth() + 3;
+            }
+            int bx = mx0 + mw - 8;
+            for (int i = buttons.size() - 1; i >= moves.size(); i--) {
+                Button b = buttons.get(i);
+                bx -= b.getWidth();
+                b.setX(bx);
+                b.setY(my0 + mh - 24);
+                bx -= 4;
+            }
+        }
+
+        @Override
+        Component title() {
+            return title;
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            return font.split(body, modalW() - 16);
+        }
+
+        @Override
+        void cancel() {
+            closeModal();
+        }
+    }
+
+    /** "Save as…": the name */
+    private void openScriptSave(String was) {
+        Form fm = new Form(lit("Save the fight setup"), lit("It is saved with the spot where you stand now (and the way"
+                + " you face): Replay stages it here again. Put it on a schedule with /giants admin schedule add"
+                + " fight:<name> weekends."));
+        EditBox name = fm.box(lit("Name"), was.isEmpty() ? "" : was, 32);
+        fm.button(lit("Save"), () -> {
+            closeModal();
+            scriptNamed("fightsave", name.getValue().strip());
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
+    }
+
+    /** the staged fight now: phase, score, each giant's health, Stop */
+    private void scriptNowCard(JsonObject now) {
+        List<JsonObject> gs = objects(now, "giants");
+        String phase = switch (str(now, "phase")) {
+            case "place", "find" -> "Setting up";
+            case "count" -> "Counting down";
+            case "rest" -> "Resting between rounds";
+            case "finish" -> "The finish";
+            case "chase" -> "The chase";
+            case "after", "done" -> "Over";
+            default -> "Fighting";
+        };
+        int rounds = (int) dbl(now, "rounds", 1);
+        String head = "Staged fight: " + phase + (rounds > 1 ? " · round " + (int) dbl(now, "round", 1) + " of best of "
+                + rounds + " · " + (int) dbl(now, "winsA", 0) + " to " + (int) dbl(now, "winsB", 0) : "");
+        int h = 22 + gs.size() * 13 + 6;
+        rows.add(new Block(h, (g, x, y, w, mx, my) -> {
+            AdminStyle.card(g, x, y + 2, w, h - 4, false);
+            AdminStyle.icon(g, "fight", x + 5, y + 6, 16);
+            g.drawString(font, cut(head, w - 30), x + 26, y + 10, HEAD, false);
+            for (int i = 0; i < gs.size(); i++) {
+                JsonObject j = gs.get(i);
+                boolean a = str(j, "side").equals("a");
+                int yy = y + 24 + i * 13, c = a ? 0xFFB02A1A : 0xFF1A5AA0;
+                String nm = (a ? "A " : "B ") + str(j, "name") + (bool(j, "dead") ? " (down)" : bool(j, "broken")
+                        ? " (broke)" : "");
+                g.drawString(font, cut(nm, w / 2 - 12), x + 26, yy, c, false);
+                int bx = x + w / 2, bw = w / 2 - 40;
+                double sh = dbl(j, "share", 1);
+                g.fill(bx, yy, bx + bw, yy + 8, 0xFF8A6A40);
+                g.fill(bx + 1, yy + 1, bx + bw - 1, yy + 7, 0xFFEADBB8);
+                int fill = (int) Math.round((bw - 2) * Math.max(0, Math.min(1, sh)));
+                if (fill > 0) g.fill(bx + 1, yy + 1, bx + 1 + fill, yy + 7, c);
+                g.drawString(font, Math.round(sh * 100) + "%", bx + bw + 4, yy, GREY, false);
+            }
+        }));
+        rows.add(new LineRow(lit("Stop it"), WARN, lit("Every giant in it stands down and goes home; bets are paid"
+                + " back."), List.<Object[]>of(new Object[] {lit("Stop and send home"), (Runnable) () -> funRequest(
+                "fightstop", new JsonObject()), lit("Interrupt the staged fight now.")})));
     }
 
     /** the World tools page: the biome brush, building, mixing */
@@ -5841,6 +6407,8 @@ public class AdminBookScreen extends Screen {
         for (String[] grp : net.jj.giants.systems.SystemsCatalog.GROUPS) {
             // (Part 9) new systems B under their own heading
             if (grp[0].equals(net.jj.giants.systems.SystemsCatalog.FIRST_B)) systemsB();
+            // (Part 10B) the giant fights under their own heading
+            if (grp[0].equals(net.jj.giants.fights.FightCatalog.FIRST)) systemsFights();
             List<AdminSetting> in = new ArrayList<>();
             for (int i = 1; i < grp.length; i++)
                 for (AdminSetting s : p.settings()) if (s.id().equals(grp[i])) in.add(s);
@@ -5961,6 +6529,18 @@ public class AdminBookScreen extends Screen {
             g.fill(x + 2, y + 3, x + w - 2, y + 4, 0x55804020);
             AdminStyle.icon(g, "systems_b", x + 4, y + 8, 16);
             g.drawString(font, tr("systems.b"), x + 25, y + 8, HEAD, false);
+            for (int i = 0; i < note.size(); i++) g.drawString(font, note.get(i), x + 25, y + 19 + i * 10, GREY, false);
+        }));
+    }
+
+    /** (Part 10B) the heading the giant-fight settings start under */
+    private void systemsFights() {
+        List<FormattedCharSequence> note = font.split(tr("systems.fights.note"), lw - 30);
+        int h = 20 + note.size() * 10;
+        rows.add(new Block(h + 4, (g, x, y, w, mx, my) -> {
+            g.fill(x + 2, y + 3, x + w - 2, y + 4, 0x55804020);
+            AdminStyle.icon(g, "fight", x + 4, y + 8, 16);
+            g.drawString(font, tr("systems.fights"), x + 25, y + 8, HEAD, false);
             for (int i = 0; i < note.size(); i++) g.drawString(font, note.get(i), x + 25, y + 19 + i * 10, GREY, false);
         }));
     }

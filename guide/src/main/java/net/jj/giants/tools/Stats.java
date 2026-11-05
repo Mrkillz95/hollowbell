@@ -36,13 +36,19 @@ public final class Stats {
 
     public static void entityStarts(Entity e) {
         current = Tools.kindOf(e);
+        // (Part 10B) the entity itself, for the blocks giants break while they fight
+        currentEntity = current != null ? e : null;
         if (current != null) started = System.nanoTime();
     }
+
+    /** (Part 10B) the giant mod's entity ticking now, or null */
+    public static Entity currentEntity;
 
     public static void entityEnds() {
         if (current == null) return;
         nanos.computeIfAbsent(current, k -> new long[1])[0] += System.nanoTime() - started;
         current = null;
+        currentEntity = null;
     }
 
     /** a block went to air while one of this kind's entities ticked */
