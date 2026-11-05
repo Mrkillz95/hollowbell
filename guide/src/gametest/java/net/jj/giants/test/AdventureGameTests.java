@@ -376,12 +376,13 @@ public class AdventureGameTests implements FabricGameTest {
                 // ticking, no adventure round, and nothing holding on to it once the garbage is collected
                 .thenWaitUntil(() -> h.assertTrue(net.jj.giants.minigames.MgLevels.standing(s).isEmpty(),
                         "its world thrown away"))
-                .thenExecute(() -> {
-                    h.assertTrue(Adventure.roundState() == null, "no adventure round left");
-                    for (int i = 0; i < 3; i++) System.gc();
+                .thenExecute(() -> h.assertTrue(Adventure.roundState() == null, "no adventure round left"))
+                // (a collection now and then until it's gone: the timeout is the failure, a world something keeps)
+                .thenWaitUntil(() -> {
+                    if (s.getTickCount() % 20 == 0) System.gc();
                     var held = net.jj.giants.minigames.MgLevels.stillHeld();
                     h.assertTrue(held.isEmpty(), "nothing still holds the thrown-away world: " + held);
-                    done(h, j.p());
-                });
+                })
+                .thenExecute(() -> done(h, j.p()));
     }
 }
