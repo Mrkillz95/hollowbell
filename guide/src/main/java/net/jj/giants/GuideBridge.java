@@ -29,6 +29,9 @@ public final class GuideBridge {
             case "mygiantdone" -> net.jj.giants.players.Players.pickDone(server, arg);
             // (Part 8) a giant tells what a hit on him did, while Growth or Loyalty needs it (ADMIN_BRIDGE.md 24.4)
             case "syshurt" -> net.jj.giants.systems.Systems.hurt(server, arg);
+            // (Part 10B) may a giant fight start now; a giant's fight began or he backed down (ADMIN_BRIDGE.md §27)
+            case "fightok" -> net.jj.giants.fights.Fights.ok(server, arg);
+            case "fightnews" -> net.jj.giants.fights.Fights.news(server, arg);
             default -> null;
         };
     }

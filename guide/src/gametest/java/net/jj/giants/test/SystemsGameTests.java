@@ -138,7 +138,9 @@ public class SystemsGameTests implements FabricGameTest {
                 h.assertTrue(x.when().equals("live") && x.id().startsWith("all."), x.id());
                 h.assertTrue(AdminCatalog.plain(x), x.id() + " is no multiplier");
             }
-        h.assertTrue(n == 42 && grouped == 42, "42 settings (Part 8 and 9), every one in a group: " + n + " " + grouped);
+        // (Part 10B: and the 41 giant-fight settings, FightGameTests)
+        h.assertTrue(n == 83 && grouped == 83, "83 settings (Parts 8, 9 and 10B), every one in a group: " + n + " "
+                + grouped);
         // nothing on: what the giants are sent is exactly the world's own
         Map<String, JsonElement> all = AdminWorld.get(s).values("all");
         h.assertTrue(Systems.forGiants(s, all) == all, "off: the very same map");

@@ -102,9 +102,18 @@ final class BellTargets {
                 // giants only while fightGiants is on
                 && (BellConfig.V.fightGiants || !Giants.isGiant(e))
                 // (a giant that has backed down is left alone, and backing down he leaves every giant alone)
-                && !(Giants.isGiant(e) && (Meeting.yielding(e) || hb.yielding()))
+                && !offLimits(e)
                 // anything standing where a woken crown holds him off is out of his reach
                 && !hb.warded(e.getX(), e.getZ());
+    }
+
+    /**
+     * a giant he must leave alone just now: one that has backed down, or any while he himself has; (Part 10B) but not
+     * the one he was sent to chase down
+     */
+    private boolean offLimits(LivingEntity e) {
+        return Giants.isGiant(e) && (Meeting.yielding(e) || hb.yielding())
+                && !net.jj.hollowbell.GiantsFight.chasing(hb, giantOf(e));
     }
 
     /** bound to a circle, anything too far outside it is past his reach and let go */
@@ -169,7 +178,7 @@ final class BellTargets {
                 hb.huntSeen = le.position();
                 hb.huntLostAt = -1;
                 // put on the safe list since, or a giant that has backed down: let go for good
-                if (spares(le) || (Giants.isGiant(le) && (Meeting.yielding(le) || hb.yielding()))) {
+                if (spares(le) || offLimits(le)) {
                     if (hb.getTarget() == le) hb.setTarget(null);
                     dropHunt();
                 } else if (fairGame(le)) {
@@ -429,7 +438,7 @@ final class BellTargets {
         LivingEntity g = giantOf(e);
         if (g == null) return true;
         // a giant that has backed down (or him, backing down): nothing of his touches it, not even what's still flying
-        if (Meeting.yielding(g) || hb.yielding()) return false;
+        if ((Meeting.yielding(g) || hb.yielding()) && !net.jj.hollowbell.GiantsFight.chasing(hb, g)) return false;
         for (LivingEntity t : new LivingEntity[] {hb.getTarget(), hb.moves.moveTarget()}) {
             if (t != null && (t == g || giantOf(t) == g))
                 return true; // the one he's going for, or his move is aimed at
@@ -458,7 +467,7 @@ final class BellTargets {
                 hb.meetFoe = null;
                 if (hb.getTarget() == foe) hb.setTarget(null);
                 if (won) victory();
-            } else if (Meeting.yielding(foe)) {
+            } else if (Meeting.yielding(foe) && !net.jj.hollowbell.GiantsFight.chasing(hb, foe)) {
                 hb.meetFoe = null; // it backed down: he won
                 if (hb.getTarget() == foe) hb.setTarget(null);
                 if (hb.moves.moveTarget() == foe) hb.moves.stopNow();
@@ -518,6 +527,11 @@ final class BellTargets {
     public boolean startMeeting(LivingEntity other, boolean byPlayer) {
         if (!(hb.level() instanceof ServerLevel sl) || other == hb || hb.isDeadOrDying()) return false;
         long now = hb.level().getGameTime();
+        // (Part 10B) the world's giant-fight rules, asked of the Guide while one needs it
+        if (!net.jj.hollowbell.GiantsFight.mayStart(hb, other, byPlayer)) {
+            hb.metLately.put(other.getUUID(), now + 600L);
+            return false;
+        }
         hb.wakeUp();
         hb.meetFoe = other.getUUID();
         hb.flee.ordered = byPlayer;
@@ -540,6 +554,7 @@ final class BellTargets {
             if (dMe < 128 * 128 || dThem < 128 * 128) Adv.grant(p, "watch_giants");
         }
         HollowbellMod.LOG.info("A Hollowbell meets {} and they fight", Meeting.name(them, false));
+        net.jj.hollowbell.GiantsFight.started(hb, other, byPlayer);
         return true;
     }
 
@@ -547,6 +562,9 @@ final class BellTargets {
     public void backDown(Entity from) {
         if (hb.yielding() || !(hb.level() instanceof ServerLevel sl)) return;
         long now = hb.level().getGameTime();
+        // (Part 10B) whether it was an owner's fight, for the Guide's news (before the orders are dropped)
+        LivingEntity winner = giantOf(from);
+        boolean wasOrdered = hb.flee.playerFight(winner != null ? winner : from);
         hb.addTag(Meeting.YIELD);
         hb.yieldUntil = now + 2400;
         hb.fleeFrom = from.position();
@@ -566,6 +584,14 @@ final class BellTargets {
                 p.sendSystemMessage(Component.translatable(
                         "message.hollowbell.giant_yields", Meeting.name(Meeting.ME, true), Meeting.name(them, true)));
         HollowbellMod.LOG.info("A Hollowbell backs down from {}", Meeting.name(them, false));
+        net.jj.hollowbell.GiantsFight.yielded(hb, from, wasOrdered, "run");
+    }
+
+    /** (Part 10B) a stand-down: no grudge on any giant (the ones on players stay) */
+    void forgetGiantGrudges(ServerLevel sl) {
+        List<UUID> giants = new java.util.ArrayList<>();
+        for (UUID id : grudges.all()) if (Giants.isGiant(sl.getEntity(id))) giants.add(id);
+        for (UUID id : giants) grudges.drop(id);
     }
 
     /** he won: a big toll and a flare of his glow, then back to his own business */

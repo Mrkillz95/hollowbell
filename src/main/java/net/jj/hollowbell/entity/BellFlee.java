@@ -58,6 +58,10 @@ public final class BellFlee {
      * fleeInWildFights not read; a player's fight as shipped.
      */
     public boolean shouldYield(@Nullable Entity by, float hp) {
+        // (Part 10B) a staged fight's giant, owned giants who may not kill, the world's "Fight to"
+        Boolean f = net.jj.hollowbell.GiantsFight.yieldNow(hb, by, playerFight(by), hp, hb.healthMax(),
+                BellConfig.V.yieldAt);
+        if (f != null) return f && !hb.yielding();
         if ("run_away".equals(net.jj.hollowbell.GiantsBehave.meets()) && !playerFight(by))
             return !hb.yielding() && hp < hb.healthMax();
         return BellConfig.V.yieldAt > 0f && hp < hb.healthMax() * BellConfig.V.yieldAt && mayBackDown(by);
@@ -181,6 +185,20 @@ public final class BellFlee {
         hb.fleeUntil = 0;
         restUntil = now + REST_TICKS;
         if (hb.yieldUntil > 0) hb.yieldUntil = Math.max(hb.yieldUntil, restUntil); // (through the rest too)
+    }
+
+    /** (Part 10B) a staged fight's loser bows out: backed down, he settles where he is and rests, no flight */
+    void bowOut(long now) {
+        restFrom(now);
+    }
+
+    /** (Part 10B) ready to fight again: no longer on his way anywhere or resting */
+    void fresh() {
+        run = false;
+        fleeTo = null;
+        fleeStart = null;
+        restUntil = -1L;
+        restFor = 0;
     }
 
     public void restForTests(long now) {

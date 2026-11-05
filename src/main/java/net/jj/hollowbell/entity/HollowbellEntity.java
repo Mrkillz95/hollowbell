@@ -2321,6 +2321,41 @@ public class HollowbellEntity extends Monster implements SitHost {
         targets.backDown(from);
     }
 
+    // (Part 10B) what a staged fight asks of him (GiantsFight)
+
+    /** backed down, he bows out: he settles where he is and rests instead of flying off */
+    public void bowOut() {
+        flee.bowOut(level().getGameTime());
+    }
+
+    /** ready to fight this one again (a staged fight's next round, or a chase): not backed down, flying off or resting */
+    public void freshFor(@Nullable UUID other) {
+        removeTag(Meeting.YIELD);
+        yieldUntil = 0;
+        fleeFrom = null;
+        fleeUntil = 0;
+        flee.fresh();
+        if (other != null) metLately.remove(other);
+    }
+
+    /** forget the meeting fight (and keeping away): a stand-down */
+    public void dropMeeting() {
+        meetFoe = null;
+        meetAvoid = null;
+        avoidAt = null;
+        flee.ordered = false;
+    }
+
+    /** no grudge on any giant */
+    public void forgetGiantGrudges(ServerLevel sl) {
+        targets.forgetGiantGrudges(sl);
+    }
+
+    /** his show of a win over a giant: a big toll and a flare of his glow */
+    public void showWin() {
+        targets.victory();
+    }
+
     // saving
 
     @Override
