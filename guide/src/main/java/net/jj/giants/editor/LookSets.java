@@ -51,7 +51,7 @@ public final class LookSets {
                 "white_concrete", "snow_block"), Map.of(), mc("lapis_block", "light_blue_concrete", "blue_ice"),
                 mc("sea_lantern"), "minecraft:light_blue_stained_glass", "minecraft:snow_block",
                 "minecraft:warped_fence", "minecraft:warped_trapdoor", "minecraft:soul_lantern"));
-        SETS.put("gold", new Set(mc("gilded_blackstone", "orange_terracotta", "yellow_terracotta", "raw_gold_block",
+        SETS.put("gold", new Set(mc("orange_terracotta", "yellow_terracotta", "honeycomb_block", "raw_gold_block",
                 "gold_block", "smooth_sandstone"), Map.of(), mc("redstone_block", "red_concrete"),
                 mc("shroomlight", "ochre_froglight"), "minecraft:yellow_stained_glass", "minecraft:yellow_wool",
                 "minecraft:bamboo_fence", "minecraft:bamboo_trapdoor", "minecraft:lantern"));

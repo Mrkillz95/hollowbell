@@ -224,7 +224,8 @@ public class EditorGameTests implements FabricGameTest {
         h.assertTrue(gold.get("minecraft:white_concrete").startsWith("minecraft:smooth_sandstone")
                 || gold.get("minecraft:white_concrete").equals("minecraft:gold_block"), "gold's light: " + gold);
         // a small strongly coloured part takes the accent (gold: rubies)
-        h.assertTrue(gold.get("minecraft:red_concrete").contains("red"), "accent: " + gold);
+        h.assertTrue(gold.getOrDefault("minecraft:red_concrete", "minecraft:red_concrete").contains("red")
+                && !gold.getOrDefault("minecraft:red_concrete", "").contains("terracotta"), "accent: " + gold);
         // custom: a base and the admin's own blocks on top; "same" as the block itself takes it back off
         Map<String, String> c = LookSets.custom("frost", Map.of("minecraft:stone", "minecraft:gold_block",
                 "minecraft:white_concrete", "minecraft:white_concrete"), palette, share);
