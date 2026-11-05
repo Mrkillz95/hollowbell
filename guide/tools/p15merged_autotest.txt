@@ -1,0 +1,74 @@
+# 1.15.0 merged pictures: the Minigames page (its line no longer cut off), a Giant Royale round in play (the minigame's
+# bar and only the nearest giant's bars), the Fight script on the Fun page, and a staged fight (the fight's one bar,
+# not each fighter's own as well).
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd gamerule sendCommandFeedback false
+cmd difficulty normal
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd giants admin set all mgLobby 10
+cmd giants admin set all mgSize small
+wait 40
+adminbook minigames 0
+wait 60
+mouse 2 2
+wait 25
+shot p15_minigames_page
+close
+cmd giants minigame start royale open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p15_royale_start
+wait 700
+shot p15_royale_play
+wait 40
+cmd giants minigame stop
+wait 200
+adminmode advanced
+cmd gamemode creative
+cmd tp @s 0 -60 0 0 10
+wait 20
+cmd giants admin fight reset
+cmd giants admin fight giant a 1 wreckback 0.12
+cmd giants admin fight giant b 1 cerberus 0.12
+cmd giants admin fight set winner a
+cmd giants admin fight set ending death
+cmd giants admin fight set length quick
+wait 20
+adminbook fun 380
+wait 60
+mouse 2 2
+wait 25
+shot p15_fight_script
+close
+cmd tp @s 300 -60 0 0 10
+wait 60
+cmd giants admin build arena small
+wait 500
+cmd tp @s 300 -60 0 0 0
+wait 10
+cmd giants admin fight start here
+cmd tp @s 300 -44 -38 0 12
+wait 30
+shot p15_fight_count
+wait 260
+shot p15_fight_bars
+wait 200
+shot p15_fight_mid
+fightphase none 3000
+wait 100
+cmd wreckback remove
+cmd cerberus remove
+quit

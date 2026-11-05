@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.39
+# Hollowbell (Java mod), version 1.12.40
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,19 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- **Minigames** in the Giants Admin Book (in the all-in-one jar): an admin can start rounds of eleven minigames
+  (Giant Royale, Boss Rush, Siege, Escort, Legends, Possession, Rival Tamers, Bounty Board, Kaiju War, One Life and
+  Speedrun), each played in a world of its own that's thrown away after, and every player gets their things back.
+  The Hollowbell takes part; minigame giants never count toward the world's own.
+- **Staged fights and giant-fight settings** (in the all-in-one jar): an admin can script a fight between giants
+  (who wins, how it ends, rounds, bets, a countdown). The Hollowbell's finisher is his sky dive. If the world switched that move
+  off, he finishes with his next big move that's still on. New settings decide how ordinary giant fights go; as
+  shipped they go exactly as before.
+- Fewer boss bars: while a staged fight is on you see only the fight's one bar, not his own bars too, and in a
+  minigame only the nearest giant's bars show.
+
+### 1.12.39
 
 - More new systems in the Giants Admin Book (in the all-in-one jar; every one is off until an admin turns it on):
   **villagers** can flee from him, hide, or gather round him while he's calm and leave him bread, and **iron

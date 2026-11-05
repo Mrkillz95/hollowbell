@@ -98,6 +98,9 @@ public final class FightScript {
         /** bets close this game time (a few seconds into the first round) */
         long betsAt = -1;
         long finishAt;
+        /** (1.15) the loser running off a little faster for a few seconds (a slow giant reads as running) */
+        @Nullable Slot boosted;
+        long boostUntil;
         /** the area: its middle and how far players count as near */
         double radius;
 
@@ -284,7 +287,7 @@ public final class FightScript {
                 o.addProperty("stay", false);
                 AdminServer.Result m = FunGiants.act(server, x.g, e.getStringUUID(), "move", o);
                 if (m.ok()) {
-                    x.id = e.getUUID();
+                    claim(server, x, e);
                     continue;
                 }
             }
@@ -294,6 +297,8 @@ public final class FightScript {
             String arg = r.level.dimension().location() + " " + x.at.x + " " + y + " " + x.at.z + " - calm "
                     + AdminSetting.plain(size(server, x.f));
             AdminServer.call(server, x.g, "summon", arg);
+            // (1.15) found at once when his summon stands him there now: marked as the staged fight's from the start
+            findOne(server, r, x);
         }
         r.phase = "find";
         r.phaseAt = r.now();
@@ -301,28 +306,44 @@ public final class FightScript {
 
     private static void find(MinecraftServer server, Run r) {
         boolean all = true;
-        for (Slot x : r.slots) {
-            if (x.id != null) continue;
-            LivingEntity best = null;
-            double bd = Double.MAX_VALUE;
-            for (LivingEntity e : FunGiants.standing(server, x.g.key())) {
-                if (x.before != null && x.before.contains(e.getUUID()) || e.level() != r.level || r.slot(e.getUUID())
-                        != null) continue;
-                double d = e.position().distanceToSqr(x.at);
-                if (d < bd) {
-                    bd = d;
-                    best = e;
-                }
-            }
-            if (best == null) all = false;
-            else x.id = best.getUUID();
-        }
+        for (Slot x : r.slots) if (x.id == null && !findOne(server, r, x)) all = false;
         if (!all) {
             if (r.now() - r.phaseAt > 60) fail(server, r, "a giant's own summon left none of him standing there (the"
                     + " world may already hold as many of him as it allows: pick one out there instead)");
             return;
         }
         ready(server, r);
+    }
+
+    /** a fresh one of the slot's kind standing there now (not one from before): his, and marked at once */
+    private static boolean findOne(MinecraftServer server, Run r, Slot x) {
+        if (x.id != null) return true;
+        LivingEntity best = null;
+        double bd = Double.MAX_VALUE;
+        for (LivingEntity e : FunGiants.standing(server, x.g.key())) {
+            if (x.before != null && x.before.contains(e.getUUID()) || e.level() != r.level || r.slot(e.getUUID())
+                    != null) continue;
+            double d = e.position().distanceToSqr(x.at);
+            if (d < bd) {
+                bd = d;
+                best = e;
+            }
+        }
+        if (best == null) return false;
+        claim(server, x, best);
+        return true;
+    }
+
+    /**
+     * (1.15) a giant of the staged fight from the moment he is found: its tags at once (so no wild giant starts on him
+     * before the bell, and he starts on none) and standing down
+     */
+    private static void claim(MinecraftServer server, Slot x, LivingEntity e) {
+        x.id = e.getUUID();
+        x.last = e;
+        e.addTag(SCRIPT);
+        e.addTag(TEAM + x.side());
+        FightGiants.act(server, e, "stop", null);
     }
 
     private static void fail(MinecraftServer server, Run r, String why) {
@@ -385,7 +406,9 @@ public final class FightScript {
     }
 
     static String finisher(MinecraftServer server, Slot x) {
-        return !x.f.finisher.isEmpty() ? x.f.finisher : FightGiants.finisher(server, x.g);
+        String want = !x.f.finisher.isEmpty() ? x.f.finisher : FightGiants.finisher(server, x.g);
+        // (1.15) never a move the world switched off: then his next big move still on
+        return FightGiants.allowedFinisher(server, x.g, want, x.f.moves);
     }
 
     // the clock
@@ -394,11 +417,14 @@ public final class FightScript {
         Run r = run;
         if (r == null) return;
         long now = r.now();
+        if (server.getTickCount() % 20 == 0) ownBars(server, r);
         switch (r.phase) {
             case "find" -> find(server, r);
             case "count" -> {
                 if ((now - r.phaseAt) % 20 != 0) return;
                 List<ServerPlayer> near = near(r);
+                // (1.15) the fight's one bar from the countdown on
+                show(server, r);
                 FightShow.count(near, r.count, r.s.rounds > 1 ? "Round " + r.round : sideName(r, "a") + " vs "
                         + sideName(r, "b", false));
                 holdStill(server, r);
@@ -669,6 +695,7 @@ public final class FightScript {
                 FightGiants.act(server, le, "yield", with("by", w));
                 say(server, r, near, called(l, true) + " runs for it! " + called(r.finisher, true) + " lets him go.");
                 toAfter(server, r);
+                boost(server, r, l, le, 1.6, 120);
             }
             case "bow" -> {
                 FightGiants.act(server, w, "stop", null);
@@ -684,6 +711,8 @@ public final class FightScript {
                 FightGiants.act(server, w, "stop", null);
                 FightGiants.act(server, le, "yield", with("by", w));
                 setTag(le, FLOOR, "0.02");
+                // (his head start is a real run: faster for it, till the chase slows him)
+                boost(server, r, l, le, 1.5, 60);
                 say(server, r, near, called(l, true) + " runs for it!");
                 r.phase = "chase";
             }
@@ -698,12 +727,27 @@ public final class FightScript {
         }
     }
 
+    /** (1.15) the loser runs off faster for a while (Fights.speed, put back by unboost) */
+    private static void boost(MinecraftServer server, Run r, Slot l, LivingEntity le, double f, int ticks) {
+        Fights.speed(server, le, f);
+        r.boosted = l;
+        r.boostUntil = r.now() + ticks;
+    }
+
+    /** his boost over (time up, or now) */
+    private static void unboost(MinecraftServer server, Run r, boolean now) {
+        if (r.boosted == null || !now && r.now() < r.boostUntil) return;
+        LivingEntity e = find(server, r.boosted);
+        r.boosted = null;
+        if (e != null && !r.chasing) Fights.speed(server, e, 1);
+    }
+
     /** the winner's finisher, at the loser */
     private static void finish(MinecraftServer server, Run r, LivingEntity w, LivingEntity le, List<ServerPlayer> near) {
         String move = finisher(server, r.finisher);
         JsonObject o = FightGiants.foe(le);
         o.addProperty("move", move);
-        List<String> did = FightGiants.act(server, w, "do", o);
+        List<String> did = move.isEmpty() ? null : FightGiants.act(server, w, "do", o);
         if (FightGiants.ok(did)) {
             r.finisherDone = true;
             if (r.s.announcer) say(server, r, near, called(r.finisher, true) + " goes for the finish: "
@@ -731,6 +775,7 @@ public final class FightScript {
                 return;
             }
             if (!r.chasing && t >= 60) {
+                r.boosted = null;
                 r.chasing = true;
                 say(server, r, near, called(r.finisher, true) + " goes after him!");
                 FightGiants.act(server, w, "chase", FightGiants.foe(le));
@@ -794,6 +839,7 @@ public final class FightScript {
     /** after: the winner roars, then goes home, stays, or turns on the players near; the loser goes home */
     private static void after(MinecraftServer server, Run r) {
         long t = r.now() - r.phaseAt;
+        unboost(server, r, t >= 160);
         if (!r.roared) {
             r.roared = true;
             for (Slot x : r.side(r.won)) {
@@ -856,6 +902,21 @@ public final class FightScript {
 
     static void untag(LivingEntity e) {
         for (String t : List.copyOf(e.getTags())) if (t.startsWith(TAG)) e.removeTag(t);
+        net.jj.giants.tools.GiantBars.clear(e);
+    }
+
+    /**
+     * (1.15) while the fight's one bar shows (Both bars on), each fighter's own bars are hidden, so the watchers see
+     * the fight's bar alone
+     */
+    private static void ownBars(MinecraftServer server, Run r) {
+        boolean one = r.s.bars && !r.phase.equals("place") && !r.phase.equals("find") && !r.phase.equals("done");
+        for (Slot x : r.slots) {
+            LivingEntity e = x.id == null ? null : find(server, x);
+            if (e == null) continue;
+            if (one && !x.dead) net.jj.giants.tools.GiantBars.hide(e);
+            else net.jj.giants.tools.GiantBars.clear(e);
+        }
     }
 
     static void setTag(LivingEntity e, String head, @Nullable String value) {

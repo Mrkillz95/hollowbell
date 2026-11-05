@@ -1674,6 +1674,8 @@ public class HollowbellEntity extends Monster implements SitHost {
             for (ServerPlayer p : sl.players()) {
                 if (p.distanceToSqr(getX(), p.getY(), getZ()) < r * r || moves.caught(p) || p == rider) want.add(p);
             }
+        // (1.15) the Guide's say over his bars (a staged fight's one bar, a minigame's nearest giants)
+        want.removeIf(p -> net.jj.hollowbell.GiantsFight.barHidden(this, p.getStringUUID()));
         for (BellBar b : new BellBar[] {barHp, barPods}) {
             for (ServerPlayer p : new ArrayList<>(b.getPlayers())) if (!want.contains(p)) b.removePlayer(p);
             for (ServerPlayer p : want) b.addPlayer(p);

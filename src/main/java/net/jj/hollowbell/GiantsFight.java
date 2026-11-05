@@ -119,6 +119,30 @@ public final class GiantsFight {
 
     // his tags
 
+    /**
+     * (1.15) the Guide's say over his own boss bars: hidden from everyone while a staged fight shows its one bar
+     * ("jj_giants.bars.off=<until>"), shown only to these players in a minigame ("jj_giants.bars.for=<until>:<ids>");
+     * each tag holds till a game time of his world (none on him: as always)
+     */
+    public static boolean barHidden(@Nullable Entity him, String playerId) {
+        if (him == null || him.getTags().isEmpty()) return false;
+        for (String t : him.getTags()) {
+            if (!t.startsWith("jj_giants.bars.") || t.length() < 19) continue;
+            String kind = t.substring(15, 19), rest = t.substring(19);
+            int c = rest.indexOf(':');
+            long until;
+            try {
+                until = Long.parseLong(c < 0 ? rest : rest.substring(0, c));
+            } catch (NumberFormatException bad) {
+                continue;
+            }
+            if (him.level().getGameTime() > until) continue;
+            if (kind.equals("off=")) return true;
+            if (kind.equals("for=")) return c < 0 || !rest.substring(c + 1).contains(playerId);
+        }
+        return false;
+    }
+
     /** a staged fight's tag on him (any of them) */
     public static boolean tagged(@Nullable Entity e) {
         if (e == null) return false;
