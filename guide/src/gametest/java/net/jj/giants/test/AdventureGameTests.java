@@ -287,7 +287,6 @@ public class AdventureGameTests implements FabricGameTest {
                 })
                 .thenExecute(() -> {
                     ServerLevel rl = game().level;
-                    ours[0] = new java.lang.ref.WeakReference<>(rl);
                     // (lagfix) the round's world sends and moves only its map's land, not the server's whole distance
                     int reach = net.jj.giants.minigames.MgLevels.reachOf(rl);
                     h.assertTrue(reach >= 3 && reach <= 14, "the round's world's own view distance: " + reach);
@@ -356,6 +355,7 @@ public class AdventureGameTests implements FabricGameTest {
                     h.assertTrue(rs.hooks.size() == 5, "the five hooks");
                     h.assertTrue(rs.areas.keySet().containsAll(List.of("cove", "harbour")), "the areas");
                     ServerLevel rl = game().level;
+                    ours[0] = new java.lang.ref.WeakReference<>(rl);
                     h.assertTrue(rl.getBlockState(new BlockPos(-76, 63, 0)).is(Blocks.SPRUCE_PLANKS), "the quay: "
                             + rl.getBlockState(new BlockPos(-76, 63, 0)));
                     h.assertTrue(j.p().getX() < -60, "the player starts at the harbour: " + j.p().getX());
