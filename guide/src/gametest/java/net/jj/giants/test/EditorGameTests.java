@@ -259,10 +259,12 @@ public class EditorGameTests implements FabricGameTest {
         AdminServer.Result r = Editor.setKind(s, "Tester", "fakefight", "frost");
         h.assertTrue(r.ok() && r.lines().get(0).contains("Frost"), r.lines().toString());
         h.assertTrue(w.s.kinds.get("fakefight").equals("frost") && Editor.lookOf(s, g).equals("frost"), "kind");
-        // a tag (Event boss is built in) beats his kind
-        FunWorld.get(s);
-        g.addTag("jj_giants.tag=Event boss");
-        r = Editor.setTag(s, "Tester", "event boss", "Gold");
+        // a giant tag beats his kind
+        FunWorld.Tag lt = new FunWorld.Tag();
+        lt.name = "Look test";
+        FunWorld.get(s).s.tags.put(lt.name, lt);
+        g.addTag("jj_giants.tag=Look test");
+        r = Editor.setTag(s, "Tester", "look test", "Gold");
         h.assertTrue(r.ok() && Editor.lookOf(s, g).equals("gold"), "tag: " + r.lines());
         // his own beats both
         r = Editor.setGiant(s, "Tester", g, "shadow");
@@ -271,7 +273,7 @@ public class EditorGameTests implements FabricGameTest {
         // the page lists all three
         JsonObject page = Editor.state(s);
         h.assertTrue(page.getAsJsonObject("kinds").get("fakefight").getAsString().equals("frost")
-                && page.getAsJsonObject("tags").get("Event boss").getAsString().equals("gold")
+                && page.getAsJsonObject("tags").get("Look test").getAsString().equals("gold")
                 && page.toString().contains(g.getStringUUID()) && page.getAsJsonObject("takes").get("fakefight")
                         .getAsBoolean(), page.toString());
         // a custom set: made from a base with blocks; worn; changed; deleted (whoever wore it: his own again)
@@ -292,7 +294,7 @@ public class EditorGameTests implements FabricGameTest {
         h.assertTrue(!Editor.setTag(s, "Tester", "No such tag", "frost").ok(), "no such tag");
         // back to his own, step by step
         Editor.setGiant(s, "Tester", g, "none");
-        Editor.setTag(s, "Tester", "Event boss", "none");
+        Editor.setTag(s, "Tester", "Look test", "none");
         h.assertTrue(Editor.lookOf(s, g).equals("frost"), "his kind's again");
         Editor.setKind(s, "Tester", "fakefight", "");
         h.assertTrue(Editor.lookOf(s, g).isEmpty(), "his own look");
@@ -305,6 +307,7 @@ public class EditorGameTests implements FabricGameTest {
         h.assertTrue(tag.getString("Json").contains("festive"), tag.toString());
         Editor.setKind(s, "Tester", "fakefight", "");
         g.discard();
+        FunWorld.get(s).s.tags.remove("Look test");
         w.s = new EditorWorld.State();
         AdminServer.useGiants(null);
         h.succeed();
