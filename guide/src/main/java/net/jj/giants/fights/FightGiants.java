@@ -64,6 +64,51 @@ public final class FightGiants {
         return h == null ? "" : AdminJson.str(h, "finisher", 64);
     }
 
+    /** (the tests) moves taken as switched off, by kind */
+    public static final Map<String, java.util.Set<String>> TEST_OFF = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** (1.15) his moves the world switched off (his "move.<id>.on" set off, or resting in Random chaos today) */
+    public static java.util.Set<String> movesOff(@Nullable MinecraftServer server, Giant g) {
+        java.util.Set<String> off = new java.util.HashSet<>(TEST_OFF.getOrDefault(g.key(), java.util.Set.of()));
+        if (server == null) return off;
+        net.jj.giants.admin.AdminJson.Report rep = net.jj.giants.admin.AdminServer.report(server, g);
+        if (rep != null)
+            for (net.jj.giants.admin.AdminSetting s : rep.settings()) {
+                String id = s.id();
+                if (!id.startsWith("move.") || !id.endsWith(".on") || s.type() != net.jj.giants.admin.AdminSetting.Type.BOOL)
+                    continue;
+                try {
+                    if (!s.value().getAsBoolean()) off.add(id.substring(5, id.length() - 3));
+                } catch (RuntimeException e) {
+                    // (unreadable: left as on)
+                }
+            }
+        try {
+            List<String> rest = net.jj.giants.systems.SystemsData.get(server).s.rests.get(g.key());
+            if (rest != null && net.jj.giants.systems.Systems.on(server, "chaos")) off.addAll(rest);
+        } catch (RuntimeException e) {
+            // (no chaos data)
+        }
+        return off;
+    }
+
+    /**
+     * (1.15) the finisher he may really do: the one wanted unless the world switched it off, else his next big move
+     * still on (his heavy moves, then his medium ones; from the script's list when it has one); "" when none is left
+     */
+    public static String allowedFinisher(@Nullable MinecraftServer server, Giant g, String want, List<String> only) {
+        java.util.Set<String> off = movesOff(server, g);
+        if (want.isEmpty() || !off.contains(want)) return want;
+        List<String> fights = moves(server, g);
+        for (List<String> from : only.isEmpty() ? List.of(only) : List.of(only, List.<String>of()))
+            for (int tier : new int[] {net.jj.giants.Giants.HEAVY, net.jj.giants.Giants.MEDIUM})
+                for (Giant.Move m : g.moves())
+                    if (m.tier() == tier && !m.id().equals(want) && !off.contains(m.id())
+                            && (fights.isEmpty() || fights.contains(m.id())) && (from.isEmpty() || from.contains(m.id())))
+                        return m.id();
+        return "";
+    }
+
     public static boolean speaks(@Nullable MinecraftServer server, Giant g) {
         return head(server, g) != null;
     }

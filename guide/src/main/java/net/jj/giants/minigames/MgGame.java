@@ -513,6 +513,28 @@ public final class MgGame {
             default -> {}
         }
         if (phaseTicks % 10 == 0) barNow();
+        if (phaseTicks % 20 == 5) giantBars();
+    }
+
+    /**
+     * (1.15) the giants' own boss bars in the round's world: each player sees the bars of the nearest giant only, under
+     * the minigame's own bar, never a stack of them
+     */
+    void giantBars() {
+        ServerLevel l = level;
+        if (l == null) return;
+        List<net.minecraft.world.entity.LivingEntity> gs = new java.util.ArrayList<>();
+        for (MgGiants.G k : giants.all.values())
+            if (l.getEntity(k.id) instanceof net.minecraft.world.entity.LivingEntity e && e.isAlive()) gs.add(e);
+        if (gs.isEmpty()) return;
+        Map<UUID, java.util.Set<UUID>> see = new HashMap<>();
+        for (ServerPlayer sp : l.players()) {
+            List<net.minecraft.world.entity.LivingEntity> by = new java.util.ArrayList<>(gs);
+            by.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(sp)));
+            see.computeIfAbsent(by.get(0).getUUID(), k -> new java.util.HashSet<>()).add(sp.getUUID());
+        }
+        for (net.minecraft.world.entity.LivingEntity e : gs)
+            net.jj.giants.tools.GiantBars.only(e, see.getOrDefault(e.getUUID(), java.util.Set.of()));
     }
 
     private void lobby() {
