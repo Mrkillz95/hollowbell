@@ -381,6 +381,10 @@ public class AdventureGameTests implements FabricGameTest {
                 .thenWaitUntil(() -> {
                     if (s.getTickCount() % 20 == 0) System.gc();
                     var held = net.jj.giants.minigames.MgLevels.stillHeld();
+                    // (what holds it, in the log, now and then: the way to the leak)
+                    if (!held.isEmpty() && s.getTickCount() % 1000 == 0)
+                        for (String path : LeakScan.paths(s, held.get(0), 3, 5_000_000))
+                            net.jj.giants.GiantsGuideMod.LOG.warn("still held: {}", path);
                     h.assertTrue(held.isEmpty(), "nothing still holds the thrown-away world: " + held);
                 })
                 .thenExecute(() -> done(h, j.p()));
