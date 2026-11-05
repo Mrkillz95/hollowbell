@@ -396,6 +396,11 @@ public final class Minigames {
         current = null;
     }
 
+    /** (the tests) the giants noted in minigame worlds that are gone, taken away (how many) */
+    public static int cleanGiantsForTests(MinecraftServer server) {
+        return cleanGiants(server);
+    }
+
     /** (the tests) the server stopping */
     public static void stoppingForTests(MinecraftServer server) {
         stopping(server);

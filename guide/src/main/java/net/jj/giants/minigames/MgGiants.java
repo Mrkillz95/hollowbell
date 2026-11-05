@@ -225,9 +225,10 @@ public final class MgGiants {
                 g.role = a.role;
                 g.team = a.team;
                 g.health = a.health;
-                if (a.wantHp > 0 && best.getMaxHealth() > 0) {
-                    // (his own most health at this size, from the tag he has now, decides the multiplier)
-                    double own = best.getMaxHealth() / Math.max(0.01, tag(best, "health"));
+                if (a.wantHp > 0) {
+                    // (his own most health at this size, as his mod lists it (some keep their own), decides the
+                    // multiplier)
+                    double own = maxOf(best) / Math.max(0.01, tag(best, "health"));
                     g.health = Math.max(0.1, Math.min(20, a.wantHp / Math.max(1, own)));
                 }
                 g.damage = a.damage;
@@ -261,6 +262,25 @@ public final class MgGiants {
         g.fell = true;
         game.mode.giantFell(game, g);
         Minigames.changed();
+    }
+
+    /** (the tests) */
+    public double maxOfForTests(LivingEntity e) {
+        return maxOf(e);
+    }
+
+    /** his most health as his own mod lists it (Live control's "max"), else the game's */
+    double maxOf(LivingEntity e) {
+        Giant g = AdminServer.giant(FunGiants.kindOf(e));
+        List<String> lines = g == null ? null : AdminServer.call(game.server, g, AdminLive.LIST,
+                String.valueOf(AdminLive.VERSION));
+        if (lines != null)
+            for (int i = 1; i < lines.size(); i++) {
+                JsonObject r = AdminJson.object(lines.get(i));
+                if (r != null && e.getStringUUID().equals(AdminJson.str(r, "id", 40)) && r.has("max"))
+                    return AdminJson.num(r, "max", e.getMaxHealth());
+            }
+        return e.getMaxHealth();
     }
 
     /** the multiplier his own stat tag holds now (1 without one) */

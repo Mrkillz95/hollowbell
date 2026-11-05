@@ -30,7 +30,8 @@
       "net.jj.giants.test.Answers2GameTests",
       "net.jj.giants.test.Answers2GiantsGameTests",
       "net.jj.giants.test.MinigameGameTests",
-      "net.jj.giants.test.MinigameModeGameTests"
+      "net.jj.giants.test.MinigameModeGameTests",
+      "net.jj.giants.test.MinigameGiantsGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"
