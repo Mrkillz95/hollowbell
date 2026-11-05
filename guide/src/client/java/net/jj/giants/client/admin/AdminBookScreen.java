@@ -69,7 +69,8 @@ public class AdminBookScreen extends Screen {
     private static boolean ownPage(String key) {
         return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES)
                 || key.equals(PLAYERS) || key.equals(TOOLS)
-                || key.equals(FUN) || key.equals(WORLD) || key.equals(SYSTEMS) || key.equals(MINIGAMES);
+                || key.equals(FUN) || key.equals(WORLD) || key.equals(SYSTEMS) || key.equals(MINIGAMES)
+                || key.equals(EDITOR) || key.equals(SOUND);
     }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
@@ -294,6 +295,8 @@ public class AdminBookScreen extends Screen {
         if (key.equals(AdminCatalog.ALL)) return tr("all").getString();
         if (key.equals(TOOLS)) return tt("name", "Server tools").getString();
         if (key.equals(MINIGAMES)) return mg("name", "Minigames").getString();
+        if (key.equals(EDITOR)) return ed("name", "Editor").getString();
+        if (key.equals(SOUND)) return ed("sound", "Sound").getString();
         if (ownPage(key)) return tr(key).getString();
         AdminBookClient.Page p = AdminBookClient.page(key);
         if (p != null && !p.name().isEmpty()) return p.name();
@@ -316,7 +319,7 @@ public class AdminBookScreen extends Screen {
         if (!AdminBookClient.admin()) return List.of(HOME);
         List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS, SYSTEMS)
                 : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS, FUN, WORLD, SYSTEMS,
-                        MINIGAMES));
+                        EDITOR, SOUND, MINIGAMES));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -1279,6 +1282,8 @@ public class AdminBookScreen extends Screen {
         else if (pageKey.equals(WORLD)) worldRows();
         else if (pageKey.equals(SYSTEMS)) systemsRows();
         else if (pageKey.equals(MINIGAMES)) minigamesRows();
+        else if (pageKey.equals(EDITOR)) editorRows();
+        else if (pageKey.equals(SOUND)) soundRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1297,7 +1302,7 @@ public class AdminBookScreen extends Screen {
         Component label;
         if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS)
                 || pageKey.equals(TOOLS) || pageKey.equals(FUN) || pageKey.equals(WORLD) || pageKey.equals(SYSTEMS)
-                || pageKey.equals(MINIGAMES))
+                || pageKey.equals(MINIGAMES) || pageKey.equals(EDITOR) || pageKey.equals(SOUND))
             return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
@@ -1740,6 +1745,8 @@ public class AdminBookScreen extends Screen {
                 || gj.get("speaks").getAsBoolean();
         Component sub = key.equals(TOOLS) ? tt("tile", "Pause, events, map, stats")
                 : key.equals(MINIGAMES) ? mg("tile", "Royale, Boss Rush, Siege…")
+                : key.equals(EDITOR) ? ed("tile", "Frost, Gold, Shadow looks")
+                : key.equals(SOUND) ? ed("sound.tile", "Music, ground sounds, voices")
                 : ownPage(key) ? tr(key + ".tile") : !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n)
                 : tr("tile.default");
         g.drawString(font, cut(sub.getString(), tw), tx, y + 16, !speaks ? DIM : n > 0 ? GOLD : GREY, false);
@@ -1910,6 +1917,8 @@ public class AdminBookScreen extends Screen {
             case FUN, WORLD -> AdminBookClient.fun() != null && AdminBookClient.live() != null;
             case SYSTEMS -> AdminBookClient.page(AdminCatalog.ALL) != null;
             case MINIGAMES -> AdminBookClient.minigames() != null;
+            case EDITOR -> AdminBookClient.editor() != null;
+            case SOUND -> AdminBookClient.page(AdminCatalog.ALL) != null;
             default -> AdminBookClient.home() != null
                     && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
         };
@@ -2181,6 +2190,14 @@ public class AdminBookScreen extends Screen {
             title = tr("systems");
             sub = tr("systems.sub");
             pic = "systems";
+        } else if (pageKey.equals(EDITOR)) {
+            title = ed("name", "Editor");
+            sub = ed("sub", "Material sets for events: how a giant looks on every player's game.");
+            pic = EDITOR;
+        } else if (pageKey.equals(SOUND)) {
+            title = ed("sound", "Sound");
+            sub = ed("sound.sub", "Each giant's fight music, ground sounds and voice.");
+            pic = SOUND;
         } else if (pageKey.equals(MINIGAMES)) {
             title = mg("name", "Minigames");
             sub = mg("sub", "Rounds in worlds of their own: nothing here changes, and players get their things back.");
@@ -3164,6 +3181,10 @@ public class AdminBookScreen extends Screen {
             List<Object[]> bs = new ArrayList<>();
             bs.add(new Object[] {tr("presets.preview"), (Runnable) () -> request("preset", "name", name),
                 tr("presets.preview.tip")});
+            // (Part 12) its share code, copied
+            bs.add(new Object[] {ed("share", "Share"), (Runnable) () -> request("share", "preset", name),
+                ed("share.preset.tip", "Copies a share code of this preset: paste it into Import code on another"
+                        + " server")});
             bs.add(new Object[] {tr("presets.delete"), (Runnable) () -> confirm(tr("presets.delete.title", name),
                     tr("presets.delete.body", name), tr("presets.delete"),
                     () -> request("deletepreset", "name", name)),
@@ -3202,7 +3223,21 @@ public class AdminBookScreen extends Screen {
         Button exB = Button.builder(exC, x -> request("export")).bounds(0, 0, font.width(exC) + 14, 16).build();
         exB.setTooltip(Tooltip.create(tr("presets.export.tip")));
         ex.add(exB, 0, 3, false);
-        rows.add(ex);
+        // (Part 12) the same as a short share code
+        Component shC = ed("share.world", "Share code");
+        Button shB = Button.builder(shC, x -> request("share")).bounds(0, 0, font.width(shC) + 14, 16).build();
+        shB.setTooltip(Tooltip.create(ed("share.world.tip", "Copies this world's settings as a short share code"
+                + " (GS1-…) to paste into Import code on another server. Checked as it's read, so a mistyped one is"
+                + " caught.")));
+        ex.add(shB, exB.getWidth() + 4, 3, false);
+        if (!AdminBookClient.lastExport.isEmpty()) {
+            String last = AdminBookClient.lastExport;
+            rows.add(ex);
+            rows.add(new Note(ed("copied", "Copied (%s letters): %s", last.length(), last.length() > 60
+                    ? last.substring(0, 57) + "…" : last), GREY));
+            ex = null;
+        }
+        if (ex != null) rows.add(ex);
         Block im = new Block(22, (g, x, y, w, mx, my) -> {});
         Component imC = tr("presets.import");
         int imW = font.width(imC) + 14;
@@ -6421,6 +6456,421 @@ public class AdminBookScreen extends Screen {
         @Override
         void cancel() {
             closeModal();
+        }
+    }
+
+    // (Part 12, ADMIN_BRIDGE.md §29) the Editor page: a giant's look (a material set or a custom one) for his kind, a
+    // giant tag or one giant, with a picture of him before and after; and the Sound page: each giant's fight music,
+    // ground sounds and voice, with Play buttons
+
+    public static final String EDITOR = "editor", SOUND = "sound";
+    /** the giant and the set the Editor shows (kept while the game runs) */
+    private static String edKind = "", edSet = "frost";
+    /** the custom set being made or changed: its name, base and blocks (from block -> what was typed) */
+    private static String edName = "", edBase = "";
+    private static final Map<String, String> edBlocks = new LinkedHashMap<>();
+    private static boolean edEditing;
+
+    /** (the picture-taking) the Editor page shows this giant in this set */
+    public static void editorPick(String kind, String set) {
+        edKind = kind;
+        edSet = set.equals("none") ? "" : set;
+        edEditing = false;
+    }
+
+    static MutableComponent ed(String key, String fallback, Object... args) {
+        return Component.translatableWithFallback("admin.jj_giants.ed." + key, fallback, args);
+    }
+
+    private List<String> edKinds() {
+        List<String> out = new ArrayList<>();
+        JsonObject e = AdminBookClient.editor();
+        if (e != null && e.get("kinds") instanceof JsonObject k) out.addAll(k.keySet());
+        return out;
+    }
+
+    /** the sets to pick from: none, the built-in ones, the custom ones */
+    private List<String> edSets() {
+        List<String> out = new ArrayList<>();
+        out.add("");
+        out.addAll(net.jj.giants.editor.LookSets.BUILT_IN);
+        for (JsonObject c : objects(AdminBookClient.editor(), "custom")) out.add("custom:" + str(c, "name"));
+        return out;
+    }
+
+    private static String edSetName(String id) {
+        if (id == null || id.isEmpty()) return ed("own", "His own look").getString();
+        if (id.startsWith("custom:")) return id.substring(7);
+        return ed("set." + id, id.equals("ancient") ? "Ancient stone"
+                : Character.toUpperCase(id.charAt(0)) + id.substring(1)).getString();
+    }
+
+    private static @Nullable JsonObject edCustom(String name) {
+        for (JsonObject c : objects(AdminBookClient.editor(), "custom")) if (str(c, "name").equals(name)) return c;
+        return null;
+    }
+
+    /** the blocks typed into the custom set being made, each one the game knows (others left out) */
+    private static Map<String, String> edTyped() {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (var e : edBlocks.entrySet()) {
+            String to = net.jj.giants.editor.LookSets.valid(e.getValue());
+            if (to != null) out.put(e.getKey(), to);
+        }
+        return out;
+    }
+
+    /** what a set does to this giant's palette (worked out here, the same way the server does) */
+    private static Map<String, String> edMap(String kind, String set) {
+        var m = net.jj.giants.systems.remains.GiantModels.get(kind);
+        if (m == null || set.isEmpty() && !edEditing) return Map.of();
+        double[] share = net.jj.giants.editor.LookSets.share(m.palette, m.pal);
+        if (edEditing)
+            return net.jj.giants.editor.LookSets.custom(edBase, edTyped(), m.palette, share);
+        if (set.startsWith("custom:")) {
+            JsonObject c = edCustom(set.substring(7));
+            if (c == null) return Map.of();
+            Map<String, String> b = new LinkedHashMap<>();
+            if (c.get("blocks") instanceof JsonObject bj)
+                for (var e : bj.entrySet()) b.put(e.getKey(), e.getValue().getAsString());
+            return net.jj.giants.editor.LookSets.custom(str(c, "base"), b, m.palette, share);
+        }
+        return net.jj.giants.editor.LookSets.map(set, m.palette, share);
+    }
+
+    private void editorRows() {
+        JsonObject e = AdminBookClient.editor();
+        if (e == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        List<String> kinds = edKinds();
+        if (kinds.isEmpty()) {
+            rows.add(new Note(ed("none", "No giants are here."), GREY));
+            return;
+        }
+        if (!kinds.contains(edKind)) edKind = kinds.get(0);
+        if (!edSets().contains(edSet)) edSet = "frost";
+        rows.add(new Note(ed("note", "Dress giants up for an event: a material set changes the blocks a giant is"
+                + " drawn with on every player's game. His size, his hits and the blocks you can stand on stay his"
+                + " own, and so do his moves. Pick a giant and a set to see it, then give it to every one of him, a"
+                + " giant tag, or one giant."), GREY));
+        // the picker and the picture
+        rows.add(new Head(ed("preview", "Preview"), null, null).pic(EDITOR));
+        Block pick = new Block(22, (g, x, y, w, mx, my) -> {});
+        Button kindB = Button.builder(Component.literal(giantName(edKind)), b -> {
+                    edKind = kinds.get((kinds.indexOf(edKind) + 1) % kinds.size());
+                    build();
+                })
+                .bounds(0, 0, 110, 18)
+                .build();
+        kindB.setTooltip(Tooltip.create(ed("kind.tip", "Which giant (click for the next)")));
+        pick.add(kindB, 0, 2, false);
+        List<String> sets = edSets();
+        Button setB = Button.builder(Component.literal(edEditing ? ed("draft", "Your custom set").getString()
+                        : edSetName(edSet)), b -> {
+                    edEditing = false;
+                    edSet = sets.get((sets.indexOf(edSet) + 1) % sets.size());
+                    build();
+                })
+                .bounds(0, 0, 120, 18)
+                .build();
+        setB.setTooltip(Tooltip.create(ed("set.tip", "Which set (click for the next): Frost, Gold, Shadow,"
+                + " Festive, Ancient stone, or a custom one")));
+        pick.add(setB, 114, 2, false);
+        rows.add(pick);
+        String kind = edKind;
+        Map<String, String> after = edMap(kind, edSet);
+        boolean takes = !(e.get("takes") instanceof JsonObject tk) || !tk.has(kind) || tk.get(kind).getAsBoolean();
+        int picH = Math.max(90, Math.min(150, lw / 3));
+        rows.add(new Block(picH + 16, (g, x, y, w, mx, my) -> {
+            int half = (w - 8) / 2;
+            edPic(g, kind, Map.of(), x, y, half, picH, ed("before", "His own look").getString());
+            edPic(g, kind, after, x + half + 8, y, half, picH, edEditing ? ed("draft", "Your custom set").getString()
+                    : edSetName(edSet));
+        }));
+        if (!takes)
+            rows.add(new Note(ed("old", "%s's mod on this server is too old to wear another look.", giantName(kind)),
+                    WARN));
+        String chosen = edEditing ? "custom:" + edName.strip() : edSet;
+        // (a custom set still being made is saved first)
+        boolean ready = takes && !edEditing;
+        String nameNow = giantName(kind);
+        rows.add(new LineRow(ed("give", "Give this look"), TEXT, ed("give.sub", "%s: every one of him now and"
+                + " later. A tag or one giant: below.", nameNow), List.<Object[]>of(
+                        new Object[] {ed("give.kind", "Every %s", nameNow), (Runnable) () -> request("look", "scope",
+                                "kind", "target", kind, "set", chosen), ed("give.kind.tip", "Every %s wears it on"
+                                        + " every player's game, at once", nameNow), ready},
+                        new Object[] {ed("give.own", "His own look"), (Runnable) () -> request("look", "scope",
+                                "kind", "target", kind, "set", ""), ed("give.own.tip", "Every %s back as he is",
+                                        nameNow)})));
+        // each kind
+        Head kh = new Head(ed("kinds", "Each giant"), ed("kinds.note", "The look every one of him wears (a tag's or"
+                + " his own look comes first)."), null).folding(EDITOR + "/kinds", "all", kinds.size());
+        rows.add(kh);
+        if (!kh.shut())
+            for (String k : kinds) {
+                String now = e.getAsJsonObject("kinds").get(k).getAsString();
+                rows.add(new LineRow(Component.literal(giantName(k)), now.isEmpty() ? TEXT : GOLD, Component.literal(
+                        edSetName(now)), List.<Object[]>of(new Object[] {ed("show", "Show"), (Runnable) () -> {
+                            edKind = k;
+                            edEditing = false;
+                            if (!now.isEmpty()) edSet = now;
+                            build();
+                        }, ed("show.tip", "See him in it above")})));
+            }
+        // the tags
+        JsonObject tags = e.get("tags") instanceof JsonObject t ? t : new JsonObject();
+        Head th = new Head(ed("tags", "Giant tags"), ed("tags.note", "Every giant wearing the tag (Fun page) wears"
+                + " this look, whatever his kind."), null).folding(EDITOR + "/tags", "fun", tags.size());
+        rows.add(th);
+        if (!th.shut()) {
+            if (tags.isEmpty()) rows.add(new Note(ed("tags.none", "No giant tags yet (the Fun page makes them)."),
+                    GREY));
+            for (var t : tags.entrySet()) {
+                String tag = t.getKey(), now = t.getValue().getAsString();
+                rows.add(new LineRow(Component.literal(tag), now.isEmpty() ? TEXT : GOLD, Component.literal(edSetName(
+                        now)), List.<Object[]>of(
+                                new Object[] {ed("set.this", "Give %s", edSetName(chosen)), (Runnable) () -> request(
+                                        "look", "scope", "tag", "target", tag, "set", chosen), null, ready},
+                                new Object[] {ed("clear", "Clear"), (Runnable) () -> request("look", "scope", "tag",
+                                        "target", tag, "set", ""), null, !now.isEmpty()})));
+            }
+        }
+        // one giant
+        List<JsonObject> giants = objects(e, "giants");
+        Head gh = new Head(ed("giants", "One giant"), ed("giants.note", "His own look comes before his tag's and his"
+                + " kind's. Kept with him while he lives."), null).folding(EDITOR + "/giants", "live", giants.size());
+        rows.add(gh);
+        if (!gh.shut()) {
+            if (giants.isEmpty()) rows.add(new Note(ed("giants.none", "No giant is standing in the world now."),
+                    GREY));
+            for (JsonObject j : giants) {
+                String id = str(j, "id"), own = str(j, "own"), wears = str(j, "wears");
+                boolean away = bool(j, "away");
+                String label = str(j, "label").isEmpty() ? giantName(str(j, "kind")) : str(j, "label");
+                String sub = (away ? ed("away", "out of the world · ").getString() : "") + ed("wears", "wears %s%s",
+                        edSetName(wears), own.isEmpty() ? "" : ed("wears.own", " (his own)").getString()).getString();
+                boolean mine = str(j, "kind").equals(kind) && !edEditing;
+                rows.add(new LineRow(Component.literal(label), own.isEmpty() ? TEXT : GOLD, Component.literal(sub),
+                        List.<Object[]>of(
+                                new Object[] {ed("set.this", "Give %s", edSetName(chosen)), (Runnable) () -> request(
+                                        "look", "scope", "giant", "target", id, "set", chosen), mine ? null
+                                                : ed("set.other", "Pick his kind above first"), mine && !away && ready},
+                                new Object[] {ed("clear", "Clear"), (Runnable) () -> request("look", "scope", "giant",
+                                        "target", id, "set", ""), null, !own.isEmpty()})));
+            }
+        }
+        edCustomRows(e, kind);
+    }
+
+    /** a giant's picture with its label under it, fitted into w x h */
+    private void edPic(GuiGraphics g, String kind, Map<String, String> map, int x, int y, int w, int h,
+            String label) {
+        AdminStyle.card(g, x, y, w, h + 14, false);
+        net.jj.giants.client.editor.LookPreview.Pic p = net.jj.giants.client.editor.LookPreview.of(kind, map);
+        if (p == null) {
+            g.drawString(font, ed("nopic", "No picture").getString(), x + 6, y + 6, DIM, false);
+        } else {
+            float k = Math.min((w - 8) / (float) p.w(), (h - 6) / (float) p.h());
+            int dw = Math.max(1, (int) (p.w() * k)), dh = Math.max(1, (int) (p.h() * k));
+            g.blit(p.tex(), x + (w - dw) / 2, y + 3 + (h - 6 - dh), dw, dh, 0, 0, p.w(), p.h(), p.w(), p.h());
+        }
+        g.drawCenteredString(font, cut(label, w - 4), x + w / 2, y + h + 3, TEXT);
+    }
+
+    /** the custom sets: each one (Show, Change, Delete), and making one: its name, a set to start from, its blocks */
+    private void edCustomRows(JsonObject e, String kind) {
+        List<JsonObject> custom = objects(e, "custom");
+        Head ch = new Head(ed("custom", "Custom sets"), ed("custom.note", "Your own: start from a set (or none) and"
+                + " pick a block for any of his blocks. Kept for this world."), null).folding(EDITOR + "/custom",
+                        EDITOR, custom.size());
+        rows.add(ch);
+        if (ch.shut()) return;
+        for (JsonObject c : custom) {
+            String name = str(c, "name"), base = str(c, "base");
+            int n = c.get("blocks") instanceof JsonObject b ? b.size() : 0;
+            rows.add(new LineRow(Component.literal(name), KEY, ed("custom.sub", "%s%s blocks · %s", base.isEmpty() ? ""
+                    : ed("from", "from %s, ", edSetName(base)).getString(), n, str(c, "by")), List.<Object[]>of(
+                            new Object[] {ed("show", "Show"), (Runnable) () -> {
+                                edEditing = false;
+                                edSet = "custom:" + name;
+                                build();
+                            }, ed("show.tip", "See him in it above")},
+                            new Object[] {ed("change", "Change"), (Runnable) () -> {
+                                edEditing = true;
+                                edName = name;
+                                edBase = base;
+                                edBlocks.clear();
+                                if (c.get("blocks") instanceof JsonObject b)
+                                    for (var x : b.entrySet()) edBlocks.put(x.getKey(), x.getValue().getAsString());
+                                build();
+                            }, ed("change.tip", "Change its blocks below")},
+                            new Object[] {ed("delete", "Delete"), (Runnable) () -> confirm(ed("delete.title",
+                                    "Delete %s?", name), ed("delete.body", "Whoever wears it goes back to his own"
+                                            + " look."), ed("delete", "Delete"), () -> request("lookdel", "name",
+                                                    name)), null})));
+        }
+        // making or changing one
+        rows.add(new Head(edEditing && !edName.isBlank() ? ed("making.change", "Changing %s", edName)
+                : ed("making", "Make a custom set"), null, null).pic(EDITOR));
+        Block nb = new Block(22, (g, x, y, w, mx, my) -> {});
+        EditBox nameBox = new EditBox(font, 0, 0, Math.max(60, lw - 250), 16, ed("name", "Name"));
+        nameBox.setMaxLength(24);
+        nameBox.setHint(ed("name.hint", "Its name").withStyle(ChatFormatting.DARK_GRAY));
+        nameBox.setValue(edName);
+        nameBox.setResponder(t -> edName = t);
+        nb.add(nameBox, 0, 3, false);
+        List<String> bases = new ArrayList<>();
+        bases.add("");
+        bases.addAll(net.jj.giants.editor.LookSets.BUILT_IN);
+        Button baseB = Button.builder(ed("base", "From: %s", edBase.isEmpty() ? ed("base.none", "nothing").getString()
+                        : edSetName(edBase)), b -> {
+                    edEditing = true;
+                    edBase = bases.get((bases.indexOf(edBase) + 1) % bases.size());
+                    build();
+                })
+                .bounds(0, 0, 120, 16)
+                .build();
+        baseB.setTooltip(Tooltip.create(ed("base.tip", "The set it starts from (click for the next); your blocks go on"
+                + " top")));
+        nb.add(baseB, 124, 3, true);
+        Button saveB = Button.builder(ed("save", "Save"), b -> {
+                    if (edName.isBlank()) {
+                        say(ed("save.empty", "Give it a name first."), WARN);
+                        return;
+                    }
+                    JsonObject o = new JsonObject();
+                    o.addProperty("do", "lookset");
+                    o.addProperty("name", edName.strip());
+                    o.addProperty("base", edBase);
+                    JsonObject bl = new JsonObject();
+                    for (var x : edBlocks.entrySet())
+                        if (!x.getValue().isBlank()) bl.addProperty(x.getKey(), x.getValue().strip());
+                    o.add("blocks", bl);
+                    if (AdminBookClient.request(o)) say(tr("sent"), GREY);
+                    else say(tr("no_server"), WARN);
+                    edEditing = false;
+                    edSet = "custom:" + edName.strip();
+                })
+                .bounds(0, 0, 54, 16)
+                .build();
+        saveB.setTooltip(Tooltip.create(ed("save.tip", "Saves it for this world (the same name changes it)")));
+        nb.add(saveB, 0, 3, true);
+        Button newB = Button.builder(ed("new", "New"), b -> {
+                    edEditing = true;
+                    edName = "";
+                    edBase = "";
+                    edBlocks.clear();
+                    build();
+                })
+                .bounds(0, 0, 54, 16)
+                .build();
+        newB.setTooltip(Tooltip.create(ed("new.tip", "Start a new one from nothing")));
+        nb.add(newB, 58, 3, true);
+        rows.add(nb);
+        // his blocks: each with what it becomes
+        var m = net.jj.giants.systems.remains.GiantModels.get(kind);
+        if (m == null) return;
+        double[] share = net.jj.giants.editor.LookSets.share(m.palette, m.pal);
+        Map<String, Double> byBlock = new LinkedHashMap<>();
+        for (int i = 0; i < m.palette.length; i++)
+            byBlock.merge(net.jj.giants.editor.LookSets.blockId(m.palette[i]), share[i], Double::sum);
+        List<Map.Entry<String, Double>> list = new ArrayList<>(byBlock.entrySet());
+        list.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+        Map<String, String> base = edBase.isEmpty() ? Map.of()
+                : net.jj.giants.editor.LookSets.map(edBase, m.palette, share);
+        rows.add(new Note(ed("blocks.note", "%s's blocks, most used first. Type a block for any of them"
+                + " (gold_block, minecraft:blue_ice); leave one empty to keep it (or what the set gives it).",
+                giantName(kind)), GREY));
+        for (var en : list) {
+            String from = en.getKey();
+            String setGives = null;
+            for (int i = 0; i < m.palette.length; i++)
+                if (net.jj.giants.editor.LookSets.blockId(m.palette[i]).equals(from) && base.containsKey(m.palette[i]))
+                    setGives = base.get(m.palette[i]);
+            String gives = setGives;
+            Block r = new Block(20, (g, x, y, w, mx, my) -> {
+                int c = 0xFF000000 | net.jj.giants.editor.LookSets.rgb(from);
+                g.fill(x, y + 4, x + 12, y + 16, c);
+                g.renderOutline(x, y + 4, 12, 12, EDGE);
+                String typed = edBlocks.getOrDefault(from, "");
+                String to = net.jj.giants.editor.LookSets.valid(typed);
+                String now = to != null ? to : gives;
+                int tw = w - 150 - 40;
+                g.drawString(font, cut(from.replace("minecraft:", "") + "  " + Math.round(en.getValue() * 1000) / 10.0
+                        + "%", tw), x + 16, y + 6, TEXT, false);
+                if (now != null) {
+                    int c2 = 0xFF000000 | net.jj.giants.editor.LookSets.rgb(now);
+                    g.fill(x + w - 150 - 18, y + 4, x + w - 150 - 6, y + 16, c2);
+                    g.renderOutline(x + w - 150 - 18, y + 4, 12, 12, EDGE);
+                }
+                if (!typed.isBlank() && to == null)
+                    g.drawString(font, "?", x + w - 150 - 28, y + 6, WARN, false);
+            });
+            EditBox box = new EditBox(font, 0, 0, 148, 16, Component.literal(from));
+            box.setMaxLength(80);
+            box.setHint(Component.literal(gives == null ? ed("keep", "keep").getString()
+                    : gives.replace("minecraft:", "")).withStyle(ChatFormatting.DARK_GRAY));
+            box.setValue(edBlocks.getOrDefault(from, ""));
+            box.setResponder(t -> {
+                edEditing = true;
+                if (t.isBlank()) edBlocks.remove(from);
+                else edBlocks.put(from, t);
+            });
+            r.add(box, 0, 2, true);
+            rows.add(r);
+        }
+    }
+
+    // the Sound page
+
+    private void soundRows() {
+        AdminBookClient.Page p = AdminBookClient.page(AdminCatalog.ALL);
+        if (p == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        rows.add(new Note(ed("sound.note", "Each giant's fight music (his own, none, or another giant's tracks), the"
+                + " sounds of his ground and of him at rest, and his voice. Every player hears it at once; their own"
+                + " volume settings still count. Presets, export and share codes carry these too."), GREY));
+        JsonObject h = AdminBookClient.home();
+        List<String> kinds = new ArrayList<>();
+        if (h != null && h.get("giants") instanceof JsonArray a)
+            for (JsonElement x : a)
+                if (x.isJsonObject()) kinds.add(AdminBookClient.AdminJsonBridge.str(x.getAsJsonObject(), "key"));
+        for (String k : kinds) {
+            AdminSetting music = allSetting("all.music." + k), ambient = allSetting("all.ambient." + k),
+                    vol = allSetting("all.ambientVolume." + k), pitch = allSetting("all.voicePitch." + k);
+            if (music == null) continue;
+            int changed = 0;
+            for (AdminSetting s : new AdminSetting[] {music, ambient, vol, pitch})
+                if (s != null && !AdminSetting.same(s.value(), s.jar())) changed++;
+            MutableComponent title = Component.literal(giantName(k));
+            if (changed > 0)
+                title.append(Component.literal("  • ").append(ed("sound.changed", "%s changed", changed)).withStyle(
+                        st -> st.withColor(GOOD)));
+            Head head = new Head(title, null, k).folding(SOUND + "/" + k, null, 4);
+            rows.add(head);
+            if (head.shut()) continue;
+            for (AdminSetting s : new AdminSetting[] {music, ambient, vol, pitch}) if (s != null) rows.add(new SetRow(s));
+            String m = music.value().getAsString();
+            String whose = m.equals("own") ? k : m;
+            float pv = pitch == null ? 1f : (float) pitch.value().getAsDouble();
+            rows.add(new LineRow(ed("try", "Try it"), TEXT, ed("try.sub", "Music: %s · voice at %s",
+                    m.equals("off") ? ed("try.off", "none").getString() : ed("try.tracks", "%s's tracks",
+                            giantName(whose)).getString(), AdminSetting.plain(pv)), List.<Object[]>of(
+                                    new Object[] {ed("play.music", "Play music"), (Runnable) () -> {
+                                        if (!net.jj.giants.client.editor.EditorClient.preview(whose, true, 1f))
+                                            say(ed("play.none", "That sound isn't on this game."), WARN);
+                                    }, ed("play.music.tip", "Plays the start of the fight music he'd have"),
+                                        !m.equals("off")},
+                                    new Object[] {ed("play.voice", "Play voice"), (Runnable) () -> {
+                                        if (!net.jj.giants.client.editor.EditorClient.preview(k, false, pv))
+                                            say(ed("play.none", "That sound isn't on this game."), WARN);
+                                    }, ed("play.voice.tip", "One of his calls at this pitch")},
+                                    new Object[] {ed("stop", "Stop"),
+                                        (Runnable) net.jj.giants.client.editor.EditorClient::stopPreview, null})));
         }
     }
 

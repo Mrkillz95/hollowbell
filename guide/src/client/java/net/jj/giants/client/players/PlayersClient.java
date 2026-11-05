@@ -50,6 +50,9 @@ public final class PlayersClient {
             case PlayersStatePayload.PICK -> Minecraft.getInstance().setScreen(
                     new PickScreen(Minecraft.getInstance().screen, o));
             case PlayersStatePayload.SYNC -> giants(o.toString());
+            // (Part 12) the giant editor's looks and the sound picker
+            case net.jj.giants.editor.Editor.LOOKS -> net.jj.giants.client.editor.EditorClient.looks(o);
+            case net.jj.giants.editor.Editor.SOUND -> net.jj.giants.client.editor.EditorClient.sound(o);
             case PlayersStatePayload.SAID -> {
                 List<String> l = new ArrayList<>();
                 if (o.get("lines") instanceof JsonArray a) for (JsonElement e : a) l.add(e.getAsString());
@@ -72,6 +75,7 @@ public final class PlayersClient {
         said = List.of();
         version++;
         giants("{}");
+        net.jj.giants.client.editor.EditorClient.forget();
     }
 
     public static @Nullable JsonObject world() {

@@ -260,6 +260,11 @@ public final class AdminBook {
             AdminServer.Result pr = net.jj.giants.players.PlayersAdmin.request(server, who, what, o);
             return pr == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : pr;
         }
+        // (Part 12) the Editor page's requests
+        if (net.jj.giants.editor.Editor.DOS.contains(what)) {
+            AdminServer.Result er = net.jj.giants.editor.Editor.request(server, p, who, what, o);
+            return er == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : er;
+        }
         // (Part 7) the Fun and World tools pages' requests
         if (net.jj.giants.fun.Fun.DOS.contains(what)) {
             AdminServer.Result fr = net.jj.giants.fun.Fun.request(server, p, who, what, o);
@@ -296,7 +301,14 @@ public final class AdminBook {
                 yield preview(server, p, AdminTransfer.plan(server, b), "preset");
             }
             case "import" -> {
-                AdminTransfer.Bundle b = AdminTransfer.decode(AdminJson.str(o, "text", AdminBookChangePayload.MOST));
+                String text = AdminJson.str(o, "text", AdminBookChangePayload.MOST);
+                // (Part 12) a share code: what's wrong with it, or its preview
+                if (ShareCodes.looksLike(text)) {
+                    ShareCodes.Read rd = ShareCodes.read(text);
+                    if (rd.bundle() == null) yield AdminServer.Result.fail(rd.why());
+                    yield preview(server, p, AdminTransfer.plan(server, rd.bundle()), "import");
+                }
+                AdminTransfer.Bundle b = AdminTransfer.decode(text);
                 if (b == null)
                     yield AdminServer.Result.fail("That isn't a settings string: it starts with "
                             + AdminTransfer.PREFIX + " (from Export, or /giants admin export).");
@@ -313,6 +325,21 @@ public final class AdminBook {
                 GiantsGuideMod.LOG.info("Giants admin export ({}): {}", who, text);
                 yield new AdminServer.Result(true, List.of("Copied this world's settings (" + text.length()
                         + " characters). Paste them into Import in another world's book."), List.of());
+            }
+            // (Part 12) a share code of this world's settings, or of a preset ("preset"), copied on their game
+            case "share" -> {
+                String name = AdminJson.str(o, "preset", 48);
+                AdminTransfer.Bundle b = name.isEmpty() ? AdminTransfer.current(server) : AdminTransfer.preset(name);
+                if (b == null) yield AdminServer.Result.fail("No preset called " + name + ".");
+                String code = ShareCodes.encode(b);
+                JsonObject e = new JsonObject();
+                e.addProperty("text", code);
+                e.addProperty("share", true);
+                sender.accept(p, new AdminBookStatePayload(AdminBookStatePayload.EXPORT, e.toString()));
+                GiantsGuideMod.LOG.info("Giants admin share code ({}): {}", who, code);
+                yield new AdminServer.Result(true, List.of("Copied " + (name.isEmpty() ? "this world's settings"
+                        : AdminTransfer.title(b)) + " as a share code (" + code.length() + " letters). Paste it into"
+                        + " Import code on another server."), List.of());
             }
             case "mod" -> AdminRoles.set(server, who, AdminJson.str(o, "player", 40),
                     !AdminJson.str(o, "on", 8).equals("false"));
@@ -500,6 +527,9 @@ public final class AdminBook {
             if (r != Role.ADMIN) continue;
             for (AdminBookStatePayload pg : pages) sender.accept(p, pg);
             if (presets) sender.accept(p, presets(server, p));
+            // (Part 12) the Editor page
+            if (every || what.contains(net.jj.giants.editor.Editor.PAGE))
+                sender.accept(p, net.jj.giants.editor.Editor.page(server));
             // (Part 7) the Fun and World tools pages (each admin's own: what they watch, play, their brush)
             if (every || what.contains(net.jj.giants.fun.Fun.PAGE)) sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
         }
@@ -540,6 +570,7 @@ public final class AdminBook {
             sender.accept(p, net.jj.giants.tools.ToolsAdmin.page(server));
             sender.accept(p, net.jj.giants.systems.SystemsAdmin.page(server));
             sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
+            sender.accept(p, net.jj.giants.editor.Editor.page(server));
         }
         if (r != Role.NONE && net.jj.giants.minigames.MgAdmin.mayRun(p))
             sender.accept(p, net.jj.giants.minigames.MgAdmin.page(server));

@@ -67,6 +67,8 @@ public final class AdminBookClient {
     private static @Nullable JsonObject fun;
     /** (Part 10A) the Minigames page, and whether this player may run minigames (admins; moderators if allowed) */
     private static @Nullable JsonObject minigames;
+    /** (Part 12) the Editor page: the sets, who wears which look, the custom sets */
+    private static @Nullable JsonObject editor;
     private static boolean mayMinigames;
     /** goes up with every Live control page (once a second while it is looked at) */
     private static int liveVersion, previewVersion;
@@ -99,7 +101,7 @@ public final class AdminBookClient {
         said = List.of();
         role = "";
         live = changes = presets = preview = players = tools = systems = null;
-        fun = minigames = null;
+        fun = minigames = editor = null;
         mayMinigames = false;
         version++;
         liveVersion++;
@@ -134,6 +136,16 @@ public final class AdminBookClient {
 
     public static @Nullable JsonObject changes() {
         return changes;
+    }
+
+    public static @Nullable JsonObject editor() {
+        return editor;
+    }
+
+    /** (the picture-taking) the Editor page as if the server had sent it */
+    public static void editorForTests(JsonObject o) {
+        editor = o;
+        version++;
     }
 
     public static @Nullable JsonObject fun() {
@@ -480,6 +492,7 @@ public final class AdminBookClient {
             case "systems" -> systems = o;
             case "fun" -> fun = o;
             case "minigames" -> minigames = o;
+            case "editor" -> editor = o;
             case AdminBookStatePayload.PRESETS -> presets = o;
             case AdminBookStatePayload.PREVIEW -> {
                 preview = o;
@@ -514,6 +527,11 @@ public final class AdminBookClient {
 
     /** the last settings string the server sent to copy */
     static String lastExport = "";
+
+    /** (Part 12, the picture-taking) the last code or string copied */
+    public static String lastCopied() {
+        return lastExport;
+    }
 
     public static @Nullable JsonObject home() {
         return home;

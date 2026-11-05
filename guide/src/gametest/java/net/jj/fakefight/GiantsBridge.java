@@ -77,6 +77,9 @@ public final class GiantsBridge {
         switch (action) {
             case "admin" -> out.add("{\"admin\":1,\"giant\":\"fakefight\",\"name\":\"Fakefight\",\"uses\":["
                     + "\"all.wildFightTo\",\"all.ownedFightTo\",\"all.fightAsk\",\"all.fightReport\"],\"all\":{}}");
+            // (Part 12) the giant editor: this stand-in takes looks
+            case "look" -> out.add("{\"look\":1}");
+            case "lookclient" -> out.add("ok");
             case "adminset" -> {
                 JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
                 all = o.has("all") ? o.getAsJsonObject("all") : new JsonObject();

@@ -354,6 +354,8 @@ public final class AdminTransfer {
     public static @Nullable Bundle decode(String text) {
         String t = text == null ? "" : text.trim();
         if (t.startsWith("{")) return read(t);
+        // (Part 12) a share code
+        if (ShareCodes.looksLike(t)) return ShareCodes.read(t).bundle();
         if (!t.startsWith(PREFIX)) return null;
         try {
             byte[] packed = Base64.getUrlDecoder().decode(t.substring(PREFIX.length()));

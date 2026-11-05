@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import net.jj.hollowbell.GiantsLook;
 import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.mixin.VertexBufferAccess;
@@ -52,7 +53,26 @@ import org.joml.Vector3f;
  * far. Each lump's box only spans the blocks it has, so a strand one block thick stays one block thick.
  */
 public final class BellMeshes {
-    public static final BellMeshes INSTANCE = new BellMeshes();
+    public static final BellMeshes INSTANCE = new BellMeshes(null);
+
+    /** (Part 12) the giant editor's looks worn on this game: his meshes built once more with their blocks, kept */
+    private static final java.util.Map<String, BellMeshes> LOOKS = new java.util.HashMap<>();
+
+    private static int lookVersion = -1;
+    private final @Nullable String look;
+
+    /** his meshes in this look (null: his own); looks no one wears any more are freed */
+    public static BellMeshes of(@Nullable String look) {
+        if (lookVersion != GiantsLook.version) {
+            lookVersion = GiantsLook.version;
+            LOOKS.entrySet().removeIf(e -> {
+                if (GiantsLook.used(e.getKey())) return false;
+                e.getValue().invalidate();
+                return true;
+            });
+        }
+        return look == null ? INSTANCE : LOOKS.computeIfAbsent(look, BellMeshes::new);
+    }
     private static final Direction[] DIRS = {
         Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
     };
@@ -111,7 +131,9 @@ public final class BellMeshes {
 
     private record Built(Part[][][] parts, ByteBufferBuilder[] memory) {}
 
-    private BellMeshes() {}
+    private BellMeshes(@Nullable String look) {
+        this.look = look;
+    }
 
     public boolean ensureReady() {
         if (ready) return true;
@@ -232,6 +254,12 @@ public final class BellMeshes {
                 b.parts[TINY][0].length,
                 fq);
         return true;
+    }
+
+    /** (Part 12) a new frame for his own meshes and every look's */
+    public static void frameStartAll() {
+        INSTANCE.frameStart();
+        for (BellMeshes m : LOOKS.values()) m.frameStart();
     }
 
     /** a new frame (called as the world starts to draw) */
@@ -436,7 +464,7 @@ public final class BellMeshes {
         for (int i = 0; i < np; i++) {
             BlockState st;
             try {
-                st = BlockStateParser.parseForBlock(lookup, model.palette[i], false)
+                st = BlockStateParser.parseForBlock(lookup, GiantsLook.block(look, model.palette[i]), false)
                         .blockState();
             } catch (CommandSyntaxException e) {
                 throw new IllegalStateException("Hollowbell: unknown block " + model.palette[i], e);
@@ -663,6 +691,11 @@ public final class BellMeshes {
 
     /** textures changed (resource pack switch): throw the meshes away, they rebuild on the next frame */
     public void invalidate() {
+        // (Part 12) a reload: the looks are built again too
+        if (this == INSTANCE) {
+            for (BellMeshes m : LOOKS.values()) m.invalidate();
+            LOOKS.clear();
+        }
         RenderSystem.recordRenderCall(() -> {
             for (Mesh m : withOthers) if (m.others != null) for (Order o : m.others) if (!free(o)) letGoLater(o);
             withOthers.clear();

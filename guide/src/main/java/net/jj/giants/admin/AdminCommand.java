@@ -19,6 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * /giants admin (operators, permission level 2): get, set and reset any giant's admin settings for this world, list
@@ -96,6 +97,16 @@ public final class AdminCommand {
                                         .executes(c -> say(c, AdminPresets.delete(who(c), whoId(c),
                                                 StringArgumentType.getString(c, "name"))))))
                         .then(Commands.literal("export").executes(AdminCommand::export))
+                        // (Part 12) share codes: this world's settings, or a preset saved here
+                        .then(Commands.literal("share").executes(c -> share(c, null))
+                                .then(Commands.argument("preset", StringArgumentType.greedyString())
+                                        .suggests((c, b) -> {
+                                            List<String> out = new ArrayList<>();
+                                            for (AdminPresets.Saved s : AdminPresets.list()) out.add(s.name());
+                                            out.addAll(AdminTransfer.presets());
+                                            return SharedSuggestionProvider.suggest(out, b);
+                                        })
+                                        .executes(c -> share(c, StringArgumentType.getString(c, "preset")))))
                         .then(Commands.literal("import")
                                 .then(Commands.argument("text", StringArgumentType.greedyString())
                                         .executes(AdminCommand::importText)))
@@ -379,8 +390,29 @@ public final class AdminCommand {
         return preview(c, b);
     }
 
+    /** (Part 12) a share code of this world's settings (null) or of a preset, to copy */
+    private static int share(CommandContext<CommandSourceStack> c, @Nullable String preset) {
+        AdminTransfer.Bundle b = preset == null ? AdminTransfer.current(server(c)) : AdminTransfer.preset(preset);
+        if (b == null) return say(c, AdminServer.Result.fail("No preset called " + preset + "."));
+        String code = ShareCodes.encode(b);
+        GiantsGuideMod.LOG.info("Giants admin share code ({}): {}", who(c), code);
+        c.getSource().sendSuccess(() -> Component.literal((preset == null ? "This world's settings" : "The preset "
+                + AdminTransfer.title(b)) + " as a share code (" + code.length() + " letters, click to copy): ")
+                .append(Component.literal(code).withStyle(st -> st.withColor(ChatFormatting.AQUA).withClickEvent(
+                        new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action
+                                .COPY_TO_CLIPBOARD, code)))), false);
+        return 1;
+    }
+
     private static int importText(CommandContext<CommandSourceStack> c) {
-        AdminTransfer.Bundle b = AdminTransfer.decode(StringArgumentType.getString(c, "text"));
+        String text = StringArgumentType.getString(c, "text");
+        // (Part 12) a share code says what's wrong with it
+        if (ShareCodes.looksLike(text)) {
+            ShareCodes.Read r = ShareCodes.read(text);
+            if (r.bundle() == null) return say(c, AdminServer.Result.fail(r.why()));
+            return preview(c, r.bundle());
+        }
+        AdminTransfer.Bundle b = AdminTransfer.decode(text);
         if (b == null)
             return say(c, AdminServer.Result.fail(
                     "That isn't a settings string: it starts with " + AdminTransfer.PREFIX + " (from /giants admin"

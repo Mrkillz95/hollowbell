@@ -71,6 +71,9 @@ public final class GiantsBridge {
         // (Part 5) the Guide's player rules, My Giant, the starting kit and fight music on players' games
         if (action.equals("players")) return GiantsPlayers.rules(arg);
         if (action.equals("playersclient")) return GiantsPlayers.client(arg);
+        // (Part 12, ADMIN_BRIDGE.md §29) the giant editor: looks taken (server), the looks on this game (client)
+        if (action.equals("look")) return GiantsLook.describe();
+        if (action.equals("lookclient")) return GiantsLook.receive(arg);
         if (action.equals("mygiant")) return net.jj.hollowbell.world.MyGiant.pick(server, arg);
         if (action.equals("give")) return net.jj.hollowbell.world.MyGiant.give(server, arg);
         if (action.equals("live")) return GiantsLive.describe(server, arg);

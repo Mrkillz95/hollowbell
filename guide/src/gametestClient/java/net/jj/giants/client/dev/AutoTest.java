@@ -424,6 +424,20 @@ public final class AutoTest implements ClientModInitializer {
                 AdminBookScreen.testMap(Double.parseDouble(a[0]), Double.parseDouble(a[1]), Double.parseDouble(a[2]));
                 continue;
             }
+            // (Part 12) editorpick KIND SET: the Editor page's giant and set; importlast: the last code copied, pasted
+            // into Import code (its preview opens)
+            if (s.startsWith("editorpick ")) {
+                String[] a = s.substring(11).trim().split(" +", 2);
+                AdminBookScreen.editorPick(a[0], a.length > 1 ? a[1] : "frost");
+                continue;
+            }
+            if (s.equals("importlast")) {
+                com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+                o.addProperty("do", "import");
+                o.addProperty("text", AdminBookClient.lastCopied());
+                if (!AdminBookScreen.testRequest(o.toString())) GiantsGuideMod.LOG.warn("autotest: can't import");
+                continue;
+            }
             if (s.equals("adminpress")) {
                 if (!AdminBookScreen.testPress()) GiantsGuideMod.LOG.warn("autotest: nothing to press");
                 continue;

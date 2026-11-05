@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.jj.hollowbell.GiantsLook;
 import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.Detail;
 import net.jj.hollowbell.entity.HollowbellEntity;
@@ -67,7 +68,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             float fogEnd,
             Vector3f l0,
             Vector3f l1,
-            boolean[] shown) {}
+            boolean[] shown,
+            BellMeshes meshes) {}
 
     public BellRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
@@ -149,7 +151,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
             return;
         }
         if (!fastKept.isEmpty()) fastKept.clear();
-        BellMeshes meshes = BellMeshes.INSTANCE;
+        BellMeshes meshes = BellMeshes.of(GiantsLook.of(e));
         if (!meshes.ensureReady()) return;
         BellPieces pieces = BellPieces.get();
         // (each one's own, kept from frame to frame: every matrix is written again each time, and his glass is drawn
@@ -330,7 +332,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
                 fe,
                 l0w,
                 l1w,
-                shown));
+                shown,
+                meshes));
     }
 
     /**
@@ -414,7 +417,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
 
     private static void drawAllGlass() {
         if (glass.isEmpty()) return;
-        BellMeshes meshes = BellMeshes.INSTANCE;
+        // (Part 12: each one's own look, gl.meshes)
         BellRig rig = BellRig.get();
         BellModel model = BellModel.get();
         RenderType rt = RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
@@ -431,6 +434,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         Matrix3f rot = new Matrix3f();
         Vector3f l0 = new Vector3f(), l1 = new Vector3f(), cam = new Vector3f(), c = new Vector3f();
         for (Glass gl : glass) {
+            BellMeshes meshes = gl.meshes();
             RenderSystem.setShaderFogStart(gl.fogStart);
             RenderSystem.setShaderFogEnd(gl.fogEnd);
             shader.setDefaultUniforms(VertexFormat.Mode.QUADS, gl.view, gl.proj, mc.getWindow());
@@ -501,7 +505,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     public static void forgetFrame() {
         glass.clear();
         fastGlass.clear();
-        BellMeshes.INSTANCE.frameStart();
+        BellMeshes.frameStartAll();
     }
 
     // Fast drawing (the guide's Drawing: Fast): the same picture as drawHim and drawAllGlass, made with no new objects
@@ -519,6 +523,8 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         int who, lod;
         boolean sliced, red;
         float lit, hurt, fogStart, fogEnd;
+        /** (Part 12) his look's meshes */
+        BellMeshes meshes = BellMeshes.INSTANCE;
 
         Kept(BellRig rig, BellPieces pieces) {
             draw = rig.newPose();
@@ -543,7 +549,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
     private final BlockPos.MutableBlockPos lightAt = new BlockPos.MutableBlockPos();
 
     private void drawFast(HollowbellEntity e, float partial, PoseStack ps) {
-        BellMeshes meshes = BellMeshes.INSTANCE;
+        BellMeshes meshes = BellMeshes.of(GiantsLook.of(e));
         if (!meshes.ensureReady()) return;
         BellPieces pieces = BellPieces.get();
         Kept kp = fastKept.get(e);
@@ -741,6 +747,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         kp.fogEnd = fe;
         kp.l0w.set(l0w);
         kp.l1w.set(l1w);
+        kp.meshes = meshes;
         fastGlass.add(kp);
     }
 
@@ -755,7 +762,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
 
     private static void drawAllGlassFast() {
         if (fastGlass.isEmpty()) return;
-        BellMeshes meshes = BellMeshes.INSTANCE;
+        // (Part 12: each one's own look, gl.meshes)
         BellRig rig = BellRig.get();
         BellModel model = BellModel.get();
         RenderType rt = RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
@@ -773,6 +780,7 @@ public class BellRenderer extends EntityRenderer<HollowbellEntity> {
         Vector3f l0 = gL0, l1 = gL1, cam = gCam, c = gC;
         BellPieces pieces = BellPieces.get();
         for (Kept gl : fastGlass) {
+            BellMeshes meshes = gl.meshes;
             RenderSystem.setShaderFogStart(gl.fogStart);
             RenderSystem.setShaderFogEnd(gl.fogEnd);
             shader.setDefaultUniforms(VertexFormat.Mode.QUADS, gl.view, gl.proj, mc.getWindow());

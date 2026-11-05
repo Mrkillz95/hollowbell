@@ -1,0 +1,282 @@
+# Part 12 pictures (ADMIN_BRIDGE.md 29): every giant in his own look, Frost and Gold (each a whole kind's look, sent
+# to this game and drawn from his own model's meshes built once more), then the Editor page (a preview, the kinds,
+# a custom set), the Sound page, and a share code's preview of changes on the Presets page.
+#   set GUIDE_SCRIPT=<full path>/tools/p12_autotest.txt; withslot.ps1 <guide> runAutotest -Pgiants
+#   (pictures in build/autotest/screenshots, copied to hollowbell/pictures/adminbook/p12)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode advanced
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamemode creative
+# pitchgut
+cmd tp @s 4000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd pitchgut summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 4068.8 -15.1 51.6 126.9 12.8
+wait 100
+shot p12_pitchgut_own
+cmd giants admin look kind pitchgut frost
+wait 200
+shot p12_pitchgut_frost
+cmd giants admin look kind pitchgut gold
+wait 200
+shot p12_pitchgut_gold
+cmd giants admin look kind pitchgut none
+cmd giants unfreeze
+cmd pitchgut kill
+wait 20
+# furrowmaw
+cmd tp @s 5500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd furrowmaw summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 5605.6 -26.8 79.2 126.9 11.5
+wait 100
+shot p12_furrowmaw_own
+cmd giants admin look kind furrowmaw frost
+wait 200
+shot p12_furrowmaw_frost
+cmd giants admin look kind furrowmaw gold
+wait 200
+shot p12_furrowmaw_gold
+cmd giants admin look kind furrowmaw none
+cmd giants unfreeze
+cmd furrowmaw kill
+wait 20
+# cerberus
+cmd tp @s 7000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd cerberus summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 7073.6 -11.6 55.2 126.9 12.8
+wait 100
+shot p12_cerberus_own
+cmd giants admin look kind cerberus frost
+wait 200
+shot p12_cerberus_frost
+cmd giants admin look kind cerberus gold
+wait 200
+shot p12_cerberus_gold
+cmd giants admin look kind cerberus none
+cmd giants unfreeze
+cmd cerberus kill
+wait 20
+# hollowbell
+cmd tp @s 8500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd hollowbell summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 8573.6 -11.6 55.2 126.9 12.8
+wait 100
+shot p12_hollowbell_own
+cmd giants admin look kind hollowbell frost
+wait 200
+shot p12_hollowbell_frost
+cmd giants admin look kind hollowbell gold
+wait 200
+shot p12_hollowbell_gold
+cmd giants admin look kind hollowbell none
+cmd giants unfreeze
+cmd hollowbell kill
+wait 20
+# lanternwillow
+cmd tp @s 10000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd lanternwillow summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 10073.6 -11.6 55.2 126.9 12.8
+wait 100
+shot p12_lanternwillow_own
+cmd giants admin look kind lanternwillow frost
+wait 200
+shot p12_lanternwillow_frost
+cmd giants admin look kind lanternwillow gold
+wait 200
+shot p12_lanternwillow_gold
+cmd giants admin look kind lanternwillow none
+cmd giants unfreeze
+cmd lanternwillow kill
+wait 20
+# wreckback
+cmd tp @s 11500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd wreckback summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 11576.2 -9.8 57.1 126.9 12.8
+wait 100
+shot p12_wreckback_own
+cmd giants admin look kind wreckback frost
+wait 200
+shot p12_wreckback_frost
+cmd giants admin look kind wreckback gold
+wait 200
+shot p12_wreckback_gold
+cmd giants admin look kind wreckback none
+cmd giants unfreeze
+cmd wreckback kill
+wait 20
+# swarmforge
+cmd tp @s 13000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd swarmforge summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 13058.2 -22.6 43.7 126.9 12.7
+wait 100
+shot p12_swarmforge_own
+cmd giants admin look kind swarmforge frost
+wait 200
+shot p12_swarmforge_frost
+cmd giants admin look kind swarmforge gold
+wait 200
+shot p12_swarmforge_gold
+cmd giants admin look kind swarmforge none
+cmd giants unfreeze
+cmd swarmforge kill
+wait 20
+# gloamwick
+cmd tp @s 14500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd gloamwick summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 14573.6 -11.6 55.2 126.9 12.8
+wait 100
+shot p12_gloamwick_own
+cmd giants admin look kind gloamwick frost
+wait 200
+shot p12_gloamwick_frost
+cmd giants admin look kind gloamwick gold
+wait 200
+shot p12_gloamwick_gold
+cmd giants admin look kind gloamwick none
+cmd giants unfreeze
+cmd gloamwick kill
+wait 20
+# one giant of his own look beside his kind's: two Wreckbacks, the kind in Shadow, one of them Festive
+cmd tp @s 20000 -60 3000 0 0
+wait 30
+cmd gamemode creative
+cmd wreckback summon calm 0.2
+cmd tp @s 20060 -60 3000 0 0
+wait 10
+cmd wreckback summon calm 0.2
+wait 4
+cmd giants freeze
+wait 20
+cmd giants admin look kind wreckback shadow
+cmd giants admin look giant wreckback festive
+cmd gamemode spectator
+cmd tp @s 20030 10 3110 180 18
+wait 220
+shot p12_wreckback_two_looks
+cmd giants admin look giant wreckback none
+cmd giants admin look kind wreckback none
+cmd giants unfreeze
+cmd wreckback kill
+wait 20
+cmd gamemode creative
+cmd tp @s 0 -60 0 0 10
+wait 20
+# a custom set, and the Editor page
+cmd giants admin look custom "Ice palace" base frost
+cmd giants admin look custom "Ice palace" block bone_block gold_block
+cmd giants admin look kind gloamwick "Ice palace"
+cmd giants admin look kind cerberus shadow
+editorpick wreckback gold
+adminbook editor 0
+wait 80
+mouse 2 2
+wait 25
+shot p12_editor_top
+close
+editorpick gloamwick custom:Ice palace
+adminbook editor 0
+wait 80
+mouse 2 2
+wait 25
+shot p12_editor_custom_preview
+adminbook editor 420
+wait 50
+mouse 2 2
+wait 25
+shot p12_editor_kinds
+adminbook editor 900
+wait 50
+mouse 2 2
+wait 25
+shot p12_editor_custom
+close
+# the Sound page (Wreckback's fight music swapped for the Gloamwick's, Pitchgut's ground quiet, the Cerberus deeper)
+cmd giants admin set all music.wreckback gloamwick
+cmd giants admin set all ambientVolume.pitchgut 0.4
+cmd giants admin set all voicePitch.cerberus 0.8
+adminbook sound 0
+wait 60
+mouse 2 2
+wait 25
+shot p12_sound_top
+adminbook sound 520
+wait 40
+mouse 2 2
+wait 25
+shot p12_sound_wreckback
+close
+# share codes: the Presets page's Share, then the copied code pasted into Import code (its preview of changes)
+adminbook presets 0
+wait 40
+adminreq {"do":"share"}
+wait 20
+close
+adminbook presets 3000
+wait 50
+mouse 2 2
+wait 25
+shot p12_presets_share
+cmd giants admin reset all music.wreckback
+cmd giants admin reset all ambientVolume.pitchgut
+importlast
+wait 40
+mouse 2 2
+wait 25
+shot p12_share_preview
+close
+cmd giants admin look kind gloamwick none
+cmd giants admin look kind cerberus none
+quit

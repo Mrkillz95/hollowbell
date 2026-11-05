@@ -60,6 +60,8 @@ public class GiantsGuideMod implements ModInitializer {
         net.jj.giants.minigames.Minigames.register();
         // (Part 10B) giant fights: the fight script for staged fights and the giant-fight settings
         net.jj.giants.fights.Fights.register();
+        // (Part 12) the giant editor (looks) and the sound and music picker
+        net.jj.giants.editor.Editor.register();
         LOG.info(
                 "Giants Guide loaded: {} of {} giants installed",
                 Giants.installed().size(),

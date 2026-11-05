@@ -57,6 +57,9 @@ public final class AdminStyle {
             "mg_escort", "mg_legends", "mg_possession", "mg_rivals", "mg_bounty", "mg_kaiju", "mg_onelife",
             "mg_speedrun");
     static final ResourceLocation P10A = tex("icons_p10a");
+    /** (Part 12) the Editor and Sound pages and share codes (tools/p12_icons.py) */
+    public static final List<String> P12_ICONS = List.of("editor", "sound", "share");
+    static final ResourceLocation P12 = tex("icons_p12");
 
     /** the section pictures, in the order tools/admin_textures.py draws them */
     public static final List<String> ICON_NAMES = List.of("stats", "moves", "spawning", "behaviour", "healing",
@@ -142,6 +145,10 @@ public final class AdminStyle {
         // (Part 10A) the Minigames page's pictures
         if (i < 0 && P10A_ICONS.contains(name)) {
             g.blit(P10A, x, y, size, size, P10A_ICONS.indexOf(name) * 16, 0, 16, 16, P10A_ICONS.size() * 16, 16);
+            return;
+        }
+        if (i < 0 && P12_ICONS.contains(name)) {
+            g.blit(P12, x, y, size, size, P12_ICONS.indexOf(name) * 16, 0, 16, 16, P12_ICONS.size() * 16, 16);
             return;
         }
         if (i < 0) i = ICON_NAMES.indexOf("misc");

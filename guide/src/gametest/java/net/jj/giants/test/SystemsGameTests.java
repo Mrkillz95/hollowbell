@@ -139,8 +139,10 @@ public class SystemsGameTests implements FabricGameTest {
                 h.assertTrue(AdminCatalog.plain(x), x.id() + " is no multiplier");
             }
         // (Part 10B: and the 41 giant-fight settings, FightGameTests)
-        h.assertTrue(n == 83 && grouped == 83, "83 settings (Parts 8, 9 and 10B), every one in a group: " + n + " "
-                + grouped);
+        // (Part 12: and the 32 sound settings, on the Sound page, in no group: EditorGameTests)
+        int sound = net.jj.giants.editor.SoundCatalog.SETTINGS.size();
+        h.assertTrue(n == 83 + sound && grouped == 83, "83 settings (Parts 8, 9 and 10B), every one in a group, and"
+                + " the sound ones: " + n + " " + grouped);
         // nothing on: what the giants are sent is exactly the world's own
         Map<String, JsonElement> all = AdminWorld.get(s).values("all");
         h.assertTrue(Systems.forGiants(s, all) == all, "off: the very same map");
