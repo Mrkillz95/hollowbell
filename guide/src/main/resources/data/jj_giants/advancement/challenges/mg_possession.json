@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:ender_eye"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_possession",
+      "fallback": "Possessed"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_possession.what",
+      "fallback": "Win a game of Possession"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

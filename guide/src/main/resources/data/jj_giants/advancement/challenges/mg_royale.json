@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:golden_sword"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_royale",
+      "fallback": "Royale Champion"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_royale.what",
+      "fallback": "Win a game of Giant Royale"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

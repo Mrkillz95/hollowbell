@@ -65,6 +65,9 @@ public final class AdminBookClient {
     private static @Nullable JsonObject systems;
     /** (Part 7) the Fun and World tools pages' own state */
     private static @Nullable JsonObject fun;
+    /** (Part 10A) the Minigames page, and whether this player may run minigames (admins; moderators if allowed) */
+    private static @Nullable JsonObject minigames;
+    private static boolean mayMinigames;
     /** goes up with every Live control page (once a second while it is looked at) */
     private static int liveVersion, previewVersion;
     /** the server's last word on a change */
@@ -96,7 +99,8 @@ public final class AdminBookClient {
         said = List.of();
         role = "";
         live = changes = presets = preview = players = tools = systems = null;
-        fun = null;
+        fun = minigames = null;
+        mayMinigames = false;
         version++;
         liveVersion++;
     }
@@ -164,6 +168,30 @@ public final class AdminBookClient {
     public static void toolsForTests(JsonObject o) {
         tools = o;
         version++;
+    }
+
+    /** (Part 10A) the Minigames page */
+    public static @Nullable JsonObject minigames() {
+        return minigames;
+    }
+
+    /** (Part 10A) may run minigames: admins, and moderators while the admins allow it */
+    public static boolean mayMinigames() {
+        return mayMinigames;
+    }
+
+    /** (the picture-taking) the Minigames page as the server would send it */
+    public static void minigamesForTests(JsonObject o) {
+        minigames = o;
+        mayMinigames = true;
+        version++;
+    }
+
+    /** (Part 10A) the Minigames page is being looked at (the server sends it every second while a game is on) */
+    static void watchMinigames(boolean on) {
+        if (local != null) return;
+        if (Minecraft.getInstance().getConnection() != null && ClientPlayNetworking.canSend(AdminBookAskPayload.TYPE))
+            ClientPlayNetworking.send(new AdminBookAskPayload(on ? "minigames" : "minigames_off"));
     }
 
     /** (Part 8) the Systems page */
@@ -437,6 +465,7 @@ public final class AdminBookClient {
                 role = AdminJsonBridge.str(o, "role");
                 myName = AdminJsonBridge.str(o, "name");
                 mayWatch = o.has("watch") && o.get("watch").getAsBoolean();
+                mayMinigames = o.has("minigames") && o.get("minigames").getAsBoolean();
                 watchingNow = o.get("watching") instanceof JsonObject wj ? wj : null;
                 myId = AdminJsonBridge.str(o, "id");
             }
@@ -450,6 +479,7 @@ public final class AdminBookClient {
             case "tools" -> tools = o;
             case "systems" -> systems = o;
             case "fun" -> fun = o;
+            case "minigames" -> minigames = o;
             case AdminBookStatePayload.PRESETS -> presets = o;
             case AdminBookStatePayload.PREVIEW -> {
                 preview = o;

@@ -301,7 +301,10 @@ public final class AdminServer {
         // (Part 8) the systems keep a server default of their own (config/jj_giants_admin/systems.json)
         if (f.giant() == null && AdminCatalog.systems(s)) return systemsDefault(server, who, f, s, text);
         if (f.giant() == null)
-            return Result.fail(AdminCatalog.server(s)
+            return Result.fail(net.jj.giants.minigames.MgCatalog.ours(s.id())
+                    ? "The minigame settings are only kept for each world: there's no server default to change."
+                            + " Leave out allworlds."
+                    : AdminCatalog.server(s)
                     ? "The server tools settings are only kept for each world: there's no server default to change."
                             + " Leave out allworlds."
                     : AdminCatalog.player(s)

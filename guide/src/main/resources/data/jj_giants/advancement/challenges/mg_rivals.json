@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:lead"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_rivals",
+      "fallback": "Top Tamer"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_rivals.what",
+      "fallback": "Win a game of Rival Tamers with your team"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

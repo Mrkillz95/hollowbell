@@ -65,7 +65,8 @@ public final class Look {
             List<JsonObject> rows = new ArrayList<>();
             for (String l : lines.subList(1, lines.size())) {
                 JsonObject r = AdminJson.object(l);
-                if (r != null && r.has("id") && r.has("state")) rows.add(r);
+                if (r != null && r.has("id") && r.has("state")
+                        && !net.jj.giants.minigames.MgLevels.temporary(AdminJson.str(r, "dim", 128))) rows.add(r);
             }
             out.add(new Kind(g, g.key(), AdminServer.nameOf(g), min, max,
                     Systems.names(head.getAsJsonArray("moods")), Systems.names(head.getAsJsonArray("does")), rows));

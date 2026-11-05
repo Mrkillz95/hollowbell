@@ -218,13 +218,20 @@ public final class AdminCatalog {
             "all.alertAreas");
 
     public static List<AdminSetting> servers() {
-        if (!singlePlayer) return SERVER_SETTINGS;
+        // (Part 10A) the minigames' settings are server tools settings too (MgCatalog)
+        if (!singlePlayer) return withMinigames(SERVER_SETTINGS);
         List<AdminSetting> out = new ArrayList<>();
         JsonPrimitive off = new JsonPrimitive(false);
         for (AdminSetting s : SERVER_SETTINGS)
             out.add(!ALERTS.contains(s.id()) ? s : new AdminSetting(s.giant(), s.id(), s.cat(), s.type(), s.min(),
                     s.max(), s.step(), s.options(), off, off, off, false, s.when(), s.name(), s.what(), s.key(),
                     s.group()));
+        return withMinigames(out);
+    }
+
+    private static List<AdminSetting> withMinigames(List<AdminSetting> l) {
+        List<AdminSetting> out = new ArrayList<>(l);
+        out.addAll(net.jj.giants.minigames.MgCatalog.SETTINGS);
         return out;
     }
 
@@ -240,7 +247,7 @@ public final class AdminCatalog {
         String full = id.startsWith("all.") ? id : "all." + id;
         for (AdminSetting s : PLAYER_SETTINGS) if (s.id().equals(full)) return true;
         for (AdminSetting s : SERVER_SETTINGS) if (s.id().equals(full)) return true;
-        return false;
+        return net.jj.giants.minigames.MgCatalog.ours(full);
     }
 
     /** the player settings (kitGuide's server default is the Guide's config, giveOnFirstJoin) */

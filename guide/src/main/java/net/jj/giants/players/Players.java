@@ -602,6 +602,12 @@ public final class Players {
                 tell(p, r);
                 sendWorld(p);
             }
+            // (Part 10A) This world â†’ Minigames: Join, Watch, Leave
+            case "mgjoin", "mgwatch", "mgleave" -> {
+                AdminServer.Result r = net.jj.giants.minigames.MgAdmin.ask(p, what);
+                if (r != null) tell(p, r);
+                sendWorld(p);
+            }
             default -> {}
         }
     }
@@ -629,6 +635,8 @@ public final class Players {
         o.add("boards", Boards.json(server, p.getStringUUID(), 10));
         boolean pick = on(server, "myGiant") && !PlayerData.get(server).s.picks.containsKey(p.getStringUUID());
         o.addProperty("canPick", pick);
+        // (Part 10A) This world â†’ Minigames
+        o.add("minigame", net.jj.giants.minigames.MgAdmin.guideJson(server, p));
         return o;
     }
 
@@ -699,6 +707,8 @@ public final class Players {
     /** one who was dying left the world (his own death done): counted once, with whoever last hurt him */
     private static void fell(LivingEntity e) {
         if (!(e.level() instanceof ServerLevel sl) || e instanceof Player) return;
+        // (Part 10A) a minigame's giants count only in the minigame
+        if (net.jj.giants.minigames.MgLevels.temporary(sl)) return;
         String kind = kindOf(e);
         if (kind == null || !counted.add(e.getUUID())) return;
         ServerPlayer killer = e.getKillCredit() instanceof ServerPlayer sp ? sp
@@ -712,6 +722,8 @@ public final class Players {
 
     private static void died(LivingEntity e, net.minecraft.world.damagesource.DamageSource src) {
         if (!(e.level() instanceof ServerLevel sl)) return;
+        // (Part 10A) nothing in a minigame's world counts on the boards, the challenges or the systems
+        if (net.jj.giants.minigames.MgLevels.temporary(sl)) return;
         if (e instanceof ServerPlayer dead) {
             Challenges.playerDied(dead);
             return;

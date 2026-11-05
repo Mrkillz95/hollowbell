@@ -33,16 +33,16 @@ import org.jetbrains.annotations.Nullable;
 public final class Boards {
     private Boards() {}
 
-    public static final List<String> KINDS = List.of("slayers", "owners", "friends");
+    public static final List<String> KINDS = List.of("slayers", "owners", "friends", "minigames");
     public static final Map<String, String> TITLES = Map.of("slayers", "Giant slayers", "owners", "Longest owners",
-            "friends", "Most befriended");
+            "friends", "Most befriended", "minigames", "Minigame winners");
     /** a board's title on a sign (a sign's line is short) */
     public static final Map<String, String> SIGN_TITLES = Map.of("slayers", "Giant slayers", "owners",
-            "Longest owners", "friends", "Befriended");
+            "Longest owners", "friends", "Befriended", "minigames", "Minigame wins");
 
-    /** each board's own switch */
+    /** each board's own switch ((Part 10A) minigames: the minigame settings' Minigame board) */
     static final Map<String, String> SWITCH = Map.of("slayers", "boardSlayers", "owners", "boardOwners", "friends",
-            "boardFriends");
+            "boardFriends", "minigames", "mgBoard");
 
     /** how often the owners are looked at (ticks) */
     public static final int LOOK_EVERY = 600;
@@ -57,6 +57,15 @@ public final class Boards {
     public static List<Row> rows(MinecraftServer server, String kind) {
         PlayerData d = PlayerData.get(server);
         List<Row> out = new ArrayList<>();
+        // (Part 10A) minigame wins, kept by the minigames
+        if (kind.equals("minigames")) {
+            for (var e : net.jj.giants.minigames.MgData.get(server).s.players.entrySet())
+                if (e.getValue().wins > 0)
+                    out.add(new Row(e.getKey(), e.getValue().name, e.getValue().wins,
+                            String.valueOf(e.getValue().wins)));
+            out.sort(Comparator.comparingLong(Row::score).reversed().thenComparing(Row::name));
+            return out;
+        }
         for (var e : d.s.stats.entrySet()) {
             PlayerData.Stats st = e.getValue();
             long score = switch (kind) {

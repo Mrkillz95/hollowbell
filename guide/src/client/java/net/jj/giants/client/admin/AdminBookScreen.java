@@ -69,7 +69,7 @@ public class AdminBookScreen extends Screen {
     private static boolean ownPage(String key) {
         return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES)
                 || key.equals(PLAYERS) || key.equals(TOOLS)
-                || key.equals(FUN) || key.equals(WORLD) || key.equals(SYSTEMS);
+                || key.equals(FUN) || key.equals(WORLD) || key.equals(SYSTEMS) || key.equals(MINIGAMES);
     }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
@@ -293,6 +293,7 @@ public class AdminBookScreen extends Screen {
     private String giantName(String key) {
         if (key.equals(AdminCatalog.ALL)) return tr("all").getString();
         if (key.equals(TOOLS)) return tt("name", "Server tools").getString();
+        if (key.equals(MINIGAMES)) return mg("name", "Minigames").getString();
         if (ownPage(key)) return tr(key).getString();
         AdminBookClient.Page p = AdminBookClient.page(key);
         if (p != null && !p.name().isEmpty()) return p.name();
@@ -309,10 +310,13 @@ public class AdminBookScreen extends Screen {
     /** Home, All giants, then each giant the server has */
     private List<String> navKeys() {
         // (a moderator has Live control only; before the server says who you are, only Home, asking)
-        if (AdminBookClient.role().equals("moderator")) return List.of(LIVE);
+        // ((Part 10A) and the Minigames page, while the admins let moderators run minigames)
+        if (AdminBookClient.role().equals("moderator"))
+            return AdminBookClient.mayMinigames() ? List.of(LIVE, MINIGAMES) : List.of(LIVE);
         if (!AdminBookClient.admin()) return List.of(HOME);
         List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS, SYSTEMS)
-                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS, FUN, WORLD, SYSTEMS));
+                : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS, FUN, WORLD, SYSTEMS,
+                        MINIGAMES));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -356,12 +360,13 @@ public class AdminBookScreen extends Screen {
         if (creating()) {
             allWorlds = false;
             if (pageKey.equals(LIVE) || pageKey.equals(CHANGES) || pageKey.equals(TOOLS) || pageKey.equals(FUN)
-                    || pageKey.equals(WORLD))
+                    || pageKey.equals(WORLD) || pageKey.equals(MINIGAMES))
                 pageKey = HOME;
         }
         if (livePage(pageKey)) AdminBookClient.watchLive(true);
         if (pageKey.equals(TOOLS)) AdminBookClient.watchTools(true);
         if (pageKey.equals(SYSTEMS)) AdminBookClient.watchSystems(true);
+        if (pageKey.equals(MINIGAMES)) AdminBookClient.watchMinigames(true);
         seenVersion = AdminBookClient.version();
         seenLive = AdminBookClient.liveVersion();
         seenPreview = AdminBookClient.previewVersion();
@@ -1272,6 +1277,7 @@ public class AdminBookScreen extends Screen {
         else if (pageKey.equals(FUN)) funRows();
         else if (pageKey.equals(WORLD)) worldRows();
         else if (pageKey.equals(SYSTEMS)) systemsRows();
+        else if (pageKey.equals(MINIGAMES)) minigamesRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1289,7 +1295,8 @@ public class AdminBookScreen extends Screen {
         if (searching) return;
         Component label;
         if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS)
-                || pageKey.equals(TOOLS) || pageKey.equals(FUN) || pageKey.equals(WORLD) || pageKey.equals(SYSTEMS))
+                || pageKey.equals(TOOLS) || pageKey.equals(FUN) || pageKey.equals(WORLD) || pageKey.equals(SYSTEMS)
+                || pageKey.equals(MINIGAMES))
             return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
@@ -1731,6 +1738,7 @@ public class AdminBookScreen extends Screen {
         boolean speaks = key.equals(AdminCatalog.ALL) || gj == null || gj.get("speaks") == null
                 || gj.get("speaks").getAsBoolean();
         Component sub = key.equals(TOOLS) ? tt("tile", "Pause, events, map, stats")
+                : key.equals(MINIGAMES) ? mg("tile", "Royale, Boss Rush, Siegeâ€¦")
                 : ownPage(key) ? tr(key + ".tile") : !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n)
                 : tr("tile.default");
         g.drawString(font, cut(sub.getString(), tw), tx, y + 16, !speaks ? DIM : n > 0 ? GOLD : GREY, false);
@@ -1773,6 +1781,9 @@ public class AdminBookScreen extends Screen {
         if (key.equals(TOOLS) != pageKey.equals(TOOLS)) AdminBookClient.watchTools(key.equals(TOOLS));
         // (Part 8) and the Systems page
         if (key.equals(SYSTEMS) != pageKey.equals(SYSTEMS)) AdminBookClient.watchSystems(key.equals(SYSTEMS));
+        // (Part 10A) and the Minigames page (every second while a minigame is on)
+        if (key.equals(MINIGAMES) != pageKey.equals(MINIGAMES))
+            AdminBookClient.watchMinigames(key.equals(MINIGAMES));
         pageKey = key;
         keptPage = key;
         loadTabs();
@@ -1897,6 +1908,7 @@ public class AdminBookScreen extends Screen {
             case TOOLS -> AdminBookClient.tools() != null;
             case FUN, WORLD -> AdminBookClient.fun() != null && AdminBookClient.live() != null;
             case SYSTEMS -> AdminBookClient.page(AdminCatalog.ALL) != null;
+            case MINIGAMES -> AdminBookClient.minigames() != null;
             default -> AdminBookClient.home() != null
                     && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
         };
@@ -2168,6 +2180,10 @@ public class AdminBookScreen extends Screen {
             title = tr("systems");
             sub = tr("systems.sub");
             pic = "systems";
+        } else if (pageKey.equals(MINIGAMES)) {
+            title = mg("name", "Minigames");
+            sub = mg("sub", "Rounds in worlds of their own: nothing here changes, and players get their things back.");
+            pic = MINIGAMES;
         } else if (pageKey.equals(FUN) || pageKey.equals(WORLD)) {
             title = tr(pageKey);
             sub = tr(pageKey + ".sub");
@@ -5813,6 +5829,180 @@ public class AdminBookScreen extends Screen {
         @Override
         void cancel() {
             closeModal();
+        }
+    }
+
+    // (Part 10A, ADMIN_BRIDGE.md §26.11) the Minigames page: what's on (the lobby or the round, its players and its
+    // giants, Start now / Stop), every mode with Open to join and Everyone online, the minigame settings, the last
+    // results and the winners' board. Admins, and moderators while the admins allow it (no settings for them).
+
+    public static final String MINIGAMES = "minigames";
+    /** rounds picked for the next one (0 = the world's Rounds setting) */
+    private static int mgRounds = 0;
+
+    /** a Minigames page line: its lang key (admin.jj_giants.mg.*) or these words */
+    static MutableComponent mg(String key, String fallback, Object... args) {
+        return Component.translatableWithFallback("admin.jj_giants.mg." + key, fallback, args);
+    }
+
+    private static String mgPhase(String phase) {
+        return switch (phase) {
+            case "lobby" -> "lobby";
+            case "ready" -> "about to start";
+            case "play" -> "playing";
+            case "round_end" -> "round over";
+            case "next" -> "next round coming";
+            case "results" -> "results";
+            default -> "ending";
+        };
+    }
+
+    private void minigamesRows() {
+        JsonObject m = AdminBookClient.minigames();
+        if (m == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        boolean admin = AdminBookClient.admin();
+        if (bool(m, "paused"))
+            rows.add(new Note(mg("paused", "All giants are paused: a minigame can't start until they carry on"
+                    + " (Server tools)."), WARN));
+        if (bool(m, "quiet"))
+            rows.add(new Note(mg("quiet", "Quiet mode is on: only the players in a minigame hear about it (and the"
+                    + " Guide's This world page shows it)."), GREY));
+        JsonObject g = m.get("game") instanceof JsonObject gj ? gj : null;
+        if (g != null) mgGame(g);
+        else rows.add(new Card(mg("none", "No minigame is on"), MINIGAMES, mg("none.body", "Pick a mode below:"
+                + " Open to join lets players choose (Join on their Guide's This world page, [Join] in chat, or"
+                + " /giants join), Everyone online takes everybody. Each round is played in a world of its own,"
+                + " made for it and thrown away after: nothing in this world is touched, and every player gets"
+                + " their things, place and levels back exactly."), KEY, List.of()));
+        // the modes
+        boolean free = g == null && !bool(m, "paused");
+        int rounds = mgRounds;
+        rows.add(new Head(mg("modes", "Start a minigame"), null, null).pic(MINIGAMES));
+        rows.add(new LineRow(mg("rounds", "Rounds"), TEXT, mg("rounds.sub", "%s (click to change; the world's"
+                + " Rounds setting is used when none is picked)", rounds == 0 ? "as set" : String.valueOf(rounds)),
+                List.<Object[]>of(new Object[] {Component.literal(rounds == 0 ? "as set" : rounds + ""),
+                    (Runnable) () -> {
+                        mgRounds = (mgRounds + 1) % 6;
+                        build();
+                    }, mg("rounds.tip", "Rounds in the next minigame: each on a fresh map")})));
+        for (JsonObject j : objects(m, "modes")) {
+            String id = str(j, "id"), name = str(j, "name");
+            String cannot = str(j, "cannot");
+            boolean ok = free && cannot.isEmpty();
+            String body = str(j, "about") + "  "
+                    + (cannot.isEmpty() ? (dbl(j, "fewest", 1) > 1 ? "Needs " + (int) dbl(j, "fewest", 1)
+                            + " players or more. " : "") + (bool(j, "pvp") ? "Players may hit each other." : "")
+                    : "Can't be played now: " + cannot);
+            Runnable open = () -> confirm(mg("start.title", "Open %s?", name), mg("start.body",
+                    "%s Players have the lobby's time to join (Join on their Guide, [Join] in chat, /giants join).",
+                    str(j, "about")), mg("start.open", "Open to join"),
+                    () -> request("mgstart", "mode", id, "kind", "open", "rounds", rounds));
+            Runnable all = () -> confirm(mg("start.title.all", "Start %s for everyone?", name), mg("start.body.all",
+                    "Everyone online is taken into it when the lobby's time is up (their things are kept safe and"
+                            + " given back after). %s", str(j, "about")), mg("start.all", "Everyone online"),
+                    () -> request("mgstart", "mode", id, "kind", "everyone", "rounds", rounds));
+            rows.add(new Card(Component.literal(name), "mg_" + id, Component.literal(body.trim()),
+                    cannot.isEmpty() ? GOLD : DIM, List.<Object[]>of(
+                            new Object[] {mg("start.open", "Open to join"), open,
+                                mg("start.open.tip", "Players choose to join or watch"), ok},
+                            new Object[] {mg("start.all", "Everyone online"), all,
+                                mg("start.all.tip", "Everyone online is taken in"), ok})));
+        }
+        // the settings (admins)
+        if (admin) toolSettings("mg/settings", mg("settings", "Minigame settings"), mg("settings.note",
+                "Kept for this world. Each round's map, the giants' size, the lobby, players and rounds."),
+                MINIGAMES, "all.mgLobby", "all.mgMin", "all.mgMax", "all.mgRounds", "all.mgMinutes", "all.mgSize",
+                "all.mgGiantSize", "all.mgPvp", "all.mgSpectate", "all.mgTell", "all.mgBoard", "all.mgMods");
+        // the last results and the board
+        List<JsonObject> res = objects(m, "results");
+        Head rh = new Head(mg("results", "Last results"), null, null).folding("mg/results", MINIGAMES, res.size());
+        rows.add(rh);
+        if (!rh.shut()) {
+            if (res.isEmpty()) rows.add(new Note(mg("results.none", "None yet."), GREY));
+            for (JsonObject r : res)
+                rows.add(new LineRow(Component.literal(str(r, "line")), TEXT, Component.literal(when(lng(r, "time"))
+                        + " · " + (int) dbl(r, "players", 0) + " players"), List.of(), true));
+        }
+        List<JsonObject> board = objects(m, "board");
+        Head bh = new Head(mg("board", "Minigame winners"), null, null).folding("mg/board", "players", board.size());
+        rows.add(bh);
+        if (!bh.shut()) {
+            if (board.isEmpty()) rows.add(new Note(mg("board.none", "Nobody has won one yet."), GREY));
+            for (JsonObject r : board)
+                rows.add(new LineRow(Component.literal((int) dbl(r, "place", 0) + "  " + str(r, "name")), KEY,
+                        mg("board.line", "%s wins in %s games", (int) dbl(r, "wins", 0), (int) dbl(r, "games", 0)),
+                        List.of()));
+        }
+    }
+
+    /** the minigame on now: its card (Start now, Stop), its players and its giants */
+    private void mgGame(JsonObject g) {
+        String name = str(g, "name"), phase = str(g, "phase");
+        List<JsonObject> ps = objects(g, "players");
+        int playing = 0, in = 0, watching = 0;
+        for (JsonObject p : ps) {
+            if (bool(p, "watcher")) watching++;
+            else {
+                playing++;
+                if (bool(p, "alive")) in++;
+            }
+        }
+        String body;
+        if (phase.equals("lobby")) {
+            int s = (int) dbl(g, "lobby", 0);
+            double built = dbl(g, "building", 1);
+            body = (bool(g, "force") ? "Everyone online" : "Open to join") + " · started by " + str(g, "by") + ". "
+                    + (s > 0 ? "Starts in " + s / 60 + ":" + String.format("%02d", s % 60) : "Starting")
+                    + " · " + playing + " in (needs " + (int) dbl(g, "need", 1) + ", at most " + (int) dbl(g, "most", 16)
+                    + ")" + (watching > 0 ? " · " + watching + " watching" : "")
+                    + (built < 1 ? " · map " + Math.round(built * 100) + "% built" : " · map ready") + ".";
+        } else {
+            int standing = 0;
+            for (JsonObject k : objects(g, "giants")) if (bool(k, "standing")) standing++;
+            body = (dbl(g, "rounds", 1) > 1 ? "Round " + (int) dbl(g, "round", 1) + " of " + (int) dbl(g, "rounds", 1)
+                    + " · " : "") + mgPhase(phase) + (phase.equals("play") ? " · " + str(g, "clock") + " left" : "")
+                    + " · " + in + " of " + playing + " still in" + (watching > 0 ? " · " + watching + " watching" : "")
+                    + " · " + standing + " giants standing." + (str(g, "last").isEmpty() ? "" : " " + str(g, "last"));
+        }
+        List<Object[]> bs = new ArrayList<>();
+        if (phase.equals("lobby")) bs.add(new Object[] {mg("now", "Start now"), (Runnable) () -> request("mgnow"),
+            mg("now.tip", "Cut the lobby short: it starts as soon as the map is ready")});
+        bs.add(new Object[] {mg("stop", "Stop"), (Runnable) () -> confirm(mg("stop.title", "Stop %s?", name),
+                mg("stop.body", "Everyone in it goes back where they were, with their own things, at once. Nothing"
+                        + " is counted."), mg("stop", "Stop"), () -> request("mgstop")),
+            mg("stop.tip", "Ends it now for everyone")});
+        rows.add(new Card(Component.literal(name + " · " + mgPhase(phase)), "mg_" + str(g, "mode"),
+                Component.literal(body), phase.equals("play") ? WARN : ORANGE, bs));
+        Head ph = new Head(mg("players", "Players"), null, null).folding("mg/players", "players", ps.size());
+        rows.add(ph);
+        if (!ph.shut()) {
+            if (ps.isEmpty()) rows.add(new Note(mg("players.none", "Nobody yet."), GREY));
+            for (JsonObject p : ps) {
+                boolean w = bool(p, "watcher"), alive = bool(p, "alive");
+                String state = w ? "watching" : phase.equals("lobby") ? "in the lobby" : bool(p, "down") ? "down"
+                        : alive ? "still in" : "out";
+                String more = w ? "" : " · knock-outs " + (int) dbl(p, "kos", 0) + (dbl(p, "score", 0) != 0
+                        ? " · score " + (int) dbl(p, "score", 0) : "") + (dbl(p, "wins", 0) > 0 ? " · round wins "
+                        + (int) dbl(p, "wins", 0) : "") + (p.has("team") ? " · team " + ((int) dbl(p, "team", 0) + 1)
+                        : "");
+                rows.add(new LineRow(Component.literal(str(p, "name")), w ? GREY : alive ? GOOD : DIM,
+                        Component.literal(state + more), List.of()));
+            }
+        }
+        List<JsonObject> gs = objects(g, "giants");
+        if (gs.isEmpty()) return;
+        Head gh = new Head(mg("giants", "Giants in the round"), null, null).folding("mg/giants", "all", gs.size());
+        rows.add(gh);
+        if (gh.shut()) return;
+        for (JsonObject k : gs) {
+            boolean st = bool(k, "standing");
+            String role = str(k, "role");
+            String hp = k.has("health") ? (int) dbl(k, "health", 0) + " / " + (int) dbl(k, "max", 0) + " health" : "";
+            rows.add(new LineRow(Component.literal(str(k, "name")), st ? TEXT : DIM, Component.literal(
+                    (st ? hp : "fallen") + (role.isEmpty() ? "" : " · " + role)), List.of()));
         }
     }
 

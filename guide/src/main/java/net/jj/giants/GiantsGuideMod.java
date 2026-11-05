@@ -56,6 +56,8 @@ public class GiantsGuideMod implements ModInitializer {
         net.jj.giants.tools.Tools.register();
         // (Part 8) the new systems
         net.jj.giants.systems.Systems.register();
+        // (Part 10A) the minigames, each round in a world of its own
+        net.jj.giants.minigames.Minigames.register();
         LOG.info(
                 "Giants Guide loaded: {} of {} giants installed",
                 Giants.installed().size(),

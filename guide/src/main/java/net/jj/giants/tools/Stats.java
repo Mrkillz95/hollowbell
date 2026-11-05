@@ -35,7 +35,8 @@ public final class Stats {
     private static double tickMs;
 
     public static void entityStarts(Entity e) {
-        current = Tools.kindOf(e);
+        // (Part 10A) a minigame's giants are left out (their cost, what they break, grief healing)
+        current = net.jj.giants.minigames.MgLevels.temporary(e.level()) ? null : Tools.kindOf(e);
         if (current != null) started = System.nanoTime();
     }
 
@@ -90,7 +91,7 @@ public final class Stats {
 
     /** a player died: killed by a giant (his blow, his creature's, his shot) */
     static void died(LivingEntity e, DamageSource src) {
-        if (!(e instanceof ServerPlayer p)) return;
+        if (!(e instanceof ServerPlayer p) || net.jj.giants.minigames.MgLevels.temporary(p.level())) return;
         String kind = Tools.kindOf(src.getEntity());
         if (kind == null) kind = Tools.kindOf(src.getDirectEntity());
         if (kind == null) return;
@@ -111,7 +112,8 @@ public final class Stats {
 
     /** a player was hurt by a giant */
     static void damaged(LivingEntity e, DamageSource src, float base, float taken, boolean blocked) {
-        if (!(e instanceof ServerPlayer p) || taken <= 0) return;
+        if (!(e instanceof ServerPlayer p) || taken <= 0 || net.jj.giants.minigames.MgLevels.temporary(p.level()))
+            return;
         String kind = Tools.kindOf(src.getEntity());
         if (kind == null) kind = Tools.kindOf(src.getDirectEntity());
         if (kind == null || p.getServer() == null) return;

@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:writable_book"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_bounty",
+      "fallback": "Bounty Hunter"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_bounty.what",
+      "fallback": "Win a game of Bounty Board"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

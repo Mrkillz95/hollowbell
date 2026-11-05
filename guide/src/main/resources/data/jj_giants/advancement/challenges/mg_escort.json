@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:shield"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_escort",
+      "fallback": "Safe Passage"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_escort.what",
+      "fallback": "See the giant through in a game of Escort"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

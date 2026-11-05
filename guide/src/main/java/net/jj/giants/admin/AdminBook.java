@@ -153,6 +153,12 @@ public final class AdminBook {
             liveWatching.remove(p.getUUID());
             net.jj.giants.tools.ToolsAdmin.watch(server, p, false);
             net.jj.giants.systems.SystemsAdmin.watch(server, p, false);
+            net.jj.giants.minigames.MgAdmin.watch(server, p, false);
+            return;
+        }
+        // (Part 10A) the Minigames page, looked at or not (admins, and moderators the admins allow: checked there)
+        if (what.equals("minigames") || what.equals("minigames_off")) {
+            net.jj.giants.minigames.MgAdmin.watch(server, p, what.equals("minigames"));
             return;
         }
         if (AdminBookAskPayload.LIVE_OFF.equals(what)) {
@@ -235,6 +241,9 @@ public final class AdminBook {
             AdminServer.Result wr = net.jj.giants.fun.Fun.request(server, p, who, what, o);
             return wr == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : wr;
         }
+        // (Part 10A) the Minigames page's requests: admins, and moderators while the admins allow it (checked there)
+        if (net.jj.giants.minigames.MgAdmin.DOS.contains(what))
+            return net.jj.giants.minigames.MgAdmin.request(server, p, what, o);
         // everything else: Admins only
         if (role != Role.ADMIN) {
             GiantsGuideMod.LOG.info("Giants admin book: {} (a moderator) asked for {}, which only admins may", who,
@@ -484,6 +493,10 @@ public final class AdminBook {
                 continue;
             }
             sender.accept(p, roleState(p, r));
+            // (Part 10A) the Minigames page: admins, and moderators while the admins allow it
+            if ((every || what.contains(net.jj.giants.minigames.MgAdmin.KIND))
+                    && net.jj.giants.minigames.MgAdmin.mayRun(p))
+                sender.accept(p, net.jj.giants.minigames.MgAdmin.page(server));
             if (r != Role.ADMIN) continue;
             for (AdminBookStatePayload pg : pages) sender.accept(p, pg);
             if (presets) sender.accept(p, presets(server, p));
@@ -528,6 +541,8 @@ public final class AdminBook {
             sender.accept(p, net.jj.giants.systems.SystemsAdmin.page(server));
             sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
         }
+        if (r != Role.NONE && net.jj.giants.minigames.MgAdmin.mayRun(p))
+            sender.accept(p, net.jj.giants.minigames.MgAdmin.page(server));
         if (r != Role.NONE) sender.accept(p, live(server));
     }
 
@@ -545,6 +560,8 @@ public final class AdminBook {
         MinecraftServer server = p.getServer();
         if (server != null) {
             o.addProperty("watch", r == Role.ADMIN || r == Role.MODERATOR && modWatch(server));
+            // (Part 10A) may run minigames (the Minigames page shows)
+            o.addProperty("minigames", r != Role.NONE && net.jj.giants.minigames.MgAdmin.mayRun(p));
             JsonObject now = net.jj.giants.fun.Fun.watchingJson(p);
             if (now != null) o.add("watching", now);
         }

@@ -128,7 +128,9 @@ public class GuideScreen extends Screen {
             Component[] names = new Component[pg.length];
             int need = 0;
             for (int i = 0; i < pg.length; i++) {
-                names[i] = Component.translatable("guide.jj_giants.tab." + pg[i]);
+                // ((Part 10A) This world's Minigames tab has its words here)
+                names[i] = pg[i].equals("games") ? Component.translatableWithFallback("guide.jj_giants.tab.games",
+                        "Minigames") : Component.translatable("guide.jj_giants.tab." + pg[i]);
                 need += font.width(names[i]) + 8;
             }
             int gap = 2, spare = Math.max(0, rw - need - gap * (pg.length - 1)), x = rx;
@@ -800,6 +802,7 @@ public class GuideScreen extends Screen {
         switch (page) {
             case "rules" -> WorldPages.rules(w, out);
             case "votes" -> WorldPages.votes(w, out);
+            case "games" -> WorldPages.games(w, out);
             default -> WorldPages.top(w, out);
         }
     }

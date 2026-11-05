@@ -52,6 +52,12 @@ public final class AdminStyle {
             "mirror", "chaos", "systems_b");
     static final ResourceLocation P9 = tex("icons_p9");
 
+    /** (Part 10A) the Minigames page's pictures, in the order tools/minigame_icons.py draws them */
+    public static final List<String> P10A_ICONS = List.of("minigames", "mg_royale", "mg_bossrush", "mg_siege",
+            "mg_escort", "mg_legends", "mg_possession", "mg_rivals", "mg_bounty", "mg_kaiju", "mg_onelife",
+            "mg_speedrun");
+    static final ResourceLocation P10A = tex("icons_p10a");
+
     /** the section pictures, in the order tools/admin_textures.py draws them */
     public static final List<String> ICON_NAMES = List.of("stats", "moves", "spawning", "behaviour", "healing",
             "taming", "loot", "players", "effects", "worldgen", "misc", "home", "live", "presets", "changes", "all",
@@ -129,6 +135,11 @@ public final class AdminStyle {
         // (Part 9) new systems B's pictures
         if (i < 0 && P9_ICONS.contains(name)) {
             g.blit(P9, x, y, size, size, P9_ICONS.indexOf(name) * 16, 0, 16, 16, P9_ICONS.size() * 16, 16);
+            return;
+        }
+        // (Part 10A) the Minigames page's pictures
+        if (i < 0 && P10A_ICONS.contains(name)) {
+            g.blit(P10A, x, y, size, size, P10A_ICONS.indexOf(name) * 16, 0, 16, 16, P10A_ICONS.size() * 16, 16);
             return;
         }
         if (i < 0) i = ICON_NAMES.indexOf("misc");

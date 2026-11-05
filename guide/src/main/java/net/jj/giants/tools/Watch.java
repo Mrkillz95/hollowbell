@@ -97,7 +97,10 @@ public final class Watch {
             String name = AdminServer.nameOf(g);
             for (String l : lines.subList(1, lines.size())) {
                 JsonObject r = AdminJson.object(l);
-                if (r != null && r.has("id") && r.has("state")) rows.add(new Row(g.key(), name, r));
+                // (Part 10A) a minigame's giants are left out of every look (areas, alerts, the systems, the map)
+                if (r != null && r.has("id") && r.has("state")
+                        && !net.jj.giants.minigames.MgLevels.temporary(AdminJson.str(r, "dim", 128)))
+                    rows.add(new Row(g.key(), name, r));
             }
             last.put(g.key(), rows);
         }

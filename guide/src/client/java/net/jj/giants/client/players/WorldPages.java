@@ -14,7 +14,7 @@ import net.minecraft.network.chat.Component;
 public final class WorldPages {
     private WorldPages() {}
 
-    public static final String[] PAGES = {"rules", "votes", "top"};
+    public static final String[] PAGES = {"rules", "votes", "top", "games"};
 
     static final int TEXT = 0xFFD8D8D8, GREY = 0xFF9A9A9A, KEY = 0xFFFFE080, GOOD = 0xFF80E080;
 
@@ -102,6 +102,66 @@ public final class WorldPages {
         }
     }
 
+    /** (Part 10A) This world â†’ Minigames: what's on (Join, Watch, Leave), the last results, the winners */
+    public static void games(JsonObject w, Out out) {
+        JsonObject m = w.getAsJsonObject("minigame");
+        if (m == null) return;
+        if (m.get("game") instanceof JsonObject g) {
+            String phase = str(g, "phase");
+            boolean in = g.get("in").getAsBoolean(), watch = g.get("watch").getAsBoolean(),
+                    inWorld = g.get("inWorld").getAsBoolean(), force = g.get("force").getAsBoolean(),
+                    watching = g.get("watching").getAsBoolean();
+            out.heading(Component.literal(str(g, "name")));
+            out.para(Component.literal(str(g, "about")), TEXT);
+            int players = g.get("players").getAsInt(), most = g.get("most").getAsInt(),
+                    need = g.get("need").getAsInt(), s = g.get("lobby").getAsInt();
+            if (phase.equals("lobby"))
+                out.para(Component.literal((force ? "For everyone online. " : "") + "Starts in " + s / 60 + ":"
+                        + String.format("%02d", s % 60) + " Â· " + players + " of " + most + " in" + (players < need
+                        ? " (needs " + need + ")" : "") + "."), KEY);
+            else out.para(Component.literal(phase.equals("play") ? "Being played now"
+                    + (g.get("rounds").getAsInt() > 1 ? " (round " + g.get("round").getAsInt() + " of "
+                    + g.get("rounds").getAsInt() + ")" : "") + "." : "Between rounds or ending."), KEY);
+            if (!str(g, "names").isEmpty()) out.para(Component.literal("Playing: " + str(g, "names")), GREY);
+            List<Object[]> bs = new ArrayList<>();
+            if (phase.equals("lobby") && !force) {
+                if (!in) bs.add(new Object[] {Component.literal("Join"), (Runnable) () -> PlayersClient.ask("mgjoin"),
+                    false});
+                if (!watch && watching) bs.add(new Object[] {Component.literal("Watch"),
+                    (Runnable) () -> PlayersClient.ask("mgwatch"), false});
+                if (in || watch) bs.add(new Object[] {Component.literal("Drop out"),
+                    (Runnable) () -> PlayersClient.ask("mgleave"), false});
+            } else if (!phase.equals("lobby")) {
+                if (!inWorld && watching) bs.add(new Object[] {Component.literal("Watch"),
+                    (Runnable) () -> PlayersClient.ask("mgwatch"), false});
+                if (inWorld) bs.add(new Object[] {Component.literal("Leave (back to where you were)"),
+                    (Runnable) () -> PlayersClient.ask("mgleave"), false});
+            }
+            if (in && phase.equals("lobby")) out.para(Component.literal("You're in! Your things stay safe: you get"
+                    + " them back, where you were, when you come out."), GOOD);
+            if (!bs.isEmpty()) out.buttons(bs);
+        } else {
+            out.heading(Component.literal("No minigame right now"));
+            out.para(Component.literal("When the admins open one (Giant Royale, Boss Rush, Siegeâ€¦) it shows here with"
+                    + " Join and Watch, and in chat. Each is played in a world of its own: you come back where you"
+                    + " were, with everything you had."), GREY);
+        }
+        if (m.has("myWins")) out.para(Component.literal("You: " + m.get("myWins").getAsInt() + " wins in "
+                + m.get("myGames").getAsInt() + " games."), GOOD);
+        if (m.get("results") instanceof JsonArray r && !r.isEmpty()) {
+            out.heading(Component.literal("Last results"));
+            for (JsonElement e : r) out.bullet(Component.literal(e.getAsString()));
+        }
+        if (m.get("board") instanceof JsonArray b && !b.isEmpty()) {
+            out.heading(Component.literal("Minigame winners"));
+            for (JsonElement e : b) {
+                JsonObject r = e.getAsJsonObject();
+                out.row(Component.literal(r.get("place").getAsInt() + "  " + str(r, "name")),
+                        Component.literal(r.get("wins").getAsInt() + " wins"), KEY);
+            }
+        }
+    }
+
     public static void top(JsonObject w, Out out) {
         JsonObject b = w.getAsJsonObject("boards");
         if (b == null) return;
@@ -113,7 +173,8 @@ public final class WorldPages {
         if (boards.isEmpty()) out.para(tr("top.none_shown"), GREY);
         for (JsonElement e : boards) {
             JsonObject o = e.getAsJsonObject();
-            out.heading(tr("top." + str(o, "kind")));
+            out.heading(Component.translatableWithFallback("guide.jj_giants.world.top." + str(o, "kind"),
+                    str(o, "title")));
             JsonArray rows = o.getAsJsonArray("rows");
             if (rows.isEmpty()) out.para(tr("top.nobody"), GREY);
             for (JsonElement re : rows) {

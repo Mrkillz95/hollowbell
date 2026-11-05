@@ -456,7 +456,8 @@ public class PlayersGameTests implements FabricGameTest {
                 && back.s.stats.get(b.getStringUUID()).longest == 600, "kept with the world");
         JsonObject j = Boards.json(s, a.getStringUUID(), 10);
         JsonArray boards = j.getAsJsonArray("boards");
-        h.assertTrue(boards.size() == 3, "three boards");
+        // ((Part 10A) and the minigame winners)
+        h.assertTrue(boards.size() == 4, "four boards");
         JsonObject slayers = boards.get(0).getAsJsonObject();
         h.assertTrue(slayers.getAsJsonArray("rows").get(0).getAsJsonObject().get("name").getAsString()
                 .equals("slayer") && slayers.get("myPlace").getAsInt() == 1, "slayer first: " + slayers);
@@ -471,7 +472,7 @@ public class PlayersGameTests implements FabricGameTest {
         set(h, s, "boardSlayers", "off");
         Boards.updateSigns(s);
         h.assertTrue(sign.getFrontText().getMessage(1, false).getString().equals("Turned off"), "hidden board");
-        h.assertTrue(Boards.json(s, null, 5).getAsJsonArray("boards").size() == 2, "only the boards shown");
+        h.assertTrue(Boards.json(s, null, 5).getAsJsonArray("boards").size() == 3, "only the boards shown");
         h.getLevel().setBlockAndUpdate(at, Blocks.AIR.defaultBlockState());
         Boards.updateSigns(s);
         h.assertTrue(PlayerData.get(s).s.signs.isEmpty(), "a sign that's gone is dropped");

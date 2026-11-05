@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jj.giants.minigamesmixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MgServerAccess",
+    "MgChunkSaveMixin",
+    "MgEntitySaveMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

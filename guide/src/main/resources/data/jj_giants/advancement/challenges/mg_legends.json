@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:nether_star"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_legends",
+      "fallback": "Legend Slayer"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_legends.what",
+      "fallback": "Bring down every legend in a game of Legends"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

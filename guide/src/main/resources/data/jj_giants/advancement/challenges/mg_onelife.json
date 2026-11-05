@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:golden_apple"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_onelife",
+      "fallback": "Once Is Enough"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_onelife.what",
+      "fallback": "Make it through a game of One Life"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:totem_of_undying"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.mg_kaiju",
+      "fallback": "War Survivor"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.mg_kaiju.what",
+      "fallback": "Survive a game of Kaiju War"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
