@@ -49,7 +49,11 @@ loom {
             name "Auto Test"
             source sourceSets.gametestClient
             vmArg "-Djj_giants.autotest=${project.projectDir}/" + (project.findProperty("script") ?: "tools/autotest.txt")
-            vmArg "-Xmx4G"
+            vmArg "-Xmx${project.findProperty('autotestHeap') ?: '4G'}"
+            // -Pmgreach=off: minigame worlds at the server's own distances (as before), for measuring
+            if (project.hasProperty('mgreach')) vmArg "-Djj_giants.mgreach=${project.findProperty('mgreach')}"
+            // -Pjfr: a Java Flight Recording of the whole run (build/autotest/autotest.jfr), for lag hunts
+            if (project.hasProperty('jfr')) vmArg "-XX:StartFlightRecording=filename=${project.layout.buildDirectory.get().asFile}/autotest/autotest.jfr,settings=profile,dumponexit=true"
             programArgs "--width", "1280", "--height", "720"
             runDir "build/autotest"
         }

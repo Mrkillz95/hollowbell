@@ -128,12 +128,15 @@ public final class AutoTest implements ClientModInitializer {
                                 ls,
                                 new WorldOptions(20261001L, false, false),
                                 ra -> {
+                                    // "normalworld": an ordinary world (land made as in a real game), for lag hunts
+                                    boolean normal = script.stream().anyMatch(l -> l.trim().equals("normalworld"));
                                     var dims = ra.registryOrThrow(Registries.WORLD_PRESET)
-                                            .getHolderOrThrow(WorldPresets.FLAT)
+                                            .getHolderOrThrow(normal ? WorldPresets.NORMAL : WorldPresets.FLAT)
                                             .value()
                                             .createWorldDimensions();
                                     // "deepflat": a flat world with deep ground (grass at y 36) for the dens
-                                    if (!script.stream().anyMatch(l -> l.trim().equals("deepflat"))) return dims;
+                                    if (normal || !script.stream().anyMatch(l -> l.trim().equals("deepflat")))
+                                        return dims;
                                     var flat = (net.minecraft.world.level.levelgen.FlatLevelSource) dims.overworld();
                                     var layers = List.of(
                                             new net.minecraft.world.level.levelgen.flat.FlatLayerInfo(
@@ -173,6 +176,14 @@ public final class AutoTest implements ClientModInitializer {
             fightPhase = null;
         }
         runLines(mc);
+    }
+
+    private static int layoutProblems;
+
+    private static void layoutFound(String where, java.util.Set<String> found) {
+        layoutProblems += found.size();
+        for (String f : found) GiantsGuideMod.LOG.warn("layout: {}", f);
+        GiantsGuideMod.LOG.info("layout: {} looked at, {} overlap(s); {} so far", where, found.size(), layoutProblems);
     }
 
     private static String fightPhase;
@@ -297,11 +308,75 @@ public final class AutoTest implements ClientModInitializer {
                 mc.options.renderDistance().set(Integer.parseInt(s.substring(7).trim()));
                 continue;
             }
+            // (lagfix) window W H: the game's window that size (a moment later)
+            if (s.startsWith("window ")) {
+                String[] a = s.substring(7).trim().split(" +");
+                org.lwjgl.glfw.GLFW.glfwSetWindowSize(mc.getWindow().getWindow(), Integer.parseInt(a[0]),
+                        Integer.parseInt(a[1]));
+                continue;
+            }
+            // (lagfix) layoutbook TAG: every page of the open admin book, each half and section, scrolled through,
+            // looked at for overlaps (layout: lines in the log)
+            if (s.startsWith("layoutbook ")) {
+                String tag = s.substring(11).trim();
+                List<String> more = new ArrayList<>();
+                for (String k : AdminBookScreen.testPages()) {
+                    more.add("layoutpage " + k);
+                    more.add("wait 40");
+                    more.add("layoutviews " + tag + " " + k);
+                }
+                script.addAll(line, more);
+                continue;
+            }
+            if (s.startsWith("layoutpage ")) {
+                AdminBookScreen.testGo(s.substring(11).trim());
+                continue;
+            }
+            if (s.startsWith("layoutviews ")) {
+                String where = s.substring(12).trim() + " (" + mc.getWindow().getWidth() + "x"
+                        + mc.getWindow().getHeight() + " scale " + mc.getWindow().getGuiScale() + ")";
+                java.util.Set<String> found = new java.util.LinkedHashSet<>();
+                for (String v : AdminBookScreen.testViews()) {
+                    int most = AdminBookScreen.testView(v);
+                    for (int at = 0; ; at += Math.max(20, AdminBookScreen.testScroll(at) / 2)) {
+                        AdminBookScreen.testScroll(Math.min(at, most));
+                        found.addAll(LayoutCheck.check(mc, where + " " + v + " @" + Math.min(at, most)));
+                        if (at >= most) break;
+                    }
+                }
+                layoutFound(where, found);
+                continue;
+            }
+            // (lagfix) layoutcheck NAME: the open screen (the Guide's pages) looked at for overlaps
+            if (s.startsWith("layoutcheck ")) {
+                String where = s.substring(12).trim() + " (" + mc.getWindow().getWidth() + "x"
+                        + mc.getWindow().getHeight() + " scale " + mc.getWindow().getGuiScale() + ")";
+                layoutFound(where, new java.util.LinkedHashSet<>(LayoutCheck.check(mc, where)));
+                continue;
+            }
+            // leakscan: what still holds a thrown-away minigame world (the log)
+            if (s.equals("leakscan")) {
+                MinecraftServer srv = mc.getSingleplayerServer();
+                if (srv != null) srv.execute(() -> {
+                    System.gc();
+                    var held = net.jj.giants.minigames.MgLevels.stillHeld();
+                    GiantsGuideMod.LOG.info("leakscan: {} thrown-away world(s) still held", held.size());
+                    for (var l : held)
+                        for (String p : net.jj.giants.test.LeakScan.paths(srv, l, 6, 20_000_000))
+                            GiantsGuideMod.LOG.info("leakscan path: {}", p);
+                });
+                continue;
+            }
+            // simdist N: the simulation distance (the integrated server picks it up next tick)
+            if (s.startsWith("simdist ")) {
+                mc.options.simulationDistance().set(Integer.parseInt(s.substring(8).trim()));
+                continue;
+            }
             if (s.startsWith("fov ")) {
                 mc.options.fov().set(Integer.parseInt(s.substring(4).trim()));
                 continue;
             }
-            if (s.equals("deepflat")) continue;
+            if (s.equals("deepflat") || s.equals("normalworld")) continue;
             if (s.equals("noclouds")) {
                 mc.options.cloudStatus().set(net.minecraft.client.CloudStatus.OFF);
                 continue;

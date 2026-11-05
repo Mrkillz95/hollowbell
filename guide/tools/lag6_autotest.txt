@@ -1,0 +1,39 @@
+# Lag hunt (lag6): an ordinary world at view and simulation distance 32 (JJ's), tick times before, then after
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants [-Pjfr]
+normalworld
+wait 60
+adminintro seen
+render 32
+simdist 32
+cmd gamerule doDaylightCycle false
+cmd time set 6000
+cmd giants admin set all mgLobby 10
+cmd gamemode creative @s
+wait 2400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 2400
+cmd tick query
+wait 400
+cmd tick query
+cmd tp @s 2000 157 2000
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+quit

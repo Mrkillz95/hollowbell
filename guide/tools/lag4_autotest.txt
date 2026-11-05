@@ -1,0 +1,36 @@
+# Lag hunt 4: a real round, then what still holds its world once it's thrown away (leakscan, in the log).
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+adminintro seen
+render 12
+cmd gamerule doDaylightCycle false
+cmd time set 6000
+cmd difficulty normal
+cmd giants admin set all mgLobby 10
+cmd gamemode survival @s
+wait 200
+cmd giants admin adventure play wreck_cove open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd giants admin look kind pitchgut frost
+wait 400
+cmd tick query
+cmd tp @s 20 64 0
+wait 400
+cmd tick query
+cmd kill @s
+wait 200
+cmd tick query
+cmd kill @e[tag=adv_guard]
+wait 400
+cmd tick query
+cmd giants adventure win
+wait 100
+cmd giants admin look kind pitchgut none
+wait 600
+leakscan
+wait 1200
+cmd tick query
+quit

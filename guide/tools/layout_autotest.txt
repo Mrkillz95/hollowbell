@@ -1,0 +1,184 @@
+# (lagfix) The layout check: every admin book page (each half, section, scrolled through) and the Guide's This
+# world pages, at GUI scale 2, 3 and 4 in 1280x720 and 1920x1080; overlaps are "layout:" lines in the log.
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+adminintro seen
+adminmode advanced
+adminscope world
+cmd gamemode creative @s
+wait 40
+window 1280 720
+wait 20
+guiscale 2
+wait 20
+adminbook home
+wait 80
+layoutbook 1280x720s2
+close
+wait 10
+guide world 0
+wait 40
+layoutcheck 1280x720s2 guide-world-rules
+close
+wait 5
+guide world 1
+wait 40
+layoutcheck 1280x720s2 guide-world-votes
+close
+wait 5
+guide world 2
+wait 40
+layoutcheck 1280x720s2 guide-world-top
+close
+wait 5
+guide world 3
+wait 40
+layoutcheck 1280x720s2 guide-world-games
+close
+wait 5
+window 1280 720
+wait 20
+guiscale 3
+wait 20
+adminbook home
+wait 80
+layoutbook 1280x720s3
+close
+wait 10
+guide world 0
+wait 40
+layoutcheck 1280x720s3 guide-world-rules
+close
+wait 5
+guide world 1
+wait 40
+layoutcheck 1280x720s3 guide-world-votes
+close
+wait 5
+guide world 2
+wait 40
+layoutcheck 1280x720s3 guide-world-top
+close
+wait 5
+guide world 3
+wait 40
+layoutcheck 1280x720s3 guide-world-games
+close
+wait 5
+window 1280 720
+wait 20
+guiscale 4
+wait 20
+adminbook home
+wait 80
+layoutbook 1280x720s4
+close
+wait 10
+guide world 0
+wait 40
+layoutcheck 1280x720s4 guide-world-rules
+close
+wait 5
+guide world 1
+wait 40
+layoutcheck 1280x720s4 guide-world-votes
+close
+wait 5
+guide world 2
+wait 40
+layoutcheck 1280x720s4 guide-world-top
+close
+wait 5
+guide world 3
+wait 40
+layoutcheck 1280x720s4 guide-world-games
+close
+wait 5
+window 1920 1080
+wait 20
+guiscale 2
+wait 20
+adminbook home
+wait 80
+layoutbook 1920x1080s2
+close
+wait 10
+guide world 0
+wait 40
+layoutcheck 1920x1080s2 guide-world-rules
+close
+wait 5
+guide world 1
+wait 40
+layoutcheck 1920x1080s2 guide-world-votes
+close
+wait 5
+guide world 2
+wait 40
+layoutcheck 1920x1080s2 guide-world-top
+close
+wait 5
+guide world 3
+wait 40
+layoutcheck 1920x1080s2 guide-world-games
+close
+wait 5
+window 1920 1080
+wait 20
+guiscale 3
+wait 20
+adminbook home
+wait 80
+layoutbook 1920x1080s3
+close
+wait 10
+guide world 0
+wait 40
+layoutcheck 1920x1080s3 guide-world-rules
+close
+wait 5
+guide world 1
+wait 40
+layoutcheck 1920x1080s3 guide-world-votes
+close
+wait 5
+guide world 2
+wait 40
+layoutcheck 1920x1080s3 guide-world-top
+close
+wait 5
+guide world 3
+wait 40
+layoutcheck 1920x1080s3 guide-world-games
+close
+wait 5
+window 1920 1080
+wait 20
+guiscale 4
+wait 20
+adminbook home
+wait 80
+layoutbook 1920x1080s4
+close
+wait 10
+guide world 0
+wait 40
+layoutcheck 1920x1080s4 guide-world-rules
+close
+wait 5
+guide world 1
+wait 40
+layoutcheck 1920x1080s4 guide-world-votes
+close
+wait 5
+guide world 2
+wait 40
+layoutcheck 1920x1080s4 guide-world-top
+close
+wait 5
+guide world 3
+wait 40
+layoutcheck 1920x1080s4 guide-world-games
+close
+wait 5
+quit

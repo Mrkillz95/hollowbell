@@ -1,0 +1,59 @@
+# Lag hunt (lag5): an ordinary world at view and simulation distance 32 (JJ's), tick times before, then after
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants [-Pjfr]
+normalworld
+wait 60
+adminintro seen
+render 32
+simdist 32
+cmd gamerule doDaylightCycle false
+cmd time set 6000
+cmd giants admin set all mgLobby 10
+cmd gamemode creative @s
+wait 2400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+cmd giants admin adventure play wreck_cove open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd giants admin look kind pitchgut frost
+wait 400
+cmd tick query
+cmd tp @s 20 64 0
+wait 400
+cmd tick query
+cmd kill @s
+wait 200
+cmd kill @e[tag=adv_guard]
+wait 400
+cmd tick query
+cmd giants adventure win
+wait 100
+cmd giants admin look kind pitchgut none
+wait 600
+leakscan
+cmd tick query
+wait 400
+cmd tick query
+cmd tp @s 2000 157 2000
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+wait 400
+cmd tick query
+quit
