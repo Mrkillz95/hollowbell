@@ -872,6 +872,8 @@ public class WorldOne extends SavedData {
         if (server == null) return null;
         HollowbellEntity found = null;
         for (ServerLevel l : server.getAllLevels()) {
+            // (Part 10A) a minigame's giants are the round's, never this world's own
+            if (net.jj.hollowbell.GiantsMinigame.in(l)) continue;
             for (HollowbellEntity o :
                     l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying())) {
                 if (o == except) continue;
@@ -885,6 +887,8 @@ public class WorldOne extends SavedData {
     private static @Nullable Away.Rec newestAway(MinecraftServer server) {
         Away.Rec best = null;
         for (Away.Rec r : Away.get(server).all()) {
+            // (Part 10A) a minigame's giants are the round's, never this world's own
+            if (net.jj.hollowbell.GiantsMinigame.in(r.dim)) continue;
             if (best == null) {
                 best = r;
                 continue;
@@ -918,6 +922,8 @@ public class WorldOne extends SavedData {
         MinecraftServer server = world.getServer();
         if (server == null || h.isRemoved() || h.isDeadOrDying())
             return; // one saved mid-death is already counted as dead
+        // (Part 10A) a minigame's own: not of this world, held to nothing, never its own one
+        if (net.jj.hollowbell.GiantsMinigame.in(world)) return;
         WorldOne w = get(server);
         if (w.isTheOne(h.getUUID())) return; // the world's own, or the spawner putting him down
         if (h.isWorldOne()) {
@@ -943,6 +949,8 @@ public class WorldOne extends SavedData {
      */
     public static boolean limitNow(@Nullable HollowbellEntity joining, ServerLevel world) {
         if (joining != null && joining.isRemoved()) return false;
+        // (Part 10A) a minigame's own: not of this world, held to nothing
+        if (joining != null && net.jj.hollowbell.GiantsMinigame.in(joining)) return false;
         int max = Math.max(0, BellConfig.V.maxInWorld);
         if (max <= 0) return false; // as many as you like
         MinecraftServer server = world.getServer();
@@ -950,11 +958,14 @@ public class WorldOne extends SavedData {
 
         List<HollowbellEntity> all = new ArrayList<>();
         for (ServerLevel l : server.getAllLevels())
-            for (HollowbellEntity o : l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()))
-                all.add(o);
+            if (!net.jj.hollowbell.GiantsMinigame.in(l))
+                for (HollowbellEntity o :
+                        l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()))
+                    all.add(o);
         if (joining != null && !all.contains(joining)) all.add(joining);
         Away away = Away.get(server);
-        List<Away.Rec> out = away.all();
+        List<Away.Rec> out = new ArrayList<>(away.all());
+        out.removeIf(r -> net.jj.hollowbell.GiantsMinigame.in(r.dim));
         if (all.size() + out.size() <= max) return false; // at the cap is fine; only past it someone goes
 
         List<Standing> list = new ArrayList<>();
@@ -1307,10 +1318,13 @@ public class WorldOne extends SavedData {
 
     /** how many of him the world holds, counted as the cap counts: standing in any level, and out of the world */
     public static int standing(MinecraftServer server) {
+        // (Part 10A) a minigame's giants aren't of this world: they don't count
         int n = 0;
         for (ServerLevel l : server.getAllLevels())
-            n += l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()).size();
-        return n + Away.get(server).count();
+            if (!net.jj.hollowbell.GiantsMinigame.in(l))
+                n += l.getEntities(ModEntities.HOLLOWBELL, e -> !e.isRemoved() && !e.isDeadOrDying()).size();
+        for (Away.Rec r : Away.get(server).all()) if (!net.jj.hollowbell.GiantsMinigame.in(r.dim)) n++;
+        return n;
     }
 
     /**

@@ -528,6 +528,8 @@ final class BellFlight {
     /** steps him out of the world (see Away) */
     public boolean stepAside() {
         if (!(hb.level() instanceof ServerLevel sl) || hb.isRemoved() || hb.isDeadOrDying()) return false;
+        // (Part 10A) never out of a minigame's world: the round keeps him, and the world goes when it ends
+        if (net.jj.hollowbell.GiantsMinigame.in(sl)) return false;
         net.jj.hollowbell.solid.Sitting.setDownAll(hb);
         hb.riding.stopFetch();
         hb.riding.dropRider();
