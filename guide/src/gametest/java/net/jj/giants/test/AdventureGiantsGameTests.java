@@ -118,7 +118,12 @@ public class AdventureGiantsGameTests implements FabricGameTest {
                     var rs = Adventure.roundState();
                     h.assertTrue(lost[0] != null && rs != null && rs.runs.size() == 2, "both map giants stand");
                 })
-                .thenExecute(() -> startX[0] = lost[0].getX())
+                .thenExecute(() -> {
+                    startX[0] = lost[0].getX();
+                    net.jj.giants.GiantsGuideMod.LOG.info("cove test: the lost giant starts at {} {}, the player at {}",
+                            Math.round(lost[0].getX()), Math.round(lost[0].getZ()), Math.round(p.getX()));
+                    h.assertTrue(startX[0] > -40, "he starts on the cove's beach, not at the harbour: " + startX[0]);
+                })
                 // the player walks with him: a few blocks behind (east of) him, once a second, until he's home
                 .thenWaitUntil(() -> {
                     MgGame g = Minigames.current();
@@ -130,10 +135,13 @@ public class AdventureGiantsGameTests implements FabricGameTest {
                                 (int) Math.floor(z)), z, 90, 0);
                         p.setHealth(p.getMaxHealth());
                         minShare[0] = Math.min(minShare[0], lost[0].getHealth() / Math.max(1, lost[0].getMaxHealth()));
+                        if (ticks[0] % 200 == 0) net.jj.giants.GiantsGuideMod.LOG.info("cove test: he is at {} {}",
+                                Math.round(lost[0].getX()), Math.round(lost[0].getZ()));
                     }
                     h.assertTrue(false, "on the road: x " + Math.round(lost[0].getX()) + " (from "
                             + Math.round(startX[0]) + ")");
                 })
+                .thenWaitUntil(() -> h.assertTrue(Minigames.current() == null, "the game over"))
                 .thenExecute(() -> {
                     var res = MgData.get(s).s.results;
                     String line = res.isEmpty() ? "" : res.get(res.size() - 1).line;
