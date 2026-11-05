@@ -318,12 +318,17 @@ public final class AutoTest implements ClientModInitializer {
             // (lagfix) layoutbook TAG: every page of the open admin book, each half and section, scrolled through,
             // looked at for overlaps (layout: lines in the log)
             if (s.startsWith("layoutbook ")) {
-                String tag = s.substring(11).trim();
+                String[] a = s.substring(11).trim().split(" +");
+                String tag = a[0];
+                boolean shots = a.length > 1 && a[1].equals("shots");
                 List<String> more = new ArrayList<>();
                 for (String k : AdminBookScreen.testPages()) {
                     more.add("layoutpage " + k);
                     more.add("wait 40");
                     more.add("layoutviews " + tag + " " + k);
+                    // (shots: one picture of each page, from its top, to look at)
+                    if (shots) more.addAll(List.of("adminview general/ 0", "wait 10", "mouse 2 2", "wait 5",
+                            "shot layout_" + tag + "_" + k));
                 }
                 script.addAll(line, more);
                 continue;
@@ -331,6 +336,13 @@ public final class AutoTest implements ClientModInitializer {
             // adminscrollto WORDS: the open book scrolled to the heading that starts so
             if (s.startsWith("adminscrollto ")) {
                 AdminBookScreen.testScrollTo(s.substring(14).trim());
+                continue;
+            }
+            // adminview HALF/SECTION [SCROLL]: the open book's page on that half and section, scrolled
+            if (s.startsWith("adminview ")) {
+                String[] a = s.substring(10).trim().split(" +");
+                AdminBookScreen.testView(a[0]);
+                if (a.length > 1) AdminBookScreen.testScroll(Double.parseDouble(a[1]));
                 continue;
             }
             if (s.startsWith("layoutpage ")) {
@@ -347,6 +359,26 @@ public final class AutoTest implements ClientModInitializer {
                         AdminBookScreen.testScroll(Math.min(at, most));
                         found.addAll(LayoutCheck.check(mc, where + " " + v + " @" + Math.min(at, most)));
                         if (at >= most) break;
+                    }
+                }
+                layoutFound(where, found);
+                continue;
+            }
+            // (lagfix) layoutmodal NAME: the open book's question: every button inside it, none over another
+            if (s.startsWith("layoutmodal ")) {
+                String where = s.substring(12).trim() + " (" + mc.getWindow().getWidth() + "x"
+                        + mc.getWindow().getHeight() + " scale " + mc.getWindow().getGuiScale() + ")";
+                List<int[]> m = AdminBookScreen.testModal();
+                java.util.Set<String> found = new java.util.LinkedHashSet<>();
+                if (m.isEmpty()) found.add(where + ": no question open");
+                for (int i = 1; i < m.size(); i++) {
+                    int[] b = m.get(i), box = m.get(0);
+                    if (b[0] < box[0] || b[2] > box[2] || b[1] < box[1] || b[3] > box[3])
+                        found.add(where + ": button " + i + " sticks out of its question");
+                    for (int j = i + 1; j < m.size(); j++) {
+                        int[] o = m.get(j);
+                        if (b[0] < o[2] && o[0] < b[2] && b[1] < o[3] && o[1] < b[3])
+                            found.add(where + ": buttons " + i + " and " + j + " overlap");
                     }
                 }
                 layoutFound(where, found);

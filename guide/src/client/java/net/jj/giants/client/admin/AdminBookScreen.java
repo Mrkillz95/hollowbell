@@ -202,6 +202,18 @@ public class AdminBookScreen extends Screen {
         return Math.max(0, b.contentH - (b.ly1 - b.ly0));
     }
 
+    /** (the layout check) the open question's box and its buttons' boxes {x0, y0, x1, y1}, the box first; empty: none */
+    public static List<int[]> testModal() {
+        AdminBookScreen b = open();
+        if (b == null || b.modal == null) return List.of();
+        List<int[]> out = new ArrayList<>();
+        out.add(new int[] {b.modal.mx0, b.modal.my0, b.modal.mx0 + b.modal.mw, b.modal.my0 + b.modal.mh});
+        for (Button bt : b.modal.buttons)
+            if (bt.visible)
+                out.add(new int[] {bt.getX(), bt.getY(), bt.getX() + bt.getWidth(), bt.getY() + bt.getHeight()});
+        return out;
+    }
+
     /** the open book's list scrolled so the heading that starts so is at the top */
     public static void testScrollTo(String heading) {
         AdminBookScreen b = open();
@@ -1592,6 +1604,16 @@ public class AdminBookScreen extends Screen {
                 else groups.computeIfAbsent(s.group(), k -> new ArrayList<>()).add(s);
             }
             if (shown == 0) continue;
+            // (lagfix, layout check) only a move's own few parts share one line (on, its wait, its wind); a group of
+            // many (Swarmforge's robots: one "On" each) ran off the page over the contents: its rows go one a line
+            for (var it = groups.entrySet().iterator(); it.hasNext(); ) {
+                List<AdminSetting> gr = it.next().getValue();
+                long bools = gr.stream().filter(x -> x.type() == AdminSetting.Type.BOOL).count();
+                if (gr.size() > 3 || bools > 1) {
+                    plain.addAll(gr);
+                    it.remove();
+                }
+            }
             String base = key + "/" + (key.equals(AdminCatalog.ALL) ? "" : part) + "/" + sec;
             Head head = new Head(tr("cat." + sec), null, null);
             if (all) {
@@ -4834,14 +4856,41 @@ public class AdminBookScreen extends Screen {
         void layout(int buttonsW) {
             mw = modalW();
             List<FormattedCharSequence> b = body();
-            mh = 30 + Math.min(b.size(), bodyRoom()) * 10 + 28;
+            int room = mw - 16;
+            // (lagfix, layout check) buttons wider than the question go on more lines (each right-aligned), so none
+            // runs out past its left edge
+            List<List<Button>> lines = new ArrayList<>();
+            if (buttonsW <= room) lines.add(buttons);
+            else {
+                List<Button> line = new ArrayList<>();
+                int used = 0;
+                for (Button bt : buttons) {
+                    if (bt.getWidth() > room) bt.setWidth(room);
+                    if (!line.isEmpty() && used + 4 + bt.getWidth() > room) {
+                        lines.add(line);
+                        line = new ArrayList<>();
+                        used = 0;
+                    }
+                    used += (line.isEmpty() ? 0 : 4) + bt.getWidth();
+                    line.add(bt);
+                }
+                if (!line.isEmpty()) lines.add(line);
+            }
+            int more = Math.max(0, lines.size() - 1) * 20;
+            mh = 30 + Math.min(b.size(), bodyRoom()) * 10 + 28 + more;
             mx0 = (width - mw) / 2;
             my0 = (height - mh) / 2;
-            int x = mx0 + mw - 8 - buttonsW, y = my0 + mh - 24;
-            for (Button bt : buttons) {
-                bt.setX(x);
-                bt.setY(y);
-                x += bt.getWidth() + 4;
+            int y = my0 + mh - 24 - more;
+            for (List<Button> line : lines) {
+                int w = line == buttons ? buttonsW : -4;
+                if (line != buttons) for (Button bt : line) w += bt.getWidth() + 4;
+                int x = mx0 + mw - 8 - w;
+                for (Button bt : line) {
+                    bt.setX(x);
+                    bt.setY(y);
+                    x += bt.getWidth() + 4;
+                }
+                y += 20;
             }
         }
 

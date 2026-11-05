@@ -1,0 +1,32 @@
+# (lagfix) Swarmforge's Special half, Behaviour: the row the layout check flagged, at GUI scale 2 and 3
+wait 60
+adminintro seen
+adminmode advanced
+adminscope world
+cmd gamemode creative @s
+wait 40
+guiscale 2
+wait 10
+adminbook home 0
+wait 60
+layoutpage swarmforge
+wait 60
+adminview special/behaviour 0
+wait 10
+mouse 2 2
+wait 20
+shot lagfix_swarm_behaviour_s2
+close
+guiscale 3
+wait 10
+adminbook home 0
+wait 60
+layoutpage swarmforge
+wait 60
+adminview special/behaviour 0
+wait 10
+mouse 2 2
+wait 20
+shot lagfix_swarm_behaviour_s3
+close
+quit

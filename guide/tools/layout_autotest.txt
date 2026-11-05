@@ -15,6 +15,45 @@ adminbook home
 wait 80
 layoutbook 1280x720s2
 close
+wait 5
+adminintro 0
+adminbook home
+wait 40
+layoutmodal 1280x720s2 intro0
+close
+wait 5
+adminintro 1
+adminbook home
+wait 40
+layoutmodal 1280x720s2 intro1
+close
+wait 5
+adminintro 2
+adminbook home
+wait 40
+layoutmodal 1280x720s2 intro2
+close
+wait 5
+adminintro 3
+adminbook home
+wait 40
+layoutmodal 1280x720s2 intro3
+close
+wait 5
+adminintro 4
+adminbook home
+wait 40
+layoutmodal 1280x720s2 intro4
+close
+wait 5
+adminconfirm wreckback roam
+adminbook wreckback
+wait 60
+layoutmodal 1280x720s2 confirm
+close
+wait 5
+adminintro seen
+close
 wait 10
 guide world 0
 wait 40
@@ -42,27 +81,70 @@ guiscale 3
 wait 20
 adminbook home
 wait 80
-layoutbook 1280x720s3
+layoutbook 1280x720s3 shots
+close
+wait 5
+adminintro 0
+adminbook home
+wait 40
+layoutmodal 1280x720s3 intro0
+close
+wait 5
+adminintro 1
+adminbook home
+wait 40
+layoutmodal 1280x720s3 intro1
+close
+wait 5
+adminintro 2
+adminbook home
+wait 40
+layoutmodal 1280x720s3 intro2
+close
+wait 5
+adminintro 3
+adminbook home
+wait 40
+layoutmodal 1280x720s3 intro3
+close
+wait 5
+adminintro 4
+adminbook home
+wait 40
+layoutmodal 1280x720s3 intro4
+close
+wait 5
+adminconfirm wreckback roam
+adminbook wreckback
+wait 60
+layoutmodal 1280x720s3 confirm
+close
+wait 5
+adminintro seen
 close
 wait 10
 guide world 0
 wait 40
 layoutcheck 1280x720s3 guide-world-rules
+shot layout_1280x720s3_guide-world-rules
 close
 wait 5
 guide world 1
 wait 40
 layoutcheck 1280x720s3 guide-world-votes
+shot layout_1280x720s3_guide-world-votes
 close
 wait 5
 guide world 2
 wait 40
 layoutcheck 1280x720s3 guide-world-top
+shot layout_1280x720s3_guide-world-top
 close
 wait 5
 guide world 3
 wait 40
 layoutcheck 1280x720s3 guide-world-games
+shot layout_1280x720s3_guide-world-games
 close
 wait 5
 window 1280 720
@@ -72,6 +154,45 @@ wait 20
 adminbook home
 wait 80
 layoutbook 1280x720s4
+close
+wait 5
+adminintro 0
+adminbook home
+wait 40
+layoutmodal 1280x720s4 intro0
+close
+wait 5
+adminintro 1
+adminbook home
+wait 40
+layoutmodal 1280x720s4 intro1
+close
+wait 5
+adminintro 2
+adminbook home
+wait 40
+layoutmodal 1280x720s4 intro2
+close
+wait 5
+adminintro 3
+adminbook home
+wait 40
+layoutmodal 1280x720s4 intro3
+close
+wait 5
+adminintro 4
+adminbook home
+wait 40
+layoutmodal 1280x720s4 intro4
+close
+wait 5
+adminconfirm wreckback roam
+adminbook wreckback
+wait 60
+layoutmodal 1280x720s4 confirm
+close
+wait 5
+adminintro seen
 close
 wait 10
 guide world 0
@@ -102,6 +223,45 @@ adminbook home
 wait 80
 layoutbook 1920x1080s2
 close
+wait 5
+adminintro 0
+adminbook home
+wait 40
+layoutmodal 1920x1080s2 intro0
+close
+wait 5
+adminintro 1
+adminbook home
+wait 40
+layoutmodal 1920x1080s2 intro1
+close
+wait 5
+adminintro 2
+adminbook home
+wait 40
+layoutmodal 1920x1080s2 intro2
+close
+wait 5
+adminintro 3
+adminbook home
+wait 40
+layoutmodal 1920x1080s2 intro3
+close
+wait 5
+adminintro 4
+adminbook home
+wait 40
+layoutmodal 1920x1080s2 intro4
+close
+wait 5
+adminconfirm wreckback roam
+adminbook wreckback
+wait 60
+layoutmodal 1920x1080s2 confirm
+close
+wait 5
+adminintro seen
+close
 wait 10
 guide world 0
 wait 40
@@ -131,6 +291,45 @@ adminbook home
 wait 80
 layoutbook 1920x1080s3
 close
+wait 5
+adminintro 0
+adminbook home
+wait 40
+layoutmodal 1920x1080s3 intro0
+close
+wait 5
+adminintro 1
+adminbook home
+wait 40
+layoutmodal 1920x1080s3 intro1
+close
+wait 5
+adminintro 2
+adminbook home
+wait 40
+layoutmodal 1920x1080s3 intro2
+close
+wait 5
+adminintro 3
+adminbook home
+wait 40
+layoutmodal 1920x1080s3 intro3
+close
+wait 5
+adminintro 4
+adminbook home
+wait 40
+layoutmodal 1920x1080s3 intro4
+close
+wait 5
+adminconfirm wreckback roam
+adminbook wreckback
+wait 60
+layoutmodal 1920x1080s3 confirm
+close
+wait 5
+adminintro seen
+close
 wait 10
 guide world 0
 wait 40
@@ -159,6 +358,45 @@ wait 20
 adminbook home
 wait 80
 layoutbook 1920x1080s4
+close
+wait 5
+adminintro 0
+adminbook home
+wait 40
+layoutmodal 1920x1080s4 intro0
+close
+wait 5
+adminintro 1
+adminbook home
+wait 40
+layoutmodal 1920x1080s4 intro1
+close
+wait 5
+adminintro 2
+adminbook home
+wait 40
+layoutmodal 1920x1080s4 intro2
+close
+wait 5
+adminintro 3
+adminbook home
+wait 40
+layoutmodal 1920x1080s4 intro3
+close
+wait 5
+adminintro 4
+adminbook home
+wait 40
+layoutmodal 1920x1080s4 intro4
+close
+wait 5
+adminconfirm wreckback roam
+adminbook wreckback
+wait 60
+layoutmodal 1920x1080s4 confirm
+close
+wait 5
+adminintro seen
 close
 wait 10
 guide world 0
