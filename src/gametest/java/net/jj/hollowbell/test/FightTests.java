@@ -321,6 +321,20 @@ public class FightTests implements FabricGameTest {
             e.addTag(GiantsFight.TAKEN + "2");
             e.addTag(GiantsFight.MOVES + "strand_lash,sky_dive");
             h.assertTrue(GiantsFight.moveOk(e, "sky_dive") && !GiantsFight.moveOk(e, "deep_toll"), "his moves");
+            // (1.15) the Guide's say over his own boss bars
+            long barsAt = e.level().getGameTime();
+            String barsMe = "00000000-0000-0000-0000-00000000000a";
+            h.assertFalse(GiantsFight.barHidden(e, barsMe), "bars as always");
+            e.addTag("jj_giants.bars.off=" + (barsAt + 100));
+            h.assertTrue(GiantsFight.barHidden(e, barsMe), "bars hidden for a staged fight");
+            e.removeTag("jj_giants.bars.off=" + (barsAt + 100));
+            e.addTag("jj_giants.bars.for=" + (barsAt + 100) + ":" + barsMe);
+            h.assertTrue(!GiantsFight.barHidden(e, barsMe)
+                    && GiantsFight.barHidden(e, "00000000-0000-0000-0000-00000000000b"), "bars for the nearest only");
+            e.removeTag("jj_giants.bars.for=" + (barsAt + 100) + ":" + barsMe);
+            e.addTag("jj_giants.bars.off=" + (barsAt - 1));
+            h.assertFalse(GiantsFight.barHidden(e, barsMe), "an old tag runs out");
+            e.removeTag("jj_giants.bars.off=" + (barsAt - 1));
             int[] w = e.moves().weights(a, null);
             for (int m = 1; m < w.length; m++)
                 h.assertTrue(w[m] == 0 || m == Moves.LASH || m == Moves.SKY_DIVE, "a move not on his list: "

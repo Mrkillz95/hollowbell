@@ -2243,8 +2243,25 @@ public class AdminBookScreen extends Screen {
             if (pic != null) AdminStyle.icon(g, pic, lx, headY + 2, 18);
             else icon(g, pageKey, lx, headY + 2, 18);
             tx += 24;
-            g.drawString(font, cut(title.getString(), right - tx), tx, headY + 3, HEAD, false);
-            g.drawString(font, cut(line.getString(), right - tx), tx, headY + 13, banner ? ORANGE : GREY, false);
+            int sw = right - tx;
+            if (sw > 40 && font.width(line) > sw) {
+                // (1.15) a line too long for one row goes on two, the title a little higher, never cut to "…"
+                List<net.minecraft.util.FormattedCharSequence> two = font.split(line, sw);
+                g.drawString(font, cut(title.getString(), sw), tx, headY - 2, HEAD, false);
+                for (int i = 0; i < Math.min(2, two.size()); i++) {
+                    if (i == 1 && two.size() > 2) {
+                        StringBuilder rest = new StringBuilder();
+                        two.get(1).accept((idx, st, cp) -> {
+                            rest.appendCodePoint(cp);
+                            return true;
+                        });
+                        g.drawString(font, cut(rest + " …", sw), tx, headY + 17, banner ? ORANGE : GREY, false);
+                    } else g.drawString(font, two.get(i), tx, headY + 8 + i * 9, banner ? ORANGE : GREY, false);
+                }
+            } else {
+                g.drawString(font, cut(title.getString(), sw), tx, headY + 3, HEAD, false);
+                g.drawString(font, cut(line.getString(), sw), tx, headY + 13, banner ? ORANGE : GREY, false);
+            }
         }
         if (allWorlds && mx >= lx && mx < right && my >= headY + 11 && my < headY + 22)
             setTooltipForNextRenderPass(font.split(tr("scope.all.tip"), 260));

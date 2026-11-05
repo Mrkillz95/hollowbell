@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.12.0 |
-| Pitchgut | 1.35.40 |
-| Furrowmaw | 1.17.37 |
-| Fire & Ice Cerberus | 2.18.37 |
-| Hollowbell | 1.12.39 |
-| Lantern Willow | 1.10.40 |
-| Wreckback | 1.2.45 |
-| The Swarmforge | 1.4.43 |
-| The Gloamwick | 1.2.24 |
+| Giants Guide | 1.13.0 |
+| Pitchgut | 1.35.41 |
+| Furrowmaw | 1.17.38 |
+| Fire & Ice Cerberus | 2.18.38 |
+| Hollowbell | 1.12.40 |
+| Lantern Willow | 1.10.41 |
+| Wreckback | 1.2.46 |
+| The Swarmforge | 1.4.44 |
+| The Gloamwick | 1.2.25 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.14.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.15.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.14.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.15.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -116,6 +116,40 @@ A book about every giant you have. Right-click it to open it.
   reactions, mob followers, Weather Gods, the Underworld, sacred ground, Mirror and random chaos), the presets Random
   Chaos, Underworld, Weather Gods, Sacred Ground and Mirror, remains made from each giant's own body, and dens and
   arenas built with real detail.
+- New in the Guide 1.13.0: the admin book's **Minigames** page (eleven minigames, each round in a world of its own)
+  and the **Fight script** on the Fun page (staged fights between giants), the giant-fight settings on the Systems
+  page under "Giant fights", Minigames on the Guide's This world page, and fewer boss bars on screen.
+
+## New in 1.15.0
+
+- **Minigames** (operators: the admin book's Minigames page or `/giants minigame`): eleven modes, Giant Royale (the
+  safe zone closes in, last player standing wins), Boss Rush, Siege, Escort, Legends, Possession, Rival Tamers,
+  Bounty Board, Kaiju War, One Life and Speedrun. Players join with Join on the Guide's This world page, [Join] in
+  chat or `/giants join`, can watch with `/giants spectate` and leave with `/giants leave`. Every round is played in
+  a world of its own, made for it and thrown away after: nothing in your world is touched, and every player gets
+  their things, place and levels back exactly, even if they log out or the server stops mid-round. Twelve settings
+  (round time, giant size, players, PvP and more), a Minigame winners board and eleven challenges.
+- **Staged fights** (the Fight script on the Fun page, or `/giants admin fight ...`): pick one or two giants a side,
+  who wins (or let them fight), how the loser ends (to the death with the winner's finisher in slow motion, running
+  off, run down and caught, or bowing out), the length, rounds, the arena, the countdown, the announcer, fight music
+  and one boss bar for the whole fight. Players can bet emeralds (`/giants fight bet a|b <emeralds>`) or join a side
+  (`/giants fight join a|b`). Save a setup and replay it, or put it on the schedule. A giant's finisher is never a
+  move the world switched off: then he uses his next big move that's still on. A losing giant who runs for it
+  really runs (a little faster for a few seconds), and the fighters are part of the fight from the moment they
+  stand there, so no wild giant can start on them before the bell.
+- **Giant-fight settings** (41, on the Systems page under "Giant fights"): for wild fights and owners' fights apart,
+  how far a fight goes, whether the loser is chased and caught or spared, damage between giants, blocks broken
+  (usual, none, or healed after), healing and rest after, the fight area, keeping out of villages, keeping players
+  near safe, one bar for both, fight music, fight news, the winner growing, loyalty, the loser's loot, and whether
+  owned giants may fight or kill each other. Players: `/giants fight standdown`, `allow` and `top`.
+- **Fewer boss bars**: during a staged fight you see only the fight's one bar, and in a minigame the minigame's bar
+  with only the nearest giant's bars under it, not a stack of five.
+- When Pitchgut stands down from a fight he lets go only of his grudge against the giant he fought.
+- Left as shipped, every new setting matches 1.14.0: giant fights go exactly as before, and nothing starts until an
+  admin starts it.
+
+Inside: Pitchgut 1.35.41, Furrowmaw 1.17.38, Cerberus 2.18.38, Hollowbell 1.12.40, Lantern Willow 1.10.41,
+Wreckback 1.2.46, Swarmforge 1.4.44, Gloamwick 1.2.25, Giants Guide 1.13.0.
 
 ## New in 1.14.0
 

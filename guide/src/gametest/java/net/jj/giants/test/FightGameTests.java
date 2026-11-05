@@ -163,6 +163,45 @@ public class FightGameTests implements FabricGameTest {
         return null;
     }
 
+    // (1.15) fixed at the release
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "f15_fixes")
+    public void theFinisherIsAMoveStillOnAndTheFightersAreStagedFromTheirSummon(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        Giant g = new Giant("fakefight", "fakefight", "fakefight", "net.jj.fakefight.GiantsBridge", List.of(
+                new Giant.Move("stomp", net.jj.giants.Giants.MEDIUM, "", ""),
+                new Giant.Move("roar", net.jj.giants.Giants.HEAVY, "", ""),
+                new Giant.Move("slam", net.jj.giants.Giants.HEAVY, "", "")), Set.of());
+        net.jj.giants.fights.FightGiants.TEST_OFF.clear();
+        h.assertTrue(net.jj.giants.fights.FightGiants.allowedFinisher(s, g, "slam", List.of()).equals("slam"),
+                "on: his own finisher");
+        net.jj.giants.fights.FightGiants.TEST_OFF.put("fakefight", Set.of("slam"));
+        h.assertTrue(net.jj.giants.fights.FightGiants.allowedFinisher(s, g, "slam", List.of()).equals("roar"),
+                "switched off: his next heavy move");
+        h.assertTrue(net.jj.giants.fights.FightGiants.allowedFinisher(s, g, "slam", List.of("stomp")).equals("stomp"),
+                "from the script's moves");
+        net.jj.giants.fights.FightGiants.TEST_OFF.put("fakefight", Set.of("slam", "roar", "stomp"));
+        h.assertTrue(net.jj.giants.fights.FightGiants.allowedFinisher(s, g, "slam", List.of()).isEmpty(),
+                "none left: no finisher");
+        net.jj.giants.fights.FightGiants.TEST_OFF.clear();
+        BlockPos at = FunGameTests.spot(h, 73);
+        FightData.Setup d = script(s, "a", "death");
+        h(FightEdit.set(d, "countdown", "on"));
+        start(h, s, d, at);
+        when(h, () -> phase(s).equals("count"), 200, "the countdown", () -> {
+            IronGolem a = side(s, "a", 1), b = side(s, "b", 1);
+            h.assertTrue(a != null && b != null && FightScript.in(a.getUUID()) && FightScript.in(b.getUUID())
+                    && a.getTags().contains("jj_giants.fight.script"), "both staged before the bell");
+            when(h, () -> tag(a, "jj_giants.bars.off=") != null && tag(b, "jj_giants.bars.off=") != null, 40,
+                    "their own bars hidden under the fight's one bar", () -> {
+                        FightScript.stop(s, "Tester");
+                        h.assertTrue(tag(a, "jj_giants.bars.") == null, "their own bars back after");
+                        done(h, at);
+                    });
+        });
+    }
+
     // the settings
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 100, batch = "f10b_settings")
@@ -263,8 +302,10 @@ public class FightGameTests implements FabricGameTest {
                 h.assertFalse(GiantsBridge.called("fightact yield " + a.getUUID() + " " + b.getUUID() + " bow"),
                         "he runs, not bows");
                 h.assertTrue(GiantsBridge.called("fightact stop " + b.getUUID()), "the winner lets him go");
+                h.assertTrue("1.6".equals(tag(a, "jj_giants.fightx.speed=")), "(1.15) he runs off faster");
                 when(h, () -> !FightScript.busy(), 400, "the end", () -> {
                     h.assertTrue(a.isAlive(), "he got away alive");
+                    h.assertTrue(tag(a, "jj_giants.fightx.speed=") == null, "his own speed again after");
                     h.assertFalse(GiantsBridge.called("liveact home " + a.getUUID()), "he went his own way home");
                     h.assertTrue(GiantsBridge.called("liveact home " + b.getUUID()), "the winner goes home");
                     done(h, at);
