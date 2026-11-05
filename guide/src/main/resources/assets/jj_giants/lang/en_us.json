@@ -4,6 +4,8 @@
   "item.jj_giants.admin_book": "Giants Admin Book",
   "item.jj_giants.admin_book.tip": "For admins: every giant's settings for this world.",
   "item.jj_giants.biome_brush": "Biome Brush",
+  "item.jj_giants.adventure_wand": "Adventure Wand",
+  "item.jj_giants.adventure_wand.tip": "For admins: right-click blocks to place a path's points or an area's corners. Pick its job on the admin book's Adventure page.",
   "item.jj_giants.biome_brush.tip": "For admins: right-click to paint a giant's biome where you point, sneak + right-click to erase.",
   "admin.jj_giants.book.title": "Giants Admin Book",
   "admin.jj_giants.book.home": "Home",

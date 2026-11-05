@@ -1,0 +1,97 @@
+# Part 11 pictures (ADMIN_BRIDGE.md 28): the admin book's Adventure page (wand, maps, scripts, giants running them,
+# paths and areas, hooks, steps and events), the wand's dust in the world, and the built-in Wreck Cove Rescue played.
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd gamerule sendCommandFeedback false
+cmd gamerule doDaylightCycle false
+cmd time set 6000
+cmd difficulty normal
+cmd giants admin set all mgLobby 10
+cmd giants admin set all mgSize small
+cmd gamemode creative @s
+# a guard post: a path round it, a gate area, a script, a hook or two
+cmd execute positioned ~12 ~ ~ run giants admin path point walls
+cmd execute positioned ~12 ~ ~24 run giants admin path point walls
+cmd execute positioned ~-12 ~ ~24 run giants admin path point walls
+cmd execute positioned ~-12 ~ ~ run giants admin path point walls
+cmd execute positioned ~12 ~ ~ run giants admin path point walls
+cmd giants admin area set gate ~-6 ~-1 ~30 ~6 ~6 ~40
+cmd giants admin script add gatekeeper title The Gatekeeper
+cmd giants admin script add gatekeeper say None shall pass!
+cmd giants admin script add gatekeeper patrol walls until area gate
+cmd giants admin script add gatekeeper say Turn back!
+cmd giants admin script add gatekeeper fight 60
+cmd giants admin script add gatekeeper guard 32
+cmd giants admin script add castaway waitfor players 20
+cmd giants admin script add castaway walk walls
+cmd giants hook add wreckback half tellraw @a {"text":"The Gatekeeper is badly hurt!","color":"aqua"}
+cmd giants hook add all dies say {name} fell at {x} {z}.
+cmd giants hook add script.gatekeeper enters.gate playsound minecraft:event.raid.horn hostile @a ~ ~ ~ 3
+cmd giants hook scores on
+cmd wreckback summon calm 0.12
+wait 60
+cmd giants admin script give wreckback gatekeeper
+wait 40
+adminbook adventure 0
+wait 60
+mouse 2 2
+wait 25
+shot p11_page_0
+adminbook adventure 330
+wait 40
+mouse 2 2
+wait 25
+shot p11_page_1
+adminbook adventure 700
+wait 40
+mouse 2 2
+wait 25
+shot p11_page_2
+adminbook adventure 1100
+wait 40
+mouse 2 2
+wait 25
+shot p11_page_3
+close
+# the wand in hand: the paths (gold) and areas (blue) show
+cmd giants admin wand path walls
+cmd tp @s ~ ~8 ~-14 0 30
+wait 40
+hotbar 0
+cmd item replace entity @s hotbar.0 with jj_giants:adventure_wand
+wait 60
+shot p11_wand_world
+# the built-in map, played
+cmd giants admin adventure play wreck_cove open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 400
+shot p11_cove_start
+cmd tp @s ~ ~ ~ -90 10
+wait 40
+shot p11_cove_road
+cmd gamemode spectator @s
+cmd tp @s -20 110 -70 -60 35
+wait 80
+shot p11_cove_overview
+cmd tp @s 10 80 -30 -70 30
+wait 60
+shot p11_cove_close
+cmd gamemode adventure @s
+cmd tp @s -10 64 0 90 0
+wait 400
+shot p11_cove_play
+wait 40
+cmd giants minigame stop
+wait 200
+shot p11_home_again
+quit

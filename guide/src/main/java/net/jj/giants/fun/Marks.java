@@ -110,6 +110,21 @@ public final class Marks {
                 + "'s name." : " named a " + nameOf(e) + " \"" + now + "\".")));
     }
 
+    /**
+     * (Part 11) a script's title for him (the boss bar shows it): set quietly, without a change-log line, the way his
+     * name and title are kept for the Fun page ("" takes it off)
+     */
+    public static void scriptTitle(MinecraftServer server, LivingEntity e, String title) {
+        FunWorld w = FunWorld.get(server);
+        String id = e.getStringUUID();
+        boolean fresh = w.markOf(id) == null;
+        FunWorld.Mark m = w.mark(id, FunGiants.kindOf(e));
+        if (fresh && e.hasCustomName() && e.getCustomName() != null) m.oldName = e.getCustomName().getString();
+        m.title = clean(title);
+        applyName(e, m);
+        w.tidy(id);
+    }
+
     // loot
 
     /** what a container holds as saved text (at most 54 stacks), or null when there's no container there */

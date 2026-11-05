@@ -47,6 +47,43 @@ public final class MgShapes {
         }
     }
 
+    /** (Part 11) a plan given column by column by its maker (an adventure map's saved blocks) */
+    public interface Columns {
+        int reach();
+
+        void column(int dx, int dz, int f, Out out);
+    }
+
+    /** (Part 11) a shape from a plan of one's own */
+    public static Shape custom(Columns c) {
+        return new Shape(new Builds.Shape() {
+            @Override
+            public void column(int dx, int dz, double d, int f, Builds.Col out) {
+                c.column(dx, dz, f, new Out() {
+                    @Override
+                    public void set(int y, BlockState s) {
+                        out.set(y, s);
+                    }
+
+                    @Override
+                    public void clearAbove(int y) {
+                        out.clearAbove(y);
+                    }
+
+                    @Override
+                    public void support(BlockState s) {
+                        out.support = s;
+                    }
+                });
+            }
+
+            @Override
+            public int reach() {
+                return c.reach();
+            }
+        });
+    }
+
     /** the World tools' arena, r round (its stands reach further: {@link Shape#reach()}) */
     public static Shape arena(int r) {
         return new Shape(new Arena(Math.max(24, r)).made());
@@ -66,6 +103,17 @@ public final class MgShapes {
     /** the radius the World tools give his den at this size */
     public static int denRadius(String kind, double size) {
         return Mth.clamp((int) Math.round(FunGiants.reach(kind, size) * Dens.ROOM), Dens.LEAST, Dens.MOST);
+    }
+
+    /**
+     * (Part 11, the Wreck Cove example) where Wreckback's cove den r round has its galleon (x, z from the middle), how
+     * far out its shore is, and the anchor's spot on the beach: {wreckX, wreckZ, shore, anchorX, anchorZ}
+     */
+    public static double[] cove(int r) {
+        r = Mth.clamp(r, Dens.LEAST, Dens.MOST);
+        double shore = r * 0.7, a1 = Plan.rnd(r, 3, 177) * Math.PI * 2, a3 = a1 + Math.PI * 0.6;
+        double place = shore * 0.78, ar = shore + (r - shore) * 0.55;
+        return new double[] {Math.cos(a1) * place, Math.sin(a1) * place, shore, Math.cos(a3) * ar, Math.sin(a3) * ar};
     }
 
     /** (Siege) the keep the players hold: a walled yard round a tower, r round */

@@ -69,7 +69,8 @@ public class AdminBookScreen extends Screen {
     private static boolean ownPage(String key) {
         return key.equals(HOME) || key.equals(LIVE) || key.equals(PRESETS) || key.equals(CHANGES)
                 || key.equals(PLAYERS) || key.equals(TOOLS)
-                || key.equals(FUN) || key.equals(WORLD) || key.equals(SYSTEMS) || key.equals(MINIGAMES);
+                || key.equals(FUN) || key.equals(WORLD) || key.equals(SYSTEMS) || key.equals(MINIGAMES)
+                || key.equals(ADVENTURE);
     }
     /** the size settings that get a picture beside a player */
     private static final List<String> SIZES = List.of("worldScale", "spawnEggScale", "smallEggScale", "all.size");
@@ -294,6 +295,7 @@ public class AdminBookScreen extends Screen {
         if (key.equals(AdminCatalog.ALL)) return tr("all").getString();
         if (key.equals(TOOLS)) return tt("name", "Server tools").getString();
         if (key.equals(MINIGAMES)) return mg("name", "Minigames").getString();
+        if (key.equals(ADVENTURE)) return adv("name", "Adventure").getString();
         if (ownPage(key)) return tr(key).getString();
         AdminBookClient.Page p = AdminBookClient.page(key);
         if (p != null && !p.name().isEmpty()) return p.name();
@@ -316,7 +318,7 @@ public class AdminBookScreen extends Screen {
         if (!AdminBookClient.admin()) return List.of(HOME);
         List<String> out = new ArrayList<>(creating() ? List.of(HOME, PRESETS, AdminCatalog.ALL, PLAYERS, SYSTEMS)
                 : List.of(HOME, LIVE, PRESETS, CHANGES, AdminCatalog.ALL, PLAYERS, TOOLS, FUN, WORLD, SYSTEMS,
-                        MINIGAMES));
+                        MINIGAMES, ADVENTURE));
         JsonObject h = AdminBookClient.home();
         if (h != null && h.get("giants") instanceof JsonArray a)
             for (JsonElement e : a)
@@ -360,7 +362,7 @@ public class AdminBookScreen extends Screen {
         if (creating()) {
             allWorlds = false;
             if (pageKey.equals(LIVE) || pageKey.equals(CHANGES) || pageKey.equals(TOOLS) || pageKey.equals(FUN)
-                    || pageKey.equals(WORLD) || pageKey.equals(MINIGAMES))
+                    || pageKey.equals(WORLD) || pageKey.equals(MINIGAMES) || pageKey.equals(ADVENTURE))
                 pageKey = HOME;
         }
         if (livePage(pageKey)) AdminBookClient.watchLive(true);
@@ -1279,6 +1281,7 @@ public class AdminBookScreen extends Screen {
         else if (pageKey.equals(WORLD)) worldRows();
         else if (pageKey.equals(SYSTEMS)) systemsRows();
         else if (pageKey.equals(MINIGAMES)) minigamesRows();
+        else if (pageKey.equals(ADVENTURE)) adventureRows();
         else settingRows(pageKey);
         int y = 0;
         for (Row r : rows) {
@@ -1297,7 +1300,7 @@ public class AdminBookScreen extends Screen {
         Component label;
         if (pageKey.equals(LIVE) || pageKey.equals(PRESETS) || pageKey.equals(CHANGES) || pageKey.equals(PLAYERS)
                 || pageKey.equals(TOOLS) || pageKey.equals(FUN) || pageKey.equals(WORLD) || pageKey.equals(SYSTEMS)
-                || pageKey.equals(MINIGAMES))
+                || pageKey.equals(MINIGAMES) || pageKey.equals(ADVENTURE))
             return;
         if (pageKey.equals(HOME)) {
             label = tr("reset_all");
@@ -1740,6 +1743,7 @@ public class AdminBookScreen extends Screen {
                 || gj.get("speaks").getAsBoolean();
         Component sub = key.equals(TOOLS) ? tt("tile", "Pause, events, map, stats")
                 : key.equals(MINIGAMES) ? mg("tile", "Royale, Boss Rush, Siege…")
+                : key.equals(ADVENTURE) ? adv("tile", "Scripts, hooks, maps")
                 : ownPage(key) ? tr(key + ".tile") : !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n)
                 : tr("tile.default");
         g.drawString(font, cut(sub.getString(), tw), tx, y + 16, !speaks ? DIM : n > 0 ? GOLD : GREY, false);
@@ -1910,6 +1914,7 @@ public class AdminBookScreen extends Screen {
             case FUN, WORLD -> AdminBookClient.fun() != null && AdminBookClient.live() != null;
             case SYSTEMS -> AdminBookClient.page(AdminCatalog.ALL) != null;
             case MINIGAMES -> AdminBookClient.minigames() != null;
+            case ADVENTURE -> AdminBookClient.adventure() != null;
             default -> AdminBookClient.home() != null
                     && (pageKey.equals(HOME) || AdminBookClient.page(pageKey) != null || !keptQuery.isBlank());
         };
@@ -2185,6 +2190,10 @@ public class AdminBookScreen extends Screen {
             title = mg("name", "Minigames");
             sub = mg("sub", "Rounds in worlds of their own: nothing here changes, and players get their things back.");
             pic = MINIGAMES;
+        } else if (pageKey.equals(ADVENTURE)) {
+            title = adv("name", "Adventure");
+            sub = adv("sub", "Scripted giants, command hooks, and adventure maps played as minigames.");
+            pic = ADVENTURE;
         } else if (pageKey.equals(FUN) || pageKey.equals(WORLD)) {
             title = tr(pageKey);
             sub = tr(pageKey + ".sub");
@@ -6596,6 +6605,319 @@ public class AdminBookScreen extends Screen {
             rows.add(new LineRow(Component.literal(str(k, "name")), st ? TEXT : DIM, Component.literal(
                     (st ? hp : "fallen") + (role.isEmpty() ? "" : " · " + role)), List.of()));
         }
+    }
+
+    // (Part 11, ADMIN_BRIDGE.md §28.8) the Adventure page: the Adventure Wand (paths, areas, a map's box), the
+    // adventure maps (the built-in Wreck Cove Rescue and every saved one, each played as a minigame), the scripts and
+    // the giants running them, the paths and areas, the command hooks and the scoreboard. Admins only.
+
+    public static final String ADVENTURE = "adventure";
+
+    /** an Adventure page line: its lang key (admin.jj_giants.adv.*) or these words */
+    static MutableComponent adv(String key, String fallback, Object... args) {
+        return Component.translatableWithFallback("admin.jj_giants.adv." + key, fallback, args);
+    }
+
+    private void adventureRows() {
+        JsonObject a = AdminBookClient.adventure();
+        if (a == null) {
+            rows.add(new Note(tr("asking"), GREY));
+            return;
+        }
+        // the wand
+        JsonObject w = a.get("wand") instanceof JsonObject wj ? wj : new JsonObject();
+        String mode = str(w, "mode"), wname = str(w, "name");
+        String now = mode.isEmpty() ? "" : (mode.equals("map") ? "a map's box" : "the " + mode) + " \"" + wname + "\""
+                + (bool(w, "first") ? " (first corner set: click the other one)" : "");
+        rows.add(new Card(adv("wand", "The Adventure Wand"), "adv_wand", adv("wand.body", "Pick what it places, then"
+                + " right-click blocks with it. A path: each click adds the next point (crouch-click takes the last"
+                + " off). An area or a map's box: click one corner, then the other. Held, it shows this world's paths"
+                + " (gold) and areas (blue). Now: %s.", now.isEmpty() ? "nothing yet" : now), GOLD, List.<Object[]>of(
+                        new Object[] {adv("wand.path", "Path…"), (Runnable) () -> wandForm("path", mode, wname),
+                            adv("wand.path.tip", "Place a path's points: a giant's walk or patrol")},
+                        new Object[] {adv("wand.area", "Area…"), (Runnable) () -> wandForm("area", mode, wname),
+                            adv("wand.area.tip", "Place an area's two corners: for waits, guards and hooks")},
+                        new Object[] {adv("wand.map", "Save a map…"), (Runnable) () -> wandForm("map", mode, wname),
+                            adv("wand.map.tip", "Click two corners round what to save as an adventure map")})));
+        if (bool(a, "saving")) rows.add(new Note(adv("saving", "A map is being saved…"), WARN));
+        // the maps
+        boolean busy = bool(a, "busy");
+        rows.add(new Head(adv("maps", "Adventure maps"), adv("maps.note", "Each is played as a minigame round in a"
+                + " world of its own, built fresh (players' things kept safe and given back). Its scripts and hooks"
+                + " work in that world only."), null).pic("adv_map"));
+        if (busy) rows.add(new Note(adv("busy", "A minigame is on now (%s): stop it on the Minigames page first.",
+                str(a, "playing").isEmpty() ? "see Minigames" : str(a, "playing")), GREY));
+        for (JsonObject m : objects(a, "maps")) {
+            String name = str(m, "name"), title = str(m, "title");
+            boolean built = bool(m, "builtIn");
+            String body = str(m, "goal") + (built ? "" : "  " + str(m, "size") + " · " + (int) dbl(m, "giants", 0)
+                    + " giants · saved by " + str(m, "by") + " · time up: " + str(m, "timeUp")
+                    + (str(m, "winArea").isEmpty() ? "" : " · win area: " + str(m, "winArea")));
+            List<Object[]> bs = new ArrayList<>();
+            bs.add(new Object[] {mg("start.open", "Open to join"), (Runnable) () -> confirm(adv("play.title",
+                    "Open %s?", title), adv("play.body", "Players have the lobby's time to join (Join on their Guide,"
+                    + " [Join] in chat, /giants join)."), mg("start.open", "Open to join"),
+                    () -> request("advplay", "map", name, "kind", "open")), mg("start.open.tip",
+                    "Players choose to join or watch"), !busy});
+            bs.add(new Object[] {mg("start.all", "Everyone online"), (Runnable) () -> confirm(adv("play.title.all",
+                    "Start %s for everyone?", title), adv("play.body.all", "Everyone online is taken into it when the"
+                    + " lobby's time is up (their things are kept safe and given back after)."),
+                    mg("start.all", "Everyone online"), () -> request("advplay", "map", name, "kind", "everyone")),
+                mg("start.all.tip", "Everyone online is taken in"), !busy});
+            if (!built) {
+                bs.add(new Object[] {adv("map.goal", "Goal…"), (Runnable) () -> {
+                    Form fm = new Form(adv("map.goal.title", "%s: goal", title), adv("map.goal.body", "Shown to the"
+                            + " players when the round starts."));
+                    EditBox goal = fm.box(adv("map.goal", "Goal…"), str(m, "goal"), 200);
+                    String[] up = {str(m, "timeUp").isEmpty() ? "lose" : str(m, "timeUp")};
+                    fm.cycle(adv("map.timeup", "Time up"), () -> lit(up[0].equals("win") ? "the players win"
+                            : "the players lose"), () -> up[0] = up[0].equals("win") ? "lose" : "win");
+                    EditBox area = fm.box(adv("map.winarea", "Win area"), str(m, "winArea"), 24);
+                    fm.button(adv("save", "Save"), () -> {
+                        closeModal();
+                        request("advmap", "op", "goal", "map", name, "value", goal.getValue());
+                        request("advmap", "op", "timeup", "map", name, "value", up[0]);
+                        request("advmap", "op", "winarea", "map", name, "value",
+                                area.getValue().isBlank() ? "none" : area.getValue());
+                    });
+                    fm.button(tr("cancel"), fm::cancel);
+                    fm.done();
+                    modal = fm;
+                    place();
+                }, adv("map.goal.tip", "Its goal, what time up means, and an area that wins it")});
+                bs.add(new Object[] {adv("delete", "Delete"), (Runnable) () -> confirm(adv("map.delete", "Delete %s?",
+                        title), adv("map.delete.body", "The saved map is gone for good (the world itself is not"
+                        + " touched)."), adv("delete", "Delete"), () -> request("advmap", "op", "delete", "map", name)),
+                    null});
+            }
+            rows.add(new Card(Component.literal(title + (built ? "  (built in)" : "")), built ? "adv_cove" : "adv_map",
+                    Component.literal(body.trim()), built ? GOLD : KEY, bs));
+        }
+        // the scripts
+        List<JsonObject> scripts = objects(a, "scripts");
+        Head sh = new Head(adv("scripts", "Scripts"), adv("scripts.note", "A script is steps a giant does one after"
+                + " another: walk or patrol a path, wait, wait for players, stand guard, fight, say a line, a title on"
+                + " his boss bar, a mood, sleep or wake, run a command. Give one to a giant to start it."), null)
+                .folding("adv/scripts", "adv_script", scripts.size());
+        rows.add(sh);
+        if (!sh.shut()) {
+            rows.add(new LineRow(adv("script.new", "New script or step"), KEY, adv("script.new.sub",
+                    "A name and its first step (or another step for one you have)"), List.<Object[]>of(
+                            new Object[] {adv("script.add", "Add step…"), (Runnable) () -> stepForm("", 0, ""), null},
+                            new Object[] {adv("script.give", "Give to a giant…"), (Runnable) () -> giveForm(scripts),
+                                null, !scripts.isEmpty()})));
+            if (scripts.isEmpty()) rows.add(new Note(adv("scripts.none", "No scripts yet."), GREY));
+            for (JsonObject sc : scripts) {
+                String name = str(sc, "name");
+                List<String> steps = strings(sc, "steps");
+                int n = (int) dbl(sc, "giants", 0);
+                Head one = new Head(Component.literal(name), null, null).folding("adv/s/" + name, "adv_script",
+                        steps.size());
+                rows.add(one);
+                if (one.shut()) continue;
+                for (int i = 0; i < steps.size(); i++) {
+                    int k = i + 1;
+                    String line = steps.get(i);
+                    rows.add(new LineRow(Component.literal(k + ".  " + line), TEXT, Component.empty(), List.<Object[]>of(
+                            new Object[] {adv("edit", "Edit"), (Runnable) () -> stepForm(name, k, line), null},
+                            new Object[] {lit("−"), (Runnable) () -> request("advscript", "op", "remove", "name", name,
+                                    "n", k), adv("step.remove", "Take this step off")})));
+                }
+                rows.add(new LineRow(Component.empty(), TEXT, adv("script.giants", "%s giants run it", n),
+                        List.<Object[]>of(
+                                new Object[] {adv("script.add", "Add step…"), (Runnable) () -> stepForm(name, 0, ""),
+                                    null},
+                                new Object[] {adv("delete", "Delete"), (Runnable) () -> confirm(adv("script.delete",
+                                        "Delete the script %s?", name), adv("script.delete.body", "Giants running it"
+                                        + " stop where they are and are free again."), adv("delete", "Delete"),
+                                        () -> request("advscript", "op", "delete", "name", name)), null})));
+            }
+        }
+        // the giants running scripts
+        List<JsonObject> runs = objects(a, "runs");
+        Head rh = new Head(adv("runs", "Giants running scripts"), null, null).folding("adv/runs", "all", runs.size());
+        rows.add(rh);
+        if (!rh.shut()) {
+            if (runs.isEmpty()) rows.add(new Note(adv("runs.none", "None yet: give a giant a script."), GREY));
+            for (JsonObject r : runs) {
+                String id = str(r, "id");
+                boolean here = bool(r, "here");
+                rows.add(new LineRow(Component.literal(str(r, "label") + " · " + str(r, "script")), here ? TEXT : DIM,
+                        Component.literal(str(r, "where")), List.<Object[]>of(
+                                new Object[] {adv("restart", "Restart"), (Runnable) () -> request("advrestart",
+                                        "giant", id), adv("restart.tip", "From its first step again"), here},
+                                new Object[] {adv("take", "Take off"), (Runnable) () -> request("advtake", "giant", id),
+                                    adv("take.tip", "He stops the script and is free again"), here})));
+            }
+        }
+        // paths and areas
+        List<JsonObject> paths = objects(a, "paths"), areas = objects(a, "areas");
+        Head ph = new Head(adv("places", "Paths and areas"), adv("places.note", "Placed with the wand (or /giants"
+                + " admin path point, /giants admin area set). Scripts walk paths; waits, guards, hooks and maps use"
+                + " areas."), null).folding("adv/places", "adv_path", paths.size() + areas.size());
+        rows.add(ph);
+        if (!ph.shut()) {
+            if (paths.isEmpty() && areas.isEmpty()) rows.add(new Note(adv("places.none", "None yet."), GREY));
+            for (JsonObject p : paths) {
+                String name = str(p, "name");
+                rows.add(new LineRow(Component.literal(name), GOLD, adv("path.sub", "path · %s points · %s blocks long"
+                        + " · from %s", (int) dbl(p, "points", 0), (int) dbl(p, "length", 0), str(p, "at")),
+                        List.<Object[]>of(new Object[] {adv("remove", "Remove"), (Runnable) () -> request("advpath",
+                                "name", name), null})));
+            }
+            for (JsonObject ar : areas) {
+                String name = str(ar, "name");
+                rows.add(new LineRow(Component.literal(name), 0xFF2A6AB0, adv("area.sub", "area · %s blocks · at %s",
+                        str(ar, "size"), str(ar, "at")), List.<Object[]>of(new Object[] {adv("remove", "Remove"),
+                            (Runnable) () -> request("advarea", "name", name), null})));
+            }
+        }
+        // hooks
+        List<JsonObject> hooks = objects(a, "hooks");
+        Head hh = new Head(adv("hooks", "Command hooks"), adv("hooks.note", "When a giant has an event, a command runs"
+                + " once: as the server, @s = the giant, with the permission level of whoever added the hook (a"
+                + " command block: 2). Target: all, a giant (wreckback), a tag, script:<name> or an id. Also from"
+                + " command blocks: /giants hook add <target> <event> <command>."), null)
+                .folding("adv/hooks", "adv_hook", hooks.size());
+        rows.add(hh);
+        if (!hh.shut()) {
+            boolean scores = bool(a, "scores");
+            rows.add(new LineRow(adv("hook.new", "New hook"), KEY, adv("scores.sub", "Scoreboard (giants_health,"
+                    + " giants_alive, giants_events): %s", scores ? "on" : "off"), List.<Object[]>of(
+                            new Object[] {adv("hook.add", "Add hook…"), (Runnable) () -> hookForm(a), null},
+                            new Object[] {scores ? adv("scores.off", "Scoreboard off") : adv("scores.on",
+                                    "Scoreboard on"), (Runnable) () -> request("advscores", "on", !scores),
+                                adv("scores.tip", "Objectives command blocks can test: each giant's health %, how"
+                                        + " many stand, how often each event fired")})));
+            if (hooks.isEmpty()) rows.add(new Note(adv("hooks.none", "No hooks yet."), GREY));
+            for (JsonObject h : hooks) {
+                int id = (int) dbl(h, "id", 0);
+                rows.add(new LineRow(Component.literal(id + ".  " + str(h, "target") + " " + str(h, "words")), TEXT,
+                        Component.literal("/" + str(h, "command") + "   (by " + str(h, "by") + ", level "
+                                + (int) dbl(h, "level", 2) + ", ran " + (int) dbl(h, "fired", 0) + "x)"),
+                        List.<Object[]>of(
+                                new Object[] {adv("test", "Try"), (Runnable) () -> request("advhook", "op", "test",
+                                        "id", id), adv("test.tip", "Run it once now on the nearest giant it matches")},
+                                new Object[] {lit("−"), (Runnable) () -> request("advhook", "op", "remove", "id", id),
+                                    adv("hook.remove", "Remove this hook")}), true));
+            }
+        }
+        // what the words mean
+        List<JsonObject> none = List.of();
+        Head vh = new Head(adv("help", "Steps and events"), null, null).folding("adv/help", "misc",
+                none.size() + (a.get("verbs") instanceof JsonArray va ? va.size() : 0));
+        rows.add(vh);
+        if (!vh.shut()) {
+            if (a.get("verbs") instanceof JsonArray va)
+                for (JsonElement e : va) {
+                    JsonArray v = e.getAsJsonArray();
+                    rows.add(new LineRow(Component.literal(v.get(0).getAsString() + " " + v.get(1).getAsString()), KEY,
+                            Component.literal(v.get(2).getAsString()), List.of(), true));
+                }
+            if (a.get("events") instanceof JsonArray ea)
+                for (JsonElement e : ea) {
+                    JsonArray v = e.getAsJsonArray();
+                    rows.add(new LineRow(Component.literal("event " + v.get(0).getAsString()), 0xFF2A6AB0,
+                            Component.literal(v.get(1).getAsString()), List.of(), true));
+                }
+            rows.add(new Note(adv("fill", "In a hook's command: {giant} {name} {id} {x} {y} {z} {health} {player}"
+                    + " {area}. A map's hooks end its round with /giants adventure win|lose [words]."), GREY));
+        }
+    }
+
+    /** the wand's job and name */
+    private void wandForm(String mode, String nowMode, String nowName) {
+        Form fm = new Form(adv("wand." + mode + ".title", mode.equals("path") ? "Place a path" : mode.equals("area")
+                ? "Place an area" : "Save an adventure map"), adv("wand." + mode + ".body", mode.equals("path")
+                ? "Each right-click on a block adds the next point; crouch-click takes the last off. A path that ends"
+                        + " where it began makes a loop for patrols."
+                : mode.equals("area") ? "Right-click one corner, then the other (the box between them, top to"
+                        + " bottom). Crouch-click removes it."
+                : "Right-click one corner, then the other: the blocks between them, the giants standing in it (with"
+                        + " their scripts) and the paths, areas and hooks that go with them are saved. At most 192 x"
+                        + " 128 x 192."));
+        EditBox name = fm.box(adv("name.label", "Name"), mode.equals(nowMode) ? nowName : mode + "1", 24);
+        fm.button(adv("wand.take", "Take the wand"), () -> {
+            closeModal();
+            request("advwand", "mode", mode, "name", name.getValue().strip());
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
+    }
+
+    /** a step added to (n = 0) or changed in a script */
+    private void stepForm(String script, int n, String line) {
+        Form fm = new Form(n > 0 ? adv("step.edit", "%s: step %s", script, n) : adv("step.add.title", "Add a step"),
+                adv("step.body", "For example: walk shore · patrol camp until area gate · waitfor players 20 ·"
+                        + " guard 24 · fight · say Halt! · title The Gatekeeper · mood hunting · run <command>."));
+        EditBox name = fm.box(adv("script.name", "Script"), script, 24);
+        EditBox step = fm.box(adv("step.label", "Step"), line, 300);
+        if (!script.isEmpty()) {
+            name.setFocused(false);
+            step.setFocused(true);
+            fm.typing = step;
+        }
+        fm.button(adv("save", "Save"), () -> {
+            closeModal();
+            if (n > 0) request("advscript", "op", "set", "name", name.getValue().strip(), "n", n, "line",
+                    step.getValue());
+            else request("advscript", "op", "add", "name", name.getValue().strip(), "line", step.getValue());
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
+    }
+
+    /** a script given to a giant */
+    private void giveForm(List<JsonObject> scripts) {
+        Form fm = new Form(adv("give.title", "Give a script"), adv("give.body", "Which giant: wreckback (the nearest"
+                + " one to you), wreckback 2 (as Live control numbers them) or his id. He starts at its first step."));
+        EditBox giant = fm.box(adv("give.giant", "Giant"), "", 64);
+        List<String> names = new ArrayList<>();
+        for (JsonObject s : scripts) names.add(str(s, "name"));
+        String[] pick = {names.isEmpty() ? "" : names.get(0)};
+        fm.cycle(adv("script.name", "Script"), () -> lit(pick[0]), () -> pick[0] =
+                names.get((names.indexOf(pick[0]) + 1) % names.size()));
+        fm.button(adv("give", "Give"), () -> {
+            closeModal();
+            request("advgive", "giant", giant.getValue().strip(), "script", pick[0]);
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
+    }
+
+    /** a new hook: target, event, command */
+    private void hookForm(JsonObject a) {
+        Form fm = new Form(adv("hook.title", "Add a command hook"), adv("hook.body", "The command runs once each time"
+                + " (no / needed), as the server with @s = the giant, at your permission level."));
+        EditBox target = fm.box(adv("hook.target", "Target"), "all", 48);
+        List<String> evs = new ArrayList<>();
+        if (a.get("events") instanceof JsonArray ea) for (JsonElement e : ea) evs.add(e.getAsJsonArray().get(0)
+                .getAsString());
+        if (evs.isEmpty()) evs.add("dies");
+        String[] ev = {evs.get(0)};
+        fm.cycle(adv("hook.event", "Event"), () -> lit(ev[0]), () -> ev[0] = evs.get((evs.indexOf(ev[0]) + 1)
+                % evs.size()));
+        EditBox area = fm.box(adv("hook.area", "Area (enters/leaves)"), "", 24);
+        EditBox cmd = fm.box(adv("hook.command", "Command"), "say {name} {giant} event!", 400);
+        target.setFocused(true);
+        fm.button(adv("save", "Save"), () -> {
+            closeModal();
+            String e = ev[0];
+            if ((e.equals("enters") || e.equals("leaves")) && !area.getValue().isBlank())
+                e = e + ":" + area.getValue().strip();
+            request("advhook", "op", "add", "target", target.getValue().strip(), "event", e, "command",
+                    cmd.getValue());
+        });
+        fm.button(tr("cancel"), fm::cancel);
+        fm.done();
+        modal = fm;
+        place();
     }
 
     // (Part 8, ADMIN_BRIDGE.md 24.8) the Systems page: what the new systems are doing now, each system's settings in
