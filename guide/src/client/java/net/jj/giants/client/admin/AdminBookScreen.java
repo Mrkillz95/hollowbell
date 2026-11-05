@@ -6723,7 +6723,9 @@ public class AdminBookScreen extends Screen {
                             new Object[] {lit("−"), (Runnable) () -> request("advscript", "op", "remove", "name", name,
                                     "n", k), adv("step.remove", "Take this step off")})));
                 }
-                rows.add(new LineRow(Component.empty(), TEXT, adv("script.giants", "%s giants run it", n),
+                rows.add(new LineRow(Component.empty(), TEXT, n == 0 ? adv("script.giants.none", "No giant runs it"
+                        + " yet") : n == 1 ? adv("script.giants.one", "1 giant runs it") : adv("script.giants",
+                        "%s giants run it", n),
                         List.<Object[]>of(
                                 new Object[] {adv("script.add", "Add step…"), (Runnable) () -> stepForm(name, 0, ""),
                                     null},
@@ -6776,7 +6778,7 @@ public class AdminBookScreen extends Screen {
         List<JsonObject> hooks = objects(a, "hooks");
         Head hh = new Head(adv("hooks", "Command hooks"), adv("hooks.note", "When a giant has an event, a command runs"
                 + " once: as the server, @s = the giant, with the permission level of whoever added the hook (a"
-                + " command block: 2). Target: all, a giant (wreckback), a tag, script:<name> or an id. Also from"
+                + " command block: 2). Target: all, a giant (wreckback), a tag, script.<name> or an id. Also from"
                 + " command blocks: /giants hook add <target> <event> <command>."), null)
                 .folding("adv/hooks", "adv_hook", hooks.size());
         rows.add(hh);
@@ -6788,7 +6790,7 @@ public class AdminBookScreen extends Screen {
                             new Object[] {scores ? adv("scores.off", "Scoreboard off") : adv("scores.on",
                                     "Scoreboard on"), (Runnable) () -> request("advscores", "on", !scores),
                                 adv("scores.tip", "Objectives command blocks can test: each giant's health %, how"
-                                        + " many stand, how often each event fired")})));
+                                        + " many stand, how often each event fired")}), true));
             if (hooks.isEmpty()) rows.add(new Note(adv("hooks.none", "No hooks yet."), GREY));
             for (JsonObject h : hooks) {
                 int id = (int) dbl(h, "id", 0);

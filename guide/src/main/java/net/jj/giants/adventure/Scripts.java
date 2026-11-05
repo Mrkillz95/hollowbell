@@ -29,15 +29,15 @@ public final class Scripts {
 
     /** every step a script can have: its word, what follows it, and what it does (the book and /giants admin script) */
     public static final String[][] VERBS = {
-        {"walk", "<path> [until area <area>|until players <blocks>]", "walks the path once, point by point"},
-        {"patrol", "<path> [until area <area>|until players <blocks>]", "walks the path round and round"},
+        {"walk", "<path> [until area <area> or until players <blocks>]", "walks the path once, point by point"},
+        {"patrol", "<path> [until area <area> or until players <blocks>]", "walks the path round and round"},
         {"wait", "<seconds>", "stays where he is for a while"},
-        {"waitfor", "players <blocks> | area <area>", "stays where he is until a player comes that close, or into the area"},
-        {"guard", "[blocks] [until area <area>|until players <blocks>]", "stands guard here: goes for anyone who comes that close (24), then back to his post"},
+        {"waitfor", "players <blocks> or area <area>", "stays where he is until a player comes that close, or into the area"},
+        {"guard", "[blocks] [until area <area> or until players <blocks>]", "stands guard here: goes for anyone who comes that close (24), then back to his post"},
         {"fight", "[blocks]", "starts fighting the nearest player (within 64 blocks)"},
         {"mood", "<mood>", "his mood (calm, hunting, guardian...)"},
         {"say", "<words>", "says a line in chat to the players near him (96 blocks)"},
-        {"title", "<words>|clear", "the title on his boss bar"},
+        {"title", "<words> or clear", "the title on his boss bar"},
         {"sleep", "", "lies down to sleep"},
         {"wake", "", "wakes up"},
         {"run", "<command>", "runs a command as the server, @s = him, with the script author's permission level"},
