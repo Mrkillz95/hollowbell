@@ -1,0 +1,168 @@
+# Part 10A pictures (ADMIN_BRIDGE.md 26): the admin book's Minigames page, the lobby (chat, boss bar, the Guide's
+# This world -> Minigames tab), and each mode a single player can play, in action in its own world.
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd gamerule sendCommandFeedback false
+cmd difficulty normal
+cmd giants admin set all mgLobby 10
+cmd giants admin set all mgSize small
+wait 40
+adminbook minigames 0
+wait 60
+mouse 2 2
+wait 25
+shot p10a_page_0
+adminbook minigames 600
+wait 40
+mouse 2 2
+wait 25
+shot p10a_page_1
+close
+cmd giants minigame start royale open
+wait 40
+shot p10a_lobby_chat
+guide world 3
+wait 40
+shot p10a_guide_lobby
+close
+chat /giants join
+wait 20
+adminbook minigames 0
+wait 40
+mouse 2 2
+wait 25
+shot p10a_page_lobby
+close
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_royale_start
+wait 700
+shot p10a_royale_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start bossrush open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_bossrush_start
+wait 500
+shot p10a_bossrush_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start siege open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_siege_start
+wait 700
+shot p10a_siege_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start escort open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_escort_start
+wait 600
+shot p10a_escort_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start legends open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_legends_start
+wait 500
+shot p10a_legends_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start bounty open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_bounty_start
+wait 600
+shot p10a_bounty_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start kaiju open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_kaiju_start
+wait 600
+shot p10a_kaiju_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start onelife open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_onelife_start
+wait 600
+shot p10a_onelife_play
+wait 40
+cmd giants minigame stop
+wait 200
+cmd giants minigame start speedrun open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 600
+shot p10a_speedrun_start
+wait 400
+shot p10a_speedrun_play
+wait 40
+cmd giants minigame stop
+wait 200
+guide world 3
+wait 40
+shot p10a_guide_results
+close
+quit

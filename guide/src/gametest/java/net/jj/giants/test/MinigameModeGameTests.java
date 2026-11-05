@@ -212,7 +212,8 @@ public class MinigameModeGameTests implements FabricGameTest {
                     ServerPlayer foot = held[0] == a ? b : a;
                     boolean pvp = s.isPvpAllowed();
                     s.setPvpAllowed(true);
-                    // a knock-out on foot scores 1
+                    // a knock-out on foot scores 1 (past the grace at Go)
+                    held[0].removeAllEffects();
                     held[0].hurt(held[0].damageSources().playerAttack(foot), Float.MAX_VALUE);
                     s.setPvpAllowed(pvp);
                     h.assertTrue(game().of(foot.getUUID()).score == 1, "1 for a knock-out on foot");

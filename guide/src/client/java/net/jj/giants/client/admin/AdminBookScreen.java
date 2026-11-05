@@ -1738,7 +1738,7 @@ public class AdminBookScreen extends Screen {
         boolean speaks = key.equals(AdminCatalog.ALL) || gj == null || gj.get("speaks") == null
                 || gj.get("speaks").getAsBoolean();
         Component sub = key.equals(TOOLS) ? tt("tile", "Pause, events, map, stats")
-                : key.equals(MINIGAMES) ? mg("tile", "Royale, Boss Rush, Siegeâ€¦")
+                : key.equals(MINIGAMES) ? mg("tile", "Royale, Boss Rush, Siege…")
                 : ownPage(key) ? tr(key + ".tile") : !speaks ? tr("tile.none") : n > 0 ? tr("tile.set", n)
                 : tr("tile.default");
         g.drawString(font, cut(sub.getString(), tw), tx, y + 16, !speaks ? DIM : n > 0 ? GOLD : GREY, false);
@@ -5881,8 +5881,8 @@ public class AdminBookScreen extends Screen {
         boolean free = g == null && !bool(m, "paused");
         int rounds = mgRounds;
         rows.add(new Head(mg("modes", "Start a minigame"), null, null).pic(MINIGAMES));
-        rows.add(new LineRow(mg("rounds", "Rounds"), TEXT, mg("rounds.sub", "%s (click to change; the world's"
-                + " Rounds setting is used when none is picked)", rounds == 0 ? "as set" : String.valueOf(rounds)),
+        rows.add(new LineRow(mg("rounds", "Rounds"), TEXT, mg("rounds.sub", "%s (click to change)",
+                rounds == 0 ? "as the world's Rounds setting" : String.valueOf(rounds)),
                 List.<Object[]>of(new Object[] {Component.literal(rounds == 0 ? "as set" : rounds + ""),
                     (Runnable) () -> {
                         mgRounds = (mgRounds + 1) % 6;

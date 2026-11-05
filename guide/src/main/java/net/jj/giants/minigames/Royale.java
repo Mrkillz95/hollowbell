@@ -96,7 +96,8 @@ public final class Royale extends MgMode {
         MgKits.royaleChests(g, 10 + g.players().size());
         for (String k : Minigames.kinds()) {
             Vec3 at = g.map.spots.get(k);
-            if (at != null) g.giants.summon(k, at, "hunting", g.giantSize, 1, 0.6, "hunter", -1, null);
+            // (calm in their dens for the first half minute: the players get a start)
+            if (at != null) g.giants.summon(k, at, "calm", g.giantSize, 1, 0.4, "hunter", -1, null);
         }
         g.data.put("stage", 0);
     }
@@ -106,6 +107,10 @@ public final class Royale extends MgMode {
     public void tick(MgGame g) {
         ServerLevel l = g.level;
         if (l == null || g.map == null) return;
+        if (g.roundTicks == 600) {
+            for (MgGiants.G k : g.giants.standing()) MgGiants.mood(g, k, "hunting");
+            closing(g, "The giants wake: they're hunting!");
+        }
         int stage = (int) g.data.getOrDefault("stage", 0);
         double t = g.roundTicks / (double) g.roundMax();
         WorldBorder b = l.getWorldBorder();

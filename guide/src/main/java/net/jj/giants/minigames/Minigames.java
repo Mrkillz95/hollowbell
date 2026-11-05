@@ -286,7 +286,7 @@ public final class Minigames {
     private static boolean allowDeath(LivingEntity e, DamageSource src, float amount) {
         if (!(e instanceof ServerPlayer sp)) return true;
         MgGame g = current;
-        if (g == null || !MgLevels.temporary(sp.level())) return true;
+        if (g == null) return true;
         MgGame.P p = g.of(sp.getUUID());
         if (p == null || !p.in) return true;
         sp.setHealth(sp.getMaxHealth());
@@ -345,6 +345,8 @@ public final class Minigames {
         if (moving.contains(p.getUUID())) return;
         MgGame g = current;
         if (g == null || from != g.level || to == g.level) return;
+        // (a giant's own place, Pitchgut's innards, is part of the round: they come back from there)
+        if (!to.dimension().location().getNamespace().equals("minecraft")) return;
         MgGame.P q = g.of(p.getUUID());
         if (q == null || !q.in) return;
         // left the round's world some other way (a command, a portal): out of the round, and put back

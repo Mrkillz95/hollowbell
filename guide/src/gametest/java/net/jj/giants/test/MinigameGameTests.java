@@ -310,8 +310,8 @@ public class MinigameGameTests implements FabricGameTest {
                     h.assertTrue(GiantsBridge.calls.stream().anyMatch(c -> c.startsWith("summon "
                             + world[0].dimension().location())), "summoned into the round's world: "
                             + GiantsBridge.calls);
-                    h.assertTrue(GiantsBridge.calls.stream().anyMatch(c -> c.contains(" hunting ")),
-                            "hunting: " + GiantsBridge.calls);
+                    h.assertTrue(GiantsBridge.calls.stream().anyMatch(c -> c.contains(" calm ")),
+                            "calm in his den at first: " + GiantsBridge.calls);
                     // the main world isn't touched: no golem there
                     for (var gm : GiantsBridge.golems(s)) h.assertTrue(gm.level() == world[0], "only in the round");
                     h.assertTrue(Minigames.stop(s, "Tester").ok(), "stopped");
@@ -360,6 +360,8 @@ public class MinigameGameTests implements FabricGameTest {
                     // players may hit each other in Royale (where the server allows it)
                     boolean pvpWas = s.isPvpAllowed();
                     s.setPvpAllowed(true);
+                    // (past the few seconds' grace at Go)
+                    b.p().removeAllEffects();
                     float hp = b.p().getHealth();
                     b.p().hurt(b.p().damageSources().playerAttack(a.p()), 2);
                     h.assertTrue(b.p().getHealth() < hp, "PvP in Royale");

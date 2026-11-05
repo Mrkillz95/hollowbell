@@ -183,6 +183,18 @@ public final class MgGiants {
         FunGiants.act(game.server, gi, k.id.toString(), "move", o);
     }
 
+    /** his mood set (his own sysact mood, as /<giant> mood for him alone) */
+    public static void mood(MgGame game, G k, String mood) {
+        Giant gi = AdminServer.giant(k.kind);
+        if (gi == null) return;
+        JsonObject o = new JsonObject();
+        o.addProperty("sys", 1);
+        o.addProperty("do", "mood");
+        o.addProperty("id", k.id.toString());
+        o.addProperty("value", mood);
+        AdminServer.call(game.server, gi, "sysact", o.toString());
+    }
+
     /** one giant told to go for another (his own meet: a fight a player started, neither backs down) */
     public static void meet(MgGame game, G who, G other) {
         Giant gi = AdminServer.giant(who.kind);

@@ -117,7 +117,7 @@ public final class WorldPages {
                     need = g.get("need").getAsInt(), s = g.get("lobby").getAsInt();
             if (phase.equals("lobby"))
                 out.para(Component.literal((force ? "For everyone online. " : "") + "Starts in " + s / 60 + ":"
-                        + String.format("%02d", s % 60) + " Â· " + players + " of " + most + " in" + (players < need
+                        + String.format("%02d", s % 60) + " · " + players + " of " + most + " in" + (players < need
                         ? " (needs " + need + ")" : "") + "."), KEY);
             else out.para(Component.literal(phase.equals("play") ? "Being played now"
                     + (g.get("rounds").getAsInt() > 1 ? " (round " + g.get("round").getAsInt() + " of "

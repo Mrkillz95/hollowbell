@@ -617,6 +617,9 @@ public final class MgGame {
             ServerPlayer sp = online(p);
             if (sp == null || !p.in) continue;
             title(sp, Component.literal("Go!").withStyle(ChatFormatting.GREEN), Component.empty(), 0, 20, 10);
+            // (a few seconds' grace)
+            if (!p.watcher && p.alive) sp.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
             sp.playNotifySound(SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.MASTER, 1f, 1.4f);
         }
         mode.go(this);
