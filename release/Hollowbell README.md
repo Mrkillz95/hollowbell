@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.40
+# Hollowbell (Java mod), version 1.12.41
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,21 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- **Adventure maps** in the Giants Admin Book (in the all-in-one jar): admins can script giants (walk a path, guard,
+  fight, talk), run commands when something happens to a giant, and save a part of the world as an adventure map to
+  play as a minigame. Comes with one ready-made map, The Wreck Cove Rescue. Win any adventure map for the new
+  **Adventurer** challenge.
+- **Giant editor** (in the all-in-one jar): an admin can dress Hollowbell in another look (Frost, Gold, Shadow,
+  Festive, Ancient stone, and new Ember and Crystal, or a custom set). Only how he looks changes. His Bellings wear
+  his look too. Followers that gather round him take the look's colour. Frost is lighter now (icy white and pale
+  blue).
+- **Sound and music picker** and **share codes** (in the all-in-one jar): change his fight music, ground sounds and
+  voice pitch; share a preset as a short code that works offline.
+- After a staged fight is stopped or ends, both fighters calm down for a minute and walk home: they no longer go
+  after players standing near the fight.
+
+### 1.12.40
 
 - **Minigames** in the Giants Admin Book (in the all-in-one jar): an admin can start rounds of eleven minigames
   (Giant Royale, Boss Rush, Siege, Escort, Legends, Possession, Rival Tamers, Bounty Board, Kaiju War, One Life and

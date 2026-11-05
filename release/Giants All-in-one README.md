@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.13.0 |
-| Pitchgut | 1.35.41 |
-| Furrowmaw | 1.17.38 |
-| Fire & Ice Cerberus | 2.18.38 |
-| Hollowbell | 1.12.40 |
-| Lantern Willow | 1.10.41 |
-| Wreckback | 1.2.46 |
-| The Swarmforge | 1.4.44 |
-| The Gloamwick | 1.2.25 |
+| Giants Guide | 1.14.0 |
+| Pitchgut | 1.35.42 |
+| Furrowmaw | 1.17.39 |
+| Fire & Ice Cerberus | 2.18.39 |
+| Hollowbell | 1.12.41 |
+| Lantern Willow | 1.10.42 |
+| Wreckback | 1.2.47 |
+| The Swarmforge | 1.4.45 |
+| The Gloamwick | 1.2.26 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.15.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.16.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.15.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.16.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -119,6 +119,36 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.13.0: the admin book's **Minigames** page (eleven minigames, each round in a world of its own)
   and the **Fight script** on the Fun page (staged fights between giants), the giant-fight settings on the Systems
   page under "Giant fights", Minigames on the Guide's This world page, and fewer boss bars on screen.
+- New in the Guide 1.14.0: the admin book's **Adventure** page (scripted giants, command hooks, adventure maps),
+  the **Editor** page (giant looks) and the **Sound** page (music, ground sounds, voices), and share codes.
+
+## New in 1.16.0
+
+This completes the Giants Admin Book. Released without the full test run (JJ's call, to get it out faster): every
+mod was built and the jar was load-checked on a server.
+
+- **Adventure maps** (admins: the admin book's Adventure page): give a giant a script (walk or patrol a path, wait
+  for players, guard a spot, fight, talk, set his title), run commands when something happens to a giant (he falls,
+  wakes, gets hurt, enters an area, sees a player...), and save a piece of your world, giants and all, as an
+  adventure map that's played as a minigame round. The Adventure Wand marks paths and areas. One map comes ready:
+  **The Wreck Cove Rescue** (bring a lost young giant home past the cove's guard). Winning any adventure map gives
+  the new **Adventurer** challenge. Everything works from command blocks too.
+- **Giant editor** (the Editor page or `/giants admin look ...`): dress a whole kind, a tagged group or one giant in
+  another look: Frost, Gold, Shadow, Festive, Ancient stone, and new **Ember** and **Crystal**, or your own set. Only
+  how he's drawn changes. Frost is lighter now (icy white and pale blue, even on dark giants). The Swarmforge's
+  robots, Hollowbell's Bellings, the Lantern Willow's Mudlings and Furrowmaw's Furrowlings wear their giant's look,
+  and followers take its colour. Looks belong to the world: they aren't part of presets or share codes.
+- **Sound and music picker** (the Sound page): per giant, his fight music (his own, none, or another giant's), his
+  ground sounds on or off and how loud, and his voice higher or deeper.
+- **Share codes**: share any preset as a short `GS1-...` code (Presets page or `/giants admin share`) and import it
+  on another server. No internet needed.
+- **Staged fight fix**: when a staged fight is stopped or ends, both fighters drop every target and grudge (players
+  and each other), calm down for a minute and walk home. In 1.15.0 a fighter could still go after a player standing
+  near the fight right after Stop.
+- The Wreck Cove Rescue's giants are smaller, so both fit the cove.
+
+Inside: Pitchgut 1.35.42, Furrowmaw 1.17.39, Cerberus 2.18.39, Hollowbell 1.12.41, Lantern Willow 1.10.42,
+Wreckback 1.2.47, Swarmforge 1.4.45, Gloamwick 1.2.26, Giants Guide 1.14.0.
 
 ## New in 1.15.0
 
