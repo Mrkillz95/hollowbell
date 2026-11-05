@@ -37,11 +37,34 @@ public final class EditorClient {
     /** the server's looks: each installed giant gets his kind's ({} = none) */
     public static void looks(JsonObject o) {
         looks = o;
+        java.util.Map<java.util.UUID, Integer> t = new java.util.HashMap<>();
+        if (o.get("followers") instanceof JsonObject f)
+            for (var e : f.entrySet())
+                try {
+                    t.put(java.util.UUID.fromString(e.getKey()), e.getValue().getAsInt());
+                } catch (RuntimeException bad) {
+                    // left out
+                }
+        TINTS = java.util.Map.copyOf(t);
         JsonObject kinds = o.get("kinds") instanceof JsonObject k ? k : new JsonObject();
         for (Giant g : Giants.installed()) {
             JsonElement mine = kinds.get(g.key());
             AdminServer.call(null, g, "lookclient", mine instanceof JsonObject m ? m.toString() : "{}");
         }
+    }
+
+    /** (1.16) followers wearing their giant's look: each one's colour (LivingEntityTintMixin) */
+    private static volatile java.util.Map<java.util.UUID, Integer> TINTS = java.util.Map.of();
+
+    /** the colour (ARGB) to draw this creature in: his own times his giant's look's, as it was when none */
+    public static int tint(net.minecraft.world.entity.Entity e, int argb) {
+        var t = TINTS;
+        if (t.isEmpty() || e == null) return argb;
+        Integer c = t.get(e.getUUID());
+        if (c == null) return argb;
+        int a = argb >>> 24, r = (argb >> 16 & 255) * (c >> 16 & 255) / 255, g = (argb >> 8 & 255) * (c >> 8 & 255)
+                / 255, b = (argb & 255) * (c & 255) / 255;
+        return a << 24 | r << 16 | g << 8 | b;
     }
 
     public static JsonObject lastLooks() {

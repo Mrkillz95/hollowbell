@@ -25,11 +25,15 @@ final class WreckCove {
     private WreckCove() {}
 
     static final int[] COVE = {36, 44, 52};
+    /** the map's own giant size (1.16 integration): small enough that both giants fit the cove; a smaller size picked
+     *  for the game still wins */
+    static final double SIZE = 0.08;
     /** the order the lost giant's kind is picked in (the first installed that isn't the guard) */
     static final List<String> LOST = List.of("pitchgut", "cerberus", "gloamwick", "lanternwillow", "swarmforge",
             "hollowbell", "furrowmaw", "wreckback");
 
-    static Object make(MinecraftServer server, int sizeIndex, double giantSize) {
+    static Object make(MinecraftServer server, int sizeIndex, double gameSize) {
+        double giantSize = Math.min(gameSize, SIZE);
         List<String> kinds = new ArrayList<>();
         for (var g : AdminServer.giants()) kinds.add(g.key());
         if (kinds.isEmpty()) return "No giants are installed.";

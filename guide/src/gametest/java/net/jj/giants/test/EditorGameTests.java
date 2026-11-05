@@ -218,8 +218,20 @@ public class EditorGameTests implements FabricGameTest {
                 "east=true"), "a fence stays a fence, turned the same: " + frost.get(palette[5]));
         h.assertTrue(frost.get("minecraft:lantern[hanging=true]").equals("minecraft:soul_lantern[hanging=true]"),
                 "frost lantern");
-        h.assertTrue(frost.get("minecraft:black_concrete").equals("minecraft:cyan_terracotta")
+        h.assertTrue(frost.get("minecraft:black_concrete").equals("minecraft:blue_ice")
                 && frost.get("minecraft:white_concrete").equals("minecraft:snow_block"), "frost ends: " + frost);
+        // (1.16) Frost leans light: even his darkest block is a pale icy one
+        for (String k : List.of("minecraft:black_concrete", "minecraft:stone", "minecraft:oak_log[axis=x]"))
+            h.assertTrue(lum(LookSets.rgb(frost.get(k))) > 140, "frost is light: " + k + " -> " + frost.get(k));
+        // (1.16) Ember and Crystal are built in too
+        h.assertTrue(LookSets.BUILT_IN.containsAll(List.of("ember", "crystal")), "ember and crystal");
+        // (1.16) followers take their giant's look's colour
+        h.assertTrue(LookSets.tint(EditorWorld.get(h.getLevel().getServer()), "frost") == 0xD6ECFF
+                && LookSets.tint(EditorWorld.get(h.getLevel().getServer()), "") == -1, "follower tints");
+        h.assertTrue(LookSets.map("ember", palette, share).get("minecraft:glass").equals(
+                "minecraft:orange_stained_glass"), "ember glass");
+        h.assertTrue(LookSets.map("crystal", palette, share).get(palette[5]).startsWith("minecraft:cherry_fence["),
+                "crystal fence");
         Map<String, String> gold = LookSets.map("gold", palette, share);
         h.assertTrue(gold.get("minecraft:white_concrete").startsWith("minecraft:smooth_sandstone")
                 || gold.get("minecraft:white_concrete").equals("minecraft:gold_block"), "gold's light: " + gold);

@@ -36,7 +36,9 @@ public class BellingRenderer extends EntityRenderer<Belling> {
 
     @Override
     public void render(Belling e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {
-        BellMeshes meshes = BellMeshes.INSTANCE;
+        // (1.16) his Bellings wear his look
+        BellMeshes meshes = BellMeshes.of(net.jj.hollowbell.GiantsLook.ofMinion(e,
+                net.jj.hollowbell.entity.HollowbellEntity.class));
         if (!meshes.ensureReady()) return;
         BellRig rig = BellRig.get();
         float t = e.tickCount + partial;

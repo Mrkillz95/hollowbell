@@ -28,7 +28,8 @@ public final class LookSets {
     private LookSets() {}
 
     /** the built-in sets, in the book's order */
-    public static final List<String> BUILT_IN = List.of("frost", "gold", "shadow", "festive", "ancient");
+    public static final List<String> BUILT_IN = List.of("frost", "gold", "shadow", "festive", "ancient", "ember",
+            "crystal");
 
     /** what a custom set is called in ids: "custom:<name>" */
     public static final String CUSTOM = "custom:";
@@ -47,8 +48,9 @@ public final class LookSets {
     private static final Map<String, Set> SETS = new LinkedHashMap<>();
 
     static {
-        SETS.put("frost", new Set(mc("cyan_terracotta", "light_blue_terracotta", "blue_ice", "packed_ice",
-                "white_concrete", "snow_block"), Map.of(), mc("lapis_block", "light_blue_concrete", "blue_ice"),
+        // (1.16) Frost leans light: icy white and pale blue even on a dark giant (his darkest to blue ice)
+        SETS.put("frost", new Set(mc("blue_ice", "packed_ice", "white_concrete", "calcite", "snow_block"), Map.of(),
+                mc("lapis_block", "light_blue_concrete", "blue_ice"),
                 mc("sea_lantern"), "minecraft:light_blue_stained_glass", "minecraft:snow_block",
                 "minecraft:warped_fence", "minecraft:warped_trapdoor", "minecraft:soul_lantern"));
         SETS.put("gold", new Set(mc("orange_terracotta", "yellow_terracotta", "honeycomb_block", "raw_gold_block",
@@ -69,6 +71,17 @@ public final class LookSets {
                 "stone_bricks", "andesite", "smooth_stone"), Map.of(), mc("oxidized_copper", "moss_block"),
                 mc("glowstone"), null, "minecraft:moss_block", "minecraft:mangrove_fence",
                 "minecraft:iron_trapdoor", null));
+        // (1.16) Ember: a giant of smouldering coals, black and deep red to glowing orange
+        SETS.put("ember", new Set(mc("red_nether_bricks", "blackstone", "red_concrete", "magma_block",
+                "orange_terracotta", "orange_concrete", "shroomlight"), Map.of(), mc("shroomlight", "gold_block"),
+                mc("magma_block", "shroomlight"), "minecraft:orange_stained_glass", "minecraft:nether_wart_block",
+                "minecraft:nether_brick_fence", "minecraft:crimson_trapdoor", "minecraft:lantern"));
+        // (1.16) Crystal: amethyst and purpur to diamond and quartz
+        SETS.put("crystal", new Set(mc("purple_terracotta", "amethyst_block", "purpur_block", "diamond_block",
+                "calcite", "quartz_block"), Map.of(), mc("diamond_block", "amethyst_block"),
+                mc("sea_lantern", "pearlescent_froglight"), "minecraft:pink_stained_glass",
+                "minecraft:amethyst_block", "minecraft:cherry_fence", "minecraft:cherry_trapdoor",
+                "minecraft:soul_lantern"));
     }
 
     /** blocks left as they are by every set (metal bits, roots, chests: they carry no colour of their own) */
@@ -77,6 +90,20 @@ public final class LookSets {
 
     /** a part this small (of all his blocks) takes the set's accent when it's bright and strongly coloured */
     private static final double ACCENT_SHARE = 0.015;
+
+    /** (1.16) each set's colour, for his followers (ordinary creatures, tinted) */
+    private static final Map<String, Integer> TINT = Map.of("frost", 0xD6ECFF, "gold", 0xFFD65A, "shadow", 0x7E6C96,
+            "festive", 0xFF8F8F, "ancient", 0xA9BA98, "ember", 0xFF8A4A, "crystal", 0xD4AEFF);
+
+    /** the colour his followers take in this look (a custom set: its base's), -1: none */
+    public static int tint(EditorWorld w, String look) {
+        if (look == null || look.isEmpty()) return -1;
+        if (look.startsWith(CUSTOM)) {
+            EditorWorld.Custom c = w.custom(look.substring(CUSTOM.length()));
+            look = c == null || c.base == null ? "" : c.base;
+        }
+        return TINT.getOrDefault(look, -1);
+    }
 
     public static boolean builtIn(String id) {
         return SETS.containsKey(id);

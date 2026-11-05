@@ -8,6 +8,7 @@
     "CreateWorldMoreTabMixin",
     "CreateWorldScreenMixin",
     "GridLayoutTabAccess",
+    "LivingEntityTintMixin",
     "SoundEngineMixin",
     "SoundLocationAccess",
     "WeatherFogMixin",

@@ -308,6 +308,8 @@ public class AdventureGameTests implements FabricGameTest {
                     var r = res.get(res.size() - 1);
                     h.assertTrue(r.line.contains("Golem down"), "the hook's words: " + r.line);
                     h.assertTrue(r.winners.contains("advmapper"), "the player won");
+                    h.assertTrue(net.jj.giants.players.Challenges.done(j[0].p(), "adventurer"),
+                            "winning an adventure map gives the Adventurer challenge");
                     MinigameGameTests.same(h, j[0].p(), inv[0], at[0], "after the adventure");
                     h.assertTrue(Adventure.roundState() == null, "the round's scripts and hooks are gone");
                     h.assertTrue(AdvMaps.delete(s, "Tester", "testmap").ok(), "deleted");
@@ -324,6 +326,13 @@ public class AdventureGameTests implements FabricGameTest {
         if (PlayersGameTests.realGiants(h)) return;
         MinecraftServer s = fresh(h);
         MinigameGameTests.Joined j = MinigameGameTests.join(h, "advcove", false);
+        // (1.16) the map's own small giant size, so both fit the cove; a smaller game size still wins
+        if (AdvMaps.load(s, AdvMaps.BUILT_IN, 1, 0.3) instanceof AdvMaps.Loaded big)
+            for (AdvMaps.MapGiant mg : big.giants)
+                h.assertTrue(mg.size <= 0.08 + 1e-9, mg.kind + " fits the cove: " + mg.size);
+        else h.fail("the cove loads");
+        if (AdvMaps.load(s, AdvMaps.BUILT_IN, 1, 0.05) instanceof AdvMaps.Loaded small)
+            h.assertTrue(small.giants.stream().allMatch(mg -> mg.size <= 0.05 + 1e-9), "a smaller game size wins");
         h.assertTrue(Adventure.play(s, "Tester", AdvMaps.BUILT_IN, false, 1).ok(), "opened");
         h.assertTrue(Minigames.join(j.p(), false).ok(), "joined");
         Minigames.now(s, "Tester");

@@ -153,6 +153,19 @@ public final class Editor {
         for (var e : per.entrySet()) kinds.add(e.getKey(), e.getValue());
         JsonObject o = new JsonObject();
         o.add("kinds", kinds);
+        // (1.16) his followers (Systems: Mob followers) wear his look: tinted in its colour
+        if (!per.isEmpty() && !net.jj.giants.systems.Followers.BANDS.isEmpty()) {
+            JsonObject f = new JsonObject();
+            Map<String, Integer> tints = new java.util.HashMap<>();
+            for (var e : net.jj.giants.systems.Followers.BANDS.entrySet()) {
+                Integer t = tints.computeIfAbsent(e.getValue(), id -> {
+                    LivingEntity g = FunGiants.find(server, id);
+                    return g == null ? -1 : LookSets.tint(w, lookOf(server, g));
+                });
+                if (t >= 0) f.addProperty(e.getKey(), t);
+            }
+            if (!f.isEmpty()) o.add("followers", f);
+        }
         return o;
     }
 

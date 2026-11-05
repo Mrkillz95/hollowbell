@@ -30,6 +30,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -136,6 +137,7 @@ public final class FightScript {
 
     static void forget() {
         run = null;
+        cooling.clear();
     }
 
     /** a giant in the staged fight now */
@@ -826,6 +828,10 @@ public final class FightScript {
                 setTag(e, TAKEN, null);
                 setTag(e, FLOOR, null);
                 Fights.speed(server, e, 1);
+                // (1.16) over: nobody is his target any more (players near the spot included)
+                if (e instanceof Mob m) m.setTarget(null);
+                e.setLastHurtByMob(null);
+                live(server, x.g, e, "forgive");
             }
         }
         if (r.s.grow && !r.won.isEmpty() && (r.loser == null || !r.loser.dead))
@@ -856,14 +862,13 @@ public final class FightScript {
             if (e == null || x.dead) continue;
             boolean winner = x.side().equals(r.won);
             untag(e);
-            if (winner && r.s.after.equals("stay")) FightGiants.act(server, e, "stop", null);
+            if (winner && r.s.after.equals("stay")) settle(server, x.g, e, false);
             else if (winner && r.s.after.equals("turn")) {
+                cooling.remove(e.getUUID());
                 FightGiants.act(server, e, "stop", null);
                 Fights.sys(server, x.g, e, "mood", FightGiants.with("value", "hunting"));
                 say(server, r, near(r), called(x, true) + " turns on the crowd!");
-            } else if (!winner && r.s.ending.equals("escape")) {
-                // (he is on his own way home already)
-            } else Fights.home(server, x.g, e);
+            } else settle(server, x.g, e, true);
         }
         if (r.s.healBlocks) Fights.healBlocks(server);
         FightShow.end(r.show, server);
@@ -893,11 +898,109 @@ public final class FightScript {
             if (e == null) continue;
             untag(e);
             Fights.speed(server, e, 1);
-            FightGiants.act(server, e, "stop", null);
-            if (home) Fights.home(server, x.g, e);
+            settle(server, x.g, e, home);
         }
         if (r.s.healBlocks) Fights.healBlocks(server);
         r.phase = "done";
+    }
+
+    // (1.16) after the fight: a minute of calm
+
+    /** how long the fighters stay calm after a staged fight is stopped or over (game ticks; tests shorten it) */
+    public static int coolTicks = 1200;
+
+    /** one fighter calming down: his mood before, until when, whether he walks home */
+    static final class Cool {
+        final UUID id;
+        final Giant g;
+        final String mood;
+        final long until;
+        final boolean home;
+
+        Cool(UUID id, Giant g, String mood, long until, boolean home) {
+            this.id = id;
+            this.g = g;
+            this.mood = mood;
+            this.until = until;
+            this.home = home;
+        }
+    }
+
+    static final Map<UUID, Cool> cooling = new LinkedHashMap<>();
+
+    /** the fighters calming down now (tests) */
+    public static Set<UUID> cooling() {
+        return Set.copyOf(cooling.keySet());
+    }
+
+    /**
+     * a staged fight is stopped or over: he drops every target and grudge (players and the other fighters), calms down
+     * and (home) walks home; for a minute he is calmed again whenever he goes after anyone, then his mood comes back
+     */
+    static void settle(MinecraftServer server, Giant g, LivingEntity e, boolean home) {
+        if (g == null) return;
+        Cool was = cooling.get(e.getUUID());
+        String mood = was != null ? was.mood : "";
+        if (was == null) {
+            FightGiants.freshRows();
+            JsonObject row = FightGiants.row(server, e.getStringUUID());
+            if (row != null) mood = net.jj.giants.admin.AdminJson.str(row, "mood", 32);
+        }
+        Cool c = new Cool(e.getUUID(), g, mood, server.overworld().getGameTime() + coolTicks, home);
+        cooling.put(e.getUUID(), c);
+        calmDown(server, c, e);
+    }
+
+    private static void calmDown(MinecraftServer server, Cool c, LivingEntity e) {
+        if (e instanceof Mob m) m.setTarget(null);
+        e.setLastHurtByMob(null);
+        FightGiants.act(server, e, "stop", null);
+        live(server, c.g, e, "calm");
+        if (c.home) Fights.home(server, c.g, e);
+    }
+
+    /** once a second: anyone calming down who goes after someone is calmed again; after the minute, his mood back */
+    static void cool(MinecraftServer server) {
+        if (cooling.isEmpty()) return;
+        long now = server.overworld().getGameTime();
+        boolean fresh = false;
+        for (Cool c : List.copyOf(cooling.values())) {
+            LivingEntity e = FunGiants.find(server, c.id);
+            if (e == null || !e.isAlive()) {
+                cooling.remove(c.id);
+                continue;
+            }
+            if (run != null && run.slots.stream().anyMatch(x -> c.id.equals(x.id))) {
+                // (in a new staged fight now)
+                cooling.remove(c.id);
+                continue;
+            }
+            if (now >= c.until) {
+                cooling.remove(c.id);
+                if (!c.mood.isEmpty() && !c.mood.equals("calm"))
+                    Fights.sys(server, c.g, e, "mood", FightGiants.with("value", c.mood));
+                continue;
+            }
+            if (!fresh) {
+                FightGiants.freshRows();
+                fresh = true;
+            }
+            JsonObject row = FightGiants.row(server, e.getStringUUID());
+            boolean after = e instanceof Mob m && m.getTarget() != null
+                    || row != null && FightGiants.bool(row, "fighting");
+            if (after) calmDown(server, c, e);
+        }
+    }
+
+    private static void live(MinecraftServer server, Giant g, LivingEntity e, String what) {
+        if (g == null) return;
+        JsonObject o = new JsonObject();
+        o.addProperty("live", 1);
+        o.addProperty("id", e.getStringUUID());
+        o.addProperty("do", what);
+        o.addProperty("value", "");
+        o.addProperty("by", "-");
+        AdminServer.call(server, g, "liveact", o.toString());
     }
 
     static void untag(LivingEntity e) {

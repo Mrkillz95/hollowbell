@@ -1,0 +1,24 @@
+{
+  "parent": "jj_giants:challenges/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:filled_map"
+    },
+    "title": {
+      "translate": "advancement.jj_giants.challenges.adventurer",
+      "fallback": "Adventurer"
+    },
+    "description": {
+      "translate": "advancement.jj_giants.challenges.adventurer.what",
+      "fallback": "Win any adventure map"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

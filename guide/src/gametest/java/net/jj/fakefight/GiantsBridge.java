@@ -100,6 +100,9 @@ public final class GiantsBridge {
                     j.addProperty("max", g.getMaxHealth());
                     j.addProperty("size", 1);
                     j.addProperty("asleep", g.getTags().contains(TAG + ".asleep"));
+                    // (1.16 tests) a mood only for one tagged with it
+                    if (g.getTags().contains(TAG + ".hunting")) j.addProperty("mood", "hunting");
+                    j.addProperty("fighting", g.getTarget() != null);
                     String o = owner(g);
                     if (!o.isEmpty()) {
                         j.addProperty("owner", "Owner");

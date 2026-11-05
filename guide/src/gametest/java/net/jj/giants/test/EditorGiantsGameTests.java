@@ -66,6 +66,24 @@ public class EditorGiantsGameTests implements FabricGameTest {
             // his mod takes it (the same code each player's game runs), and {} puts him back
             List<String> r = AdminServer.call(s, g, "lookclient", k.toString());
             h.assertTrue(r != null && r.get(0).equals("ok"), key + ": lookclient " + r);
+            // (1.16) his minions wear his look: a block of theirs he hasn't got takes the look's block nearest in colour
+            try {
+                Class<?> gl = Class.forName(g.bridge().substring(0, g.bridge().lastIndexOf('.')) + ".GiantsLook");
+                var any = gl.getMethod("blockAny", String.class, String.class);
+                String kindKey = k.get("kind").getAsString();
+                java.util.Map.Entry<String, com.google.gson.JsonElement> one = k.getAsJsonObject("maps")
+                        .getAsJsonObject(kindKey).entrySet().iterator().next();
+                h.assertTrue(any.invoke(null, kindKey, one.getKey()).equals(one.getValue().getAsString()), key
+                        + ": his own block in the look");
+                String other = (String) any.invoke(null, kindKey, "minecraft:emerald_block");
+                h.assertTrue(net.jj.giants.editor.LookSets.state(other) != null, key + ": a minion's block " + other);
+                h.assertTrue(any.invoke(null, null, "minecraft:emerald_block").equals("minecraft:emerald_block"),
+                        key + ": no look, as always");
+                h.assertTrue(gl.getMethod("ofMinion", net.minecraft.world.entity.Entity.class, Class.class) != null,
+                        key + ": ofMinion");
+            } catch (ReflectiveOperationException ex) {
+                h.fail(key + ": GiantsLook.blockAny/ofMinion: " + ex);
+            }
             List<String> off = AdminServer.call(s, g, "lookclient", "{}");
             h.assertTrue(off != null && off.get(0).equals("ok"), key + ": lookclient {} " + off);
             List<String> newer = AdminServer.call(s, g, "lookclient", "{\"look\":9}");

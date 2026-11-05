@@ -462,7 +462,38 @@ public class FightGameTests implements FabricGameTest {
                 h.assertTrue(tag(g, "jj_giants.fight.") == null, "tags off");
             }
             h.assertTrue(s.tickRateManager().tickrate() == 20f, "normal speed");
-            done(h, at);
+            // (1.16) both calm down for a minute: every target and grudge dropped, calmed again if one goes after
+            // anyone (a player standing between them, or the other), then his own mood back
+            for (IronGolem g : List.of(a, b)) h.assertTrue(GiantsBridge.called("liveact calm " + g.getUUID())
+                    && FightScript.cooling().contains(g.getUUID()), "calming down");
+            int calms = GiantsBridge.count("liveact calm " + a.getUUID());
+            a.setTarget(b);
+            when(h, () -> a.getTarget() == null, 60, "calmed again while going after someone", () -> {
+                h.assertTrue(GiantsBridge.count("liveact calm " + a.getUUID()) > calms, "calmed again");
+                h.assertTrue(GiantsBridge.called("liveact home " + a.getUUID()), "still going home");
+                done(h, at);
+            });
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "f16_cool")
+    public void afterTheMinuteHisOwnMoodComesBack(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = FunGameTests.spot(h, 68);
+        FightData.Setup d = script(s, "a", "death");
+        h(FightEdit.set(d, "arena", "off"));
+        start(h, s, d, at);
+        when(h, () -> fighting(s), 200, "the fight", () -> {
+            IronGolem a = side(s, "a", 1);
+            a.addTag(GiantsBridge.TAG + ".hunting");
+            FightScript.coolTicks = 60;
+            FightScript.stop(s, "Tester");
+            FightScript.coolTicks = 1200;
+            when(h, () -> !FightScript.cooling().contains(a.getUUID()), 200, "the minute over", () -> {
+                h.assertTrue(GiantsBridge.called("sysact mood " + a.getUUID()), "his hunting mood back");
+                done(h, at);
+            });
         });
     }
 

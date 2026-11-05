@@ -57,7 +57,7 @@ public final class AdvMode extends Coop {
 
     @Override
     public @Nullable String challenge() {
-        return null;
+        return "adventurer";
     }
 
     /** the map as last loaded for this game (the game's data is cleared each round, so it's kept here) */

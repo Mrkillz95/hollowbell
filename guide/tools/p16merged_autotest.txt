@@ -1,0 +1,388 @@
+# 1.16.0 merged pictures (Parts 11 + 12 integrated): every giant in Frost (now lighter), Ember and Crystal, his minions
+# in his look, the Editor and Sound pages, the Adventure page, the wand's paths and areas in the world, the Wreck Cove
+# Rescue with its smaller giants, and a Giant Royale round with only the nearest giant's bars.
+#   set GUIDE_SCRIPT=<full path>/tools/p16merged_autotest.txt; withslot.ps1 <guide> runAutotest -Pgiants
+#   (pictures in build/autotest/screenshots, copied to hollowbell/pictures/adminbook/p16merged)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode advanced
+adminscope world
+cmd gamerule sendCommandFeedback false
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamemode creative
+# pitchgut
+cmd tp @s 4000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd pitchgut summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 4080.5 -22 80.5 facing 4000 -38 0
+gui off
+wait 60
+cmd giants admin look kind pitchgut frost
+wait 200
+shot p16_pitchgut_frost
+cmd giants admin look kind pitchgut ember
+wait 200
+shot p16_pitchgut_ember
+cmd giants admin look kind pitchgut crystal
+wait 200
+shot p16_pitchgut_crystal
+gui on
+cmd giants admin look kind pitchgut none
+cmd giants unfreeze
+cmd pitchgut kill
+wait 20
+# furrowmaw
+cmd tp @s 5500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd furrowmaw summon calm 0.6
+wait 4
+cmd summon furrowmaw:furrowling 5540 -60 3 {NoAI:1b,PersistenceRequired:1b}
+cmd summon furrowmaw:furrowling 5542 -60 -1 {NoAI:1b,PersistenceRequired:1b}
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 5552.5 -38 52.5 facing 5500 -54 0
+gui off
+wait 60
+cmd giants admin look kind furrowmaw frost
+wait 200
+shot p16_furrowmaw_frost
+cmd giants admin look kind furrowmaw ember
+wait 200
+shot p16_furrowmaw_ember
+cmd giants admin look kind furrowmaw crystal
+wait 200
+shot p16_furrowmaw_crystal
+cmd tp @s 5547 -58 1 facing 5541 -59.6 1
+wait 80
+shot p16_furrowmaw_minions_crystal
+cmd giants admin look kind furrowmaw ember
+wait 120
+shot p16_furrowmaw_minions_ember
+gui on
+cmd giants admin look kind furrowmaw none
+cmd giants unfreeze
+cmd furrowmaw kill
+cmd kill @e[type=furrowmaw:furrowling]
+wait 20
+# cerberus
+cmd tp @s 7000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd cerberus summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 7073.5 -32 73.5 facing 7000 -38 0
+gui off
+wait 60
+cmd giants admin look kind cerberus frost
+wait 200
+shot p16_cerberus_frost
+cmd giants admin look kind cerberus ember
+wait 200
+shot p16_cerberus_ember
+cmd giants admin look kind cerberus crystal
+wait 200
+shot p16_cerberus_crystal
+gui on
+cmd giants admin look kind cerberus none
+cmd giants unfreeze
+cmd cerberus kill
+wait 20
+# hollowbell
+cmd tp @s 8500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd hollowbell summon calm 0.25
+wait 4
+cmd summon hollowbell:belling 8540 -60 3 {NoAI:1b,PersistenceRequired:1b}
+cmd summon hollowbell:belling 8542 -60 -1 {NoAI:1b,PersistenceRequired:1b}
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 8566.5 -30 66.5 facing entity @e[type=hollowbell:hollowbell,limit=1,sort=nearest] eyes
+gui off
+wait 60
+cmd giants admin look kind hollowbell frost
+wait 200
+shot p16_hollowbell_frost
+cmd giants admin look kind hollowbell ember
+wait 200
+shot p16_hollowbell_ember
+cmd giants admin look kind hollowbell crystal
+wait 200
+shot p16_hollowbell_crystal
+cmd tp @s 8547 -58 1 facing 8541 -59.6 1
+wait 80
+shot p16_hollowbell_minions_crystal
+cmd giants admin look kind hollowbell ember
+wait 120
+shot p16_hollowbell_minions_ember
+gui on
+cmd giants admin look kind hollowbell none
+cmd giants unfreeze
+cmd hollowbell kill
+cmd kill @e[type=hollowbell:belling]
+wait 20
+# lanternwillow
+cmd tp @s 10000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd lanternwillow summon calm 0.25
+wait 4
+cmd summon lanternwillow:mudling 10040 -60 3 {NoAI:1b,PersistenceRequired:1b}
+cmd summon lanternwillow:mudling 10042 -60 -1 {NoAI:1b,PersistenceRequired:1b}
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 10070.0 -34 70.0 facing 10000 -34 0
+gui off
+wait 60
+cmd giants admin look kind lanternwillow frost
+wait 200
+shot p16_lanternwillow_frost
+cmd giants admin look kind lanternwillow ember
+wait 200
+shot p16_lanternwillow_ember
+cmd giants admin look kind lanternwillow crystal
+wait 200
+shot p16_lanternwillow_crystal
+cmd tp @s 10047 -58 1 facing 10041 -59.6 1
+wait 80
+shot p16_lanternwillow_minions_crystal
+cmd giants admin look kind lanternwillow ember
+wait 120
+shot p16_lanternwillow_minions_ember
+gui on
+cmd giants admin look kind lanternwillow none
+cmd giants unfreeze
+cmd lanternwillow kill
+cmd kill @e[type=lanternwillow:mudling]
+wait 20
+# wreckback
+cmd tp @s 11500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd wreckback summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 11580.5 -32 80.5 facing 11500 -42 0
+gui off
+wait 60
+cmd giants admin look kind wreckback frost
+wait 200
+shot p16_wreckback_frost
+cmd giants admin look kind wreckback ember
+wait 200
+shot p16_wreckback_ember
+cmd giants admin look kind wreckback crystal
+wait 200
+shot p16_wreckback_crystal
+gui on
+cmd giants admin look kind wreckback none
+cmd giants unfreeze
+cmd wreckback kill
+wait 20
+# swarmforge
+cmd tp @s 13000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd swarmforge summon calm 0.25
+wait 4
+cmd summon swarmforge:walker 13040 -60 3 {NoAI:1b,PersistenceRequired:1b}
+cmd summon swarmforge:walker 13042 -60 -1 {NoAI:1b,PersistenceRequired:1b}
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 13063.0 -38 63.0 facing 13000 -45 0
+gui off
+wait 60
+cmd giants admin look kind swarmforge frost
+wait 200
+shot p16_swarmforge_frost
+cmd giants admin look kind swarmforge ember
+wait 200
+shot p16_swarmforge_ember
+cmd giants admin look kind swarmforge crystal
+wait 200
+shot p16_swarmforge_crystal
+cmd tp @s 13047 -58 1 facing 13041 -59.6 1
+wait 80
+shot p16_swarmforge_minions_crystal
+cmd giants admin look kind swarmforge ember
+wait 120
+shot p16_swarmforge_minions_ember
+gui on
+cmd giants admin look kind swarmforge none
+cmd giants unfreeze
+cmd swarmforge kill
+cmd kill @e[type=swarmforge:walker]
+wait 20
+# gloamwick
+cmd tp @s 14500 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd gloamwick summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 14573.5 -34 73.5 facing 14500 -35 0
+gui off
+wait 60
+cmd giants admin look kind gloamwick frost
+wait 200
+shot p16_gloamwick_frost
+cmd giants admin look kind gloamwick ember
+wait 200
+shot p16_gloamwick_ember
+cmd giants admin look kind gloamwick crystal
+wait 200
+shot p16_gloamwick_crystal
+gui on
+cmd giants admin look kind gloamwick none
+cmd giants unfreeze
+cmd gloamwick kill
+wait 20
+cmd gamemode creative
+cmd tp @s 0 -60 0 0 10
+wait 20
+# the Editor page: Ember on Gloamwick, Crystal on Swarmforge; the preview of Frost on the Gloamwick
+cmd giants admin look kind gloamwick ember
+cmd giants admin look kind swarmforge crystal
+editorpick gloamwick frost
+adminbook editor 0
+wait 80
+mouse 2 2
+wait 25
+shot p16_editor_frost_gloamwick
+close
+editorpick wreckback ember
+adminbook editor 0
+wait 80
+mouse 2 2
+wait 25
+shot p16_editor_ember_wreckback
+close
+editorpick cerberus crystal
+adminbook editor 0
+wait 80
+mouse 2 2
+wait 25
+shot p16_editor_crystal_cerberus
+adminbook editor 420
+wait 50
+mouse 2 2
+wait 25
+shot p16_editor_kinds
+close
+cmd giants admin look kind gloamwick none
+cmd giants admin look kind swarmforge none
+# the Sound page
+cmd giants admin set all music.wreckback gloamwick
+cmd giants admin set all voicePitch.cerberus 0.8
+adminbook sound 0
+wait 60
+mouse 2 2
+wait 25
+shot p16_sound_top
+close
+cmd giants admin reset all music.wreckback
+cmd giants admin reset all voicePitch.cerberus
+# the Adventure page: a guard post (a path, a gate area, a script, hooks)
+adminmode simple
+cmd difficulty normal
+cmd giants admin set all mgLobby 10
+cmd giants admin set all mgSize small
+cmd tp @s 600 -60 600 0 0
+wait 30
+cmd execute positioned ~10 ~ ~6 run giants admin path point walls
+cmd execute positioned ~10 ~ ~26 run giants admin path point walls
+cmd execute positioned ~-10 ~ ~26 run giants admin path point walls
+cmd execute positioned ~-10 ~ ~6 run giants admin path point walls
+cmd execute positioned ~10 ~ ~6 run giants admin path point walls
+cmd giants admin area set gate ~-5 ~ ~12 ~5 ~5 ~20
+cmd giants admin script add gatekeeper title The Gatekeeper
+cmd giants admin script add gatekeeper say None shall pass!
+cmd giants admin script add gatekeeper patrol walls until area gate
+cmd giants admin script add gatekeeper fight 60
+cmd giants admin script add gatekeeper guard 32
+cmd giants hook add wreckback half tellraw @a {"text":"The Gatekeeper is badly hurt!","color":"aqua"}
+cmd giants hook add script.gatekeeper enters.gate playsound minecraft:event.raid.horn hostile @a ~ ~ ~ 3
+cmd giants hook scores on
+cmd execute positioned ~90 ~ ~-60 run wreckback summon calm 0.12
+wait 60
+cmd giants admin script give wreckback gatekeeper
+wait 40
+adminbook adventure 0
+wait 60
+mouse 2 2
+wait 25
+shot p16_adventure_0
+adminbook adventure 330
+wait 40
+mouse 2 2
+wait 25
+shot p16_adventure_1
+close
+# the wand in hand, from above: the path's gold line and points, the gate's blue box
+cmd giants admin wand path walls
+cmd tp @s 600 -46 590 0 50
+wait 40
+hotbar 1
+wait 60
+shot p16_wand_world
+cmd wreckback remove
+wait 20
+# the Wreck Cove Rescue (its own small giants, so both fit the cove)
+cmd gamemode creative @s
+cmd giants admin adventure play wreck_cove open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 400
+shot p16_cove_start
+cmd gamemode spectator @s
+cmd tp @s -20 110 -70 -60 35
+wait 80
+shot p16_cove_overview
+cmd tp @s 20 80 -40 -70 30
+wait 60
+shot p16_cove_close
+cmd gamemode adventure @s
+cmd giants minigame stop
+wait 200
+# Giant Royale: only the nearest giant's bars
+cmd gamemode creative @s
+cmd giants minigame start royale open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+wait 900
+shot p16_royale_start
+wait 700
+shot p16_royale_play
+wait 40
+cmd giants minigame stop
+wait 200
+quit

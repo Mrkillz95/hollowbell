@@ -6602,7 +6602,7 @@ public class AdminBookScreen extends Screen {
                 .bounds(0, 0, 120, 18)
                 .build();
         setB.setTooltip(Tooltip.create(ed("set.tip", "Which set (click for the next): Frost, Gold, Shadow,"
-                + " Festive, Ancient stone, or a custom one")));
+                + " Festive, Ancient stone, Ember, Crystal, or a custom one")));
         pick.add(setB, 114, 2, false);
         rows.add(pick);
         String kind = edKind;

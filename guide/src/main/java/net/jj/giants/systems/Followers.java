@@ -83,8 +83,12 @@ public final class Followers {
         standing = 0;
     }
 
+    /** (1.16) each follower standing in a band now (its UUID) -> his giant's UUID: they wear his look */
+    public static final Map<String, String> BANDS = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void tick(MinecraftServer server) {
         if (!Systems.on(server, "followers")) {
+            BANDS.clear();
             active = false;
             if (sweepDue) {
                 sweepDue = false;
@@ -101,6 +105,7 @@ public final class Followers {
         Map<String, LivingEntity> keep = new HashMap<>();
         int total = 0;
         List<Runnable> joins = new ArrayList<>();
+        Map<String, String> bands = new HashMap<>();
         for (Map.Entry<String, List<Watch.Row>> e : Watch.rows(server).entrySet())
             for (Watch.Row r : e.getValue()) {
                 if (!"here".equals(r.state()) || !AdminJson.str(r.r(), "ownerId", 40).isEmpty()) continue;
@@ -112,7 +117,10 @@ public final class Followers {
                 double range = range(reach);
                 List<Mob> band = band(sl, giant, range, reach);
                 total += band.size();
-                for (Mob m : band) steer(m, giant, range, reach);
+                for (Mob m : band) {
+                    steer(m, giant, range, reach);
+                    bands.put(m.getStringUUID(), r.id());
+                }
                 if (band.size() >= count || sl.getDifficulty() == Difficulty.PEACEFUL) continue;
                 if (!playerNear(sl, giant, 96 + reach)) continue;
                 Integer last = lastJoin.get(r.id());
@@ -125,6 +133,8 @@ public final class Followers {
         // (new ones only while the world holds fewer than the most)
         for (Runnable j : joins) if (total++ < MOST) j.run();
         standing = Math.min(total, MOST);
+        BANDS.keySet().retainAll(bands.keySet());
+        BANDS.putAll(bands);
         lastJoin.keySet().retainAll(keep.keySet());
         // every ten seconds: followers whose giant isn't standing wild here any more crumble away
         if (now % 200 < 20 || forced) sweep(server, keep);

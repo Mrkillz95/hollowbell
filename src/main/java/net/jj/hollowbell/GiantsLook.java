@@ -7,6 +7,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Collections;
+import java.util.WeakHashMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
@@ -103,6 +108,107 @@ public final class GiantsLook {
             return to;
         } catch (Exception e) {
             return entry;
+        }
+    }
+
+    // (1.16) his minions wear his look
+
+    private static final Map<Entity, Object[]> MINIONS = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<String, Map<String, String>> ANY = new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile int anyVersion = -1;
+
+    /**
+     * The look one of his minions wears (robots, Bellings, Mudlings, Furrowlings): the look of the nearest one of him
+     * within 96 blocks (his own, else his kind's), else his kind's; or null: drawn as always. Looked up again once a
+     * second.
+     */
+    public static @Nullable String ofMinion(Entity minion, Class<? extends Entity> giant) {
+        State s = state;
+        if (s.maps.isEmpty()) return null;
+        if (s.giants.isEmpty()) return s.kind;
+        Object[] c = MINIONS.get(minion);
+        if (c != null && (int) c[1] == version && Math.abs(minion.tickCount - (int) c[2]) < 20) return (String) c[0];
+        String look = s.kind;
+        Entity best = null;
+        double bd = Double.MAX_VALUE;
+        for (Entity g : minion.level().getEntitiesOfClass(giant, minion.getBoundingBox().inflate(96))) {
+            double d = g.distanceToSqr(minion);
+            if (d < bd) {
+                bd = d;
+                best = g;
+            }
+        }
+        if (best != null) {
+            String k = s.giants.get(best.getUUID());
+            if (k != null) look = k;
+        }
+        MINIONS.put(minion, new Object[] {look, version, minion.tickCount});
+        return look;
+    }
+
+    /**
+     * A block of a minion's own model in this look: as his own model has it in the look, else the look's block for the
+     * same block of his, else the look's block for his own block nearest in colour (glowing to glowing).
+     */
+    public static String blockAny(@Nullable String look, String entry) {
+        if (look == null) return entry;
+        Map<String, String> m = state.maps.get(look);
+        if (m == null) return entry;
+        String to = block(look, entry);
+        if (!to.equals(entry) || m.containsKey(entry) || m.containsKey("minecraft:" + entry)) return to;
+        if (anyVersion != version) {
+            ANY.clear();
+            anyVersion = version;
+        }
+        Map<String, String> per = ANY.computeIfAbsent(look, k -> new java.util.concurrent.ConcurrentHashMap<>());
+        String kept = per.get(entry);
+        if (kept != null) return kept;
+        String out = entry;
+        BlockState st = parse(entry);
+        if (st != null) {
+            String id = BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
+            String props = entry.indexOf('[') < 0 ? "" : entry.substring(entry.indexOf('['));
+            String same = null, near = null;
+            int col = st.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).col;
+            boolean glow = st.getLightEmission() > 0;
+            double nd = Double.MAX_VALUE;
+            for (var e : m.entrySet()) {
+                BlockState from = parse(e.getKey());
+                if (from == null) continue;
+                if (BuiltInRegistries.BLOCK.getKey(from.getBlock()).toString().equals(id)) {
+                    same = e.getValue();
+                    break;
+                }
+                if ((from.getLightEmission() > 0) != glow) continue;
+                int c = from.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).col;
+                double d = sq((c >> 16 & 255) - (col >> 16 & 255)) + sq((c >> 8 & 255) - (col >> 8 & 255))
+                        + sq((c & 255) - (col & 255));
+                if (d < nd) {
+                    nd = d;
+                    near = e.getValue();
+                }
+            }
+            String pick = same != null ? same : near;
+            if (pick != null) {
+                // (his own shape kept when the look's block takes it: a slab stays a slab)
+                String base = pick.indexOf('[') < 0 ? pick : pick.substring(0, pick.indexOf('['));
+                out = !props.isEmpty() && parse(base + props) != null ? base + props
+                        : parse(pick) != null ? pick : entry;
+            }
+        }
+        per.put(entry, out);
+        return out;
+    }
+
+    private static double sq(double v) {
+        return v * v;
+    }
+
+    private static @Nullable BlockState parse(String text) {
+        try {
+            return BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK.asLookup(), text, false).blockState();
+        } catch (Exception e) {
+            return null;
         }
     }
 }

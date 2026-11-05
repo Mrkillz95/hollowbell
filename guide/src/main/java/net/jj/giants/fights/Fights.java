@@ -148,6 +148,7 @@ public final class Fights {
         FightScript.tick(server);
         int t = server.getTickCount();
         if (t % 20 == 0) {
+            FightScript.cool(server);
             flags(server);
             watchingBlocks = blocksRule(server);
             if (t % 100 == 0) ownerTags(server);

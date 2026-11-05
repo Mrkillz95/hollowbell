@@ -153,4 +153,68 @@ public class FightGiantsGameTests implements FabricGameTest {
             FunGiantsGameTests.unpad(h, at);
         });
     }
+
+    /**
+     * (1.16) the 1.15 server check: a bot standing between the two was killed 7 s after the fight was stopped. Now
+     * Stop calms both down for a minute (every target and grudge dropped, players and each other) while they walk
+     * home: a player standing at the spot between them is left alone.
+     */
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 3000, batch = "f16g_stop")
+    public void aStoppedFightLeavesAPlayerBetweenThemAlone(GameTestHelper h) {
+        List<Giant> two = new ArrayList<>();
+        for (String k : List.of("wreckback", "cerberus", "pitchgut", "gloamwick", "furrowmaw"))
+            if (here(k) && two.size() < 2) two.add(Giants.byKey(k));
+        if (two.size() < 2) {
+            h.succeed();
+            return;
+        }
+        MinecraftServer s = h.getLevel().getServer();
+        BlockPos at = FunGiantsGameTests.pad(h, 49);
+        FightData.Setup d = new FightData.Setup();
+        FightEdit.giant(s, d, "a", 1, two.get(0).key(), 0.12, null);
+        FightEdit.giant(s, d, "b", 1, two.get(1).key(), 0.12, null);
+        FightEdit.set(d, "countdown", "off");
+        FightEdit.set(d, "length", "epic");
+        AdminServer.Result r = FightScript.start(s, "Tester", java.util.UUID.randomUUID(), d, h.getLevel(), at,
+                new Vec3(0, 0, 1));
+        h.assertTrue(r.ok(), "start: " + r.lines());
+        long[] stopAt = {-1};
+        MinigameGameTests.Joined[] j = {null};
+        boolean[] hit = {false};
+        h.onEachTick(() -> {
+            long now = h.getLevel().getGameTime();
+            if (stopAt[0] < 0) {
+                JsonObject st = Fights.state(s, null).getAsJsonObject("now");
+                if (st == null || !"fight".equals(AdminJson.str(st, "phase", 16))) return;
+                // a few seconds in: a player walks in between them, and the fight is stopped
+                j[0] = MinigameGameTests.join(h, "fstopper", false);
+                var p = j[0].p();
+                p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                p.teleportTo(h.getLevel(), at.getX() + 0.5, at.getY() + 1, at.getZ() + 0.5, 0, 0);
+                h.assertTrue(FightScript.stop(s, "Tester").ok(), "stopped");
+                stopAt[0] = now;
+                return;
+            }
+            var p = j[0].p();
+            // (kept at full health each tick, so any drop is a blow since the last tick)
+            if (now - stopAt[0] > 30 && (p.getHealth() < 19.99f || p.isDeadOrDying())) {
+                var src = p.getLastDamageSource();
+                if (src != null && FunGiants.kindOf(src.getEntity()) != null) hit[0] = true;
+            }
+            if (!p.isDeadOrDying()) p.setHealth(20f);
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(stopAt[0] > 0 && h.getLevel().getGameTime() - stopAt[0] > 240, "ten seconds after Stop");
+            h.assertFalse(hit[0], "a giant went for the player after the fight was stopped");
+            for (LivingEntity e : FunGiants.standing(s, null))
+                if (e.distanceToSqr(Vec3.atCenterOf(at)) < 300 * 300) {
+                    if (e instanceof net.minecraft.world.entity.Mob m)
+                        h.assertTrue(!(m.getTarget() instanceof net.minecraft.world.entity.player.Player),
+                                "no fighter has the player as his target");
+                    e.discard();
+                }
+            s.getPlayerList().remove(j[0].p());
+            FunGiantsGameTests.unpad(h, at);
+        });
+    }
 }
