@@ -155,6 +155,62 @@ public class AdminBookScreen extends Screen {
         } else super.onClose();
     }
 
+    // (lagfix) the layout check (development only: the autotest walks every page through these)
+
+    private static @Nullable AdminBookScreen open() {
+        return net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b ? b : null;
+    }
+
+    /** the pages down the left of the open book */
+    public static List<String> testPages() {
+        AdminBookScreen b = open();
+        return b == null ? List.of() : List.copyOf(b.navKeys());
+    }
+
+    /** the open book on this page now */
+    public static void testGo(String key) {
+        AdminBookScreen b = open();
+        if (b != null) b.go(key);
+    }
+
+    /** every half and section of the page now, as "half/section" ("" when it has none) */
+    public static List<String> testViews() {
+        AdminBookScreen b = open();
+        if (b == null) return List.of();
+        List<String> out = new ArrayList<>();
+        List<String> halves = b.giantPage() ? List.of(GENERAL, SPECIAL) : List.of(b.part);
+        for (String h : halves) {
+            String was = b.part;
+            b.part = h;
+            List<String> tabs = b.sectionTabs();
+            b.part = was;
+            if (tabs.isEmpty()) out.add(h + "/");
+            else for (String t : tabs) out.add(h + "/" + t);
+        }
+        return out;
+    }
+
+    /** the open book on that half and section, scrolled to the top; how far its list scrolls */
+    public static int testView(String view) {
+        AdminBookScreen b = open();
+        if (b == null) return 0;
+        String[] w = view.split("/", -1);
+        b.part = w[0];
+        b.section = w.length > 1 ? w[1] : "";
+        b.scroll = 0;
+        b.build();
+        return Math.max(0, b.contentH - (b.ly1 - b.ly0));
+    }
+
+    /** the open book's list scrolled this far; how tall the list's window is */
+    public static int testScroll(double to) {
+        AdminBookScreen b = open();
+        if (b == null) return 1;
+        b.scroll = to;
+        b.place();
+        return b.ly1 - b.ly0;
+    }
+
     /** open next time on this page, scrolled this far, with this search (the picture-taking uses this) */
     public static void showAt(String page, double scroll, String query) {
         // (Part 2C) "wreckback/special/moves": a page, its half and its section
@@ -6740,8 +6796,12 @@ public class AdminBookScreen extends Screen {
         // making or changing one
         rows.add(new Head(edEditing && !edName.isBlank() ? ed("making.change", "Changing %s", edName)
                 : ed("making", "Make a custom set"), null, null).pic(EDITOR));
-        Block nb = new Block(22, (g, x, y, w, mx, my) -> {});
-        EditBox nameBox = new EditBox(font, 0, 0, Math.max(60, lw - 250), 16, ed("name", "Name"));
+        // (lagfix) the name and the three buttons (From, New, Save: 244 wide on the right) share one line only when
+        // the name still gets 100; otherwise the name has a line of its own and the buttons go under it
+        boolean oneLine = lw - 250 >= 100;
+        int btnY = oneLine ? 3 : 23;
+        Block nb = new Block(oneLine ? 22 : 42, (g, x, y, w, mx, my) -> {});
+        EditBox nameBox = new EditBox(font, 0, 0, oneLine ? lw - 250 : Math.max(60, lw), 16, ed("name", "Name"));
         nameBox.setMaxLength(24);
         nameBox.setHint(ed("name.hint", "Its name").withStyle(ChatFormatting.DARK_GRAY));
         nameBox.setValue(edName);
@@ -6760,7 +6820,8 @@ public class AdminBookScreen extends Screen {
                 .build();
         baseB.setTooltip(Tooltip.create(ed("base.tip", "The set it starts from (click for the next); your blocks go on"
                 + " top")));
-        nb.add(baseB, 124, 3, true);
+        if (oneLine) nb.add(baseB, 124, btnY, true);
+        else nb.add(baseB, 0, btnY, false);
         Button saveB = Button.builder(ed("save", "Save"), b -> {
                     if (edName.isBlank()) {
                         say(ed("save.empty", "Give it a name first."), WARN);
@@ -6782,7 +6843,7 @@ public class AdminBookScreen extends Screen {
                 .bounds(0, 0, 54, 16)
                 .build();
         saveB.setTooltip(Tooltip.create(ed("save.tip", "Saves it for this world (the same name changes it)")));
-        nb.add(saveB, 0, 3, true);
+        nb.add(saveB, 0, btnY, true);
         Button newB = Button.builder(ed("new", "New"), b -> {
                     edEditing = true;
                     edName = "";
@@ -6793,7 +6854,7 @@ public class AdminBookScreen extends Screen {
                 .bounds(0, 0, 54, 16)
                 .build();
         newB.setTooltip(Tooltip.create(ed("new.tip", "Start a new one from nothing")));
-        nb.add(newB, 58, 3, true);
+        nb.add(newB, 58, btnY, true);
         rows.add(nb);
         // his blocks: each with what it becomes
         var m = net.jj.giants.systems.remains.GiantModels.get(kind);
@@ -6809,6 +6870,8 @@ public class AdminBookScreen extends Screen {
         rows.add(new Note(ed("blocks.note", "%s's blocks, most used first. Type a block for any of them"
                 + " (gold_block, minecraft:blue_ice); leave one empty to keep it (or what the set gives it).",
                 giantName(kind)), GREY));
+        // (lagfix) the block boxes narrower on a narrow page, so the names and swatches keep their room
+        int bw = Mth.clamp(lw * 4 / 10, 90, 148);
         for (var en : list) {
             String from = en.getKey();
             String setGives = null;
@@ -6823,18 +6886,18 @@ public class AdminBookScreen extends Screen {
                 String typed = edBlocks.getOrDefault(from, "");
                 String to = net.jj.giants.editor.LookSets.valid(typed);
                 String now = to != null ? to : gives;
-                int tw = w - 150 - 40;
+                int tw = w - bw - 2 - 40;
                 g.drawString(font, cut(from.replace("minecraft:", "") + "  " + Math.round(en.getValue() * 1000) / 10.0
                         + "%", tw), x + 16, y + 6, TEXT, false);
                 if (now != null) {
                     int c2 = 0xFF000000 | net.jj.giants.editor.LookSets.rgb(now);
-                    g.fill(x + w - 150 - 18, y + 4, x + w - 150 - 6, y + 16, c2);
-                    g.renderOutline(x + w - 150 - 18, y + 4, 12, 12, EDGE);
+                    g.fill(x + w - bw - 2 - 18, y + 4, x + w - bw - 2 - 6, y + 16, c2);
+                    g.renderOutline(x + w - bw - 2 - 18, y + 4, 12, 12, EDGE);
                 }
                 if (!typed.isBlank() && to == null)
-                    g.drawString(font, "?", x + w - 150 - 28, y + 6, WARN, false);
+                    g.drawString(font, "?", x + w - bw - 2 - 28, y + 6, WARN, false);
             });
-            EditBox box = new EditBox(font, 0, 0, 148, 16, Component.literal(from));
+            EditBox box = new EditBox(font, 0, 0, bw, 16, Component.literal(from));
             box.setMaxLength(80);
             box.setHint(Component.literal(gives == null ? ed("keep", "keep").getString()
                     : gives.replace("minecraft:", "")).withStyle(ChatFormatting.DARK_GRAY));
