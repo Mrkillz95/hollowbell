@@ -166,8 +166,17 @@ public final class AutoTest implements ClientModInitializer {
             wait--;
             return;
         }
+        // (Part 10B) fightphase PHASE MOST: until the staged fight (on this game's own server) is at that phase
+        if (fightPhase != null) {
+            String now = net.jj.giants.fights.FightScript.phaseForTests();
+            if (!fightPhase.equals(now) && --fightMost > 0) return;
+            fightPhase = null;
+        }
         runLines(mc);
     }
+
+    private static String fightPhase;
+    private static int fightMost;
 
     /** the first button on the open screen whose words start so */
     private static boolean press(Minecraft mc, String text) {
@@ -264,6 +273,12 @@ public final class AutoTest implements ClientModInitializer {
                 GiantsGuideMod.LOG.info("autotest chat: {}", s.substring(5));
                 mc.player.connection.sendCommand(s.substring(6).trim());
                 continue;
+            }
+            if (s.startsWith("fightphase ")) {
+                String[] a = s.substring(11).trim().split(" +");
+                fightPhase = a[0];
+                fightMost = a.length > 1 ? Integer.parseInt(a[1]) : 2400;
+                return;
             }
             if (s.startsWith("wait ")) {
                 wait = Integer.parseInt(s.substring(5).trim());

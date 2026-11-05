@@ -22,6 +22,7 @@
     "jj_giants_tools.mixins.json",
     "jj_giants_systems.mixins.json",
     "jj_giants_minigames.mixins.json",
+    "jj_giants_fights.mixins.json",
     {
       "config": "jj_giants.client.mixins.json",
       "environment": "client"

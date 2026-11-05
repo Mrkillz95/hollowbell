@@ -144,7 +144,8 @@ public final class Systems {
             if (out == null) out = new LinkedHashMap<>(all);
             out.put("all.dimOverworld", new JsonPrimitive("nogiants"));
         }
-        return out == null ? all : out;
+        // (Part 10B) the giant-fight settings the giants apply, and whether the Guide asks and listens
+        return net.jj.giants.fights.Fights.forGiants(server, out == null ? all : out);
     }
 
     /** (Part 9) one giant's own values as he is sent them: Random chaos's resting moves off for the day */
@@ -233,8 +234,25 @@ public final class Systems {
             // the win: whoever last hurt him, within 30 s, if a giant
             if (!g.lastBy.isEmpty() && sl.getGameTime() - g.lastByAt < 600) Look.win(server, g.lastBy);
         }
-        String rule = option(server, "deathRule");
+        // (Part 10B) a fight he was in is over; a staged fight's loser leaves the remains its script asks for
+        net.jj.giants.fights.Fights.fell(e);
+        String rule = net.jj.giants.fights.FightScript.remains(e, option(server, "deathRule"));
         if (!rule.equals("drops")) Remains.build(sl, kind, e, rule, num(server, "corpseDays"));
+    }
+
+    /** (Part 10B) a giant won a fight (the loser backed down): a win for his growth while Growth is on */
+    public static void winFromFight(MinecraftServer server, String id) {
+        Look.win(server, id);
+    }
+
+    /** (Part 10B) a giant won a fight: his loyalty up while Loyalty is on and he is owned */
+    public static void loyaltyFromFight(MinecraftServer server, String id, int by) {
+        if (!on(server, "loyalty")) return;
+        SystemsData d = SystemsData.get(server);
+        SystemsData.G g = d.s.giants.get(id);
+        if (g == null || g.loyalty < 0) return;
+        g.loyalty = Math.min(100, g.loyalty + by);
+        d.setDirty();
     }
 
     /** a player or a creature died: a giant's kill counts for his growth, and a creature feeds him */

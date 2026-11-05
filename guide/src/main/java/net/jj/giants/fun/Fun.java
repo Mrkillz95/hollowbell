@@ -38,7 +38,10 @@ public final class Fun {
     /** the book's requests this part answers */
     public static final Set<String> DOS = Set.of("spectate", "spectatestop", "playas", "playasstop", "fight", "name",
             "tag", "tagsave", "tagdelete", "loot", "brush", "brushget", "paintat", "eraseat", "build", "buildstop",
-            "takedown", "buildgo", "settle");
+            "takedown", "buildgo", "settle",
+            // (Part 10B) the fight script and giant fights (net.jj.giants.fights)
+            "fightscript", "fightstart", "fightstop", "fightsave", "fightload", "fightdelete", "fightreplay",
+            "fightstanddown");
     /** the book's page kind */
     public static final String PAGE = "fun";
 
@@ -199,6 +202,8 @@ public final class Fun {
         o.add("places", places);
         o.add("kinds", kinds);
         o.addProperty("erasing", Brush.erasing());
+        // (Part 10B) the fight script, the saved setups, the staged fight now, the fights going on
+        o.add("fights", net.jj.giants.fights.Fights.state(server, p));
         return o;
     }
 
@@ -317,7 +322,7 @@ public final class Fun {
                 if (e == null) yield notThere(server, o);
                 yield Settle.settle(server, who, p, e, AdminJson.str(o, "where", 16), AdminJson.str(o, "ground", 32));
             }
-            default -> null;
+            default -> net.jj.giants.fights.Fights.request(server, p, who, what, o);
         };
     }
 
