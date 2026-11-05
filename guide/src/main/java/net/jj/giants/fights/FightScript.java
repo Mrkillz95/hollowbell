@@ -94,7 +94,7 @@ public final class FightScript {
         /** decided once it is over: the side that won, the loser who ends it, the winner finishing him */
         String won = "";
         @Nullable Slot loser, finisher;
-        boolean finisherDone, roared, betsOpen = true;
+        boolean finisherDone, roared, betsOpen = true, chasing;
         /** bets close this game time (a few seconds into the first round) */
         long betsAt = -1;
         long finishAt;
@@ -148,6 +148,18 @@ public final class FightScript {
         return x == null ? "" : x.side();
     }
 
+    /** the staged fight is in a round (not counting down, resting or over) */
+    static boolean fightingNow() {
+        Run r = run;
+        return r != null && (r.phase.equals("fight") || r.phase.equals("finish") || r.phase.equals("chase"));
+    }
+
+    /** (the picture runs) the staged fight's phase now ("none" when there is none) */
+    public static String phaseForTests() {
+        Run r = run;
+        return r == null ? "none" : r.phase;
+    }
+
     public static boolean busy() {
         return run != null;
     }
@@ -167,8 +179,13 @@ public final class FightScript {
 
     /** a side's name for lines: one giant's, or both ("Wreckback and the Cerberus") */
     static String sideName(Run r, String side) {
+        return sideName(r, side, true);
+    }
+
+    /** start: at the start of a sentence ("The Cerberus"), else "the Cerberus" */
+    static String sideName(Run r, String side, boolean start) {
         List<String> n = new ArrayList<>();
-        for (Slot x : r.side(side)) n.add(called(x, n.isEmpty()));
+        for (Slot x : r.side(side)) n.add(called(x, start && n.isEmpty()));
         return String.join(" and ", n);
     }
 
@@ -229,6 +246,8 @@ public final class FightScript {
         for (Slot x : r.slots) spots.add(BlockPos.containing(x.at));
         run = r;
         r.phaseAt = r.now();
+        // (the giants are told at once: a staged fight's giants fight only each other)
+        Fights.pushFlags(server);
         net.jj.giants.fun.Spots.whenLoaded(l, spots, () -> place(server, r),
                 () -> {
                     if (run == r) run = null;
@@ -337,7 +356,8 @@ public final class FightScript {
             face(e, x.facing.add(x.at.subtract(x.facing).scale(-2)));
         }
         List<ServerPlayer> near = near(r);
-        say(server, r, near, sideName(r, "a") + " against " + sideName(r, "b") + "!" + (r.s.rounds > 1 ? " Best of "
+        say(server, r, near, sideName(r, "a") + " against " + sideName(r, "b", false) + "!" + (r.s.rounds > 1
+                ? " Best of "
                 + r.s.rounds + "." : ""));
         if (r.s.bets) offerBets(server, r, near);
         Fun.told(server, r);
@@ -380,7 +400,8 @@ public final class FightScript {
                 if ((now - r.phaseAt) % 20 != 0) return;
                 List<ServerPlayer> near = near(r);
                 FightShow.count(near, r.count, r.s.rounds > 1 ? "Round " + r.round : sideName(r, "a") + " vs "
-                        + sideName(r, "b"));
+                        + sideName(r, "b", false));
+                holdStill(server, r);
                 if (r.count-- <= 0) startRound(server, r);
             }
             case "fight" -> {
@@ -388,7 +409,10 @@ public final class FightScript {
                 else if (server.getTickCount() % 5 == 0) show(server, r);
             }
             case "rest" -> {
-                if (server.getTickCount() % 20 == 0) show(server, r);
+                if (server.getTickCount() % 20 == 0) {
+                    show(server, r);
+                    holdStill(server, r);
+                }
                 if (now - r.phaseAt >= r.s.rest * 20L) {
                     r.round++;
                     if (r.s.countdown) {
@@ -405,6 +429,14 @@ public final class FightScript {
                 if (server.getTickCount() % 20 == 0) after(server, r);
             }
             default -> {}
+        }
+    }
+
+    /** before the bell and between rounds: nobody starts on his own */
+    private static void holdStill(MinecraftServer server, Run r) {
+        for (Slot x : r.slots) {
+            LivingEntity e = find(server, x);
+            if (e != null && !x.dead) FightGiants.act(server, e, "stop", null);
         }
     }
 
@@ -506,9 +538,18 @@ public final class FightScript {
                     : Math.min(x.start, Math.max(r.s.breakAt + 0.25, x.start * 0.5));
             double plan = x.start - (x.start - end) * p;
             double err = x.share - plan;
-            x.pace = Mth.clamp(x.pace * Math.exp(4.0 * err), 0.05, 15);
+            // (past the length the pace may go further: the fight must come to its end)
+            x.pace = Mth.clamp(x.pace * Math.exp(4.0 * err), t > T ? 0.02 : 0.05, t > T ? 40 : 15);
             if (t < 100) x.pace = Math.max(x.pace, 0.5);
             setTag(e, TAKEN, Math.abs(x.pace - 1) < 0.02 ? null : AdminSetting.plain(Math.round(x.pace * 100) / 100.0));
+            // (twice the length gone and still well above the break point: the blows he takes wear him down a little
+            // more each second, so the fight comes to its end however little his foe's blows do)
+            if (t > 2 * T && (w.isEmpty() || !x.side().equals(w)) && x.share > r.s.breakAt + 0.01) {
+                JsonObject o = new JsonObject();
+                o.addProperty("share", Math.max(r.s.breakAt, x.share - 0.03));
+                o.addProperty("set", true);
+                FightGiants.act(server, e, "health", o);
+            }
             // keep each one on the nearest foe still up (a foe who broke, or a pair split up)
             if ((t / 20) % 5 == 0) {
                 LivingEntity foe = nearestFoe(server, r, x);
@@ -639,20 +680,18 @@ public final class FightScript {
                 toAfter(server, r);
             }
             case "caught" -> {
+                // he runs; the winner lets him get a few blocks away, then goes after him
+                FightGiants.act(server, w, "stop", null);
                 FightGiants.act(server, le, "yield", with("by", w));
-                FightGiants.act(server, w, "chase", FightGiants.foe(le));
-                // the chase is run down: he is slower now, the winner faster
-                Fights.speed(server, le, 0.7);
-                Fights.speed(server, w, 1.3);
                 setTag(le, FLOOR, "0.02");
-                say(server, r, near, called(l, true) + " runs for it! " + called(r.finisher, true) + " goes after him!");
+                say(server, r, near, called(l, true) + " runs for it!");
                 r.phase = "chase";
             }
             default -> {
                 // to the death: he holds on just above nothing until the winner's finisher lands
                 setTag(le, FLOOR, "0.02");
                 setTag(le, TAKEN, "3");
-                setTag(w, FLOOR, AdminSetting.plain(Math.max(0.05, Math.min(0.2, r.finisher.share - 0.02))));
+                setTag(w, FLOOR, AdminSetting.plain(Math.max(0.05, r.finisher.share - 0.05)));
                 finish(server, r, w, le, near);
                 r.phase = "finish";
             }
@@ -691,8 +730,17 @@ public final class FightScript {
                 toAfter(server, r);
                 return;
             }
+            if (!r.chasing && t >= 60) {
+                r.chasing = true;
+                say(server, r, near, called(r.finisher, true) + " goes after him!");
+                FightGiants.act(server, w, "chase", FightGiants.foe(le));
+                // the chase is run down: he is slower now, the winner faster
+                Fights.speed(server, le, 0.7);
+                Fights.speed(server, w, 1.3);
+            }
             double gap = Math.hypot(w.getX() - le.getX(), w.getZ() - le.getZ());
-            boolean caught = gap < FightGiants.reach(w) * 0.6 + 6 || share < l.share - 0.01;
+            // (he gets a head start: five seconds of running before he can be caught)
+            boolean caught = t > 100 && (gap < FightGiants.reach(w) * 0.6 + 6 || share < l.share - 0.01);
             if (caught) {
                 say(server, r, near, called(r.finisher, true) + " has caught " + called(l, false) + "!");
                 setTag(le, TAKEN, "3");
@@ -703,7 +751,9 @@ public final class FightScript {
             return;
         }
         // the final blow: he is at the floor (the finisher landed), or it has taken too long
-        if (share <= 0.035 || t > 600) {
+        // (the finisher landing hardest: past 8 s every blow on him counts for more)
+        if (t > 160 && t < 170) setTag(le, TAKEN, "8");
+        if (share <= 0.035 || t > 400) {
             if (r.s.slowmo) FightShow.slowMo(server, 2600);
             r.loser.dead = true;
             Fights.kill(server, le);
@@ -835,7 +885,21 @@ public final class FightScript {
             share.put(e.getUUID(), x.share);
             side.put(e.getUUID(), x.side());
         }
-        if (r.s.bars) FightShow.bars(r.show, r.level, r.spot, r.radius, gs, share, side);
+        if (r.s.bars) {
+            double sa = 0, sb = 0;
+            int na = 0, nb = 0;
+            for (Slot x : r.slots) {
+                if (x.side().equals("a")) {
+                    sa += x.dead ? 0 : x.share;
+                    na++;
+                } else {
+                    sb += x.dead ? 0 : x.share;
+                    nb++;
+                }
+            }
+            FightShow.bar(r.show, r.level, r.spot, r.radius, sideName(r, "a", true), sa / Math.max(1, na),
+                    sideName(r, "b", false), sb / Math.max(1, nb));
+        }
         FightShow.music(r.show, server, r.level, r.spot, r.radius, r.s.music ? "on" : "");
     }
 
@@ -845,7 +909,7 @@ public final class FightScript {
         MutableComponent line = Component.literal("[Fight] ").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)
                 .append(Component.literal("Bets are open: ").withStyle(ChatFormatting.GOLD));
         for (String side : List.of("a", "b"))
-            line.append(Component.literal("[Bet on " + sideName(r, side) + "] ").withStyle(st -> st
+            line.append(Component.literal("[Bet on " + sideName(r, side, false) + "] ").withStyle(st -> st
                     .withColor(side.equals("a") ? ChatFormatting.RED : ChatFormatting.AQUA)
                     .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/giants fight bet " + side + " 1"))
                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(

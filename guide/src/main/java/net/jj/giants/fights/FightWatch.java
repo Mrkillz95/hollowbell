@@ -286,7 +286,7 @@ public final class FightWatch {
         share.put(f.a, ha.share());
         share.put(f.b, hb.share());
         if (Fights.on(server, s + "Bars"))
-            FightShow.bars(f.show, f.level, mid, r, List.of(a, b), share, Map.of(f.a, "a", f.b, "b"));
+            FightShow.bar(f.show, f.level, mid, r, FightGiants.shown(a), ha.share(), FightGiants.shown(b), hb.share());
         String music = Fights.option(server, s + "Music");
         FightShow.music(f.show, server, f.level, mid, r, music.equals("usual") ? "" : music);
     }

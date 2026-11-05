@@ -126,6 +126,12 @@ public final class Fights {
     /** the flags the giants were last sent (sent again when they change) */
     private static @Nullable String pushed;
 
+    /** the flags sent again now (a staged fight began) */
+    static void pushFlags(MinecraftServer server) {
+        pushed = "";
+        flags(server);
+    }
+
     private static void flags(MinecraftServer server) {
         String now = asks(server) + "," + (follows(server) || FightScript.busy());
         if (now.equals(pushed)) return;
@@ -178,7 +184,7 @@ public final class Fights {
         boolean sa = FightScript.in(self.getUUID()), sb = FightScript.in(other.getUUID());
         if (sa || sb) {
             String s1 = FightScript.sideOf(self.getUUID()), s2 = FightScript.sideOf(other.getUUID());
-            return sa && sb && !s1.equals(s2) ? null : "That giant is in a staged fight.";
+            return sa && sb && !s1.equals(s2) && FightScript.fightingNow() ? null : "That giant is in a staged fight.";
         }
         long now = self.level().getGameTime();
         FightData d = FightData.get(server);

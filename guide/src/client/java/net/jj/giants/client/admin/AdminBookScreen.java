@@ -941,7 +941,8 @@ public class AdminBookScreen extends Screen {
                 out.add(b);
             }
             case CHOICE -> {
-                Button b = Button.builder(Component.literal(AdminSetting.text(shown(s))), x -> {
+                // (Part 10B) an option's words with spaces ("back down", "run away")
+                Button b = Button.builder(Component.literal(AdminSetting.text(shown(s)).replace('_', ' ')), x -> {
                             int i = s.options().indexOf(shown(s).getAsString());
                             commit(s, new JsonPrimitive(s.options().get((i + 1) % s.options().size())));
                         })
@@ -5362,7 +5363,7 @@ public class AdminBookScreen extends Screen {
         String next = vs.get((i + 1) % vs.size());
         return new LineRow(lit(label), TEXT, lit(what), List.<Object[]>of(new Object[] {lit(scriptWords(s, key)),
             (Runnable) () -> scriptSet(key, next), lit("Click for the next: " + label.toLowerCase(java.util.Locale.ROOT)
-                    + ".")}));
+                    + ".")}), true);
     }
 
     /** a small heading inside the script */
@@ -5402,8 +5403,8 @@ public class AdminBookScreen extends Screen {
         rows.add(scriptOption(s, "winner", "Winner", "Side A, side B, or let them fight it out."));
         rows.add(scriptOption(s, "ending", "Loser's ending", "How the loser's end comes."));
         rows.add(scriptOption(s, "break", "Break point", "The loser breaks at this much of his health."));
-        rows.add(scriptOption(s, "length", "Length", "Quick clash (half a minute), normal (a minute and a half), epic"
-                + " (four minutes): the winner's blows are paced to fit."));
+        rows.add(scriptOption(s, "length", "Length", "Quick (30 s), normal (90 s), epic (4 min): the winner's blows are"
+                + " paced to fit."));
         rows.add(scriptOption(s, "rounds", "Rounds", "One fight, or best of 3 or 5 with a rest between."));
         if (dbl(s, "rounds", 1) > 1) {
             rows.add(scriptOption(s, "rest", "Rest between rounds", "How long they rest."));
@@ -5593,7 +5594,7 @@ public class AdminBookScreen extends Screen {
         Form fm = new Form(lit(giantName(kind) + ": side " + side.toUpperCase(java.util.Locale.ROOT) + slot),
                 lit("How much of his health he starts with, and the move he finishes the loser with."));
         double[] hp = {dbl(f, "health", 1) * 100};
-        fm.slider(lit("Starting health %"), 5, 100, 5, hp, false);
+        fm.percent(lit("Starting health"), 5, 100, 5, hp);
         JsonObject mv = fs.get("moves") instanceof JsonObject m ? m : new JsonObject();
         List<String> his = new ArrayList<>(List.of(""));
         his.addAll(strings(mv, kind));
@@ -5677,7 +5678,7 @@ public class AdminBookScreen extends Screen {
 
         Component word(String m) {
             boolean y = on.contains(m);
-            return lit((y ? "✔ " : "✘ ") + m.replace('_', ' ')).withStyle(y ? ChatFormatting.DARK_GREEN
+            return lit((y ? "✔ " : "✘ ") + m.replace('_', ' ')).withStyle(y ? ChatFormatting.GREEN
                     : ChatFormatting.GRAY);
         }
 
@@ -6241,6 +6242,31 @@ public class AdminBookScreen extends Screen {
                 x.setMessage(now.get());
             }).bounds(0, 0, 100, 16).build();
             field(label, b[0]);
+        }
+
+        /** (Part 10B) a slider shown as a percentage */
+        void percent(Component label, double lo, double hi, double step, double[] v) {
+            AbstractSliderButton s = new AbstractSliderButton(0, 0, 100, 16, Component.empty(),
+                    (Mth.clamp(v[0], lo, hi) - lo) / (hi - lo)) {
+                {
+                    updateMessage();
+                }
+
+                double cur() {
+                    return Mth.clamp(Math.round((lo + value * (hi - lo)) / step) * step, lo, hi);
+                }
+
+                @Override
+                protected void updateMessage() {
+                    setMessage(Component.literal(Math.round(cur()) + "%"));
+                }
+
+                @Override
+                protected void applyValue() {
+                    v[0] = cur();
+                }
+            };
+            field(label, s);
         }
 
         void slider(Component label, double lo, double hi, double step, double[] v, boolean zeroLeaves) {

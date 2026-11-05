@@ -122,34 +122,52 @@ cmd giants admin fight set bets on
 cmd tp @s 300 -60 0 0 0
 wait 10
 cmd giants admin fight start here
-cmd tp @s 300 -50 -30 0 15
-wait 12
-shot p10b_countdown_3
-wait 24
-shot p10b_countdown_2
-wait 40
-shot p10b_fight_start
+cmd tp @s 300 -44 -38 0 12
+wait 6
+shot p10b_count_a
+wait 8
+shot p10b_count_b
+wait 16
+shot p10b_count_c
+wait 20
+shot p10b_count_d
+wait 20
+shot p10b_count_e
 wait 200
 shot p10b_fight_bars
 wait 200
 shot p10b_fight_mid
-wait 160
-shot p10b_fight_late
-wait 60
-shot p10b_end_1
-wait 30
-shot p10b_end_2
-wait 30
-shot p10b_end_3
-wait 30
-shot p10b_end_4
-wait 30
-shot p10b_end_5
-wait 40
-shot p10b_end_6
+fightphase finish 4000
+wait 20
+shot p10b_end_00
+wait 20
+shot p10b_end_01
+wait 20
+shot p10b_end_02
+wait 20
+shot p10b_end_03
+wait 20
+shot p10b_end_04
+fightphase after 2400
+wait 6
+shot p10b_slow_00
+wait 6
+shot p10b_slow_01
+wait 6
+shot p10b_slow_02
+wait 6
+shot p10b_slow_03
+wait 6
+shot p10b_slow_04
+wait 6
+shot p10b_slow_05
 wait 60
 shot p10b_after
-wait 300
+fightphase none 600
+wait 100
+cmd wreckback remove
+cmd cerberus remove
+wait 20
 # the loser runs and is caught
 cmd giants admin fight reset
 cmd giants admin fight giant a 1 gloamwick 0.12
@@ -161,20 +179,37 @@ cmd giants admin fight set countdown off
 cmd tp @s 300 -60 0 0 0
 wait 10
 cmd giants admin fight start here
-cmd tp @s 300 -45 -40 0 20
-wait 400
-shot p10b_flee_1
-wait 80
-shot p10b_flee_2
-wait 80
-shot p10b_flee_3
-wait 80
-shot p10b_flee_4
-wait 80
-shot p10b_flee_5
-wait 120
-shot p10b_flee_6
-wait 120
+cmd tp @s 300 -44 -38 0 12
+wait 300
+shot p10b_flee_fight
+fightphase chase 4000
+wait 30
+shot p10b_flee_00
+wait 30
+shot p10b_flee_01
+wait 30
+shot p10b_flee_02
+wait 30
+shot p10b_flee_03
+wait 30
+shot p10b_flee_04
+wait 30
+shot p10b_flee_05
+wait 30
+shot p10b_flee_06
+wait 30
+shot p10b_flee_07
+wait 30
+shot p10b_flee_08
+wait 30
+shot p10b_flee_09
+wait 30
+shot p10b_flee_10
+wait 30
+shot p10b_flee_11
+fightphase after 2400
+wait 20
+shot p10b_flee_end
 cmd giants admin fight status
 wait 20
 shot p10b_status

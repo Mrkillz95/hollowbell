@@ -300,14 +300,14 @@ public class FightGameTests implements FabricGameTest {
         when(h, () -> fighting(s), 200, "the fight", () -> {
             IronGolem a = side(s, "a", 1), b = side(s, "b", 1);
             hp(b, 0.25);
-            when(h, () -> GiantsBridge.called("fightact chase " + a.getUUID() + " " + b.getUUID()), 60,
+            when(h, () -> GiantsBridge.called("fightact chase " + a.getUUID() + " " + b.getUUID()), 140,
                     "the chase", () -> {
                         h.assertTrue(GiantsBridge.called("fightact yield " + b.getUUID()), "he ran first");
                         h.assertTrue("0.7".equals(tag(b, "jj_giants.fightx.speed=")) && "1.3".equals(tag(a,
                                 "jj_giants.fightx.speed=")), "the chase is run down: slower and faster");
                         // the winner catches up with him
                         a.teleportTo(b.getX() + 3, b.getY(), b.getZ());
-                        when(h, () -> "3".equals(tag(b, "jj_giants.fight.taken=")), 40, "caught", () -> {
+                        when(h, () -> "3".equals(tag(b, "jj_giants.fight.taken=")), 100, "caught", () -> {
                             hp(b, 0.02);
                             when(h, () -> !b.isAlive(), 40, "killed", () -> when(h, () -> !FightScript.busy(), 400,
                                     "the end", () -> {

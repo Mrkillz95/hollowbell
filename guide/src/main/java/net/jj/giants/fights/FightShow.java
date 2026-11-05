@@ -56,6 +56,24 @@ public final class FightShow {
         return out;
     }
 
+    /**
+     * the fight's one bar, both sides on it: "Wreckback 88%  ⚔  76% the Cerberus", filled by side A's share of what
+     * health the two sides have left (each giant's own bar shows on its own as well)
+     */
+    static void bar(Show s, ServerLevel l, Vec3 at, double r, String a, double sa, String b, double sb) {
+        List<ServerPlayer> who = near(l, at, r);
+        UUID key = new UUID(0, 1);
+        ServerBossEvent bar = s.bars.computeIfAbsent(key, k -> new ServerBossEvent(Component.empty(),
+                BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.PROGRESS));
+        bar.setName(Component.literal(a + " " + pct(sa)).withStyle(ChatFormatting.RED)
+                .append(Component.literal("  ⚔  ").withStyle(ChatFormatting.WHITE))
+                .append(Component.literal(pct(sb) + " " + b).withStyle(ChatFormatting.AQUA)));
+        double sum = sa + sb;
+        bar.setProgress((float) (sum <= 0 ? 0.5 : Math.max(0, Math.min(1, sa / sum))));
+        for (ServerPlayer p : List.copyOf(bar.getPlayers())) if (!who.contains(p)) bar.removePlayer(p);
+        for (ServerPlayer p : who) bar.addPlayer(p);
+    }
+
     /** each giant's bar brought up to date and shown to the players near (side a red, b blue) */
     static void bars(Show s, ServerLevel l, Vec3 at, double r, List<LivingEntity> giants, Map<UUID, Double> share,
             Map<UUID, String> side) {
