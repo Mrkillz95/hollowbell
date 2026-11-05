@@ -775,6 +775,10 @@ public final class BellMoves {
         // (a move this world has turned off: never)
         for (int m = 1; m < w.length; m++)
             if (w[m] > 0 && !net.jj.hollowbell.GiantsAdmin.moveOn(m)) w[m] = 0;
+        // (Part 10B) a staged fight's moves for him: only those
+        if (net.jj.hollowbell.GiantsFight.tagged(h))
+            for (int m = 1; m < w.length; m++)
+                if (w[m] > 0 && !net.jj.hollowbell.GiantsFight.moveOk(h, Moves.NAMES[m])) w[m] = 0;
         if (why != null)
             why.append(String.format(
                     "%.0f out (%.1f bells), %.0f up%s%s%s%s%s",

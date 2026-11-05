@@ -630,6 +630,14 @@ public final class CodexOrders {
             LookOrder.refuse(p, why, t);
             return why;
         }
+        // (Part 10B) the world's rules on owned giants fighting each other
+        if (net.jj.hollowbell.entity.Giants.isGiant(t)) {
+            String rule = net.jj.hollowbell.GiantsFight.orderRefusal(m, t, p);
+            if (rule != null) {
+                p.displayClientMessage(Component.literal(rule), true);
+                return "fight_rule";
+            }
+        }
         if (!already && !gate(p, m, pay)) return "gate";
         if (m.mood().stage(p.getUUID()) >= Mood.WILFUL) {
             m.clearHitList();

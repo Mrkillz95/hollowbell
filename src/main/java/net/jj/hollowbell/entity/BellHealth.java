@@ -195,7 +195,22 @@ final class BellHealth {
             dealt = net.jj.hollowbell.GiantsSystems.hit(hb, src, dealt, net.jj.hollowbell.GiantsSystems.weakBone(hb, bone),
                     bone >= 0 ? boneCentreWorld(bone) : null);
         if (att instanceof LivingEntity le && hb.moves.caught(le)) hb.moves.hurtFromInside(dealt);
+        // (Part 10B) the world's giant-fight rules and a staged fight's script (none: the same number)
+        if (net.jj.hollowbell.GiantsFight.active(hb)) {
+            LivingEntity byGiant = Giants.fromGiant(src, hb) ? giantBehind(src) : null;
+            dealt = net.jj.hollowbell.GiantsFight.taken(hb, src, byGiant, dealt, hb.healthNow(), hb.healthMax(),
+                    hb.flee.playerFight(byGiant != null ? byGiant : Giants.behind(src)), BellConfig.V.yieldAt);
+            // (his own side's blow in a staged fight: no hurt at all, no flinch, no grudge)
+            if (byGiant != null && net.jj.hollowbell.GiantsFight.sameTeam(hb, byGiant)) return false;
+        }
         return takeDamage(src, dealt);
+    }
+
+    /** (Part 10B) the giant behind a giant's blow: the giant himself, or the giant whose helper struck */
+    private @Nullable LivingEntity giantBehind(DamageSource src) {
+        LivingEntity g = Giants.ownerOf(Giants.behind(src));
+        if (g != null && Giants.isGiant(g)) return g;
+        return hb.level() instanceof ServerLevel sl ? Giants.helperOwner(src, sl) : null;
     }
 
     /** how much of this blow is new: all of it the first time this tick, only what it's over the last one after that */

@@ -31,7 +31,9 @@
       "net.jj.giants.test.Answers2GiantsGameTests",
       "net.jj.giants.test.MinigameGameTests",
       "net.jj.giants.test.MinigameModeGameTests",
-      "net.jj.giants.test.MinigameGiantsGameTests"
+      "net.jj.giants.test.MinigameGiantsGameTests",
+      "net.jj.giants.test.FightGameTests",
+      "net.jj.giants.test.FightGiantsGameTests"
     ],
     "client": [
       "net.jj.giants.client.dev.AutoTest"

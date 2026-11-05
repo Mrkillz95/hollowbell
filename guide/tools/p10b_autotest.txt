@@ -1,0 +1,216 @@
+# Part 10B pictures (ADMIN_BRIDGE.md 27): the Fight script on the admin book's Fun page and its questions, the giant
+# fights' settings on the Systems page, then a scripted fight in an arena (the countdown, both bars and the announcer,
+# the finish in slow motion) and a second one where the loser runs and is chased down.
+#   set GUIDE_SCRIPT=tools/p10b_autotest.txt; withslot.ps1 <guide> runAutotest -Pgiants
+#   (pictures in build/autotest/screenshots, copied to hollowbell/pictures/adminbook/p10b)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode advanced
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd gamemode creative
+cmd tp @s 0 -60 0 0 10
+wait 20
+# the script: a tag team, two a side (Wreckback and the Cerberus against Pitchgut and the Gloamwick)
+cmd giants admin fight reset
+cmd giants admin fight giant a 1 wreckback 0.1
+cmd giants admin fight giant a 2 cerberus 0.1
+cmd giants admin fight giant b 1 pitchgut 0.1
+cmd giants admin fight giant b 2 gloamwick 0.1
+cmd giants admin fight moves a 1 claw_snip,feeler_lash,cannon_broadside,full_broadside
+cmd giants admin fight health b 2 70
+cmd giants admin fight set winner a
+cmd giants admin fight set rounds 3
+cmd giants admin fight set bets on
+cmd giants admin fight save Harbour Showdown
+wait 20
+# the Fun page down to the Fight script
+adminbook fun 0
+wait 60
+mouse 2 2
+wait 25
+shot p10b_fun_top
+adminbook fun 380
+wait 40
+mouse 2 2
+wait 25
+shot p10b_script_1
+adminbook fun 640
+wait 40
+mouse 2 2
+wait 25
+shot p10b_script_2
+adminbook fun 900
+wait 40
+mouse 2 2
+wait 25
+shot p10b_script_3
+adminbook fun 1160
+wait 40
+mouse 2 2
+wait 25
+shot p10b_script_4
+# its questions
+adminbook fun 380
+wait 40
+funask fightmoves
+wait 15
+mouse 2 2
+wait 10
+shot p10b_ask_moves
+close
+adminbook fun 380
+wait 40
+funask fightmore
+wait 15
+mouse 2 2
+wait 10
+shot p10b_ask_more
+close
+adminbook fun 380
+wait 40
+funask fightsave
+wait 15
+mouse 2 2
+wait 10
+shot p10b_ask_save
+close
+# the Systems page: the giant fights' settings
+adminbook systems 2600
+wait 60
+mouse 2 2
+wait 25
+shot p10b_systems_1
+adminbook systems 2900
+wait 40
+mouse 2 2
+wait 25
+shot p10b_systems_2
+adminbook systems 3300
+wait 40
+mouse 2 2
+wait 25
+shot p10b_systems_3
+close
+# GUI scale 3 (a narrow book)
+guiscale 3
+adminbook fun 400
+wait 50
+mouse 2 2
+wait 20
+shot p10b_script_scale3
+close
+guiscale 2
+wait 10
+# an arena for the fight
+cmd tp @s 300 -60 0 0 10
+wait 60
+cmd giants admin build arena small
+wait 500
+# a one-on-one: Wreckback wins to the death, quick, with every show
+cmd giants admin fight reset
+cmd giants admin fight giant a 1 wreckback 0.12
+cmd giants admin fight giant b 1 cerberus 0.12
+cmd giants admin fight set winner a
+cmd giants admin fight set ending death
+cmd giants admin fight set length quick
+cmd giants admin fight set bets on
+cmd tp @s 300 -60 0 0 0
+wait 10
+cmd giants admin fight start here
+cmd tp @s 300 -44 -38 0 12
+wait 6
+shot p10b_count_a
+wait 8
+shot p10b_count_b
+wait 16
+shot p10b_count_c
+wait 20
+shot p10b_count_d
+wait 20
+shot p10b_count_e
+wait 200
+shot p10b_fight_bars
+wait 200
+shot p10b_fight_mid
+fightphase finish 4000
+wait 20
+shot p10b_end_00
+wait 20
+shot p10b_end_01
+wait 20
+shot p10b_end_02
+wait 20
+shot p10b_end_03
+wait 20
+shot p10b_end_04
+fightphase after 2400
+wait 6
+shot p10b_slow_00
+wait 6
+shot p10b_slow_01
+wait 6
+shot p10b_slow_02
+wait 6
+shot p10b_slow_03
+wait 6
+shot p10b_slow_04
+wait 6
+shot p10b_slow_05
+wait 60
+shot p10b_after
+fightphase none 600
+wait 100
+cmd wreckback remove
+cmd cerberus remove
+wait 20
+# the loser runs and is caught
+cmd giants admin fight reset
+cmd giants admin fight giant a 1 gloamwick 0.12
+cmd giants admin fight giant b 1 pitchgut 0.12
+cmd giants admin fight set winner a
+cmd giants admin fight set ending caught
+cmd giants admin fight set length quick
+cmd giants admin fight set countdown off
+cmd tp @s 300 -60 0 0 0
+wait 10
+cmd giants admin fight start here
+cmd tp @s 300 -44 -38 0 12
+wait 300
+shot p10b_flee_fight
+fightphase chase 4000
+wait 30
+shot p10b_flee_00
+wait 30
+shot p10b_flee_01
+wait 30
+shot p10b_flee_02
+wait 30
+shot p10b_flee_03
+wait 30
+shot p10b_flee_04
+wait 30
+shot p10b_flee_05
+wait 30
+shot p10b_flee_06
+wait 30
+shot p10b_flee_07
+wait 30
+shot p10b_flee_08
+wait 30
+shot p10b_flee_09
+wait 30
+shot p10b_flee_10
+wait 30
+shot p10b_flee_11
+fightphase after 2400
+wait 20
+shot p10b_flee_end
+cmd giants admin fight status
+wait 20
+shot p10b_status
+quit
