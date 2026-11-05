@@ -100,7 +100,8 @@ public final class Fights {
     static boolean asks(MinecraftServer server) {
         return !option(server, "ownedMayFight").equals("always") || num(server, "fightsMost") > 0
                 || !option(server, "fightsWhen").equals("any") || !on(server, "fightsSleepers")
-                || num(server, "wildRest") > 0 || num(server, "ownedRest") > 0 || FightScript.busy();
+                || num(server, "wildRest") > 0 || num(server, "ownedRest") > 0 || FightScript.busy()
+                || net.jj.giants.adventure.Adventure.roundOn();
     }
 
     /** what the giants are sent with their "all" (their own settings' server defaults, and the two flags) */
@@ -181,6 +182,9 @@ public final class Fights {
     /** why this fight may not start now, or null */
     static @Nullable String refusal(MinecraftServer server, LivingEntity self, LivingEntity other, boolean ordered,
             String by) {
+        // (lagfix) an adventure map's own giants are on the same story: never each other, ordered or not
+        if (net.jj.giants.adventure.Adventure.sameStory(self, other))
+            return "They're on the same side in this adventure.";
         // a staged fight's giants fight only each other
         boolean sa = FightScript.in(self.getUUID()), sb = FightScript.in(other.getUUID());
         if (sa || sb) {

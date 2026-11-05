@@ -723,6 +723,21 @@ public final class Adventure {
     }
 
     /** (the tests) the round's state, or null */
+    /** an adventure map's round is being played (its giants ask before any giant fight) */
+    public static boolean roundOn() {
+        return round != null;
+    }
+
+    /**
+     * (lagfix, JJ) two of the round's own scripted giants: they're on the same story, so they never meet or fight each
+     * other (the guard is there for the players)
+     */
+    public static boolean sameStory(LivingEntity a, LivingEntity b) {
+        Round r = round;
+        return r != null && a.level() == r.level && b.level() == r.level && r.state.runs.containsKey(a.getStringUUID())
+                && r.state.runs.containsKey(b.getStringUUID());
+    }
+
     public static @Nullable AdvData.State roundState() {
         Round r = round;
         return r == null ? null : r.state;

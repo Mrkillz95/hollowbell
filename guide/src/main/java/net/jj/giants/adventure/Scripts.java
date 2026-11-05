@@ -30,6 +30,8 @@ public final class Scripts {
     /** every step a script can have: its word, what follows it, and what it does (the book and /giants admin script) */
     public static final String[][] VERBS = {
         {"walk", "<path> [until area <area> or until players <blocks>]", "walks the path once, point by point"},
+        {"escort", "<path> [blocks]", "walks the path once with the players: a few blocks at a time, at a pace they"
+                + " keep up with, waiting whenever no player is that close (24)"},
         {"patrol", "<path> [until area <area> or until players <blocks>]", "walks the path round and round"},
         {"wait", "<seconds>", "stays where he is for a while"},
         {"waitfor", "players <blocks> or area <area>", "stays where he is until a player comes that close, or into the area"},
@@ -54,6 +56,12 @@ public final class Scripts {
                 if (w.length < 2) return v + " needs a path: " + v + " <path>.";
                 if (AdvData.name(w[1]) == null) return "A path's name is letters, digits, _ and -.";
                 return until(w, 2);
+            }
+            case "escort" -> {
+                if (w.length < 2) return "escort needs a path: escort <path> [blocks].";
+                if (AdvData.name(w[1]) == null) return "A path's name is letters, digits, _ and -.";
+                if (w.length > 2 && (num(w[2]) <= 0 || num(w[2]) > 128)) return "escort's blocks: 1 to 128.";
+                return null;
             }
             case "wait" -> {
                 if (w.length < 2 || num(w[1]) < 0 || num(w[1]) > 3600) return "wait needs seconds: wait 10 (0 to 3600).";
@@ -89,7 +97,7 @@ public final class Scripts {
                 return null;
             }
             default -> {
-                return "No step called " + v + ". Steps: walk, patrol, wait, waitfor, guard, fight, mood, say, title,"
+                return "No step called " + v + ". Steps: walk, escort, patrol, wait, waitfor, guard, fight, mood, say, title,"
                         + " sleep, wake, run, repeat, end.";
             }
         }
@@ -137,6 +145,8 @@ public final class Scripts {
         long bestAt;
         long lastGo;
         @Nullable UUID fighting;
+        /** (escort) waiting for the players to come up */
+        boolean waiting;
     }
 
     static final Map<UUID, Live> live = new HashMap<>();
@@ -232,6 +242,10 @@ public final class Scripts {
             switch (w[0]) {
                 case "walk", "patrol" -> {
                     if (walk(server, e, run, w, lv, in, now, w[0].equals("patrol"))) next(run, lv);
+                    return;
+                }
+                case "escort" -> {
+                    if (escort(server, e, w, lv, in, now)) next(run, lv);
                     return;
                 }
                 case "wait" -> {
@@ -349,6 +363,88 @@ public final class Scripts {
             lv.bestAt = now;
         }
         return false;
+    }
+
+    /** how far ahead of himself an escorted giant is sent each time (a short way, so he keeps a walking pace) */
+    static final double ESCORT_LEAD = 8;
+
+    /**
+     * (lagfix, JJ "no road follow") walks the path with the players: a spot a few blocks along the road, given again
+     * each second, so he keeps to the road at a pace they can keep up with; no player within the blocks (24): he
+     * stops where he is and waits for them, then goes on from where he stopped. True at the path's end.
+     */
+    private static boolean escort(MinecraftServer server, LivingEntity e, String[] w, Live lv, AdvData.State in,
+            long now) {
+        AdvData.Path p = in.paths.get(w[1].toLowerCase(Locale.ROOT));
+        if (p == null || p.pts.isEmpty() || !p.dim.equals(e.level().dimension().location().toString()))
+            return now - lv.started > 200;
+        double range = w.length > 2 ? num(w[2]) : 24;
+        int n = p.pts.size();
+        if (lv.pt >= n) lv.pt = n - 1;
+        // (from the nearest point on: after a fight or a push he picks up the road where he is)
+        if (lv.lastGo < 0) lv.pt = nearestAhead(p, e, lv.pt);
+        double near = Math.min(AdvGiants.near(e), 4);
+        double[] at = p.pts.get(lv.pt);
+        double d = Math.sqrt(AdvGiants.horizontal(e.position(), new Vec3(at[0], 0, at[2])));
+        while (d <= near) {
+            if (lv.pt == n - 1) return true;
+            lv.pt++;
+            lv.best = Double.MAX_VALUE;
+            lv.bestAt = now;
+            at = p.pts.get(lv.pt);
+            d = Math.sqrt(AdvGiants.horizontal(e.position(), new Vec3(at[0], 0, at[2])));
+        }
+        if (AdvGiants.nearest(e, range, null) == null) {
+            // nobody with him: he waits here (sent to his own spot so he stops), and the stuck clock stops
+            if (!lv.waiting) {
+                lv.waiting = true;
+                AdvGiants.go(server, e, e.getX(), e.getZ());
+            }
+            lv.bestAt = now;
+            return false;
+        }
+        if (lv.waiting) {
+            lv.waiting = false;
+            lv.lastGo = -100;
+        }
+        if (d < lv.best - 0.5) {
+            lv.best = d;
+            lv.bestAt = now;
+        }
+        if (now - lv.lastGo >= 20) {
+            Vec3 to = new Vec3(at[0] - e.getX(), 0, at[2] - e.getZ());
+            Vec3 spot = to.length() > ESCORT_LEAD ? e.position().add(to.normalize().scale(ESCORT_LEAD))
+                    : new Vec3(at[0], 0, at[2]);
+            AdvGiants.go(server, e, spot.x, spot.z);
+            lv.lastGo = now;
+        }
+        // no nearer for ten seconds (stuck on something): a step along the way
+        if (now - lv.bestAt > 200) {
+            Vec3 to = new Vec3(at[0] - e.getX(), 0, at[2] - e.getZ());
+            AdvGiants.nudge(server, e, e.position().add(to.normalize().scale(Math.min(4, to.length()))));
+            lv.bestAt = now;
+        }
+        return false;
+    }
+
+    /** the path point to make for: the nearest to him from this one on (never back along the road) */
+    private static int nearestAhead(AdvData.Path p, LivingEntity e, int from) {
+        int best = from;
+        double bd = Double.MAX_VALUE;
+        for (int i = from; i < p.pts.size(); i++) {
+            double[] q = p.pts.get(i);
+            double d = AdvGiants.horizontal(e.position(), new Vec3(q[0], 0, q[2]));
+            if (d < bd) {
+                bd = d;
+                best = i;
+            }
+        }
+        // (past that point already, along the road to the next: the next)
+        if (best + 1 < p.pts.size()) {
+            double[] a = p.pts.get(best), b = p.pts.get(best + 1);
+            if ((e.getX() - a[0]) * (b[0] - a[0]) + (e.getZ() - a[2]) * (b[2] - a[2]) > 0) best++;
+        }
+        return best;
     }
 
     /** stays at the spot the step began (walked back when he wanders) */

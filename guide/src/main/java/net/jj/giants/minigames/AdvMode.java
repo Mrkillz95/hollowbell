@@ -101,9 +101,59 @@ public final class AdvMode extends Coop {
     @Override
     public void tick(MgGame g) {
         if (g.roundTicks % 20 != 0 || g.level == null) return;
+        keepPeace(g);
         AdvMaps.Loaded m = loaded(g);
         if (m == null || m.winArea.isEmpty()) return;
         if (Adventure.playerInRoundArea(g.level, m.winArea)) g.data.put("end", "win:Someone reached the goal!");
+    }
+
+    /**
+     * (lagfix, JJ) once a second: the map's own giants never fight each other (they're on the same story), and the
+     * one the players look after (kept safe from them) stays calm toward them the whole round: no target, no grudge.
+     */
+    static void keepPeace(MgGame g) {
+        java.util.Set<String> ours = new java.util.HashSet<>();
+        List<net.minecraft.world.entity.LivingEntity> es = new java.util.ArrayList<>();
+        for (MgGiants.G k : g.giants.standing()) {
+            var e = g.giants.entity(k);
+            if (e == null) continue;
+            ours.add(e.getStringUUID());
+            es.add(e);
+        }
+        for (var e : es) {
+            boolean kept = e.getTags().contains(AdvMaps.PROTECT);
+            var hp = net.jj.giants.fights.FightGiants.hp(g.server, e);
+            String t = hp.target() == null ? "" : hp.target();
+            boolean onOurs = ours.contains(t) && !t.equals(e.getStringUUID());
+            boolean onPlayer = kept && !t.isEmpty() && !t.equals("-") && !ours.contains(t);
+            if (onOurs || onPlayer) net.jj.giants.fights.FightGiants.act(g.server, e, "stop", null);
+            if (kept) {
+                var row = net.jj.giants.fights.FightGiants.row(g.server, e.getStringUUID());
+                String mood = row == null ? "" : net.jj.giants.admin.AdminJson.str(row, "mood", 32);
+                if (!mood.isEmpty() && !mood.equals("calm")) MgGiants.mood(g, g.giants.of(e.getUUID()), "calm");
+            }
+        }
+    }
+
+    @Override
+    public boolean playerMayBeHurt(MgGame g, MgGame.P p, DamageSource src) {
+        // (lagfix, JJ) the giant the players look after never hurts them, nor anything of his
+        for (var s : new net.minecraft.world.entity.Entity[] {src.getEntity(), src.getDirectEntity()}) {
+            if (s == null) continue;
+            if (s.getTags().contains(AdvMaps.PROTECT)) return false;
+            String kind = net.jj.giants.tools.Tools.kindOf(s);
+            if (kind == null || net.jj.giants.fun.FunGiants.kindOf(s) != null) continue;
+            // his helpers (a shadow, a minion): the kind of one kept safe, and no other of that kind in the round
+            int kept = 0, other = 0;
+            for (MgGiants.G k : g.giants.standing()) {
+                if (!kind.equals(k.kind)) continue;
+                var e = g.giants.entity(k);
+                if (e != null && e.getTags().contains(AdvMaps.PROTECT)) kept++;
+                else other++;
+            }
+            if (kept > 0 && other == 0) return false;
+        }
+        return true;
     }
 
     /** the map's hooks: /giants adventure win|lose [words] */
@@ -119,8 +169,11 @@ public final class AdvMode extends Coop {
 
     @Override
     public boolean giantMayBeHurt(MgGame g, MgGiants.G giant, DamageSource src, MgGame.P by) {
-        if (by == null) return true;
         var e = g.giants.entity(giant);
+        // (lagfix, JJ) the map's own giants are on the same story: one's blows never land on the other
+        if (e != null && src.getEntity() instanceof net.minecraft.world.entity.LivingEntity le && le != e
+                && Adventure.sameStory(le, e)) return false;
+        if (by == null) return true;
         return e == null || !e.getTags().contains(AdvMaps.PROTECT);
     }
 

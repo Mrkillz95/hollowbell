@@ -16,8 +16,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * (Part 11, ADMIN_BRIDGE.md §28.6) The built-in adventure map, "The Wreck Cove Rescue": a young giant is lost on the
  * beach of Wreck Cove, where a Wreckback guards the wreck. The players come from the harbour to the west; once they're
- * near, the lost giant follows the shore road home (a scripted walk) while the guard patrols the lagoon, and goes for
- * them the moment a player sets foot in the cove. Hooks end it: the lost giant reaching the harbour wins, his falling
+ * near, the lost giant follows the shore road home (a scripted escort: a walking pace, waiting for the players)
+ * while the guard patrols the lagoon, and goes for them the moment a player sets foot in the cove. Hooks end it: the lost giant reaching the harbour wins, his falling
  * loses; the guard's half health and fall are told to everyone. Made entirely of the tools an admin has (paths, areas,
  * scripts, hooks), so it shows how to build one.
  */
@@ -95,7 +95,7 @@ final class WreckCove {
                 "say Is someone there? Please, help me get home!",
                 "waitfor players 20",
                 "say You came! The harbour is west, along the shore road. Stay close!",
-                "walk shore_road",
+                "escort shore_road 24",
                 "say The harbour! I'm home!"));
         s.scripts.put("cove_guard", script(
                 "title Guard of Wreck Cove",
