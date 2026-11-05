@@ -287,6 +287,7 @@ public class AdventureGameTests implements FabricGameTest {
                 })
                 .thenExecute(() -> {
                     ServerLevel rl = game().level;
+                    ours[0] = new java.lang.ref.WeakReference<>(rl);
                     // (lagfix) the round's world sends and moves only its map's land, not the server's whole distance
                     int reach = net.jj.giants.minigames.MgLevels.reachOf(rl);
                     h.assertTrue(reach >= 3 && reach <= 14, "the round's world's own view distance: " + reach);
@@ -329,6 +330,9 @@ public class AdventureGameTests implements FabricGameTest {
         if (PlayersGameTests.realGiants(h)) return;
         MinecraftServer s = fresh(h);
         MinigameGameTests.Joined j = MinigameGameTests.join(h, "advcove", false);
+        @SuppressWarnings("unchecked")
+        java.lang.ref.WeakReference<ServerLevel>[] ours = new java.lang.ref.WeakReference[] {
+                new java.lang.ref.WeakReference<ServerLevel>(null)};
         // (1.16) the map's own small giant size, so both fit the cove; a smaller game size still wins
         if (AdvMaps.load(s, AdvMaps.BUILT_IN, 1, 0.3) instanceof AdvMaps.Loaded big)
             for (AdvMaps.MapGiant mg : big.giants)
@@ -380,12 +384,12 @@ public class AdventureGameTests implements FabricGameTest {
                 // (a collection now and then until it's gone: the timeout is the failure, a world something keeps)
                 .thenWaitUntil(() -> {
                     if (s.getTickCount() % 20 == 0) System.gc();
-                    var held = net.jj.giants.minigames.MgLevels.stillHeld();
+                    ServerLevel held = ours[0].get();
                     // (what holds it, in the log, now and then: the way to the leak)
-                    if (!held.isEmpty() && s.getTickCount() % 1000 == 0)
-                        for (String path : LeakScan.paths(s, held.get(0), 3, 5_000_000))
+                    if (held != null && s.getTickCount() % 1000 == 0)
+                        for (String path : LeakScan.paths(s, held, 3, 5_000_000))
                             net.jj.giants.GiantsGuideMod.LOG.warn("still held: {}", path);
-                    h.assertTrue(held.isEmpty(), "nothing still holds the thrown-away world: " + held);
+                    h.assertTrue(held == null, "nothing still holds the round's thrown-away world");
                 })
                 .thenExecute(() -> done(h, j.p()));
     }
