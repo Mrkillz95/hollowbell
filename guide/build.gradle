@@ -105,6 +105,19 @@ tasks.matching { it.name in ['processResources', 'processGametestResources', 'pr
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": project.version }
 }
+// -Ponly=A,B: run only these game test classes (names as in the gametest fabric.mod.json)
+if (project.hasProperty('only')) {
+    def only = project.findProperty('only').toString().split(',')
+    processGametestResources {
+        inputs.property "only", only.join(',')
+        doLast {
+            def f = new File(destinationDir, 'fabric.mod.json')
+            def j = new groovy.json.JsonSlurper().parse(f)
+            j.entrypoints['fabric-gametest'] = j.entrypoints['fabric-gametest'].findAll { t -> only.any { t.endsWith('.' + it) } }
+            f.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(j))
+        }
+    }
+}
 tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
 java {
     sourceCompatibility = JavaVersion.VERSION_21

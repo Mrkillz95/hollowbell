@@ -104,7 +104,7 @@ public class AdventureGiantsGameTests implements FabricGameTest {
         Minigames.now(s, "Tester");
         LivingEntity[] lost = {null};
         double[] startX = {0}, minShare = {1};
-        int[] ticks = {0};
+        int[] ticks = {0}, guardStep = {0};
         h.startSequence()
                 .thenWaitUntil(() -> h.assertTrue(MinigameGiantsGameTests.game().phase() == MgGame.Phase.PLAY,
                         "playing"))
@@ -124,17 +124,25 @@ public class AdventureGiantsGameTests implements FabricGameTest {
                             Math.round(lost[0].getX()), Math.round(lost[0].getZ()), Math.round(p.getX()));
                     h.assertTrue(startX[0] > -40, "he starts on the cove's beach, not at the harbour: " + startX[0]);
                 })
-                // the player walks with him: a few blocks behind (east of) him, once a second, until he's home
+                // the player walks with him: a few blocks ahead (west, the harbour side, the way players come), once a
+                // second, until he's home
                 .thenWaitUntil(() -> {
                     MgGame g = Minigames.current();
                     if (g == null || g.phase() != MgGame.Phase.PLAY) return;
                     if (++ticks[0] % 20 == 0 && !lost[0].isRemoved() && g.level != null) {
                         ServerLevel l = g.level;
-                        double x = lost[0].getX() + 6, z = lost[0].getZ();
+                        double x = lost[0].getX() - 6, z = lost[0].getZ();
                         p.teleportTo(l, x, l.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) Math.floor(x),
-                                (int) Math.floor(z)), z, 90, 0);
+                                (int) Math.floor(z)), z, -90, 0);
                         p.setHealth(p.getMaxHealth());
                         minShare[0] = Math.min(minShare[0], lost[0].getHealth() / Math.max(1, lost[0].getMaxHealth()));
+                        var rs = Adventure.roundState();
+                        if (rs != null) for (var run : rs.runs.values())
+                            if (run.script.equals("cove_guard") && run.step > guardStep[0]) {
+                                guardStep[0] = run.step;
+                                net.jj.giants.GiantsGuideMod.LOG.info("cove test: the guard is on step {}, the player at {} {}",
+                                        run.step, Math.round(p.getX()), Math.round(p.getZ()));
+                            }
                         if (ticks[0] % 200 == 0) net.jj.giants.GiantsGuideMod.LOG.info("cove test: he is at {} {}",
                                 Math.round(lost[0].getX()), Math.round(lost[0].getZ()));
                     }
@@ -148,6 +156,8 @@ public class AdventureGiantsGameTests implements FabricGameTest {
                     h.assertTrue(line.contains("home safe"), "won by reaching the harbour: " + line);
                     h.assertTrue(lostHits.get() == 0, "the lost giant never hurt the player: " + lostHits.get());
                     h.assertTrue(guardOnLost.get() == 0, "the guard never hurt him: " + guardOnLost.get());
+                    // (1.16.1) the lost giant's beach and the road are outside the guard's cove: he keeps patrolling
+                    h.assertTrue(guardStep[0] <= 2, "the guard never noticed the player: his step " + guardStep[0]);
                     h.assertTrue(minShare[0] > 0.95, "he was never in a fight: health down to " + minShare[0]);
                     MinigameGiantsGameTests.done(h, p);
                 });

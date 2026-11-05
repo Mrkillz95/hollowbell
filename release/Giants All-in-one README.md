@@ -11,11 +11,11 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.14.0 |
+| Giants Guide | 1.14.1 |
 | Pitchgut | 1.35.42 |
 | Furrowmaw | 1.17.39 |
 | Fire & Ice Cerberus | 2.18.39 |
-| Hollowbell | 1.12.41 |
+| Hollowbell | 1.12.42 |
 | Lantern Willow | 1.10.42 |
 | Wreckback | 1.2.47 |
 | The Swarmforge | 1.4.45 |
@@ -23,7 +23,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.16.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.16.1), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.16.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.16.1.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -121,6 +121,39 @@ A book about every giant you have. Right-click it to open it.
   page under "Giant fights", Minigames on the Guide's This world page, and fewer boss bars on screen.
 - New in the Guide 1.14.0: the admin book's **Adventure** page (scripted giants, command hooks, adventure maps),
   the **Editor** page (giant looks) and the **Sound** page (music, ground sounds, voices), and share codes.
+- New in the Guide 1.14.1: minigame worlds load only their own small area (much less lag), a chat note when the game
+  has too little memory, Wreck Cove fixes and book layout fixes.
+
+## New in 1.16.1
+
+A quick fix release: the lag after minigames, the Wreck Cove Rescue, and a few book layouts. Released without the
+full test run: every changed mod was built and the jar was checked on a server.
+
+### Less lag in minigames
+
+- A minigame's world now loads only its own small area, not a whole world's worth round every player. That saves a
+  lot of memory, so the game no longer freezes again and again during and after a round.
+- If your game has too little memory for the giants, a note in chat tells you once and says how to fix it. Minecraft
+  gives itself 2 GB by default, which is too little for the giants: in the launcher go to **Installations**, the
+  Fabric profile, **More options**, and in **JVM arguments** change `-Xmx2G` to `-Xmx6G`.
+
+### The Wreck Cove Rescue
+
+- The two map giants never fight each other.
+- The lost giant stays calm: he never turns on the players who came to help him.
+- He walks the shore road home at a walking pace and waits for you (new `escort` script step:
+  `escort <path> [blocks]`).
+- The guard only goes for players who wade out into the lagoon. Reaching the lost giant on his beach and walking him
+  home along the shore road no longer sets the guard on you.
+
+### Admin book
+
+- Editor page: on a custom set, the set's name and buttons never overlap.
+- Swarmforge's Special and Behaviour pages: the robot switches no longer overlap.
+- Question buttons wrap their text onto a second line instead of running off the button.
+
+Inside: Pitchgut 1.35.42, Furrowmaw 1.17.39, Cerberus 2.18.39, Hollowbell 1.12.42, Lantern Willow 1.10.42,
+Wreckback 1.2.47, Swarmforge 1.4.45, Gloamwick 1.2.26, Giants Guide 1.14.1.
 
 ## New in 1.16.0
 

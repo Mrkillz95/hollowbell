@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.41
+# Hollowbell (Java mod), version 1.12.42
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,16 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- **Less lag in minigames** (in the all-in-one jar): a minigame's world loads only its own small area, which saves a
+  lot of memory. If the game has too little memory for the giants, a chat note says how to give it more (launcher:
+  Installations, the Fabric profile, More options, JVM arguments: change `-Xmx2G` to `-Xmx6G`).
+- **The Wreck Cove Rescue** (in the all-in-one jar): the map's giants never fight each other, the lost giant stays
+  calm and walks the shore road home with you (new `escort` script step), and the guard only goes for players who
+  wade out into the lagoon, not for those reaching the lost giant on his beach.
+- Admin book layout fixes: the Editor's custom set, the Swarmforge's robot switches, and question buttons that wrap.
+
+### 1.12.41
 
 - **Adventure maps** in the Giants Admin Book (in the all-in-one jar): admins can script giants (walk a path, guard,
   fight, talk), run commands when something happens to a giant, and save a part of the world as an adventure map to

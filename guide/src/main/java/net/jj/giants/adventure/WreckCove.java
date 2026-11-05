@@ -17,7 +17,8 @@ import net.minecraft.world.phys.Vec3;
  * (Part 11, ADMIN_BRIDGE.md §28.6) The built-in adventure map, "The Wreck Cove Rescue": a young giant is lost on the
  * beach of Wreck Cove, where a Wreckback guards the wreck. The players come from the harbour to the west; once they're
  * near, the lost giant follows the shore road home (a scripted escort: a walking pace, waiting for the players)
- * while the guard patrols the lagoon, and goes for them the moment a player sets foot in the cove. Hooks end it: the lost giant reaching the harbour wins, his falling
+ * while the guard patrols the lagoon, and goes for them the moment a player wades out into the lagoon (the
+ * beach where the lost giant waits, and the road, are outside the guard's area). Hooks end it: the lost giant reaching the harbour wins, his falling
  * loses; the guard's half health and fall are told to everyone. Made entirely of the tools an admin has (paths, areas,
  * scripts, hooks), so it shows how to build one.
  */
@@ -85,8 +86,11 @@ final class WreckCove {
             watch.pts.add(new double[] {cx + Math.cos(a) * wr, 0, Math.sin(a) * wr});
         }
         s.paths.put("lagoon_watch", watch);
-        // areas: the cove (where the guard notices you) and the harbour (home)
-        s.areas.put("cove", area(cx - r, -8, -r, cx + r, 40, r));
+        // areas: the cove (where the guard notices you) and the harbour (home). (1.16.1) The cove is the lagoon proper,
+        // not the beach round it: the lost giant's beach and the shore road are outside, so reaching him doesn't set the
+        // guard on you; only wading out into the lagoon does.
+        int lagoon = (int) Math.round(shore * 0.6);
+        s.areas.put("cove", area(cx - lagoon, -8, -lagoon, cx + r, 40, lagoon));
         s.areas.put("harbour", area((int) hx - 12, -4, -14, (int) hx + 16, 30, 14));
         // the scripts
         s.scripts.put("lost_giant", script(
