@@ -120,6 +120,11 @@ public final class Minigames {
         MgMode m = MODES.get(mode.toLowerCase(java.util.Locale.ROOT));
         if (m == null) return AdminServer.Result.fail("No minigame called " + mode + ". Try one of: "
                 + String.join(", ", MODES.keySet()) + ".");
+        return start(server, who, m, force, rounds);
+    }
+
+    /** (Part 11) a mode made for this game only (an adventure map played as a minigame) */
+    public static AdminServer.Result start(MinecraftServer server, String who, MgMode m, boolean force, int rounds) {
         if (current != null) return AdminServer.Result.fail(current.mode.name() + " is on already. Stop it first"
                 + " (/giants minigame stop).");
         if (net.jj.giants.tools.Tools.on(server, "paused"))

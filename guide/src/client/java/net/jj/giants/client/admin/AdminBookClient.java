@@ -101,7 +101,7 @@ public final class AdminBookClient {
         said = List.of();
         role = "";
         live = changes = presets = preview = players = tools = systems = null;
-        fun = minigames = editor = null;
+        fun = minigames = editor = adventure = null;
         mayMinigames = false;
         version++;
         liveVersion++;
@@ -179,6 +179,19 @@ public final class AdminBookClient {
     /** (the picture-taking) the Server tools page as the server would send it */
     public static void toolsForTests(JsonObject o) {
         tools = o;
+        version++;
+    }
+
+    /** (Part 11) the Adventure page */
+    private static @Nullable JsonObject adventure;
+
+    public static @Nullable JsonObject adventure() {
+        return adventure;
+    }
+
+    /** (the picture-taking) the Adventure page as the server would send it */
+    public static void adventureForTests(JsonObject o) {
+        adventure = o;
         version++;
     }
 
@@ -493,6 +506,7 @@ public final class AdminBookClient {
             case "fun" -> fun = o;
             case "minigames" -> minigames = o;
             case "editor" -> editor = o;
+            case "adventure" -> adventure = o;
             case AdminBookStatePayload.PRESETS -> presets = o;
             case AdminBookStatePayload.PREVIEW -> {
                 preview = o;

@@ -61,6 +61,11 @@ public final class AdminStyle {
     public static final List<String> P12_ICONS = List.of("editor", "sound", "share");
     static final ResourceLocation P12 = tex("icons_p12");
 
+    /** (Part 11) the Adventure page's pictures, in the order tools/adventure_icons.py draws them */
+    public static final List<String> P11_ICONS = List.of("adventure", "adv_wand", "adv_script", "adv_hook",
+            "adv_map", "adv_path", "adv_area", "adv_cove");
+    static final ResourceLocation P11 = tex("icons_p11");
+
     /** the section pictures, in the order tools/admin_textures.py draws them */
     public static final List<String> ICON_NAMES = List.of("stats", "moves", "spawning", "behaviour", "healing",
             "taming", "loot", "players", "effects", "worldgen", "misc", "home", "live", "presets", "changes", "all",
@@ -149,6 +154,11 @@ public final class AdminStyle {
         }
         if (i < 0 && P12_ICONS.contains(name)) {
             g.blit(P12, x, y, size, size, P12_ICONS.indexOf(name) * 16, 0, 16, 16, P12_ICONS.size() * 16, 16);
+            return;
+        }
+        // (Part 11) the Adventure page's pictures
+        if (i < 0 && P11_ICONS.contains(name)) {
+            g.blit(P11, x, y, size, size, P11_ICONS.indexOf(name) * 16, 0, 16, 16, P11_ICONS.size() * 16, 16);
             return;
         }
         if (i < 0) i = ICON_NAMES.indexOf("misc");

@@ -265,6 +265,11 @@ public final class AdminBook {
             AdminServer.Result er = net.jj.giants.editor.Editor.request(server, p, who, what, o);
             return er == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : er;
         }
+        // (Part 11) the Adventure page's requests
+        if (net.jj.giants.adventure.Adventure.DOS.contains(what)) {
+            AdminServer.Result ar = net.jj.giants.adventure.Adventure.request(server, p, who, what, o);
+            return ar == null ? AdminServer.Result.fail("The book asked for something the server doesn't know.") : ar;
+        }
         // (Part 7) the Fun and World tools pages' requests
         if (net.jj.giants.fun.Fun.DOS.contains(what)) {
             AdminServer.Result fr = net.jj.giants.fun.Fun.request(server, p, who, what, o);
@@ -532,6 +537,9 @@ public final class AdminBook {
                 sender.accept(p, net.jj.giants.editor.Editor.page(server));
             // (Part 7) the Fun and World tools pages (each admin's own: what they watch, play, their brush)
             if (every || what.contains(net.jj.giants.fun.Fun.PAGE)) sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
+            // (Part 11) the Adventure page (each admin's own wand)
+            if (every || what.contains(net.jj.giants.adventure.Adventure.PAGE))
+                sender.accept(p, net.jj.giants.adventure.Adventure.page(server, p));
         }
     }
 
@@ -571,6 +579,7 @@ public final class AdminBook {
             sender.accept(p, net.jj.giants.systems.SystemsAdmin.page(server));
             sender.accept(p, net.jj.giants.fun.Fun.page(server, p));
             sender.accept(p, net.jj.giants.editor.Editor.page(server));
+            sender.accept(p, net.jj.giants.adventure.Adventure.page(server, p));
         }
         if (r != Role.NONE && net.jj.giants.minigames.MgAdmin.mayRun(p))
             sender.accept(p, net.jj.giants.minigames.MgAdmin.page(server));

@@ -62,6 +62,8 @@ public class GiantsGuideMod implements ModInitializer {
         net.jj.giants.fights.Fights.register();
         // (Part 12) the giant editor (looks) and the sound and music picker
         net.jj.giants.editor.Editor.register();
+        // (Part 11) adventure maps: scripted giants, command hooks, maps played as minigames
+        net.jj.giants.adventure.Adventure.register();
         LOG.info(
                 "Giants Guide loaded: {} of {} giants installed",
                 Giants.installed().size(),
