@@ -266,6 +266,9 @@ public final class MgGame {
         border.setWarningBlocks(4);
         int dist = Math.min(32, (int) Math.ceil(m.half / 16.0) + 3);
         l.getChunkSource().addRegionTicket(MgLevels.TICKET, new ChunkPos(0, 0), dist, new ChunkPos(0, 0));
+        // (lagfix) its players see and move only its map (and a little round it), not the server's whole distance of
+        // empty land: at a view distance of 32 that was 4000+ chunks more on the server and in each player's game
+        MgLevels.reach(l, dist + 2);
         MgBuild b = new MgBuild(l, MgLevels.GROUND);
         for (MgMap.Piece pc : m.pieces) b.add(pc.shape(), pc.x(), pc.z());
         if (forNext) {

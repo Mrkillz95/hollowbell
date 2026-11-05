@@ -156,6 +156,31 @@ public final class MgLevels {
         return l;
     }
 
+    /** (lagfix) each minigame world's own view and simulation distance (chunks), at most the server's */
+    private static final java.util.Map<ResourceKey<Level>, Integer> reaches = new ConcurrentHashMap<>();
+
+    /** its players are sent its land this far round them (and it moves this far), at most the server's distances */
+    public static void reach(ServerLevel l, int chunks) {
+        // (-Djj_giants.mgreach=off: as before 1.16.1, for measuring)
+        if ("off".equals(System.getProperty("jj_giants.mgreach"))) return;
+        reaches.put(l.dimension(), chunks);
+        applyReach(l);
+    }
+
+    private static void applyReach(ServerLevel l) {
+        Integer r = reaches.get(l.dimension());
+        if (r == null) return;
+        var pl = l.getServer().getPlayerList();
+        // (the same value again changes nothing: the game only acts on a new one)
+        l.getChunkSource().setViewDistance(Math.max(3, Math.min(pl.getViewDistance(), r)));
+        l.getChunkSource().setSimulationDistance(Math.max(3, Math.min(pl.getSimulationDistance(), r)));
+    }
+
+    /** the view distance a minigame world uses now (the tests) */
+    public static int reachOf(ServerLevel l) {
+        return reaches.getOrDefault(l.dimension(), -1);
+    }
+
     /** the time of day in a minigame's world */
     public static void setDayTime(ServerLevel l, long day) {
         if (l.getLevelData() instanceof Data d) d.day = day;
@@ -176,6 +201,9 @@ public final class MgLevels {
 
     /** each tick (between ticks): the worlds let go are closed once quiet, or after ten seconds */
     static void tick(MinecraftServer server) {
+        // (lagfix) the server's distance changed (a player's own game sets it): the minigame worlds keep theirs
+        if (server.getTickCount() % 40 == 0 && !reaches.isEmpty())
+            for (ServerLevel l : server.getAllLevels()) if (temporary(l)) applyReach(l);
         if (going.isEmpty()) return;
         for (Going g : List.copyOf(going)) {
             ServerLevel l = g.level();
@@ -212,8 +240,27 @@ public final class MgLevels {
             GiantsGuideMod.LOG.warn("Giants minigames: closing {}: {}", key.location(), e.toString());
         }
         made.remove(key);
+        reaches.remove(key);
+        closed.add(new java.lang.ref.WeakReference<>(l));
         delete(a.jjGiants$storage().getDimensionPath(key));
         GiantsGuideMod.LOG.info("Giants minigames: threw away the world {}", key.location());
+    }
+
+    /** (lagfix) the worlds thrown away this run, weakly: once the garbage is collected none may still be held */
+    private static final List<java.lang.ref.WeakReference<ServerLevel>> closed =
+            java.util.Collections.synchronizedList(new ArrayList<>());
+
+    /** the thrown-away worlds something still holds on to (after a collection: none, or one leaks) */
+    public static List<ServerLevel> stillHeld() {
+        List<ServerLevel> out = new ArrayList<>();
+        synchronized (closed) {
+            closed.removeIf(r -> r.get() == null);
+            for (var r : closed) {
+                ServerLevel l = r.get();
+                if (l != null) out.add(l);
+            }
+        }
+        return out;
     }
 
     /** every world of ours still standing (the server stopping) */
@@ -258,5 +305,6 @@ public final class MgLevels {
     static void forget() {
         going.clear();
         made.clear();
+        reaches.clear();
     }
 }

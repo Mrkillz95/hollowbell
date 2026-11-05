@@ -368,6 +368,16 @@ public class AdventureGameTests implements FabricGameTest {
                 .thenExecute(() -> {
                     var res = MgData.get(s).s.results;
                     h.assertTrue(res.get(res.size() - 1).line.contains("Home safe"), "the line");
+                })
+                // (lagfix) the round's world thrown away leaves nothing behind: not in the server's worlds, not
+                // ticking, no adventure round, and nothing holding on to it once the garbage is collected
+                .thenWaitUntil(() -> h.assertTrue(net.jj.giants.minigames.MgLevels.standing(s).isEmpty(),
+                        "its world thrown away"))
+                .thenExecute(() -> {
+                    h.assertTrue(Adventure.roundState() == null, "no adventure round left");
+                    for (int i = 0; i < 3; i++) System.gc();
+                    var held = net.jj.giants.minigames.MgLevels.stillHeld();
+                    h.assertTrue(held.isEmpty(), "nothing still holds the thrown-away world: " + held);
                     done(h, j.p());
                 });
     }
