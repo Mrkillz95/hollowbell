@@ -117,7 +117,8 @@ final class WreckCove {
         lg.kind = lost;
         lg.x = bx + 2;
         lg.z = 0;
-        lg.size = Math.max(0.06, giantSize * 0.75);
+        // (three quarters of the guard's, but never over the size picked for the game)
+        lg.size = Math.min(giantSize, Math.max(0.06, giantSize * 0.75));
         lg.mood = "calm";
         lg.script = "lost_giant";
         lg.tags.add("adv_lost");

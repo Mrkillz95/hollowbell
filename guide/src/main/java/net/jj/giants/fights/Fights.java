@@ -128,7 +128,7 @@ public final class Fights {
     private static @Nullable String pushed;
 
     /** the flags sent again now (a staged fight began) */
-    static void pushFlags(MinecraftServer server) {
+    public static void pushFlags(MinecraftServer server) {
         pushed = "";
         flags(server);
     }

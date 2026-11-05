@@ -1,0 +1,34 @@
+# (lagfix) The Editor page's "Make a custom set" at GUI scale 2 and 3: the name box, From:, New and Save side by side
+# or on two lines, never over each other.  set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants
+wait 60
+adminintro seen
+adminmode advanced
+adminscope world
+cmd gamemode creative @s
+wait 40
+guiscale 2
+wait 10
+editorpick wreckback frost
+adminbook editor 0
+wait 80
+adminscrollto Make a custom set
+wait 5
+press From:
+wait 10
+adminscrollto Make a custom set
+wait 10
+mouse 2 2
+wait 20
+shot lagfix_editor_custom_s2
+close
+guiscale 3
+wait 10
+adminbook editor 0
+wait 80
+adminscrollto Make a custom set
+wait 10
+mouse 2 2
+wait 20
+shot lagfix_editor_custom_s3
+close
+quit

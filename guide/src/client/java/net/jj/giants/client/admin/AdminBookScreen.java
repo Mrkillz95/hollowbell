@@ -202,6 +202,18 @@ public class AdminBookScreen extends Screen {
         return Math.max(0, b.contentH - (b.ly1 - b.ly0));
     }
 
+    /** the open book's list scrolled so the heading that starts so is at the top */
+    public static void testScrollTo(String heading) {
+        AdminBookScreen b = open();
+        if (b == null) return;
+        for (Row r : b.rows)
+            if (r instanceof Head hd && hd.title.getString().startsWith(heading)) {
+                b.scroll = r.y;
+                b.place();
+                return;
+            }
+    }
+
     /** the open book's list scrolled this far; how tall the list's window is */
     public static int testScroll(double to) {
         AdminBookScreen b = open();

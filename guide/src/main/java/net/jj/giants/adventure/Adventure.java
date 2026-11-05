@@ -153,6 +153,8 @@ public final class Adventure {
             a.y2 += ground;
         }
         round = new Round(level, st);
+        // (lagfix) the giants ask before any fight from now on (the map's own never fight each other), before they come
+        net.jj.giants.fights.Fights.pushFlags(server);
         for (Object[] be : m.blockEntities) {
             BlockPos at = new BlockPos((int) be[0], ground + (int) be[1], (int) be[2]);
             BlockEntity b = level.getBlockEntity(at);

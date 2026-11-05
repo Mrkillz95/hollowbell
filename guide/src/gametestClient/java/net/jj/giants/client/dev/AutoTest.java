@@ -328,6 +328,11 @@ public final class AutoTest implements ClientModInitializer {
                 script.addAll(line, more);
                 continue;
             }
+            // adminscrollto WORDS: the open book scrolled to the heading that starts so
+            if (s.startsWith("adminscrollto ")) {
+                AdminBookScreen.testScrollTo(s.substring(14).trim());
+                continue;
+            }
             if (s.startsWith("layoutpage ")) {
                 AdminBookScreen.testGo(s.substring(11).trim());
                 continue;

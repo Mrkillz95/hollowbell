@@ -287,6 +287,9 @@ public class AdventureGameTests implements FabricGameTest {
                 })
                 .thenExecute(() -> {
                     ServerLevel rl = game().level;
+                    // (lagfix) the round's world sends and moves only its map's land, not the server's whole distance
+                    int reach = net.jj.giants.minigames.MgLevels.reachOf(rl);
+                    h.assertTrue(reach >= 3 && reach <= 14, "the round's world's own view distance: " + reach);
                     String gold = "none";
                     for (BlockPos b : BlockPos.betweenClosed(-12, 50, -12, 12, 80, 12))
                         if (rl.getBlockState(b).is(Blocks.GOLD_BLOCK)) gold = b.toShortString();
