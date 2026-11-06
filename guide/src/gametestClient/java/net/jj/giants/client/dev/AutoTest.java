@@ -299,6 +299,13 @@ public final class AutoTest implements ClientModInitializer {
                 run(mc, s.substring(4).trim());
                 continue;
             }
+            // coveplay [cove]: the Wreck Cove Rescue walked as a player walks it (CovePlay); coveplay stop
+            if (s.equals("coveplay") || s.startsWith("coveplay ")) {
+                String m = s.length() > 8 ? s.substring(9).trim() : "";
+                if (m.equals("stop")) CovePlay.phase = -1;
+                else CovePlay.start(m);
+                continue;
+            }
             if (s.startsWith("guiscale ")) {
                 mc.options.guiScale().set(Integer.parseInt(s.substring(9).trim()));
                 mc.resizeDisplay();

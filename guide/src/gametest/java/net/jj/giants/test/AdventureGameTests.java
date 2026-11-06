@@ -332,13 +332,21 @@ public class AdventureGameTests implements FabricGameTest {
         @SuppressWarnings("unchecked")
         java.lang.ref.WeakReference<ServerLevel>[] ours = new java.lang.ref.WeakReference[] {
                 new java.lang.ref.WeakReference<ServerLevel>(null)};
-        // (1.16) the map's own small giant size, so both fit the cove; a smaller game size still wins
-        if (AdvMaps.load(s, AdvMaps.BUILT_IN, 1, 0.3) instanceof AdvMaps.Loaded big)
+        // (1.16) the map's own small giant size, so both fit the cove; a smaller game size still wins. (cove2) The
+        // guard twice the lost giant's size, and every step of both scripts one the scripts read
+        if (AdvMaps.load(s, AdvMaps.BUILT_IN, 1, 0.3) instanceof AdvMaps.Loaded big) {
             for (AdvMaps.MapGiant mg : big.giants)
-                h.assertTrue(mg.size <= 0.08 + 1e-9, mg.kind + " fits the cove: " + mg.size);
-        else h.fail("the cove loads");
+                h.assertTrue(mg.size <= (mg.tags.contains("adv_guard") ? 0.12 : 0.06) + 1e-9, mg.kind
+                        + " fits the cove: " + mg.size);
+            h.assertTrue(Math.abs(big.giants.get(1).size - 2 * big.giants.get(0).size) < 1e-9, "the guard twice his size");
+            for (var sc : big.state.scripts.values())
+                for (String st : sc.steps)
+                    h.assertTrue(net.jj.giants.adventure.Scripts.check(st) == null, st + ": "
+                            + net.jj.giants.adventure.Scripts.check(st));
+        } else h.fail("the cove loads");
         if (AdvMaps.load(s, AdvMaps.BUILT_IN, 1, 0.05) instanceof AdvMaps.Loaded small)
-            h.assertTrue(small.giants.stream().allMatch(mg -> mg.size <= 0.05 + 1e-9), "a smaller game size wins");
+            h.assertTrue(small.giants.stream().allMatch(mg -> mg.size <= (mg.tags.contains("adv_guard") ? 0.1 : 0.05)
+                    + 1e-9), "a smaller game size wins");
         h.assertTrue(Adventure.play(s, "Tester", AdvMaps.BUILT_IN, false, 1).ok(), "opened");
         h.assertTrue(Minigames.join(j.p(), false).ok(), "joined");
         Minigames.now(s, "Tester");

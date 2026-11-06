@@ -1,0 +1,46 @@
+# The Wreck Cove Rescue: the guard tried (CovePlay "cove"): the player leads the lost giant onto the road, then goes
+# back out into the lagoon and runs for the harbour once the guard is after them; positions in the log ("coveplay:").
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+adminintro seen
+cmd gamerule sendCommandFeedback false
+cmd time set 6000
+cmd difficulty normal
+cmd giants admin set all mgLobby 10
+cmd giants admin adventure play wreck_cove open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+cmd gamemode survival @s
+wait 100
+shot guard_0_harbour
+coveplay cove
+wait 400
+shot guard_1
+wait 400
+shot guard_2
+wait 400
+shot guard_3
+wait 400
+shot guard_4
+wait 400
+shot guard_5
+wait 400
+shot guard_6
+wait 400
+shot guard_7
+wait 400
+shot guard_8
+wait 400
+shot guard_9
+wait 400
+shot guard_10
+wait 400
+shot guard_11
+wait 400
+shot guard_12
+quit

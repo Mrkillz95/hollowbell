@@ -1,0 +1,46 @@
+# The Wreck Cove Rescue played as a player plays it (CovePlay): from the harbour along the shore road to the lost
+# giant, then leading him home ~10 blocks ahead; positions in the log ("coveplay:"), pictures on the way.
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+adminintro seen
+cmd gamerule sendCommandFeedback false
+cmd time set 6000
+cmd difficulty normal
+cmd giants admin set all mgLobby 10
+cmd giants admin adventure play wreck_cove open
+wait 20
+chat /giants join
+cmd giants minigame now
+wait 300
+cmd effect give @a resistance 99999 255 true
+cmd effect give @a regeneration 99999 255 true
+cmd gamemode survival @s
+wait 100
+shot cove_0_harbour
+coveplay
+wait 400
+shot cove_1
+wait 400
+shot cove_2
+wait 400
+shot cove_3
+wait 400
+shot cove_4
+wait 400
+shot cove_5
+wait 400
+shot cove_6
+wait 400
+shot cove_7
+wait 400
+shot cove_8
+wait 400
+shot cove_9
+wait 400
+shot cove_10
+wait 400
+shot cove_11
+wait 400
+shot cove_12
+quit
