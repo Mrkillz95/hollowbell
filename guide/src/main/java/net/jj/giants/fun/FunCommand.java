@@ -113,6 +113,12 @@ public final class FunCommand {
         admin.then(Commands.literal("nameshown").then(giant()
                 .then(Commands.literal("on").executes(c -> shown(c, true)))
                 .then(Commands.literal("off").executes(c -> shown(c, false)))));
+        // (tags) his own name before his title on his bar ("Wreckback, Event Boss"), or the title alone ("Event Boss");
+        // "tag": as his tag says
+        admin.then(Commands.literal("showname").then(giant()
+                .then(Commands.literal("on").executes(c -> ownName(c, true)))
+                .then(Commands.literal("off").executes(c -> ownName(c, false)))
+                .then(Commands.literal("tag").executes(c -> ownName(c, null)))));
         // loot
         LiteralArgumentBuilder<CommandSourceStack> loot = Commands.literal("loot");
         RequiredArgumentBuilder<CommandSourceStack, String> lg = giant().executes(FunCommand::lootSay)
@@ -142,11 +148,20 @@ public final class FunCommand {
                         .suggests(TAGS)
                         .then(Commands.argument("field", StringArgumentType.word())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("health", "damage",
-                                        "speed", "size", "title", "colour", "glow", "loot"), b))
+                                        "speed", "size", "title", "colour", "glow", "loot", "showname"), b))
                                 .then(Commands.argument("value", StringArgumentType.greedyString())
                                         .executes(FunCommand::tagSet)))))
                 .then(Commands.literal("give").then(Commands.argument("name", StringArgumentType.string())
                         .suggests(TAGS)
+                        // (tags) no giant named: the one you look at; "nearest"; "every <kind>"
+                        .executes(c -> giveTo(c, "look"))
+                        .then(Commands.literal("nearest").executes(c -> giveTo(c, "nearest")))
+                        .then(Commands.literal("every").then(Commands.argument("kind", StringArgumentType.word())
+                                .suggests(KINDS).executes(c -> {
+                                    FunWorld.Tag t = tagNamed(c);
+                                    return t == null ? 0 : say(c, Marks.giveEvery(server(c), who(c),
+                                            StringArgumentType.getString(c, "kind"), t));
+                                })))
                         .then(giant().executes(c -> {
                             LivingEntity e = find(c);
                             if (e == null) return 0;
@@ -290,6 +305,26 @@ public final class FunCommand {
         return e == null ? 0 : say(c, Marks.name(server(c), who(c), e, null, null, null, on));
     }
 
+    private static int ownName(CommandContext<CommandSourceStack> c, Boolean on) {
+        LivingEntity e = find(c);
+        return e == null ? 0 : say(c, Marks.name(server(c), who(c), e, null, null, null, null, on, on == null));
+    }
+
+    /** the tag the command names (null: said there's none) */
+    private static FunWorld.Tag tagNamed(CommandContext<CommandSourceStack> c) {
+        String n = StringArgumentType.getString(c, "name");
+        FunWorld.Tag t = FunWorld.get(server(c)).tag(n);
+        if (t == null) fail(c, "There's no tag called " + n + ". /giants admin tag list");
+        return t;
+    }
+
+    /** (tags) a tag to the giant you look at (256 blocks at most) or the one nearest to you */
+    private static int giveTo(CommandContext<CommandSourceStack> c, String to)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        FunWorld.Tag t = tagNamed(c);
+        return t == null ? 0 : say(c, Marks.giveTo(server(c), who(c), player(c), to, t));
+    }
+
     private static int loot(CommandContext<CommandSourceStack> c, String mode, String from, String table) {
         LivingEntity e = find(c);
         if (e == null) return 0;
@@ -315,7 +350,8 @@ public final class FunCommand {
         for (FunWorld.Tag t : tags)
             out.add(t.name + ": health x" + plain(t.health) + ", damage x" + plain(t.damage) + ", speed x"
                     + plain(t.speed) + (t.size > 0 ? ", size " + plain(t.size) : "")
-                    + (t.title.isEmpty() ? "" : ", title \"" + t.title + "\"") + (t.glow ? ", glowing" : "")
+                    + (t.title.isEmpty() ? "" : ", title \"" + t.title + "\"" + (t.ownName ? "" : " alone"))
+                    + (t.glow ? ", glowing" : "")
                     + (t.loot == null || t.loot.empty() ? "" : ", " + Marks.describe(t.loot)) + " ("
                     + wearing.getOrDefault(t.name.toLowerCase(Locale.ROOT), 0) + " wear it)");
         return say(c, AdminServer.Result.said(out));
@@ -341,6 +377,12 @@ public final class FunCommand {
                 case "title" -> t.title = value.equalsIgnoreCase("clear") ? "" : value;
                 case "colour", "color" -> t.colour = value.toLowerCase(Locale.ROOT);
                 case "glow" -> t.glow = value.equalsIgnoreCase("on") || value.equalsIgnoreCase("true");
+                // (tags) his own name before the title on his bar, or the title alone
+                case "showname", "ownname" -> {
+                    if (!value.matches("(?i)on|off|true|false"))
+                        return fail(c, "showname is on (\"Wreckback, Event Boss\") or off (\"Event Boss\").");
+                    t.ownName = value.equalsIgnoreCase("on") || value.equalsIgnoreCase("true");
+                }
                 case "loot" -> {
                     String[] w = value.split("\\s+");
                     if (w[0].equalsIgnoreCase("none")) t.loot = null;
@@ -365,7 +407,7 @@ public final class FunCommand {
                             + "<id>.");
                 }
                 default -> {
-                    return fail(c, "A tag has health, damage, speed, size, title, colour, glow and loot.");
+                    return fail(c, "A tag has health, damage, speed, size, title, colour, glow, loot and showname.");
                 }
             }
         } catch (NumberFormatException e) {

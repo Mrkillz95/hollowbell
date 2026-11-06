@@ -40,6 +40,8 @@ public final class FunWorld extends SavedData {
         public String title = "", colour = "white";
         public boolean glow;
         public @Nullable Loot loot;
+        /** (tags) his own name before the title on his bar ("Wreckback, Event Boss"); off: the title alone */
+        public boolean ownName = true;
 
         Tag copy() {
             return GSON.fromJson(GSON.toJson(this), Tag.class);
@@ -74,10 +76,12 @@ public final class FunWorld extends SavedData {
         public String oldName = "";
         /** glowing came from his tag (taken off with it) */
         public boolean tagGlow;
+        /** (tags) his own name before his title: on, off, or null (as his tag says; on with no tag) */
+        public @Nullable Boolean ownName;
 
         boolean empty() {
             return name.isEmpty() && title.isEmpty() && tag.isEmpty() && (loot == null || loot.empty())
-                    && "white".equals(colour) && !shown;
+                    && "white".equals(colour) && !shown && ownName == null;
         }
     }
 
