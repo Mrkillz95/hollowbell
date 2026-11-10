@@ -148,8 +148,8 @@ front door is a mouth and his two upper windows are eyes.
   wall, a lullaby and more. They hurt nothing, or hardly.
 - **His Hearthmeadows**, 3,000 to 15,000 blocks from spawn: rolling meadows with Hearthblooms and Thatchgrass, a brook
   and his yard. Find him with a Hearth Lantern.
-- **When he falls** he leaves a ruined cottage his size, with everything of his (his storage and what was built in
-  him) in chests by its cold hearth. His book goes quiet, and a new wild one comes some days later.
+- **When he falls** he leaves a ruined cottage and a cold hearth. His Keeper can light it again (16 logs, 16
+  cobblestone and a lantern) and he stands up there.
 - Pitchgut and the Cerberus may go for him. Every other giant keeps away from him, and won't start a fight with
   another giant near him.
 - The Giants Guide has his page, the admin book has his settings, and the Performance screen his chimney smoke and
