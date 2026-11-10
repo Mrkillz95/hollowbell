@@ -11,19 +11,19 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.14.1 |
-| Pitchgut | 1.35.42 |
-| Furrowmaw | 1.17.39 |
-| Fire & Ice Cerberus | 2.18.39 |
-| Hollowbell | 1.12.42 |
-| Lantern Willow | 1.10.42 |
-| Wreckback | 1.2.47 |
-| The Swarmforge | 1.4.45 |
-| The Gloamwick | 1.2.26 |
+| Giants Guide | 1.14.2 |
+| Pitchgut | 1.35.43 |
+| Furrowmaw | 1.17.40 |
+| Fire & Ice Cerberus | 2.18.40 |
+| Hollowbell | 1.12.43 |
+| Lantern Willow | 1.10.43 |
+| Wreckback | 1.2.48 |
+| The Swarmforge | 1.4.46 |
+| The Gloamwick | 1.2.27 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.16.1), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.16.2), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -31,7 +31,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.16.1.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-1.16.2.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -123,6 +123,61 @@ A book about every giant you have. Right-click it to open it.
   the **Editor** page (giant looks) and the **Sound** page (music, ground sounds, voices), and share codes.
 - New in the Guide 1.14.1: minigame worlds load only their own small area (much less lag), a chat note when the game
   has too little memory, Wreck Cove fixes and book layout fixes.
+- New in the Guide 1.14.2: the Wreck Cove Rescue's guard is a real threat and the lost giant keeps to the road,
+  giant tags can be given from the book (from a list, the one you look at, or every one of a kind) and shown without
+  his own name, and the Guide's go beats a giant's keeping away.
+
+## New in 1.16.2
+
+Tiny giants you can fight fairly, everything sized with the giant, one size rule for all eight, new speeds, the
+Wreck Cove Rescue's guard and giving tags from the book.
+
+### Tiny giants
+
+- You can always hit a tiny giant (size 0.01 to 0.1) with a sword, an arrow or a trident.
+- A tiny giant never flings, traps or smothers you or your animals: every push, grab, swallow and blast is held to
+  his size, and he only picks up what's small enough for him to hold.
+
+### Everything grows and shrinks with him
+
+- Every giant's moves, particles, sounds and screen shake now shrink and grow with him at every size, from 0.01 to
+  giant size. A small one sounds smaller and a little higher.
+- His minions (robots, furrowlings, mudlings, bellings, crew and the rest) are sized with him, with health, damage and
+  sounds to match.
+- Health, damage, armour and speed follow one size rule shared by all eight giants, so two giants of the same size are
+  a fair match. At size 0.01 every giant has 60 health (the Swarmforge 40).
+- **The Swarmforge's robots drop nothing** any more (no items, no experience). He still drops his own loot.
+
+### Speeds
+
+- **Cerberus is the fastest giant**, at every size: about 15 blocks a second at full size.
+- **Wreckback is faster:** about 5 blocks a second on land, 6 when he comes after you, 6.5 in the sea.
+- Furrowmaw and Hollowbell are a little slower when they're small, so they never outrun Cerberus. At full size they're
+  as fast as before.
+
+### Giants and the Guide
+
+- The Guide's **go** now beats a giant's keeping away from another giant: he goes where you sent him.
+- In minigame worlds and scripted adventures, giants never stop to hold meetings.
+
+### The Wreck Cove Rescue
+
+- The lost giant keeps to the shore road, round its corners, at a pace you can keep up with, and waits for you when
+  you fall behind.
+- The guard is a real threat now. He's twice the lost giant's size and walks the cove's west waterline, right by the
+  beach where the lost giant waits. Wade into the lagoon or come within 20 blocks of him and he comes after you, up the
+  beach and the road too, until you're 60 blocks away. He keeps up with a walking player, so sneak past while he's at
+  the far end, or sprint. He never touches the lost giant.
+
+### Giant tags (admin book, Fun page)
+
+- Give a tag to a giant straight from the book: pick one from a list (the nearest at the top, with the tag each one
+  wears now), the giant you're looking at, or every giant of one kind.
+- A tag's title can be shown alone: set **His own name** to *Left off* and his boss bar says just "Terror of the Bay"
+  instead of "Wreckback, Terror of the Bay".
+
+Inside: Pitchgut 1.35.43, Furrowmaw 1.17.40, Cerberus 2.18.40, Hollowbell 1.12.43, Lantern Willow 1.10.43,
+Wreckback 1.2.48, Swarmforge 1.4.46, Gloamwick 1.2.27, Giants Guide 1.14.2.
 
 ## New in 1.16.1
 

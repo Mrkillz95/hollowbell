@@ -129,7 +129,8 @@ final class BellFlight {
      * every size) a small one, angry, stays a tenth under Cerberus's going pace, 0.55 (1.1 s + 0.08) a tick and 15%
      * more from size 0.4 to 0.9. From about size 0.35 up he is as he always was.
      */
-    static double ownPace(float s) {
+    static double ownPace(float s, boolean cruise) {
+        if (!cruise) return 0.10 + 0.16 * Math.sqrt(s);
         double k = Mth.clamp((s - 0.4) / 0.5, 0.0, 1.0);
         double cerberus = 0.55 * (1.1 * s + 0.08) * (1 + 0.15 * k * k * (3 - 2 * k));
         return Math.min(0.10 + 0.16 * Math.sqrt(s), 0.9 * cerberus / 1.15);
@@ -137,11 +138,16 @@ final class BellFlight {
 
     /** his top speed across, blocks per tick */
     public double maxSpeed() {
+        return maxSpeed(true);
+    }
+
+    /** cruise: going a long way (held under Cerberus when small); not: closing the last stretch, at his own pace */
+    double maxSpeed(boolean cruise) {
         float s = hb.bellScale();
         // (the admin book's all-giants speed: x1 changes nothing)
         // (Part 7) and this one's own speed, from the Guide's tags (x1 without)
         double own = net.jj.hollowbell.GiantsFun.mult(hb, "speed");
-        double v = ownPace(s) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed") * own;
+        double v = ownPace(s, cruise) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed") * own;
         if (hb.rider != null) v *= 1.5;
         if (hb.angry()) v *= 1.15;
         if (hb.tired()) v *= 0.4;
@@ -310,6 +316,8 @@ final class BellFlight {
         if (want != null && !still) {
             Vec3 d = want.subtract(hb.position()).multiply(1, 0, 1);
             double len = d.length();
+            // (the last stretch up to it at his own pace: only the long way is held under Cerberus's)
+            if (len < 2 * (30 * s + 12)) max = maxSpeed(false);
             if (len > 0.01) {
                 // easing off as he gets there, so he doesn't overshoot
                 double k = Mth.clamp((len - 2 * s) / (30 * s + 12), 0, 1);
