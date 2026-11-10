@@ -124,13 +124,24 @@ final class BellFlight {
         return closing ? fp : null;
     }
 
+    /**
+     * His own pace across at a size, blocks a tick: 0.10 + 0.16 sqrt(s), but (JJ: Cerberus is the fastest giant at
+     * every size) a small one, angry, stays a tenth under Cerberus's going pace, 0.55 (1.1 s + 0.08) a tick and 15%
+     * more from size 0.4 to 0.9. From about size 0.35 up he is as he always was.
+     */
+    static double ownPace(float s) {
+        double k = Mth.clamp((s - 0.4) / 0.5, 0.0, 1.0);
+        double cerberus = 0.55 * (1.1 * s + 0.08) * (1 + 0.15 * k * k * (3 - 2 * k));
+        return Math.min(0.10 + 0.16 * Math.sqrt(s), 0.9 * cerberus / 1.15);
+    }
+
     /** his top speed across, blocks per tick */
     public double maxSpeed() {
         float s = hb.bellScale();
         // (the admin book's all-giants speed: x1 changes nothing)
         // (Part 7) and this one's own speed, from the Guide's tags (x1 without)
         double own = net.jj.hollowbell.GiantsFun.mult(hb, "speed");
-        double v = (0.10 + 0.16 * Math.sqrt(s)) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed") * own;
+        double v = ownPace(s) * hb.speedMul * net.jj.hollowbell.GiantsAdmin.all("all.speed") * own;
         if (hb.rider != null) v *= 1.5;
         if (hb.angry()) v *= 1.15;
         if (hb.tired()) v *= 0.4;

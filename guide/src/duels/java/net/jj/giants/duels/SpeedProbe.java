@@ -77,8 +77,13 @@ public class SpeedProbe implements FabricGameTest {
             if (said == null || said.isEmpty() || !"ok".equals(said.get(0)))
                 LOG.info("SPEED " + k.code() + " go said " + said);
         });
+        // (his going speed once he's up to it: the first 2.5 s after the order are his getting going)
+        h.runAfterDelay(90, () -> {
+            at[0] = g.getX();
+            at[1] = g.getZ();
+        });
         h.runAfterDelay(140, () -> {
-            at[2] = Math.hypot(g.getX() - at[0], g.getZ() - at[1]) / 5.0;
+            at[2] = Math.hypot(g.getX() - at[0], g.getZ() - at[1]) / 2.5;
             // then something to go after, far ahead: a cow that doesn't move
             Cow c = EntityType.COW.create(l);
             c.moveTo(g.getX() + 150 * s + 60, water ? y0 + GiantDuelTests.LAKE_DEPTH : y0, g.getZ(), 0f, 0f);
@@ -95,8 +100,12 @@ public class SpeedProbe implements FabricGameTest {
             at[1] = g.getZ();
             if (g instanceof Mob m && m.getTarget() == null) m.setTarget(cow[0]);
         });
+        h.runAfterDelay(190, () -> {
+            at[0] = g.getX();
+            at[1] = g.getZ();
+        });
         h.runAfterDelay(260, () -> {
-            at[3] = Math.hypot(g.getX() - at[0], g.getZ() - at[1]) / 5.0;
+            at[3] = Math.hypot(g.getX() - at[0], g.getZ() - at[1]) / 3.5;
             String line = String.format(Locale.ROOT, "SPEED %-2s size %.2f %-5s go %.2f b/s, after a cow %.2f b/s%s",
                     k.code(), s, water ? "water" : "land", at[2], at[3],
                     g instanceof Mob m && m.getTarget() != cow[0] ? " (not after it at the end)" : "");
