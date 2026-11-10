@@ -1,10 +1,10 @@
 # Copies each giant's newest released jar into run-mods/ without its own game tests, so the guide's
 # test and picture runs (gradle ... -Pgiants) have the real giants loaded.
-# usage: python3 tools/giant_mods.py [folder holding the eight repos, default /home/user]
+# usage: python3 tools/giant_mods.py [folder holding the nine repos, default /home/user]
 import zipfile, json, glob, os, re, sys
 REPOS = {'pitchgut': 'pitchgut-', 'furrowmaw': 'furrowmaw-', 'cerberus': 'fire-ice-cerberus-',
          'hollowbell': 'hollowbell-', 'lanternwillow': 'lanternwillow-', 'wreckback': 'wreckback-', 'swarmforge': 'swarmforge-',
-         'gloamwick': 'gloamwick-'}
+         'gloamwick': 'gloamwick-', 'hearthstride': 'hearthstride-'}
 def ver(p):
     m = re.search(r'-(\d+(?:\.\d+)*)\.jar$', p)
     return tuple(int(x) for x in m.group(1).split('.')) if m else ()

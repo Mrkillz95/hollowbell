@@ -48,7 +48,7 @@ public final class Giants {
                                 "belly_crush"
                             },
                             new String[] {"goo_storm", "eye_storm", "draw_in", "tear_off", "quake", "tentacle_field"}),
-                    Set.of("furrowmaw", "cerberus", "wreckback", "swarmforge", "gloamwick")),
+                    Set.of("furrowmaw", "cerberus", "wreckback", "swarmforge", "gloamwick", "hearthstride")),
             new Giant(
                     "furrowmaw",
                     "furrowmaw",
@@ -107,7 +107,8 @@ public final class Giants {
                             "lanternwillow",
                             "wreckback",
                             "swarmforge",
-                            "gloamwick")),
+                            "gloamwick",
+                            "hearthstride")),
             new Giant(
                     "hollowbell",
                     "hollowbell",
@@ -291,7 +292,53 @@ public final class Giants {
                                 "soul_pyre",
                                 "eclipse"
                             }),
-                    Set.of("pitchgut", "cerberus", "lanternwillow", "swarmforge")));
+                    Set.of("pitchgut", "cerberus", "lanternwillow", "swarmforge")),
+            // he never fights: his moves are grouped by how long he rests after each (12 s, 40 s, a minute or more)
+            new Giant(
+                    "hearthstride",
+                    "hearthstride",
+                    "hearthstride",
+                    "net.jj.hearthstride.GiantsBridge",
+                    moves(
+                            "book.hearthstride.moves.",
+                            "book.hearthstride.move.",
+                            new String[] {
+                                "shoo_kick=book.hearthstride.moves.cottage.1",
+                                "door_snap=book.hearthstride.moves.cottage.2",
+                                "chimney_smoke=book.hearthstride.moves.cottage.5",
+                                "call_inside=book.hearthstride.moves.cottage.4",
+                                "blunt_volley=book.hearthstride.moves.bastion.2",
+                                "drawbridge_slam=book.hearthstride.moves.bastion.3",
+                                "gust=book.hearthstride.moves.wingfold.1",
+                                "swoop_rescue=book.hearthstride.moves.wingfold.2",
+                                "feather_fall=book.hearthstride.moves.wingfold.3",
+                                "updraft=book.hearthstride.moves.wingfold.5",
+                                "dash=book.hearthstride.moves.scuttler.1",
+                                "trip=book.hearthstride.moves.scuttler.3",
+                                "decoy_door=book.hearthstride.moves.scuttler.5",
+                                "patch_up=book.hearthstride.moves.workshop.1",
+                                "bellows_blast=book.hearthstride.moves.workshop.4",
+                                "page_storm=book.hearthstride.moves.library_tower.2"
+                            },
+                            new String[] {
+                                "shutters=book.hearthstride.moves.cottage.3",
+                                "rally_horn=book.hearthstride.moves.bastion.4",
+                                "cloud_cover=book.hearthstride.moves.wingfold.4",
+                                "hide=book.hearthstride.moves.scuttler.2",
+                                "burrow_tuck=book.hearthstride.moves.scuttler.4",
+                                "iron_wall=book.hearthstride.moves.workshop.3",
+                                "lullaby=book.hearthstride.moves.library_tower.4"
+                            },
+                            new String[] {
+                                "shield_dome=book.hearthstride.moves.bastion.1",
+                                "hold_fast=book.hearthstride.moves.bastion.5",
+                                "spark_fence=book.hearthstride.moves.workshop.2",
+                                "mend_self=book.hearthstride.moves.workshop.5",
+                                "ward=book.hearthstride.moves.library_tower.1",
+                                "beacon=book.hearthstride.moves.library_tower.3",
+                                "recall=book.hearthstride.moves.library_tower.5"
+                            }),
+                    Set.of()));
 
     private Giants() {}
 

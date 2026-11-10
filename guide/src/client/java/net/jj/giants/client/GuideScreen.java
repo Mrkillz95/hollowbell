@@ -95,6 +95,13 @@ public class GuideScreen extends Screen {
         return world() ? WorldPages.PAGES : together() ? TOGETHER_PAGES : Giants.pages(giant());
     }
 
+    /** a giant may call a tab his own way (the Hearthstride's Fighting tab is about keeping him safe) */
+    private String tabKey(String page) {
+        Giant g = giant();
+        String own = g == null ? null : "guide.jj_giants." + g.key() + ".tab." + page;
+        return own != null && has(own) ? own : "guide.jj_giants.tab." + page;
+    }
+
     private int entries() {
         return giants.isEmpty() ? 0 : giants.size() + 2;
     }
@@ -130,7 +137,7 @@ public class GuideScreen extends Screen {
             for (int i = 0; i < pg.length; i++) {
                 // ((Part 10A) This world's Minigames tab has its words here)
                 names[i] = pg[i].equals("games") ? Component.translatableWithFallback("guide.jj_giants.tab.games",
-                        "Minigames") : Component.translatable("guide.jj_giants.tab." + pg[i]);
+                        "Minigames") : Component.translatable(tabKey(pg[i]));
                 need += font.width(names[i]) + 8;
             }
             int gap = 2, spare = Math.max(0, rw - need - gap * (pg.length - 1)), x = rx;
@@ -532,10 +539,16 @@ public class GuideScreen extends Screen {
         for (int t = 0; t < Giants.TIER_NAMES.length; t++) {
             final int tier = t;
             if (g.moves().stream().noneMatch(m -> m.tier() == tier)) continue;
-            heading(Component.translatable("guide.jj_giants.tier." + Giants.TIER_NAMES[t]), colours[t]);
-            para(Component.translatable("guide.jj_giants.tier_note." + Giants.TIER_NAMES[t]), GREY, 0);
+            heading(Component.translatable(tierKey(g, "tier", t)), colours[t]);
+            para(Component.translatable(tierKey(g, "tier_note", t)), GREY, 0);
             for (Giant.Move m : g.moves()) if (m.tier() == t) row(moveName(g, m), moveWhat(g, m), leftW, colours[t]);
         }
+    }
+
+    /** a giant may name his own kinds of move (the Hearthstride, who never fights): KEY.tier.light, else the usual */
+    private static String tierKey(Giant g, String what, int t) {
+        String own = "guide.jj_giants." + g.key() + "." + what + "." + Giants.TIER_NAMES[t];
+        return has(own) ? own : "guide.jj_giants." + what + "." + Giants.TIER_NAMES[t];
     }
 
     /** his mod's own name for the move when it has one, else the guide's copy */
