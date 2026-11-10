@@ -346,9 +346,6 @@ public class GiantsPresetGameTests implements FabricGameTest {
                     if (o != null) ids.put(g.key(), o.get("id").getAsString());
                     if (o == null) last.put(g.key(), " none summoned (" + kind(s, g.key()) + ")");
                     else if (o.has("asleep") && o.get("asleep").getAsBoolean()) slept.add(g.key());
-                    // (a giant who never fights lies down by settling where he is)
-                    else if (Giants.NEVER_FIGHT.contains(g.key()) && o.has("settled")
-                            && o.get("settled").getAsBoolean()) slept.add(g.key());
                     else last.put(g.key(), " awake by day: " + o);
                 }
             });
