@@ -18,10 +18,11 @@ import net.minecraft.world.entity.projectile.Projectile;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The giants: the eight bosses (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback,
- * the Swarmforge and the Gloamwick). They all follow the same rules with each other: a blow from one giant lands on another by the
- * other's own armour against giants, and none of them ever picks another up, swallows it or drags it about. Each one
- * tags itself {@link #TAG}; the ids below catch the others even from older versions that don't.
+ * The giants: the nine of them (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback,
+ * the Swarmforge, the Gloamwick and the Hearthstride). They all follow the same rules with each other: a blow from
+ * one giant lands on another by the other's own armour against giants, and none of them ever picks another up,
+ * swallows it or drags it about. Each one tags itself {@link #TAG}; the ids below catch the others even from older
+ * versions that don't.
  */
 public final class Giants {
     private Giants() {}
@@ -38,7 +39,8 @@ public final class Giants {
             "fire_ice_cerberus:cerberus", "fire_ice_cerberus:cerberus_part",
             "hollowbell:hollowbell", "lanternwillow:lanternwillow",
             "wreckback:wreckback", "swarmforge:swarmforge",
-            "gloamwick:gloamwick");
+            "gloamwick:gloamwick",
+            "hearthstride:hearthstride");
     private static final Set<String> MODS = Set.of(
             "mountain_breathes",
             "furrowmaw",
@@ -47,7 +49,8 @@ public final class Giants {
             "lanternwillow",
             "wreckback",
             "swarmforge",
-            "gloamwick");
+            "gloamwick",
+            "hearthstride");
 
     /** one of the giants, or a part of one */
     public static boolean isGiant(@Nullable Entity e) {
@@ -70,7 +73,7 @@ public final class Giants {
     }
 
     /**
-     * The tag each giant's helpers carry, followed by their giant's id (jj_giant_of:&lt;uuid&gt;): the same in all eight
+     * The tag each giant's helpers carry, followed by their giant's id (jj_giant_of:&lt;uuid&gt;): the same in all nine
      * mods, so a giant hurt by another's helper holds it against that giant.
      */
     public static final String OF = "jj_giant_of:";

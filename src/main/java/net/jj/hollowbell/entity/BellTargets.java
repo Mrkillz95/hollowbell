@@ -517,6 +517,9 @@ final class BellTargets {
         }
         if (best == null) return;
         Meeting.Way way = Meeting.wayNow(Meeting.kindOf(best));
+        if (way == Meeting.Way.FIGHT
+                && Meeting.way(Meeting.ME, Meeting.HEARTH) != Meeting.Way.FIGHT
+                && Meeting.nearHearth(sl, hb, hb.position(), hb.bellScale())) return;
         if (way == Meeting.Way.FIGHT && BellConfig.V.fightGiants) startMeeting(best);
         else if (way == Meeting.Way.AVOID) {
             hb.meetAvoid = best.getUUID();

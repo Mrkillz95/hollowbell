@@ -276,18 +276,23 @@ public class GiantsTests implements FabricGameTest {
             "lanternwillow",
             "wreckback",
             "swarmforge",
-            "gloamwick"
+            "gloamwick",
+            "hearthstride"
         };
-        String[] want = {"-ffaafff", "f-fafffa", "ff-fffff", "aaf-aaaa", "affa-aff", "fffaa-aa", "fffafa-f", "fafafaf-"
+        String[] want = {
+            "-ffaaffff", "f-fafffaa", "ff-ffffff", "aaf-aaaaa", "affa-affa", "fffaa-aaa", "fffafa-fa", "fafafaf-a",
+            "aaaaaaaa-"
         };
-        for (int a = 0; a < 8; a++)
-            for (int b = 0; b < 8; b++) {
+        for (int a = 0; a < 9; a++)
+            for (int b = 0; b < 9; b++) {
                 var w = Meeting.way(k[a], k[b]);
                 char c = want[a].charAt(b);
                 var expect = c == 'f' ? Meeting.Way.FIGHT : c == 'a' ? Meeting.Way.AVOID : Meeting.Way.NONE;
                 h.assertTrue(w == expect, k[a] + " meeting " + k[b] + ": " + w);
-                h.assertTrue(
-                        w == Meeting.way(k[b], k[a]), "the table isn't the same both ways for " + k[a] + ", " + k[b]);
+                // (the Hearthstride never fights, so his hunters are the only one-way meetings)
+                boolean hearth = a == 8 || b == 8;
+                h.assertTrue(hearth || w == Meeting.way(k[b], k[a]),
+                        "the table isn't the same both ways for " + k[a] + ", " + k[b]);
             }
         h.assertTrue(Meeting.way("hollowbell", "minecraft") == Meeting.Way.NONE, "an unknown kind");
         h.assertTrue(Meeting.name("fire_ice_cerberus", false).equals("the Cerberus"), "names");
@@ -295,6 +300,19 @@ public class GiantsTests implements FabricGameTest {
                 Meeting.name("swarmforge", true).equals("The Swarmforge"),
                 "his name: " + Meeting.name("swarmforge", true));
         h.assertTrue(Meeting.range(1f) == 160 && Meeting.range(0.1f) == 48 && Meeting.range(2f) == 320, "the range");
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 20, batch = "meet_hearth")
+    public void nearTheHearthstrideHeStartsNoFights(GameTestHelper h) {
+        h.assertTrue(Meeting.way(Meeting.ME, Meeting.HEARTH) == Meeting.Way.AVOID, "not one of his hunters");
+        h.assertTrue(Meeting.name(Meeting.HEARTH, true).equals("The Hearthstride"), "his name");
+        Vec3 at = h.absoluteVec(new Vec3(2, 2, 2));
+        h.assertTrue(!Meeting.nearHearth(h.getLevel(), null, at, 1.0), "no Hearthstride yet");
+        var z = giantOfKind(h, at.add(30, 0, 0), Meeting.HEARTH);
+        h.assertTrue(Meeting.nearHearth(h.getLevel(), null, at, 1.0), "one 30 blocks off calms him");
+        h.assertTrue(!Meeting.nearHearth(h.getLevel(), null, at, 0.25), "but not at a quarter size (24 blocks)");
+        z.discard();
         h.succeed();
     }
 

@@ -6,7 +6,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.jj.hollowbell.BellConfig;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -30,8 +33,8 @@ public final class Meeting {
 
     public static final String ME = "hollowbell";
 
-    /** the eight, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback, Swarmforge,
-     *  Gloamwick */
+    /** the nine, in the table's order: Pitchgut, Furrowmaw, Cerberus, Hollowbell, Willow, Wreckback, Swarmforge,
+     *  Gloamwick, Hearthstride */
     static final String[] KINDS = {
         "mountain_breathes",
         "furrowmaw",
@@ -40,19 +43,21 @@ public final class Meeting {
         "lanternwillow",
         "wreckback",
         "swarmforge",
-        "gloamwick"
+        "gloamwick",
+        "hearthstride"
     };
     /** f fight, a avoid (the same table in every giant mod) */
     private static final String[] TABLE = {
-        // P F C H W WB S G
-        "-ffaafff", // Pitchgut
-        "f-fafffa", // Furrowmaw
-        "ff-fffff", // Cerberus
-        "aaf-aaaa", // Hollowbell
-        "affa-aff", // Willow
-        "fffaa-aa", // Wreckback
-        "fffafa-f", // Swarmforge
-        "fafafaf-" // Gloamwick
+        // P F C H W WB S G HS
+        "-ffaaffff", // Pitchgut
+        "f-fafffaa", // Furrowmaw
+        "ff-ffffff", // Cerberus
+        "aaf-aaaaa", // Hollowbell
+        "affa-affa", // Willow
+        "fffaa-aaa", // Wreckback
+        "fffafa-fa", // Swarmforge
+        "fafafaf-a", // Gloamwick
+        "aaaaaaaa-" // Hearthstride, who never fights
     };
 
     private static int index(@Nullable String kind) {
@@ -134,6 +139,7 @@ public final class Meeting {
             case "wreckback" -> "Wreckback";
             case "swarmforge" -> the + "Swarmforge";
             case "gloamwick" -> the + "Gloamwick";
+            case "hearthstride" -> the + "Hearthstride";
             default -> the + "giant";
         };
     }
@@ -144,6 +150,16 @@ public final class Meeting {
         if (e.getTags().contains(YIELD)) return true;
         var o = Giants.ownerOf(e);
         return o != null && o != e && o.getTags().contains(YIELD);
+    }
+
+    /** the Hearthstride, the walking house: near him a giant that isn't one of his hunters starts no fights */
+    public static final String HEARTH = "hearthstride";
+
+    /** a Hearthstride within 96 blocks (times this giant's size) of here */
+    public static boolean nearHearth(ServerLevel sl, @Nullable Entity self, Vec3 at, double size) {
+        double r = 96.0 * size;
+        return !sl.getEntities(self, new AABB(at, at).inflate(r), e -> e.isAlive() && HEARTH.equals(kindOf(e)))
+                .isEmpty();
     }
 
     /** how far off he notices another giant: 160 blocks at full size by default, kept between 48 and 320 */
