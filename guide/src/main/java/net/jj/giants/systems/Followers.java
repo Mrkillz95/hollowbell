@@ -50,7 +50,7 @@ public final class Followers {
     static final Map<String, EntityType<? extends Mob>> TYPES = Map.of(
             "pitchgut", EntityType.MAGMA_CUBE, "furrowmaw", EntityType.HUSK, "cerberus", EntityType.WITHER_SKELETON,
             "hollowbell", EntityType.PHANTOM, "lanternwillow", EntityType.SLIME, "wreckback", EntityType.DROWNED,
-            "swarmforge", EntityType.VINDICATOR, "gloamwick", EntityType.VEX);
+            "swarmforge", EntityType.VINDICATOR, "gloamwick", EntityType.VEX, "hearthstride", EntityType.CHICKEN);
 
     public static EntityType<? extends Mob> typeOf(String kind) {
         return TYPES.getOrDefault(kind, EntityType.ZOMBIE);

@@ -6,6 +6,7 @@ import com.google.gson.JsonPrimitive;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.jj.giants.admin.AdminCatalog;
 import net.jj.giants.admin.AdminSetting;
 import net.jj.giants.admin.AdminSetting.Type;
@@ -27,7 +28,11 @@ public final class SoundCatalog {
     /** each giant's sound files' own namespace */
     public static final Map<String, String> NAMESPACE = Map.of("pitchgut", "mountain_breathes", "furrowmaw",
             "furrowmaw", "cerberus", "fire_ice_cerberus", "hollowbell", "hollowbell", "lanternwillow",
-            "lanternwillow", "wreckback", "wreckback", "swarmforge", "swarmforge", "gloamwick", "gloamwick");
+            "lanternwillow", "wreckback", "wreckback", "swarmforge", "swarmforge", "gloamwick", "gloamwick",
+            "hearthstride", "hearthstride");
+
+    /** the giants with no fight music (the Hearthstride never fights: his hearth theme is his own, left as it is) */
+    public static final Set<String> NO_FIGHT_MUSIC = Set.of("hearthstride");
 
     /** each giant's own fight tracks past the three every one has (fight, fight_dark, fight_last) */
     public static final Map<String, String> SPECIAL = Map.of("furrowmaw", "music.fight_under", "lanternwillow",
@@ -44,14 +49,15 @@ public final class SoundCatalog {
             "wreckback", List.of("groan", "roar", "hurt", "hurt_heavy", "death", "tired"),
             "swarmforge", List.of("hurt", "death", "tired", "horn", "alarm", "wave_alarm", "power_down", "power_up"),
             "gloamwick", List.of("bellow", "groan", "hurt", "death", "breath", "whisper", "wail", "toll"),
-            "hollowbell", List.of("hum", "hurt", "hurt_heavy", "death", "tired", "toll", "toll_big"));
+            "hollowbell", List.of("hum", "hurt", "hurt_heavy", "death", "tired", "toll", "toll_big"),
+            "hearthstride", List.of("creak", "cluck", "rattle", "breath", "hurt", "collapse", "death"));
 
     /** the music choice: his own, none, or another giant's tracks */
     public static final List<String> MUSIC;
 
     static {
         List<String> m = new ArrayList<>(List.of("own", "off"));
-        m.addAll(AdminCatalog.KEYS);
+        for (String k : AdminCatalog.KEYS) if (!NO_FIGHT_MUSIC.contains(k)) m.add(k);
         MUSIC = List.copyOf(m);
     }
 
@@ -88,10 +94,11 @@ public final class SoundCatalog {
         List<AdminSetting> l = new ArrayList<>();
         for (String k : AdminCatalog.KEYS) {
             String n = nameOf(k);
-            l.add(row(music(k), Type.CHOICE, new JsonPrimitive("own"), 0, MUSIC.size() - 1, 1, MUSIC,
-                    n + ": fight music",
-                    "The music players hear when " + n + " fights them. own: his own tracks. off: none. A giant's"
-                            + " name: that giant's tracks (each part of the fight to the same part of his)."));
+            if (!NO_FIGHT_MUSIC.contains(k))
+                l.add(row(music(k), Type.CHOICE, new JsonPrimitive("own"), 0, MUSIC.size() - 1, 1, MUSIC,
+                        n + ": fight music",
+                        "The music players hear when " + n + " fights them. own: his own tracks. off: none. A giant's"
+                                + " name: that giant's tracks (each part of the fight to the same part of his)."));
             l.add(row(ambient(k), Type.BOOL, new JsonPrimitive(true), 0, 1, 1, List.of(), n + ": ground sounds",
                     "The sounds of " + n + "'s own ground and of him at rest (wind, hums, creaks). Off: silent."));
             l.add(row(ambientVolume(k), Type.FLOAT, new JsonPrimitive(1.0), 0, 2, 0.05, List.of(),
@@ -123,7 +130,7 @@ public final class SoundCatalog {
         JsonObject o = new JsonObject(), gs = new JsonObject();
         for (String k : AdminCatalog.KEYS) {
             JsonObject g = new JsonObject();
-            String m = net.jj.giants.systems.Systems.option(server, music(k));
+            String m = NO_FIGHT_MUSIC.contains(k) ? "own" : net.jj.giants.systems.Systems.option(server, music(k));
             if (!m.equals("own") && MUSIC.contains(m)) g.addProperty("music", m);
             if (!net.jj.giants.systems.Systems.on(server, ambient(k))) g.addProperty("ambient", false);
             double v = net.jj.giants.systems.Systems.num(server, ambientVolume(k));

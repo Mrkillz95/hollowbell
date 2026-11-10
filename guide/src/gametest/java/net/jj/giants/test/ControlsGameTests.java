@@ -43,7 +43,7 @@ public class ControlsGameTests implements FabricGameTest {
         return new ControlKey(name, cat, key, def);
     }
 
-    /** the keys the eight giants and the guide register today (their src/client), plus some of Minecraft's */
+    /** the keys the nine giants and the guide register today (their src/client), plus some of Minecraft's */
     private static List<ControlKey> today() {
         List<ControlKey> l = new ArrayList<>();
         l.add(k("key.jump", "key.categories.movement", "key.keyboard.space"));
@@ -67,6 +67,7 @@ public class ControlsGameTests implements FabricGameTest {
         l.add(k("key.swarmforge.go_after_look", "key.categories.swarmforge", "key.keyboard.v"));
         l.add(k("key.gloamwick.armour_power", "key.categories.gloamwick", "key.keyboard.r"));
         l.add(k("key.gloamwick.attack_look", "key.categories.gloamwick", "key.keyboard.v"));
+        l.add(k("key.hearthstride.sit_on_giant", "key.categories.hearthstride", ControlKey.NONE));
         l.add(k("key.othermod.thing", "key.categories.othermod", "key.keyboard.k"));
         return l;
     }

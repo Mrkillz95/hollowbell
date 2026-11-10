@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.giants.Giant;
+import net.jj.giants.Giants;
 import net.jj.giants.admin.AdminJson;
 import net.jj.giants.admin.AdminLive;
 import net.jj.giants.admin.AdminServer;
@@ -229,8 +230,10 @@ public class GiantsPresetGameTests implements FabricGameTest {
                 }
                 float big = (Float) call(g, "GiantsAdmin", "sized", new Class<?>[] {float.class}, 1f);
                 if (Math.abs(big - 2f) > 1e-4) bad.append(g.key()).append(" titan size ").append(big).append("; ");
-                Object hunt = call(g, "GiantsBehave", "hunterTemper", new Class<?>[0]);
-                if (!Boolean.TRUE.equals(hunt)) bad.append(g.key()).append(" titan isn't a hunter; ");
+                // (a giant who never fights has no temper to set)
+                if (!Giants.NEVER_FIGHT.contains(g.key())
+                        && !Boolean.TRUE.equals(call(g, "GiantsBehave", "hunterTemper", new Class<?>[0])))
+                    bad.append(g.key()).append(" titan isn't a hunter; ");
                 AdminJson.Report r = AdminServer.report(s, g);
                 if (r.all().getOrDefault("all.damage", 1.0) != 3.0)
                     bad.append(g.key()).append(" titan damage ").append(r.all()).append("; ");
@@ -264,7 +267,7 @@ public class GiantsPresetGameTests implements FabricGameTest {
             AdminServer.set(s, "Server", g.key(), "fightGiants", "off");
             JsonObject k = kind(s, g.key());
             String hunting = k != null && k.has("moods") && k.getAsJsonArray("moods").size() > 1
-                    ? k.getAsJsonArray("moods").get(1).getAsString() : null;
+                    && !Giants.NEVER_FIGHT.contains(g.key()) ? k.getAsJsonArray("moods").get(1).getAsString() : null;
             ServerPlayer q = opAt(h, i++);
             idle.add(q);
             // (a hunting one, summoned right beside an idle player)
@@ -281,6 +284,7 @@ public class GiantsPresetGameTests implements FabricGameTest {
                 if (o == null) bad.append(g.key()).append(" none summoned (").append(kind(s, g.key())).append("); ");
                 else if (o.has("fighting") && o.get("fighting").getAsBoolean())
                     bad.append(g.key()).append(" went for the idle player; ");
+                if (Giants.NEVER_FIGHT.contains(g.key())) continue;
                 try {
                     if (!Boolean.TRUE.equals(call(g, "GiantsBehave", "peaceful", new Class<?>[0])))
                         bad.append(g.key()).append(" isn't peaceful; ");
@@ -342,6 +346,9 @@ public class GiantsPresetGameTests implements FabricGameTest {
                     if (o != null) ids.put(g.key(), o.get("id").getAsString());
                     if (o == null) last.put(g.key(), " none summoned (" + kind(s, g.key()) + ")");
                     else if (o.has("asleep") && o.get("asleep").getAsBoolean()) slept.add(g.key());
+                    // (a giant who never fights lies down by settling where he is)
+                    else if (Giants.NEVER_FIGHT.contains(g.key()) && o.has("settled")
+                            && o.get("settled").getAsBoolean()) slept.add(g.key());
                     else last.put(g.key(), " awake by day: " + o);
                 }
             });

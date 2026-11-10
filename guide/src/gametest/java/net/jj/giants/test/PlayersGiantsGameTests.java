@@ -351,6 +351,37 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         else h.succeed();
     }
 
+    /** the Hearthstride is earned by trust: never picked, no book in the kit, but his lantern is a kit finder */
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_earned")
+    public void theHearthstrideIsEarnedNotPicked(GameTestHelper h) {
+        if (!here("hearthstride")) {
+            h.succeed();
+            return;
+        }
+        MinecraftServer s = h.getLevel().getServer();
+        clean(s);
+        Giant g = Giants.byKey("hearthstride");
+        h.assertTrue(!Players.pickable(s).contains(g), "he isn't on the pick screen");
+        AdminServer.set(s, "Tester", "all", "myGiant", "on");
+        ServerPlayer picker = PlayersGameTests.join(h, "hs_pick", false);
+        h.assertTrue(!Players.pick(s, picker, "hearthstride").ok(), "he can't be picked");
+        s.getPlayerList().remove(picker);
+        AdminServer.set(s, "Tester", "all", "kitFinders", "one");
+        AdminServer.set(s, "Tester", "all", "kitFinder", "hearthstride");
+        h.assertTrue(!AdminServer.set(s, "Tester", "all", "kitBook", "hearthstride").ok(), "no book of his in the kit");
+        try {
+            ServerPlayer a = PlayersGameTests.join(h, "hs_kit", false);
+            var lantern = BuiltInRegistries.ITEM.get(ResourceLocation.parse(Players.FINDERS.get("hearthstride")));
+            h.assertTrue(a.getInventory().contains(new ItemStack(lantern)), "his Hearth Lantern in the kit");
+            s.getPlayerList().remove(a);
+        } finally {
+            AdminServer.reset(s, "Tester", "all", "kitFinders");
+            AdminServer.reset(s, "Tester", "all", "kitFinder");
+            clean(s);
+        }
+        h.succeed();
+    }
+
 
 
 

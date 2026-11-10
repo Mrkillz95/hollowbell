@@ -3,6 +3,7 @@ package net.jj.giants.admin;
 import com.google.gson.JsonPrimitive;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import net.jj.giants.admin.AdminSetting.Type;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,11 +66,23 @@ public final class AdminCatalog {
 
     /** every giant the Guide knows, as option ids (the kit's choices) */
     public static final List<String> KEYS = List.of("pitchgut", "furrowmaw", "cerberus", "hollowbell",
-            "lanternwillow", "wreckback", "swarmforge", "gloamwick");
+            "lanternwillow", "wreckback", "swarmforge", "gloamwick", "hearthstride");
+
+    /**
+     * the giants earned by trust alone (the Hearthstride gives his book to whoever he trusts): never picked for My
+     * Giant, and no book or armour of theirs in the starting kit
+     */
+    public static final Set<String> EARNED = Set.of("hearthstride");
 
     private static List<String> with(List<String> first) {
         List<String> l = new ArrayList<>(first);
         l.addAll(KEYS);
+        return List.copyOf(l);
+    }
+
+    private static List<String> withGiven(List<String> first) {
+        List<String> l = new ArrayList<>(first);
+        for (String k : KEYS) if (!EARNED.contains(k)) l.add(k);
         return List.copyOf(l);
     }
 
@@ -106,9 +119,9 @@ public final class AdminCatalog {
             choice("all.kitFinders", List.of("none", "all", "one"), "Finders in the kit",
                     "New players get every installed giant's finder, one (Which finder), or none."),
             choice("all.kitFinder", with(List.of("random")), "Which finder", "The finder \"one\" gives."),
-            choice("all.kitArmour", with(List.of("none", "leather", "iron", "diamond")), "Armour in the kit",
+            choice("all.kitArmour", withGiven(List.of("none", "leather", "iron", "diamond")), "Armour in the kit",
                     "A full set put on new players (a giant's name: his armour set)."),
-            choice("all.kitBook", with(List.of("none")), "Book in the kit",
+            choice("all.kitBook", withGiven(List.of("none")), "Book in the kit",
                     "That giant's book for a new player, when nobody has it; else left out and they are told."),
             flag("all.sit", true, "Sitting on giants",
                     "Players on a giant's safe list may sit on him (triple crouch or the key)."),

@@ -24,7 +24,7 @@ public final class LeakScan {
     private LeakScan() {}
 
     static final Set<String> MODS = Set.of("jj_giants", "mountain_breathes", "furrowmaw", "cerberus", "hollowbell",
-            "lanternwillow", "wreckback", "swarmforge", "gloamwick");
+            "lanternwillow", "wreckback", "swarmforge", "gloamwick", "hearthstride");
 
     private record Node(Object o, int parent, String label) {}
 

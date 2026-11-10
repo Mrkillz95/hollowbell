@@ -6,6 +6,7 @@ import java.util.BitSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -525,6 +526,12 @@ public final class Remains {
         }
         return null;
     }
+
+    /**
+     * the giants who leave their own remains when they fall, so the Guide lays none (the Hearthstride's ruined
+     * cottage, with the cold hearth that brings him back)
+     */
+    public static final Set<String> OWN_RUIN = Set.of("hearthstride");
 
     /** (the tests) does this kind have his own design from his model here */
     public static boolean ownDesign(String kind) {

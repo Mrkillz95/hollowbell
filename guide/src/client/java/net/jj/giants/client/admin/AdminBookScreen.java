@@ -2431,7 +2431,10 @@ public class AdminBookScreen extends Screen {
 
     // the size picture: the giant at that size beside a player
 
-    /** his height and length at full size, in blocks, and his shape: q four legs, w a worm, d a dome, t a tree */
+    /**
+     * his height and length at full size, in blocks, and his shape: q four legs, w a worm, d a dome, t a tree, h a
+     * house on two legs
+     */
     static double[] body(String key) {
         return switch (key) {
             case "pitchgut" -> new double[] {185, 265, 'q'};
@@ -2442,6 +2445,7 @@ public class AdminBookScreen extends Screen {
             case "wreckback" -> new double[] {208, 323, 'q'};
             case "swarmforge" -> new double[] {152, 225, 'q'};
             case "gloamwick" -> new double[] {200, 277, 'q'};
+            case "hearthstride" -> new double[] {145, 85, 'h'};
             default -> new double[] {200, 260, 'q'};
         };
     }
@@ -2481,6 +2485,18 @@ public class AdminBookScreen extends Screen {
                 int lw = Math.max(1, gw / 12);
                 for (int i = 1; i <= 3; i++) g.fill(gx + gw * i / 4 - lw / 2, ground - gt * 3 / 10 - 1,
                         gx + gw * i / 4 - lw / 2 + lw, ground, col);
+            }
+            case 'h' -> {
+                // two legs, the house on them and its roof
+                int legH = gt * 45 / 100, lw = Math.max(1, gw / 9), wallTop = ground - gt * 78 / 100;
+                for (double f : new double[] {0.28, 0.62})
+                    g.fill(gx + (int) (gw * f), ground - legH - 1, gx + (int) (gw * f) + lw, ground, col);
+                g.fill(gx, wallTop, gx + gw, ground - legH, col);
+                int roofH = Math.max(1, wallTop - (ground - gt));
+                for (int r = 0; r < roofH; r++) {
+                    int half = gw * (roofH - r) / (2 * roofH);
+                    g.fill(gx + gw / 2 - half, wallTop - r - 1, gx + gw / 2 + half + 1, wallTop - r, col);
+                }
             }
             case 't' -> {
                 int tw = Math.max(1, gw / 7);
@@ -4254,6 +4270,7 @@ public class AdminBookScreen extends Screen {
             case "wreckback" -> 0xFF8A8270;
             case "swarmforge" -> 0xFFD0761E;
             case "gloamwick" -> 0xFF8A66D8;
+            case "hearthstride" -> 0xFFC0702A;
             default -> 0xFF806040;
         };
     }

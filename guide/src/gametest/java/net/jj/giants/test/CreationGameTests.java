@@ -242,7 +242,7 @@ public class CreationGameTests implements FabricGameTest {
     public void closeQuartersAndFarFrontierAreRealPresets(GameTestHelper h) {
         fresh(h);
         String[] keys = {"pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow", "wreckback",
-            "swarmforge", "gloamwick"};
+            "swarmforge", "gloamwick", "hearthstride"};
         AdminTransfer.Bundle cq = AdminTransfer.preset("close_quarters"), ff = AdminTransfer.preset("Far Frontier");
         h.assertTrue(cq != null && ff != null && !cq.replace() && !ff.replace(), "the two presets");
         for (String k : keys) {

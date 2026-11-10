@@ -15,6 +15,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.jj.giants.Giant;
+import net.jj.giants.Giants;
 import net.jj.giants.GiantsGuideMod;
 import net.jj.giants.admin.AdminBook;
 import net.jj.giants.admin.AdminCommand;
@@ -431,10 +432,10 @@ public final class Minigames {
         return e != null && MgLevels.temporary(e.level());
     }
 
-    /** (the tests) a giant kind the mode would use: every installed one, in the Guide's order */
+    /** (the tests) a giant kind the mode would use: every installed one that fights, in the Guide's order */
     static List<String> kinds() {
         List<String> out = new ArrayList<>();
-        for (Giant g : AdminServer.giants()) out.add(g.key());
+        for (Giant g : AdminServer.giants()) if (!Giants.NEVER_FIGHT.contains(g.key())) out.add(g.key());
         return out;
     }
 

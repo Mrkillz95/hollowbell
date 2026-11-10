@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.giants.Giant;
+import net.jj.giants.Giants;
 import net.jj.giants.admin.AdminCatalog;
 import net.jj.giants.admin.AdminBook;
 import net.jj.giants.admin.AdminDraft;
@@ -80,6 +81,8 @@ public class PresetGameTests implements FabricGameTest {
 
     static AdminJson.Report standIn(String key) {
         List<String> l = new ArrayList<>();
+        // (a giant who never fights, the Hearthstride, has none of the fight rows)
+        boolean fights = !Giants.NEVER_FIGHT.contains(key);
         l.add("{\"admin\":1,\"giant\":\"" + key + "\",\"name\":\"" + key + "\",\"uses\":[\"all.health\",\"all.damage\","
                 + "\"all.speed\",\"all.size\",\"all.cooldowns\",\"all.healing\",\"all.windCost\"],\"all\":{}}");
         l.add(row("oneInTheWorld", "spawning", "bool", 0, 1, "true", "live"));
@@ -88,7 +91,7 @@ public class PresetGameTests implements FabricGameTest {
         l.add(row("worldRespawnDays", "spawning", "int", 0, 1000, "3", "newSpawns"));
         l.add(row("ownedRespawnDays", "spawning", "int", 0, 1000, "15", "newSpawns"));
         l.add(row("spawnSize", "spawning", "range", 0.01, 4, "[1,1]", "newSpawns"));
-        l.add(row("worldCount", "spawning", "int", 1, 8, "1", "newSpawns"));
+        if (fights) l.add(row("worldCount", "spawning", "int", 1, 8, "1", "newSpawns"));
         l.add(row("respawn", "spawning", "bool", 0, 1, "true", "live"));
         l.add(row("groundNearest", "worldgen", "int", 0, 100000, "2100", "worldCreation"));
         l.add(row("groundFarthest", "worldgen", "int", 0, 100000, "14100", "worldCreation"));
@@ -98,31 +101,32 @@ public class PresetGameTests implements FabricGameTest {
                 key.equals("cerberus") ? "2000" : "6000", "live"));
         l.add(row("healthMultiplier", "stats", "float", 0.1, 10, "1", "live"));
         l.add(row("damageMultiplier", "stats", "float", 0.1, 10, "1", "live"));
-        l.add(row("nightStrength", "stats", "float", 0.5, 4, "1", "live"));
-        l.add(row("fightGiants", "behaviour", "bool", 0, 1, "true", "live"));
+        if (fights) l.add(row("nightStrength", "stats", "float", 0.5, 4, "1", "live"));
+        if (fights) l.add(row("fightGiants", "behaviour", "bool", 0, 1, "true", "live"));
         l.add(row("meetings", "behaviour", "bool", 0, 1, "true", "live"));
-        l.add(row("meetCooldown", "behaviour", "int", 0, 1440, "10", "live"));
-        l.add(row("yieldAt", "behaviour", "float", 0, 0.9, "0.25", "live"));
-        l.add(row("fleeInWildFights", "behaviour", "bool", 0, 1, "true", "live"));
-        l.add(row("grudgeRate", "behaviour", "float", 0, 5, "1", "live"));
-        l.add(row("griefing", "behaviour", "bool", 0, 1, key.equals("swarmforge") ? "false" : "true", "live"));
-        l.add(row("temper", "behaviour", "choice", 0, 2, "\"normal\"", "live"));
+        if (fights) l.add(row("meetCooldown", "behaviour", "int", 0, 1440, "10", "live"));
+        if (fights) l.add(row("yieldAt", "behaviour", "float", 0, 0.9, "0.25", "live"));
+        if (fights) l.add(row("fleeInWildFights", "behaviour", "bool", 0, 1, "true", "live"));
+        if (fights) l.add(row("grudgeRate", "behaviour", "float", 0, 5, "1", "live"));
+        if (fights)
+            l.add(row("griefing", "behaviour", "bool", 0, 1, key.equals("swarmforge") ? "false" : "true", "live"));
+        if (fights) l.add(row("temper", "behaviour", "choice", 0, 2, "\"normal\"", "live"));
         l.add(row("roam", "behaviour", "choice", 0, 2, "\"home\"", "live"));
-        l.add(row("seekGiants", "behaviour", "bool", 0, 1, "false", "live"));
-        l.add(row("raidVillages", "behaviour", "bool", 0, 1, "false", "live"));
+        if (fights) l.add(row("seekGiants", "behaviour", "bool", 0, 1, "false", "live"));
+        if (fights) l.add(row("raidVillages", "behaviour", "bool", 0, 1, "false", "live"));
         l.add(row("sleepSchedule", "behaviour", "choice", 0, 2, "\"usual\"", "live"));
-        l.add(row("heavyDelaySeconds", "moves", "int", 0, 600, "60", "live"));
+        if (fights) l.add(row("heavyDelaySeconds", "moves", "int", 0, 600, "60", "live"));
         l.add(row("passiveHeal", "healing", "bool", 0, 1, "true", "live"));
         l.add(row("healHomePerMinute", "healing", "float", 0, 100, "2", "live"));
         l.add(row("healAwayPerMinute", "healing", "float", 0, 100, "1", "live"));
-        l.add(row("bookCosts", "taming", "bool", 0, 1, "true", "live"));
-        l.add(row("windSeconds", "taming", "int", 10, 3600, "90", "live"));
-        l.add(row("freeHits", "taming", "int", 0, 100, "5", "live"));
-        l.add(row("wardBlocks", "taming", "int", 0, 10000, "700", "live"));
-        l.add(row("wardSeconds", "taming", "int", 0, 36000, "1200", "live"));
-        l.add(row("lootMultiplier", "loot", "float", 0, 10, "1", "live"));
+        if (fights) l.add(row("bookCosts", "taming", "bool", 0, 1, "true", "live"));
+        if (fights) l.add(row("windSeconds", "taming", "int", 10, 3600, "90", "live"));
+        if (fights) l.add(row("freeHits", "taming", "int", 0, 100, "5", "live"));
+        if (fights) l.add(row("wardBlocks", "taming", "int", 0, 10000, "700", "live"));
+        if (fights) l.add(row("wardSeconds", "taming", "int", 0, 36000, "1200", "live"));
+        if (fights) l.add(row("lootMultiplier", "loot", "float", 0, 10, "1", "live"));
         l.add(row("bossBar", "effects", "bool", 0, 1, "true", "live"));
-        l.add(row("ambientSounds", "effects", "bool", 0, 1, "true", "live"));
+        if (fights) l.add(row("ambientSounds", "effects", "bool", 0, 1, "true", "live"));
         l.add(row("chunkLoading", "load", "bool", 0, 1, "true", "live"));
         if (key.equals("gloamwick")) l.add(row("eclipseOften", "moves", "bool", 0, 1, "false", "live"));
         if (key.equals("swarmforge")) {

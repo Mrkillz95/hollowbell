@@ -237,7 +237,8 @@ public final class Systems {
         // (Part 10B) a fight he was in is over; a staged fight's loser leaves the remains its script asks for
         net.jj.giants.fights.Fights.fell(e);
         String rule = net.jj.giants.fights.FightScript.remains(e, option(server, "deathRule"));
-        if (!rule.equals("drops")) Remains.build(sl, kind, e, rule, num(server, "corpseDays"));
+        if (!rule.equals("drops") && !Remains.OWN_RUIN.contains(kind))
+            Remains.build(sl, kind, e, rule, num(server, "corpseDays"));
     }
 
     /** (Part 10B) a giant won a fight (the loser backed down): a win for his growth while Growth is on */

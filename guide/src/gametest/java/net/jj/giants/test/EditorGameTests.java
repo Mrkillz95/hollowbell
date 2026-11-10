@@ -115,7 +115,7 @@ public class EditorGameTests implements FabricGameTest {
         Map<String, JsonElement> all = new LinkedHashMap<>(v.get("all"));
         all.put("all.fromTheFuture", new JsonPrimitive(7));
         v.put("all", all);
-        v.put("hearthstride", Map.of("walkSpeed", new JsonPrimitive(2)));
+        v.put("futuregiant", Map.of("walkSpeed", new JsonPrimitive(2)));
         String json = AdminTransfer.write(new AdminTransfer.Bundle("future", "Future", "", false, v, List.of()))
                 .replace("{\"admin\":1", "{\"admin\":9");
         AdminTransfer.Bundle fb = AdminTransfer.read(json);
@@ -126,7 +126,7 @@ public class EditorGameTests implements FabricGameTest {
         MinecraftServer s = h.getLevel().getServer();
         AdminTransfer.Plan plan = AdminTransfer.plan(s, fr.bundle());
         String skipped = String.join(" | ", plan.skipped());
-        h.assertTrue(skipped.contains("all.fromTheFuture") && skipped.contains("hearthstride"),
+        h.assertTrue(skipped.contains("all.fromTheFuture") && skipped.contains("futuregiant"),
                 "unknown settings and giants are left out and named: " + skipped);
         h.succeed();
     }
@@ -138,7 +138,11 @@ public class EditorGameTests implements FabricGameTest {
         for (var x : SoundCatalog.SETTINGS) w.remove("all", x.id());
         AdminServer.push(s, w);
         // as shipped: nothing to send, every one a systems setting kept by the Guide, live
-        h.assertTrue(SoundCatalog.SETTINGS.size() == 32, "4 for each of the 8: " + SoundCatalog.SETTINGS.size());
+        // (4 for each giant; the Hearthstride, who never fights, has no fight music to change)
+        h.assertTrue(SoundCatalog.SETTINGS.size() == 35, "4 for each of the 9, less one: "
+                + SoundCatalog.SETTINGS.size());
+        h.assertTrue(!SoundCatalog.ours("all.music.hearthstride") && !SoundCatalog.MUSIC.contains("hearthstride")
+                && SoundCatalog.ours("all.voicePitch.hearthstride"), "his sounds, but no fight music");
         for (var x : SoundCatalog.SETTINGS)
             h.assertTrue(AdminCatalog.shared(x.id()) != null && AdminCatalog.systems(x) && x.when().equals("live"),
                     x.id());

@@ -66,7 +66,8 @@ public class MinigameGiantsGameTests implements FabricGameTest {
         h.assertTrue(Minigames.start(s, "Tester", "royale", false, 1).ok(), "opened");
         Minigames.join(a, false);
         Minigames.now(s, "Tester");
-        int kinds = AdminServer.giants().size();
+        // (a giant who never fights isn't in the minigames)
+        int kinds = (int) AdminServer.giants().stream().filter(g -> !Giants.NEVER_FIGHT.contains(g.key())).count();
         h.startSequence()
                 .thenWaitUntil(() -> h.assertTrue(game().phase() == MgGame.Phase.PLAY, "playing"))
                 .thenWaitUntil(() -> h.assertTrue(game().giants.all.size() == kinds, "every giant came: "

@@ -38,6 +38,9 @@ public final class Simple {
                     "weathered_copper", "polished_blackstone", "oxidized_copper");
             case "gloamwick" -> new Plan(0.16, 0.12, 4, 0.3, false, 1, 0.16, 0.07, 0.04, "blackstone", "blackstone",
                     "soul_soil", "soul_sand");
+            // (a fallen cottage: timber and plaster over a stone floor, two long legs)
+            case "hearthstride" -> new Plan(0.2, 0.3, 2, 0.4, false, 1, 0.0, 0.0, 0.0, "dark_oak_planks",
+                    "white_terracotta", "stripped_spruce_log", "cobblestone");
             default -> new Plan(0.15, 0.12, 4, 0.2, false, 1, 0.1, 0.06, 0.1, "brown_terracotta",
                     "brown_terracotta", "nether_wart_block", "mud");
         };

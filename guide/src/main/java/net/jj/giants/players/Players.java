@@ -60,28 +60,31 @@ public final class Players {
             "pitchgut", "mountain_breathes:mountain", "furrowmaw", "furrowmaw:furrowmaw",
             "cerberus", "fire_ice_cerberus:cerberus", "hollowbell", "hollowbell:hollowbell",
             "lanternwillow", "lanternwillow:lanternwillow", "wreckback", "wreckback:wreckback",
-            "swarmforge", "swarmforge:swarmforge", "gloamwick", "gloamwick:gloamwick");
+            "swarmforge", "swarmforge:swarmforge", "gloamwick", "gloamwick:gloamwick",
+            "hearthstride", "hearthstride:hearthstride");
 
     /** each giant's finder and book (for the crafting switches) */
     public static final Map<String, String> FINDERS = Map.of(
             "pitchgut", "mountain_breathes:mountain_compass", "furrowmaw", "furrowmaw:furrowmaw_finder",
             "cerberus", "fire_ice_cerberus:cerberus_finder", "hollowbell", "hollowbell:hollowbell_finder",
             "lanternwillow", "lanternwillow:lanternwillow_finder", "wreckback", "wreckback:wreckback_finder",
-            "swarmforge", "swarmforge:swarmforge_finder", "gloamwick", "gloamwick:gloamwick_finder");
+            "swarmforge", "swarmforge:swarmforge_finder", "gloamwick", "gloamwick:gloamwick_finder",
+            "hearthstride", "hearthstride:hearth_lantern");
     public static final Map<String, String> BOOKS = Map.of(
             "pitchgut", "mountain_breathes:mountain_codex", "furrowmaw", "furrowmaw:furrowmaw_codex",
             "cerberus", "fire_ice_cerberus:cerberus_codex", "hollowbell", "hollowbell:hollowbell_codex",
             "lanternwillow", "lanternwillow:lanternwillow_codex", "wreckback", "wreckback:wreckback_codex",
-            "swarmforge", "swarmforge:swarmforge_codex", "gloamwick", "gloamwick:gloamwick_codex");
+            "swarmforge", "swarmforge:swarmforge_codex", "gloamwick", "gloamwick:gloamwick_codex",
+            "hearthstride", "hearthstride:hearth_book");
 
     /**
      * how hard each one is to beat as shipped (the pick screen's danger, before the world's settings). JJ (Nov 3): the
-     * same for all eight, Normal, because the giants were balanced against each other (handoff DUELS.md); only the
+     * same for all of them, Normal, because the giants were balanced against each other (handoff DUELS.md); only the
      * world's settings (sizes, health, damage, presets) move a giant's rating.
      */
     public static final Map<String, Integer> BASE_DANGER = Map.of(
             "pitchgut", 3, "furrowmaw", 3, "cerberus", 3, "hollowbell", 3, "lanternwillow", 3, "wreckback", 3,
-            "swarmforge", 3, "gloamwick", 3);
+            "swarmforge", 3, "gloamwick", 3, "hearthstride", 3);
 
     /** how a page goes to a player: over the network, or (in the tests) to a catcher */
     public static BiConsumer<ServerPlayer, PlayersStatePayload> sender = (p, s) -> {
@@ -339,8 +342,9 @@ public final class Players {
         o.addProperty("player", p.getStringUUID());
         o.addProperty("what", what);
         List<String> r = AdminServer.call(server, g, "give", o.toString());
-        if (r == null && what.equals("finder")) {
-            // (an older giant: his finder by its item id)
+        boolean answered = r != null && !r.isEmpty() && (r.get(0).equals("ok") || r.get(0).equals("no"));
+        if (!answered && what.equals("finder")) {
+            // (an older giant, or one who hands nothing out himself: his finder by its item id)
             Item it = item(FINDERS.get(g.key()));
             if (it != null) put(p, new ItemStack(it));
         }
@@ -382,6 +386,7 @@ public final class Players {
     public static List<Giant> pickable(MinecraftServer server) {
         List<Giant> out = new ArrayList<>();
         for (Giant g : AdminServer.giants()) {
+            if (AdminCatalog.EARNED.contains(g.key())) continue;
             AdminJson.Report r = AdminServer.report(server, g);
             if (r != null && r.uses().stream().anyMatch(u -> u.equals("all.sit") || u.equals("all.books")))
                 out.add(g);

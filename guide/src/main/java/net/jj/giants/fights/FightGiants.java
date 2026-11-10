@@ -230,7 +230,7 @@ public final class FightGiants {
 
     /** the kinds whose plain name takes "the" ("the Cerberus"), as the giants' own meeting lines say it */
     private static final java.util.Set<String> THE = java.util.Set.of("cerberus", "hollowbell", "lanternwillow",
-            "swarmforge", "gloamwick");
+            "swarmforge", "gloamwick", "hearthstride");
 
     /**
      * how a line calls him: a name an admin gave him as it is, else his plain name with "the" where it takes one

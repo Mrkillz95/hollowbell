@@ -2,6 +2,7 @@ package net.jj.giants.admin;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import net.jj.giants.Giant;
+import net.jj.giants.Giants;
 import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,7 +63,7 @@ public final class AdminTransfer {
 
     /** the giants a built-in preset names (every one the Guide knows, installed or not) */
     private static final String[] EVERY_GIANT = {"pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow",
-        "wreckback", "swarmforge", "gloamwick"};
+        "wreckback", "swarmforge", "gloamwick", "hearthstride"};
 
     /** a preset that sets the same values for every giant ("replace": false: it changes only what it names) */
     private static String forEveryGiant(String id, String name, String about, String values) {
@@ -76,12 +78,25 @@ public final class AdminTransfer {
     public static final List<String> SUGGESTED = List.of("my_giant", "pocket_giants", "titans", "gentle_giants", "kaiju_war",
             "night_terrors", "wild_sizes");
 
+    /** the re-tune settings that mean something for a giant who never fights; the rest leave him as he is */
+    private static final Set<String> HOME_TAKES = Set.of("spawnSize", "maxInWorld", "worldRespawnDays",
+            "ownedRespawnDays", "respawn", "passiveHeal", "roam", "sleepSchedule", "meetings", "chunkLoading",
+            "worldScale");
+
+    /** "a":1,"b":2 with only the settings a giant who never fights takes */
+    private static String homeOnly(String every) {
+        JsonObject o = JsonParser.parseString("{" + every + "}").getAsJsonObject();
+        o.keySet().removeIf(k -> !HOME_TAKES.contains(k));
+        String s = o.toString();
+        return s.substring(1, s.length() - 1);
+    }
+
     /** a Part 4 re-tune preset: a replace that keeps where the grounds go (ADMIN_BRIDGE.md 19.8) */
     private static String retune(String id, String name, String about, String all, String every,
             Map<String, String> own) {
         StringBuilder g = new StringBuilder();
         for (String k : EVERY_GIANT) {
-            StringBuilder v = new StringBuilder(every);
+            StringBuilder v = new StringBuilder(Giants.NEVER_FIGHT.contains(k) ? homeOnly(every) : every);
             String extra = own.get(k);
             if (extra != null && !extra.isEmpty()) v.append(v.length() == 0 ? "" : ",").append(extra);
             g.append(g.length() == 0 ? "" : ",").append('"').append(k).append("\":{").append(v).append('}');
@@ -105,7 +120,8 @@ public final class AdminTransfer {
             "pitchgut", "\"worldScale\":0.012", "furrowmaw", "\"worldScale\":0.03",
             "cerberus", "\"worldScale\":0.011", "hollowbell", "\"worldScale\":0.011",
             "lanternwillow", "\"worldScale\":0.011", "wreckback", "\"worldScale\":0.011",
-            "swarmforge", "\"worldScale\":0.015", "gloamwick", "\"worldScale\":0.011");
+            "swarmforge", "\"worldScale\":0.015", "gloamwick", "\"worldScale\":0.011",
+            "hearthstride", "\"worldScale\":0.014");
 
     /** Lite: ambient sounds off where the server decides them (the Hollowbell's are each player's own) */
     private static final Map<String, String> LITE_OWN = Map.of(

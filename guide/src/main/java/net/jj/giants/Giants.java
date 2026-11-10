@@ -24,6 +24,9 @@ public final class Giants {
     public static String[] pages(Giant g) {
         return g != null && g.key().equals("swarmforge") ? SWARMFORGE_PAGES : PAGES;
     }
+    /** the giants who never fight (the Hearthstride, a home): left out of the minigames and the fight presets */
+    public static final Set<String> NEVER_FIGHT = Set.of("hearthstride");
+
     /** most numbered lines one page can have */
     public static final int MAX_LINES = 80;
 
