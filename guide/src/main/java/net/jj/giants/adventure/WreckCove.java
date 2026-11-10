@@ -16,9 +16,11 @@ import net.minecraft.world.phys.Vec3;
 /**
  * (Part 11, ADMIN_BRIDGE.md §28.6) The built-in adventure map, "The Wreck Cove Rescue": a young giant is lost on the
  * beach of Wreck Cove, where a Wreckback guards the wreck. The players come from the harbour to the west; once they're
- * near, the lost giant follows the shore road home (a scripted escort: a walking pace, waiting for the players)
- * while the guard patrols the lagoon, and goes for them the moment a player wades out into the lagoon (the
- * beach where the lost giant waits, and the road, are outside the guard's area). Hooks end it: the lost giant reaching the harbour wins, his falling
+ * near, the lost giant follows the shore road home (a scripted escort: a walking pace, waiting for the players).
+ * (cove2) The guard, twice the lost giant's size, paces the cove's west waterline, right by the beach where the lost
+ * giant waits and the road begins: the players sneak past while he's at the far end, or rush. A player who wades out
+ * into the lagoon, or comes within 20 blocks of him, is hunted, onto the beach and the road too, until they're 60
+ * blocks from where he set off after them; the lost giant he never touches. Hooks end it: the lost giant reaching the harbour wins, his falling
  * loses; the guard's half health and fall are told to everyone. Made entirely of the tools an admin has (paths, areas,
  * scripts, hooks), so it shows how to build one.
  */
@@ -26,9 +28,13 @@ final class WreckCove {
     private WreckCove() {}
 
     static final int[] COVE = {36, 44, 52};
-    /** the map's own giant size (1.16 integration): small enough that both giants fit the cove; a smaller size picked
-     *  for the game still wins */
-    static final double SIZE = 0.08;
+    /** the map's own giant size (1.16 integration): the lost giant's, small enough that both giants fit the cove; a
+     *  smaller size picked for the game still wins. (cove2) The guard is twice that. */
+    static final double SIZE = 0.06;
+    /** (cove2) how near the guard spots a player, and how far from where he set off he gives up the hunt */
+    static final int SPOTS = 20, GIVES_UP = 60;
+    /** (cove2) the guard's speed (his own pace times this; 4 is the most a giant takes) */
+    static final double GUARD_SPEED = 4;
     /** the order the lost giant's kind is picked in (the first installed that isn't the guard) */
     static final List<String> LOST = List.of("pitchgut", "cerberus", "gloamwick", "lanternwillow", "swarmforge",
             "hollowbell", "furrowmaw", "wreckback");
@@ -61,7 +67,7 @@ final class WreckCove {
                 + " harbour. Beware the guard of the cove!";
         m.timeUp = "lose";
         // the cove (Wreckback's own den), east of the middle
-        MgShapes.Shape den = MgShapes.den("wreckback", r, FunGiants.height("wreckback", Math.max(0.15, giantSize)));
+        MgShapes.Shape den = MgShapes.den("wreckback", r, FunGiants.height("wreckback", Math.max(0.15, giantSize * 2)));
         if (den != null) m.pieces.add(new Object[] {den, cx, 0});
         // the shore road: from the cove's west beach to the harbour
         double bx = cx - (shore + (r - shore) * 0.5);
@@ -79,17 +85,20 @@ final class WreckCove {
         AdvData.Path home = new AdvData.Path();
         for (double[] p : road) home.pts.add(new double[] {p[0], 1, p[1]});
         s.paths.put("shore_road", home);
+        // (cove2) the guard's beat: along the cove's west waterline, from its north-west to its south-west and back,
+        // past the beach where the lost giant waits and the road begins
         AdvData.Path watch = new AdvData.Path();
-        double wr = shore * 0.45;
-        for (int i = 0; i < 4; i++) {
-            double a = i * Math.PI / 2 + Math.PI / 4;
-            watch.pts.add(new double[] {cx + Math.cos(a) * wr, 0, Math.sin(a) * wr});
+        int beat = 5;
+        for (int i = 0; i < beat * 2 - 2; i++) {
+            int k = i < beat ? i : beat * 2 - 2 - i;
+            double a = Math.PI * (0.68 + 0.64 * k / (beat - 1));
+            watch.pts.add(new double[] {cx + Math.cos(a) * (shore - 0.5), 0, Math.sin(a) * (shore - 0.5)});
         }
-        s.paths.put("lagoon_watch", watch);
+        s.paths.put("beach_watch", watch);
         // areas: the cove (where the guard notices you) and the harbour (home). (1.16.1) The cove is the lagoon proper,
-        // not the beach round it: the lost giant's beach and the shore road are outside, so reaching him doesn't set the
-        // guard on you; only wading out into the lagoon does.
-        int lagoon = (int) Math.round(shore * 0.6);
+        // not the beach round it: the lost giant's beach and the shore road are outside; wading out into the lagoon,
+        // or coming near the guard on his beat, sets him on you.
+        int lagoon = (int) Math.round(shore * 0.8);
         s.areas.put("cove", area(cx - lagoon, -8, -lagoon, cx + r, 40, lagoon));
         s.areas.put("harbour", area((int) hx - 12, -4, -14, (int) hx + 16, 30, 14));
         // the scripts
@@ -99,15 +108,16 @@ final class WreckCove {
                 "say Is someone there? Please, help me get home!",
                 "waitfor players 20",
                 "say You came! The harbour is west, along the shore road. Stay close!",
-                "escort shore_road 24",
+                "escort shore_road 32",
                 "say The harbour! I'm home!"));
         s.scripts.put("cove_guard", script(
                 "title Guard of Wreck Cove",
                 "mood calm",
-                "patrol lagoon_watch until area cove",
+                "patrol beach_watch until area cove or players " + SPOTS,
                 "say Who dares set foot in my cove?",
-                "fight 80",
-                "guard 60"));
+                "hunt " + GIVES_UP,
+                "say And stay out of my cove!",
+                "repeat"));
         // the hooks (they end the round: /giants adventure win|lose)
         s.hooks.add(hook(1, "adv_lost", "enters:harbour", "giants adventure win {name} is home safe at the harbour!"));
         s.hooks.add(hook(2, "adv_lost", "dies", "giants adventure lose The lost giant fell on the way home."));
@@ -119,10 +129,9 @@ final class WreckCove {
         // the giants
         AdvMaps.MapGiant lg = new AdvMaps.MapGiant();
         lg.kind = lost;
-        lg.x = bx + 2;
+        lg.x = bx - 2;
         lg.z = 0;
-        // (three quarters of the guard's, but never over the size picked for the game)
-        lg.size = Math.min(giantSize, Math.max(0.06, giantSize * 0.75));
+        lg.size = giantSize;
         lg.mood = "calm";
         lg.script = "lost_giant";
         lg.tags.add("adv_lost");
@@ -130,12 +139,19 @@ final class WreckCove {
         m.giants.add(lg);
         AdvMaps.MapGiant gg = new AdvMaps.MapGiant();
         gg.kind = guard;
-        gg.x = cx + cove[0] * 0.5;
-        gg.z = cove[1] * 0.5;
-        gg.size = giantSize;
+        // (cove2) on his beat, at its north end; twice the lost giant's size
+        double[] g0 = watch.pts.get(0);
+        gg.x = g0[0];
+        gg.z = g0[2];
+        gg.size = giantSize * 2;
         gg.mood = "calm";
         gg.script = "cove_guard";
         gg.tags.add("adv_guard");
+        // (cove2, JJ "posed no threat") a small Wreckback crawls (at twice the lost giant's size about 1 block a
+        // second on the sand, 1.4 in the water: his own pace, slow when small, by design): the guard is four times
+        // that, the most a speed tag gives, so he keeps up with a walking player in the lagoon and only a sprint gets
+        // away from him up the beach
+        gg.tags.add(net.jj.giants.fun.Marks.TAG + "speed=" + GUARD_SPEED);
         m.giants.add(gg);
         return m;
     }

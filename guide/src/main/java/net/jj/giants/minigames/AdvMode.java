@@ -94,7 +94,13 @@ public final class AdvMode extends Coop {
         Adventure.beginRound(g.server, g.level, m, (kind, at, mood, size, then) -> g.giants.summon(kind, at, mood, size,
                 1, 1, "adventure", -1, k -> {
                     var e = g.giants.entity(k);
-                    if (e != null) then.accept(e);
+                    if (e == null) return;
+                    // (cove2, JJ "did not follow path") a giant's own summon puts him well out in front of the spot (a
+                    // small Pitchgut 23 blocks south of it, off the beach and the road): the map's giants stand where
+                    // the map puts them
+                    double dx = at.x - e.getX(), dz = at.z - e.getZ();
+                    if (dx * dx + dz * dz > 9) e.teleportTo(at.x, MgGiants.ground(g.level, at.x, at.z), at.z);
+                    then.accept(e);
                 }));
     }
 

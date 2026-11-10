@@ -37,6 +37,8 @@ public final class Scripts {
         {"waitfor", "players <blocks> or area <area>", "stays where he is until a player comes that close, or into the area"},
         {"guard", "[blocks] [until area <area> or until players <blocks>]", "stands guard here: goes for anyone who comes that close (24), then back to his post"},
         {"fight", "[blocks]", "starts fighting the nearest player (within 64 blocks)"},
+        {"hunt", "[blocks]", "goes after the nearest player (within 64 blocks) wherever they run, until they are that far"
+                + " from where the hunt began (60): then he gives up, calms down and goes on"},
         {"mood", "<mood>", "his mood (calm, hunting, guardian...)"},
         {"say", "<words>", "says a line in chat to the players near him (96 blocks)"},
         {"title", "<words> or clear", "the title on his boss bar"},
@@ -84,6 +86,10 @@ public final class Scripts {
                 if (w.length > 1 && (num(w[1]) <= 0 || num(w[1]) > 512)) return "fight's blocks: 1 to 512.";
                 return null;
             }
+            case "hunt" -> {
+                if (w.length > 1 && (num(w[1]) <= 0 || num(w[1]) > 512)) return "hunt's blocks: 1 to 512.";
+                return null;
+            }
             case "mood" -> {
                 return w.length < 2 ? "mood needs a mood: mood hunting." : null;
             }
@@ -97,19 +103,25 @@ public final class Scripts {
                 return null;
             }
             default -> {
-                return "No step called " + v + ". Steps: walk, escort, patrol, wait, waitfor, guard, fight, mood, say, title,"
+                return "No step called " + v + ". Steps: walk, escort, patrol, wait, waitfor, guard, fight, hunt, mood, say,"
+                        + " title,"
                         + " sleep, wake, run, repeat, end.";
             }
         }
     }
 
+    /** (cove2) "until area <area>", "until players <blocks>", or several joined by "or" (until area cove or players 20) */
     private static @Nullable String until(String[] w, int i) {
         if (w.length <= i) return null;
-        if (w.length == i + 3 && w[i].equals("until")) {
-            if (w[i + 1].equals("area") && AdvData.name(w[i + 2]) != null) return null;
-            if (w[i + 1].equals("players") && num(w[i + 2]) > 0 && num(w[i + 2]) <= 512) return null;
+        String bad = "After the path: until area <area> or until players <blocks> (several joined by or).";
+        if (!w[i].equals("until") || (w.length - i) % 3 != 0) return bad;
+        for (int k = i + 1; k < w.length; k += 3) {
+            if (k > i + 1 && !w[k - 1].equals("or")) return bad;
+            if (w[k].equals("area") && AdvData.name(w[k + 1]) != null) continue;
+            if (w[k].equals("players") && num(w[k + 1]) > 0 && num(w[k + 1]) <= 512) continue;
+            return bad;
         }
-        return "After the path: until area <area> or until players <blocks>.";
+        return null;
     }
 
     static String[] words(String line) {
@@ -273,6 +285,10 @@ public final class Scripts {
                     if (p != null) AdvGiants.turn(server, e, p);
                     next(run, lv);
                 }
+                case "hunt" -> {
+                    if (hunt(server, e, lv, w.length > 1 ? num(w[1]) : 60, fresh, now)) next(run, lv);
+                    return;
+                }
                 case "mood" -> {
                     AdvGiants.mood(server, e, w[1].toLowerCase(Locale.ROOT));
                     next(run, lv);
@@ -365,13 +381,16 @@ public final class Scripts {
         return false;
     }
 
-    /** how far ahead of himself an escorted giant is sent each time (a short way, so he keeps a walking pace) */
-    static final double ESCORT_LEAD = 8;
+    /** how far ahead of himself, along the path, an escorted giant is sent each time (cove2: past any giant's own
+     *  "there" distance, so he never stops short of a corner and stands there) */
+    static final double ESCORT_LEAD = 12;
 
     /**
-     * (lagfix, JJ "no road follow") walks the path with the players: a spot a few blocks along the road, given again
-     * each second, so he keeps to the road at a pace they can keep up with; no player within the blocks (24): he
-     * stops where he is and waits for them, then goes on from where he stopped. True at the path's end.
+     * (lagfix, JJ "no road follow"; cove2 "did not follow path") walks the path with the players: each second he is sent
+     * to the spot a few blocks further along the path than where he is on it (worked out from the segment he is on,
+     * never back along it), so he keeps to the road, round its corners, at a pace they can keep up with; off the road
+     * (pushed, or after a fight) that spot brings him back onto it. No player within the blocks (24): he stops where
+     * he is and waits for them. True at the path's end.
      */
     private static boolean escort(MinecraftServer server, LivingEntity e, String[] w, Live lv, AdvData.State in,
             long now) {
@@ -380,26 +399,37 @@ public final class Scripts {
             return now - lv.started > 200;
         double range = w.length > 2 ? num(w[2]) : 24;
         int n = p.pts.size();
-        if (lv.pt >= n) lv.pt = n - 1;
-        // (from the nearest point on: after a fight or a push he picks up the road where he is)
-        if (lv.lastGo < 0) lv.pt = nearestAhead(p, e, lv.pt);
-        double near = Math.min(AdvGiants.near(e), 4);
-        double[] at = p.pts.get(lv.pt);
-        double d = Math.sqrt(AdvGiants.horizontal(e.position(), new Vec3(at[0], 0, at[2])));
-        while (d <= near) {
-            if (lv.pt == n - 1) return true;
-            lv.pt++;
-            lv.best = Double.MAX_VALUE;
-            lv.bestAt = now;
-            at = p.pts.get(lv.pt);
-            d = Math.sqrt(AdvGiants.horizontal(e.position(), new Vec3(at[0], 0, at[2])));
+        double[] last = p.pts.get(n - 1);
+        double end = Math.sqrt(AdvGiants.horizontal(e.position(), new Vec3(last[0], 0, last[2])));
+        if (end <= Math.max(AdvGiants.near(e), 5)) return true;
+        // where he is along the path: the nearest spot on this segment or the next two (never back along it)
+        if (lv.pt >= n - 1) lv.pt = Math.max(0, n - 2);
+        double along = 0, run = 0, best = Double.MAX_VALUE;
+        int seg = lv.pt;
+        for (int i = 0; i + 1 < n; i++) {
+            double[] a = p.pts.get(i), b = p.pts.get(i + 1);
+            double vx = b[0] - a[0], vz = b[2] - a[2], len = Math.sqrt(vx * vx + vz * vz);
+            if (i >= lv.pt && i <= lv.pt + 2 && len > 0) {
+                double t = Math.max(0, Math.min(1, ((e.getX() - a[0]) * vx + (e.getZ() - a[2]) * vz) / (len * len)));
+                double d = Math.hypot(a[0] + vx * t - e.getX(), a[2] + vz * t - e.getZ());
+                if (d < best - 0.01) {
+                    best = d;
+                    along = run + len * t;
+                    seg = i;
+                }
+            }
+            run += len;
         }
+        lv.pt = seg;
         if (AdvGiants.nearest(e, range, null) == null) {
-            // nobody with him: he waits here (sent to his own spot so he stops), and the stuck clock stops
+            // nobody with him: he waits here (sent to this spot again every two seconds, so he never wanders off from
+            // it: cove2, a Pitchgut left waiting walked away across the map), and the stuck clock stops
             if (!lv.waiting) {
                 lv.waiting = true;
-                AdvGiants.go(server, e, e.getX(), e.getZ());
+                lv.anchor = e.position();
+                lv.lastGo = -100;
             }
+            hold(server, e, lv, now);
             lv.bestAt = now;
             return false;
         }
@@ -407,53 +437,46 @@ public final class Scripts {
             lv.waiting = false;
             lv.lastGo = -100;
         }
-        if (d < lv.best - 0.5) {
-            lv.best = d;
+        double[] spot = n == 1 ? new double[] {last[0], last[2]} : along(p, along + ESCORT_LEAD);
+        if (along > lv.best + 0.5 || lv.best == Double.MAX_VALUE) {
+            lv.best = along;
             lv.bestAt = now;
         }
         if (now - lv.lastGo >= 20) {
-            Vec3 to = new Vec3(at[0] - e.getX(), 0, at[2] - e.getZ());
-            Vec3 spot = to.length() > ESCORT_LEAD ? e.position().add(to.normalize().scale(ESCORT_LEAD))
-                    : new Vec3(at[0], 0, at[2]);
-            AdvGiants.go(server, e, spot.x, spot.z);
+            AdvGiants.go(server, e, spot[0], spot[1]);
             lv.lastGo = now;
         }
-        // no nearer for ten seconds (stuck on something): a step along the way
+        // no further along for ten seconds (stuck on something): a step along the way
         if (now - lv.bestAt > 200) {
-            Vec3 to = new Vec3(at[0] - e.getX(), 0, at[2] - e.getZ());
+            Vec3 to = new Vec3(spot[0] - e.getX(), 0, spot[1] - e.getZ());
             AdvGiants.nudge(server, e, e.position().add(to.normalize().scale(Math.min(4, to.length()))));
             lv.bestAt = now;
         }
         return false;
     }
 
-    /** the path point to make for: the nearest to him from this one on (never back along the road) */
-    private static int nearestAhead(AdvData.Path p, LivingEntity e, int from) {
-        int best = from;
-        double bd = Double.MAX_VALUE;
-        for (int i = from; i < p.pts.size(); i++) {
-            double[] q = p.pts.get(i);
-            double d = AdvGiants.horizontal(e.position(), new Vec3(q[0], 0, q[2]));
-            if (d < bd) {
-                bd = d;
-                best = i;
+    /** the spot so far along the path (x, z), its end past its last point */
+    static double[] along(AdvData.Path p, double s) {
+        double run = 0;
+        for (int i = 0; i + 1 < p.pts.size(); i++) {
+            double[] a = p.pts.get(i), b = p.pts.get(i + 1);
+            double len = Math.hypot(b[0] - a[0], b[2] - a[2]);
+            if (s <= run + len && len > 0) {
+                double t = (s - run) / len;
+                return new double[] {a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t};
             }
+            run += len;
         }
-        // (past that point already, along the road to the next: the next)
-        if (best + 1 < p.pts.size()) {
-            double[] a = p.pts.get(best), b = p.pts.get(best + 1);
-            if ((e.getX() - a[0]) * (b[0] - a[0]) + (e.getZ() - a[2]) * (b[2] - a[2]) > 0) best++;
-        }
-        return best;
+        double[] l = p.pts.get(p.pts.size() - 1);
+        return new double[] {l[0], l[2]};
     }
 
-    /** stays at the spot the step began (walked back when he wanders) */
+    /** stays at the spot the step began: sent to it every two seconds (there already, that keeps him from picking a
+     *  far wander spot of his own: cove2), walked back when he strays */
     private static void hold(MinecraftServer server, LivingEntity e, Live lv, long now) {
         if (lv.anchor == null || now - lv.lastGo < 40) return;
-        if (Math.sqrt(AdvGiants.horizontal(e.position(), lv.anchor)) > AdvGiants.near(e) + 2) {
-            AdvGiants.go(server, e, lv.anchor.x, lv.anchor.z);
-            lv.lastGo = now;
-        }
+        AdvGiants.go(server, e, lv.anchor.x, lv.anchor.z);
+        lv.lastGo = now;
     }
 
     /** stands guard at his post: goes for anyone who comes too close, then back */
@@ -477,8 +500,39 @@ public final class Scripts {
 
     private static boolean until(MinecraftServer server, LivingEntity e, AdvData.State in, String[] w, int i) {
         if (w.length < i + 3 || !w[i].equals("until")) return false;
-        if (w[i + 1].equals("players")) return AdvGiants.nearest(e, num(w[i + 2]), null) != null;
-        return playerIn(server, e, in, w[i + 2]);
+        for (int k = i + 1; k + 1 < w.length; k += 3) {
+            if (w[k].equals("players") ? AdvGiants.nearest(e, num(w[k + 1]), null) != null
+                    : playerIn(server, e, in, w[k + 1])) return true;
+        }
+        return false;
+    }
+
+    /**
+     * (cove2) goes after the nearest player wherever they run (his own hunt, renewed every two seconds), until they are
+     * that far from where the hunt began, fall, or leave: then he forgives them, calms down and walks back. True then.
+     */
+    private static boolean hunt(MinecraftServer server, LivingEntity e, Live lv, double far, boolean fresh, long now) {
+        ServerPlayer p = null;
+        if (fresh) {
+            p = AdvGiants.nearest(e, Math.max(64, far), null);
+            if (p == null) return true;
+            lv.fighting = p.getUUID();
+            AdvGiants.mood(server, e, "hunting");
+        } else if (lv.fighting != null) p = server.getPlayerList().getPlayer(lv.fighting);
+        boolean gone = p == null || !p.isAlive() || p.isSpectator() || p.level() != e.level() || lv.anchor == null
+                || AdvGiants.horizontal(p.position(), lv.anchor) > far * far;
+        if (gone) {
+            AdvGiants.live(server, e, "forgive");
+            AdvGiants.mood(server, e, "calm");
+            if (lv.anchor != null) AdvGiants.go(server, e, lv.anchor.x, lv.anchor.z);
+            lv.fighting = null;
+            return true;
+        }
+        if (now - lv.lastGo >= 40) {
+            AdvGiants.turn(server, e, p);
+            lv.lastGo = now;
+        }
+        return false;
     }
 
     /** a player (not watching) is inside the area */
