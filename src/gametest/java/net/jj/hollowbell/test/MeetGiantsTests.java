@@ -1,21 +1,27 @@
 package net.jj.hollowbell.test;
 
+import static net.jj.hollowbell.test.HollowbellGameTests.drop;
 import static net.jj.hollowbell.test.HollowbellGameTests.force;
+import static net.jj.hollowbell.test.HollowbellGameTests.player;
 import static net.jj.hollowbell.test.HollowbellGameTests.release;
 import static net.jj.hollowbell.test.HollowbellGameTests.spawnAway;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.util.List;
+import java.util.UUID;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.GiantsAdmin;
 import net.jj.hollowbell.GiantsBehave;
 import net.jj.hollowbell.GiantsBridge;
+import net.jj.hollowbell.GiantsPlayers;
+import net.jj.hollowbell.entity.HearthYards;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Meeting;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
@@ -234,6 +240,72 @@ public class MeetGiantsTests implements FabricGameTest {
                 GiantsAdmin.clear();
                 force(h, (int) at.x, (int) at.z, 1, false);
                 other.discard();
+                release(h, e);
+            }
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "meet_yard")
+    public void inAHearthYardHeStartsNoFightOfHisOwnButAnOrderStillStartsOne(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 1580);
+        String dim = h.getLevel().dimension().location().toString();
+        String yard = "test-hollowbell-meet-yard";
+        h.runAfterDelay(5, () -> {
+            // (the stand-in comes now, so no wild meeting can start before the checks)
+            Mob z = fakeGiant(h, e.position().add(6, 0, 6), "fire_ice_cerberus");
+            try {
+                h.assertFalse(HearthYards.noFight(e, z), "no yard yet, and he'd fight the Cerberus");
+                HearthYards.put(dim, yard, e.getX(), e.getZ(), 12);
+                h.assertTrue(HearthYards.noFight(e, z), "the yard round him doesn't count");
+                h.assertFalse(e.startMeeting(z), "he started a fight in the yard");
+                h.assertTrue(e.meetFoe() == null, "he took on the Cerberus anyway");
+                h.assertTrue(e.startMeeting(z, true), "an order didn't start the fight");
+                h.assertTrue(z.getUUID().equals(e.meetFoe()), "not fighting the Cerberus");
+            } finally {
+                HearthYards.remove(dim, yard);
+                z.discard();
+                release(h, e);
+            }
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "meet_docked")
+    public void dockedBesideTheHearthstrideHeStartsNoFightOfHisOwn(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 1581);
+        h.runAfterDelay(5, () -> {
+            Mob z = fakeGiant(h, e.position().add(6, 0, 6), "fire_ice_cerberus");
+            try {
+                e.addTag(HearthYards.DOCKED + UUID.randomUUID());
+                h.assertTrue(HearthYards.docked(e) && HearthYards.noFight(e, z), "docked doesn't count");
+                h.assertFalse(e.startMeeting(z), "a docked giant started a fight");
+                h.assertTrue(e.meetFoe() == null, "he took on the Cerberus anyway");
+                h.assertTrue(e.startMeeting(z, true), "an order didn't start the fight");
+            } finally {
+                z.discard();
+                release(h, e);
+            }
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40, batch = "meet_yard_player")
+    public void aPlayerInAHearthYardIsLeftAlone(GameTestHelper h) {
+        HollowbellEntity e = spawnAway(h, 0.3f, HollowbellEntity.CALM, 1582);
+        ServerPlayer p = player(h, e.position().add(-6, 0, 0));
+        String dim = h.getLevel().dimension().location().toString();
+        String yard = "test-hollowbell-player-yard";
+        h.runAfterDelay(5, () -> {
+            try {
+                h.assertFalse(GiantsPlayers.ignored(p), "no yard yet, and he's left alone");
+                HearthYards.put(dim, yard, p.getX(), p.getZ(), 12);
+                h.assertTrue(GiantsPlayers.ignored(p), "in the yard and not left alone");
+                HearthYards.remove(dim, yard);
+                h.assertFalse(GiantsPlayers.ignored(p), "the yard is gone and he's still left alone");
+            } finally {
+                HearthYards.remove(dim, yard);
+                drop(p);
                 release(h, e);
             }
             h.succeed();

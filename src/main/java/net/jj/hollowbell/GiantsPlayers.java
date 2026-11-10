@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import net.jj.hollowbell.entity.HearthYards;
 import net.jj.hollowbell.solid.SitHost;
 import net.jj.hollowbell.solid.Sitting;
 import net.minecraft.network.chat.Component;
@@ -170,7 +171,7 @@ public final class GiantsPlayers {
     public static boolean ignored(@Nullable Entity e) {
         if (!(e instanceof Player p)) return false;
         Rule r = rules.get(p.getUUID());
-        return r != null && r.ignored();
+        return r != null && r.ignored() || HearthYards.inside(p);
     }
 
     /** GiantsBridge "players": {"players":1,"rules":{"<uuid>":{"own":false,"ignored":true}}}; the list replaces the last */

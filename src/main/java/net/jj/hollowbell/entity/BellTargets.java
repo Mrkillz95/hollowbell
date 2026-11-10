@@ -530,6 +530,8 @@ final class BellTargets {
 
     /** a meeting fight with this giant starts now (the table said so) */
     public boolean startMeeting(LivingEntity other) {
+        // (the orders, and the Guide's fight even when wild, come in by the other one)
+        if (HearthYards.noFight(hb, other)) return false;
         return startMeeting(other, false);
     }
 
