@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.43
+# Hollowbell (Java mod), version 1.12.44
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,10 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- Knows the **Hearthstride**, the ninth giant (a walking house): he's in `/giants`, the giant lists and the meeting table. He keeps away from the Hearthstride, and starts no fight with another giant near him.
+
+### 1.12.43
 
 - **Tiny giants** (size 0.01 to 0.1): you can always hit him with a sword, an arrow or a trident, and he never flings, traps or smothers you or your animals.
 - His moves, particles, sounds and screen shake now shrink with him at every size, and his minions do too.

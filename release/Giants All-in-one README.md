@@ -1,8 +1,8 @@
-# JJ's Giants: all eight in one jar
+# JJ's Giants: all nine in one jar
 
-One jar with all eight giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
-Willow, Wreckback, the Swarmforge and the Gloamwick, and the **Giants Guide**, a book about all of them. It works the
-same as having the eight jars.
+One jar with all nine giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
+Willow, Wreckback, the Swarmforge, the Gloamwick and the Hearthstride, and the **Giants Guide**, a book about all of
+them. It works the same as having the nine jars.
 Each giant keeps its own name inside, so your worlds keep working.
 
 Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reserved.
@@ -11,27 +11,28 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.14.2 |
-| Pitchgut | 1.35.43 |
-| Furrowmaw | 1.17.40 |
-| Fire & Ice Cerberus | 2.18.40 |
-| Hollowbell | 1.12.43 |
-| Lantern Willow | 1.10.43 |
-| Wreckback | 1.2.48 |
-| The Swarmforge | 1.4.46 |
-| The Gloamwick | 1.2.27 |
+| Giants Guide | 1.15.0 |
+| Pitchgut | 1.35.44 |
+| Furrowmaw | 1.17.41 |
+| Fire & Ice Cerberus | 2.18.41 |
+| Hollowbell | 1.12.44 |
+| Lantern Willow | 1.10.44 |
+| Wreckback | 1.2.49 |
+| The Swarmforge | 1.4.47 |
+| The Gloamwick | 1.2.28 |
+| The Hearthstride | 1.0.0 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.16.2), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.17.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
 the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
-`wreckback-…`, `swarmforge-…` and `gloamwick-…` out of your mods folder, and the old `giants-all-…` jar too, then put
-`giants-all-1.16.2.jar` (from the Releases page) in. Keep Fabric API in there.
+`wreckback-…`, `swarmforge-…`, `gloamwick-…` and `hearthstride-…` out of your mods folder, and the old
+`giants-all-…` jar too, then put `giants-all-1.17.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -47,7 +48,7 @@ A book about every giant you have. Right-click it to open it.
 
 | Tab | What's on it |
 |---|---|
-| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial, fortress, warship, factory or spirit), his moods |
+| About | what he is, how big, how he fights (juggernaut, ambusher, skirmisher, aerial, fortress, warship, factory, spirit or home), his moods |
 | Where | his ground and what it looks like, how to find him (the finder and its recipe), whether the world keeps one of him out there and how many at once. On a server it also says where he is right now. |
 | Moves | every move, light, medium and heavy (and Wreckback's sea moves), with what it does (the same words as his own book) |
 | Army | the Swarmforge only: every robot and unit he sends out, and the army orders in his book |
@@ -126,6 +127,36 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.14.2: the Wreck Cove Rescue's guard is a real threat and the lost giant keeps to the road,
   giant tags can be given from the book (from a list, the one you look at, or every one of a kind) and shown without
   his own name, and the Guide's go beats a giant's keeping away.
+
+## New in 1.17.0
+
+### The Hearthstride joins
+
+JJ's ninth giant: an old timber cottage walking on two great chicken legs, about 145 blocks tall. Look twice and his
+front door is a mouth and his two upper windows are eyes.
+
+- **He doesn't fight: he's a home.** Come in through his door and live in his rooms while he walks, strides or
+  settles down like any house. His rooms are built at your size: you grow or shrink to fit them as you come in.
+- **Six forms:** the Cottage, the Bastion (a castle on four stone legs), the Wingfold (a house with wings that
+  flies), the Scuttler (a quick little shed), the Workshop and the Library Tower. He rebuilds himself from one to
+  another by moving his own walls, roof and legs, and carries you safely through it.
+- **Beds, storage and building:** a bed in him is your respawn point wherever he walks; every chest and barrel in him
+  opens his one shared storage; those he lets live in him can build in his rooms.
+- **Trust:** shelter in him, sleep in his bed, never hit him. At full trust he gives you his Hearth Book and you're
+  his Keeper: choose who may come in, give roles, order him about.
+- **Thirty moves** (five a form) to keep foes off his household: door snaps, hay bales, a drawbridge, wind, an iron
+  wall, a lullaby and more. They hurt nothing, or hardly.
+- **His Hearthmeadows**, 3,000 to 15,000 blocks from spawn: rolling meadows with Hearthblooms and Thatchgrass, a brook
+  and his yard. Find him with a Hearth Lantern.
+- **When he falls** he leaves a ruined cottage and a cold hearth. His Keeper can light it again (16 logs, 16
+  cobblestone and a lantern) and he stands up there.
+- Pitchgut and the Cerberus may go for him. Every other giant keeps away from him, and won't start a fight with
+  another giant near him.
+- The Giants Guide has his page, the admin book has his settings, and the Performance screen his chimney smoke and
+  lit windows. He never fights in minigames, and he's earned by trust, so he isn't one of My Giant's picks.
+
+Inside: Pitchgut 1.35.44, Furrowmaw 1.17.41, Cerberus 2.18.41, Hollowbell 1.12.44, Lantern Willow 1.10.44,
+Wreckback 1.2.49, Swarmforge 1.4.47, Gloamwick 1.2.28, Hearthstride 1.0.0, Giants Guide 1.15.0.
 
 ## New in 1.16.2
 
