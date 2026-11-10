@@ -111,7 +111,7 @@ public final class AdminJson {
         Type type = Type.of(str(o, "type", 16));
         if (!ID.matcher(id).matches() || type == null || id.startsWith("all.") != shared) return null;
         String cat = str(o, "cat", 16);
-        // (coming back after he falls, as the Hearthstride's relighting rows say it, is spawning)
+        // (a respawn row, coming back after he falls, goes under spawning)
         if (cat.equals("respawn")) cat = "spawning";
         if (!AdminSetting.CATEGORIES.contains(cat)) cat = "behaviour";
         String when = str(o, "when", 16);

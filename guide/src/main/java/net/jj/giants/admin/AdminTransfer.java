@@ -79,9 +79,8 @@ public final class AdminTransfer {
             "night_terrors", "wild_sizes");
 
     /** the re-tune settings that mean something for a giant who never fights; the rest leave him as he is */
-    private static final Set<String> HOME_TAKES = Set.of("spawnSize", "maxInWorld", "worldRespawnDays",
-            "ownedRespawnDays", "respawn", "passiveHeal", "roam", "sleepSchedule", "meetings", "chunkLoading",
-            "worldScale");
+    private static final Set<String> HOME_TAKES = Set.of("spawnSize", "maxInWorld", "worldRespawnDays", "respawn",
+            "passiveHeal", "roam", "sleepSchedule", "meetings", "chunkLoading", "worldScale");
 
     /** "a":1,"b":2 with only the settings a giant who never fights takes */
     private static String homeOnly(String every) {
