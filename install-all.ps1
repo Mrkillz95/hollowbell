@@ -27,7 +27,7 @@ $jar = @(Get-ChildItem $cache, (Join-Path $repo 'release') -Filter 'giants-all-*
     Sort-Object { [version]($_.BaseName -replace '^giants-all-', '') } | Select-Object -Last 1
 if (-not $jar) { Write-Host 'Could not download the all-in-one jar. Check you are online and signed in (gh auth status).'; exit 1 }
 
-$singles = @('pitchgut-*.jar', 'furrowmaw-*.jar', 'fire-ice-cerberus-*.jar', 'hollowbell-*.jar', 'lanternwillow-*.jar', 'wreckback-*.jar', 'swarmforge-*.jar', 'gloamwick-*.jar')
+$singles = @('pitchgut-*.jar', 'furrowmaw-*.jar', 'fire-ice-cerberus-*.jar', 'hollowbell-*.jar', 'lanternwillow-*.jar', 'wreckback-*.jar', 'swarmforge-*.jar', 'gloamwick-*.jar', 'hearthstride-*.jar')
 foreach ($t in $targets) {
     if (-not (Test-Path $t)) { continue }
     foreach ($f in $singles) { Get-ChildItem $t -Filter $f | Remove-Item -Confirm:$false }
