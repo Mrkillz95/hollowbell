@@ -7,7 +7,8 @@
   "environment": "*",
   "entrypoints": {
     "fabric-gametest": [
-      "net.jj.giants.duels.GiantDuelTests"
+      "net.jj.giants.duels.GiantDuelTests",
+      "net.jj.giants.duels.SpeedProbe"
     ]
   },
   "depends": {

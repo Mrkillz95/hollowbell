@@ -47,7 +47,8 @@ public class BellingRenderer extends EntityRenderer<Belling> {
         float g = e.grown(partial);
         float grow = g >= 1f ? 1f : 0.2f + 0.8f * g + 0.25f * Mth.sin(g * (float) Math.PI);
         float sxz = SIZE * grow * (1f - 0.12f * p), sy = SIZE * grow * (1f + 0.08f * p);
-        Matrix4f base = new Matrix4f(ps.last().pose()).rotateY(t * 0.01f).scale(sxz, sy, sxz);
+        Matrix4f base = new Matrix4f(ps.last().pose()).scale(e.getScale()) // (his size: HollowbellEntity.scaleMinion)
+                .rotateY(t * 0.01f).scale(sxz, sy, sxz);
         Matrix4f view = new Matrix4f(RenderSystem.getModelViewMatrix());
         Matrix4f mv = new Matrix4f();
         float k = 0.3f + 0.7f * Math.max(LightTexture.block(light), LightTexture.sky(light)) / 15f;

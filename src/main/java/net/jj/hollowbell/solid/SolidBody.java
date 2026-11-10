@@ -29,6 +29,11 @@ public interface SolidBody {
     /** a box round all of him in the world (where to look at all; may be generous) */
     AABB solidBox();
 
+    /** a close box round where he is drawn now (solidBox if there's nothing closer to go by) */
+    default AABB solidTightBox() {
+        return solidBox();
+    }
+
     /** the pose as of this tick, by bone (never changed by the kit) */
     Matrix4f[] solidPose();
 

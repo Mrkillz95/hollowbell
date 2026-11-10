@@ -64,7 +64,7 @@ final class BellRiding {
         int[] b = A.bones();
         Vec3 tip = hb.armTipWorld(a), last = hb.boneWorld(b[b.length - 1], A.joints()[b.length - 1]);
         Vec3 d = tip.subtract(last);
-        return d.lengthSqr() < 1e-6 ? tip : tip.add(d.normalize().scale(4 * hb.bellScale() + 1));
+        return d.lengthSqr() < 1e-6 ? tip : tip.add(d.normalize().scale(4 * hb.bellScale() + 1 * Math.min(1f, 10f * hb.bellScale())));
     }
 
     /** held in the wrap: thrashing about in the coil, jolted hardest as it squeezes (both sides work it out) */
@@ -222,7 +222,7 @@ final class BellRiding {
         Vec3 out = new Vec3(from.x - hb.getX(), 0, from.z - hb.getZ());
         if (out.lengthSqr() < 1e-4) out = new Vec3(1, 0, 0);
         out = out.normalize();
-        for (double r = 100 * s + 3; r < 100 * s + 40; r += 4 * s + 3) {
+        for (double r = 100 * s + 3 * Math.min(1f, 10f * s); r < 100 * s + 40 * Math.min(1f, 10f * s); r += 4 * s + 3 * Math.min(1f, 10f * s)) {
             for (int turn = 0; turn < 16; turn++) {
                 double a = Math.PI / 8 * ((turn + 1) / 2) * (turn % 2 == 0 ? 1 : -1);
                 double dx = out.x * Math.cos(a) - out.z * Math.sin(a), dz = out.x * Math.sin(a) + out.z * Math.cos(a);

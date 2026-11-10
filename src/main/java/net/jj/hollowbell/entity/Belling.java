@@ -74,6 +74,15 @@ public class Belling extends Monster {
         return entityData.get(DATA_BORN) == 0 ? 1f : Mth.clamp((tickCount + partial) / 12f, 0f, 1f);
     }
 
+    /** its blows shove no harder than its Hollowbell's size allows (the game's own knock with them too) */
+    @Override
+    public boolean doHurtTarget(net.minecraft.world.entity.Entity t) {
+        boolean hit = super.doHurtTarget(t);
+        HollowbellEntity h = owner();
+        if (hit && h != null) h.capShove(t);
+        return hit;
+    }
+
     private @Nullable HollowbellEntity owner() {
         if (owner == null || !(level() instanceof ServerLevel sl)) return null;
         return sl.getEntity(owner) instanceof HollowbellEntity h ? h : null;

@@ -144,7 +144,9 @@ final class BellHealth {
             case SPOT -> inside ? 3.5f : 2.5f;
             case POD -> 1f;
             case EGG -> 0.3f;
-            default -> 0.1f; // the copper and bone take very little
+            // the copper and bone take very little; a small one's is thinner (out of reach of his crown and spots
+            // from the ground, a small one took hundreds of sword blows): up to a third of a blow at his smallest
+            default -> 0.1f + 0.25f * Mth.clamp((0.09f - hb.bellScale()) / 0.08f, 0f, 1f);
         };
     }
 
@@ -188,7 +190,7 @@ final class BellHealth {
                 hb.moves.armHit(part, amount, att);
             }
             if ((k == BellRig.Kind.SPOT || k == BellRig.Kind.CROWN) && at != null)
-                hb.particles(ParticleTypes.GLOW, at, 20, 4 * hb.bellScale() + 0.5, 0.1);
+                hb.particles(ParticleTypes.GLOW, at, 20, 4 * hb.bellScale() + 0.5 * Math.min(1f, 10f * hb.bellScale()), 0.1);
         }
         // (Part 8) weak points: the glowing spots on his bell and his crown (off: the same number)
         if (net.jj.hollowbell.GiantsSystems.active())

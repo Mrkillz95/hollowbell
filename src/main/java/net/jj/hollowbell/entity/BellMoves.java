@@ -353,8 +353,8 @@ public final class BellMoves {
         Vector3f a = h.aim();
         Vec3 aimAt = h.toWorld(a);
         Vec3 d = new Vec3(aimAt.x - h.getX(), 0, aimAt.z - h.getZ());
-        if (d.length() > 1) across = d.normalize().scale(Math.min(d.length() * 0.05, 0.4 + 0.6 * s));
-        return new Vec3(across.x, -(0.9 + 1.6 * s), across.z);
+        if (d.length() > 1) across = d.normalize().scale(Math.min(d.length() * 0.05, 0.4 * Math.min(1f, 10f * s) + 0.6 * s));
+        return new Vec3(across.x, -(0.9 * Math.min(1f, 10f * s) + 1.6 * s), across.z);
     }
 
     double groundUnder() {
@@ -433,6 +433,8 @@ public final class BellMoves {
             return false;
         // (tinier than his old smallest size he lifts nothing: see bigEnoughToHold)
         if (!h.bigEnoughToHold() && (which == Moves.GRAB || which == Moves.HARVEST)) return false;
+        // (and nobody too big for his size to hold: a fifth of how big he is drawn)
+        if ((which == Moves.GRAB || which == Moves.HARVEST) && at != null && !h.canHold(at)) return false;
         target = at;
         struckThisMove.clear();
         hitAt.clear();
@@ -500,7 +502,7 @@ public final class BellMoves {
                 if (at == null && forcedSpot == null) aim = new Vector3f(1, 0, 0);
             }
             case Moves.SKY_DIVE -> {
-                double top = Math.max(h.getY(), at != null ? at.getY() : h.getY()) + 70 * s + 30;
+                double top = Math.max(h.getY(), at != null ? at.getY() : h.getY()) + 70 * s + 30 * Math.min(1f, 10f * s);
                 diveTop = Math.min(top, NoWait.ceiling(h.level()) - (rig.crownY + 20) * s);
                 diveOver = 0f;
             }
@@ -566,7 +568,7 @@ public final class BellMoves {
         float s = s();
         h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ev, 4f, 1f);
         for (ServerPlayer p : level().players())
-            if (p.distanceToSqr(h) < Mth.square(200 * s + 80))
+            if (p.distanceToSqr(h) < Mth.square(200 * s + 80 * Math.min(1f, 10f * s)))
                 net.jj.hollowbell.GiantsPlayers.moveLine(
                         p, Component.translatable("warn.hollowbell." + name).withStyle(ChatFormatting.RED), true);
     }
@@ -660,9 +662,9 @@ public final class BellMoves {
             Vec3 spot = holds.fetchSpot(fetch);
             float s = s();
             fetchWait++;
-            boolean near = h.horiz(spot) < 1.5 + 3 * s;
+            boolean near = h.horiz(spot) < 1.5 * Math.min(1f, 10f * s) + 3 * s;
             fetchThere = near ? fetchThere + 1 : 0;
-            boolean level = Math.abs(h.getY() - fetch.getY()) < 0.3 + 1.5 * s || fetchThere > 200;
+            boolean level = Math.abs(h.getY() - fetch.getY()) < 0.3 * Math.min(1f, 10f * s) + 1.5 * s || fetchThere > 200;
             // (if he somehow can't get to the spot, he tries from where he is after a good while)
             boolean waited = fetchWait > 20 * 45 && h.horiz(fetch.position()) < h.bellRadius() * 1.4;
             if (((near && level) || waited) && holds.startCarry(fetch)) {
@@ -728,7 +730,7 @@ public final class BellMoves {
         double d = h.horiz(aimAt(tg));
         double bell = h.bellRadius();
         double over = tg.getY() - h.groundAt(tg.getX(), tg.getZ());
-        boolean flying = tg instanceof Player p && (p.isFallFlying() || p.getAbilities().flying) || over > 8 + 20 * s;
+        boolean flying = tg instanceof Player p && (p.isFallFlying() || p.getAbilities().flying) || over > 8 * Math.min(1f, 10f * s) + 20 * s;
         // (up above his rim nothing hanging under him reaches it)
         boolean above = tg.getY() > h.getY() + rig.rimY * s;
         boolean ground = !flying;
@@ -743,7 +745,7 @@ public final class BellMoves {
         if (d < bell * 0.85 && !h.sunk() && carry && !above) w[Moves.GRAB] = 4;
         if (d < bell * 3 && clear) w[Moves.VOLLEY] = flying ? 5 : 3;
         if (d < bell * 1.3 && !above) w[Moves.LASH] = 4;
-        if (d < 50 * s + 30) w[Moves.FLASH] = night ? 3 : 1;
+        if (d < 50 * s + 30 * Math.min(1f, 10f * s)) w[Moves.FLASH] = night ? 3 : 1;
         // medium
         if (d < bell * 0.85 && !above) w[Moves.CURTAIN] = 2;
         if (d < bell * 1.4 && ground) w[Moves.SWEEP] = 2;
@@ -847,6 +849,7 @@ public final class BellMoves {
         double k = 1.0 - Mth.clamp(e.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE), 0, 1) * 0.6;
         e.setDeltaMovement(e.getDeltaMovement().add(d.x * out * k, up * k, d.z * out * k));
         e.hurtMarked = true;
+        h.capShove(e);
     }
 
     /** hurts e at most once every gap ticks during a move */
@@ -866,6 +869,7 @@ public final class BellMoves {
                 p.onUpdateAbilities();
             }
             p.setDeltaMovement(p.getDeltaMovement().x, -1.6, p.getDeltaMovement().z);
+            h.capShove(p);
             net.jj.hollowbell.GiantsPlayers.moveLine(p, Component.translatable("message.hollowbell.knocked_down"), true);
         }
     }
@@ -915,8 +919,8 @@ public final class BellMoves {
         if (target != null && t < Moves.CURTAIN_CLOSE && target.isAlive()) h.setAim(h.toModel(aimAt(target)));
         if (t >= Moves.CURTAIN_CLOSE - 6 && t < Moves.CURTAIN_CLOSE + Moves.CURTAIN_HOLD && t % 5 == 0) {
             Vec3 c = h.toWorld(h.aim());
-            double r = 16 * s + 4;
-            for (LivingEntity e : near(new AABB(c, c).inflate(r, 10 + 30 * s, r))) {
+            double r = 16 * s + 4 * Math.min(1f, 10f * s);
+            for (LivingEntity e : near(new AABB(c, c).inflate(r, 10 * Math.min(1f, 10f * s) + 30 * s, r))) {
                 Vec3 in = new Vec3(c.x - at(e).x, 0, c.z - at(e).z);
                 double dist = in.length();
                 if (dist > r) continue;
@@ -924,6 +928,7 @@ public final class BellMoves {
                     e.setDeltaMovement(
                             e.getDeltaMovement().scale(0.4).add(in.normalize().scale(0.35)));
                 e.hurtMarked = true;
+                h.capShove(e);
                 e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
                 if (every(e, 20)) {
                     blow(e, 7f, c, 0, 0);
@@ -986,7 +991,7 @@ public final class BellMoves {
         sweepWas = now;
         if (was == null || box == null) return;
         for (Vec3[] line : was) for (Vec3 p : line) box = box.minmax(new AABB(p, p));
-        double r = 3 * s + 1.5;
+        double r = 3 * s + 1.5 * Math.min(1f, 10f * s);
         for (LivingEntity e : near(box.inflate(r + 2))) {
             if (struckThisMove.contains(e.getUUID())) continue;
             boolean hit = false;
@@ -995,6 +1000,7 @@ public final class BellMoves {
             struckThisMove.add(e.getUUID());
             blow(e, 18f, h.position(), 0, 0.6);
             e.setDeltaMovement(e.getDeltaMovement().add(dir.x * 2.0, 0, dir.z * 2.0));
+            h.capShove(e);
             sting(e);
         }
     }
@@ -1009,11 +1015,11 @@ public final class BellMoves {
         // the arm has weight: it lands when its tip really comes down, a moment after it's swung
         Vec3 tipNow = h.armTipWorld(arg);
         double gy = h.groundAt(tipNow.x, tipNow.z);
-        boolean down = tipNow.y - gy < 6 * s + 2;
+        boolean down = tipNow.y - gy < 6 * s + 2 * Math.min(1f, 10f * s);
         if (!landed && t >= hit - 2 && (down || t >= hit + 14)) {
             landed = true;
             landedAt[arg] = t;
-            armBlow(tipNow, -1, 32f, 12 * s + 4);
+            armBlow(tipNow, -1, 32f, 12 * s + 4 * Math.min(1f, 10f * s));
         }
         if (landed) armSlap(arg, 32f, landedAt[arg]);
     }
@@ -1032,9 +1038,9 @@ public final class BellMoves {
         }
         if (t > Moves.PULSE_AT && t <= Moves.PULSE_AT + 24) {
             // the shock goes out from the rim in a ring
-            double r = bell + (t - Moves.PULSE_AT) / 24.0 * (70 * s + 30);
+            double r = bell + (t - Moves.PULSE_AT) / 24.0 * (70 * s + 30 * Math.min(1f, 10f * s));
             Vec3 c = h.position().add(0, rig.rimY * s, 0);
-            for (LivingEntity e : near(h.bodyBox().inflate(80 * s + 34, 90 * s + 40, 80 * s + 34))) {
+            for (LivingEntity e : near(h.bodyBox().inflate(80 * s + 34 * Math.min(1f, 10f * s), 90 * s + 40 * Math.min(1f, 10f * s), 80 * s + 34 * Math.min(1f, 10f * s)))) {
                 if (struckThisMove.contains(e.getUUID())) continue;
                 double d = at(e).distanceTo(c);
                 if (d > r) continue;
@@ -1051,9 +1057,9 @@ public final class BellMoves {
         if (t == Moves.DROP_WIND) h.sound(h.position().add(0, 20 * s, 0), ModSounds.SWOOP, 4f, 0.45f);
         if (t == hit) {
             Vec3 c = h.position();
-            double r = bell * 1.2 + 6;
+            double r = bell * 1.2 + 6 * Math.min(1f, 10f * h.bellScale());
             for (LivingEntity e :
-                    near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + 50 * s + 8))) {
+                    near(h.bodyBox().inflate(r - bell + 4, 0, r - bell + 4).setMaxY(h.getY() + 50 * s + 8 * Math.min(1f, 10f * s)))) {
                 double d = h.horiz(at(e));
                 if (d > r) continue;
                 blow(e, 52f * (float) (1 - 0.35 * d / r), c, 2.4, 0.9);
@@ -1089,11 +1095,11 @@ public final class BellMoves {
             Vec3 low = new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z);
             fx(BigFx.TRAIL, low, px(4, 1.5), way, 0);
             if (t == Moves.LASH_AT) {
-                if (tip.y - low.y < 6 * s + 2) fx(BigFx.STOMP, low, px(6, 2), way, 0);
+                if (tip.y - low.y < 6 * s + 2 * Math.min(1f, 10f * s)) fx(BigFx.STOMP, low, px(6, 2), way, 0);
                 h.sound(tip, SoundEvents.TRIDENT_RIPTIDE_1.value(), 2f, 1.4f);
             }
         }
-        double r = 3 * s + 1.5;
+        double r = 3 * s + 1.5 * Math.min(1f, 10f * s);
         AABB box = new AABB(tip, tipWas);
         for (int i = 0; i < now.length; i++) box = box.minmax(new AABB(now[i], was[i]));
         for (LivingEntity e : near(box.inflate(r + 2))) {
@@ -1101,6 +1107,7 @@ public final class BellMoves {
             struckThisMove.add(e.getUUID());
             blow(e, 14f, h.position(), 0.6, 0.5);
             e.setDeltaMovement(e.getDeltaMovement().add(way.x * 1.8, 0, way.z * 1.8));
+            h.capShove(e);
             sting(e);
         }
     }
@@ -1144,7 +1151,7 @@ public final class BellMoves {
         if (t == 0) fx(BigFx.EMBERS, h.crownWorld(), px(10, 3), Vec3.ZERO, 18);
         if (t == Moves.FLASH_AT) {
             boolean night = h.level().getSkyDarken() > 6 || h.level().isThundering();
-            double r = 50 * s + 30;
+            double r = 50 * s + 30 * Math.min(1f, 10f * s);
             Vec3 c = h.position().add(0, (rig.rimY + 30) * s, 0);
             for (LivingEntity e : near(new AABB(c, c).inflate(r))) {
                 if (at(e).distanceTo(c) > r) continue;
@@ -1172,10 +1179,10 @@ public final class BellMoves {
             }
             if (t < hit - 2) continue;
             Vec3 tip = h.armTipWorld(k);
-            if (tip.y - h.groundAt(tip.x, tip.z) < 6 * s + 2 || t >= hit + 14) {
+            if (tip.y - h.groundAt(tip.x, tip.z) < 6 * s + 2 * Math.min(1f, 10f * s) || t >= hit + 14) {
                 stormLanded |= 1 << k;
                 landedAt[k] = t;
-                armBlow(tip, k, 45f, 16 * s + 5);
+                armBlow(tip, k, 45f, 16 * s + 5 * Math.min(1f, 10f * s));
             }
         }
     }
@@ -1185,7 +1192,7 @@ public final class BellMoves {
         float s = s();
         double gy = h.groundAt(tip.x, tip.z);
         Vec3 c = new Vec3(tip.x, gy, tip.z);
-        double topY = Math.max(tip.y, c.y) + 3 + 4 * s;
+        double topY = Math.max(tip.y, c.y) + 3 * Math.min(1f, 10f * s) + 4 * s;
         for (LivingEntity e : near(new AABB(c.x - r, c.y - 2, c.z - r, c.x + r, topY, c.z + r))) {
             double d = Math.hypot(at(e).x - c.x, at(e).z - c.z);
             if (d > r || !stormMay(e, arm)) continue;
@@ -1198,7 +1205,7 @@ public final class BellMoves {
         fx(heavy(px(14, 4)), c, px(14, 4));
         // copper on stone
         fx(BigFx.SPARKS, c, px(3, 1.5), Vec3.ZERO, 0);
-        if (griefing()) crack(BlockPos.containing(c), (int) Math.ceil(8 * s + 1));
+        if (griefing()) crack(BlockPos.containing(c), (int) Math.ceil(8 * s + 1 * Math.min(1f, 10f * s)));
     }
 
     /**
@@ -1210,7 +1217,7 @@ public final class BellMoves {
         float s = s();
         h.ensurePose();
         var A = rig.arms[arm];
-        double r = 8 * s + 3;
+        double r = 8 * s + 3 * Math.min(1f, 10f * s);
         List<Vec3> down = new ArrayList<>();
         int[] bones = A.bones();
         for (int i = 0; i < bones.length; i++) {
@@ -1218,7 +1225,7 @@ public final class BellMoves {
             for (int k = 0; k <= 2; k++) {
                 Vector3f p = new Vector3f(j0).lerp(j1, k / 2f);
                 Vec3 w = h.boneWorld(bones[i], p);
-                if (w.y - h.groundAt(w.x, w.z) < 10 * s + 3) down.add(w);
+                if (w.y - h.groundAt(w.x, w.z) < 10 * s + 3 * Math.min(1f, 10f * s)) down.add(w);
             }
         }
         if (down.isEmpty()) return;
@@ -1235,7 +1242,7 @@ public final class BellMoves {
         }
         for (Vec3 p : down) {
             for (LivingEntity e :
-                    near(new AABB(p.x - r, p.y - 10 * s - 4, p.z - r, p.x + r, p.y + 6 * s + 3, p.z + r))) {
+                    near(new AABB(p.x - r, p.y - 10 * s - 4, p.z - r, p.x + r, p.y + 6 * s + 3 * Math.min(1f, 10f * s), p.z + r))) {
                 String key = e.getUUID() + "/" + arm;
                 if (slapped.contains(key) || Math.hypot(at(e).x - p.x, at(e).z - p.z) > r || !stormMay(e, arm))
                     continue;
@@ -1281,11 +1288,11 @@ public final class BellMoves {
                 : h.toWorld(h.aim());
         List<Integer> ends = nearestStrands(aimAt, 5);
         for (int k : ends) {
-            Vec3 from = h.strandTipWorld(k).add(0, 1 + 2 * s, 0);
+            Vec3 from = h.strandTipWorld(k).add(0, 1 * Math.min(1f, 10f * s) + 2 * s, 0);
             Vec3 lead = target != null
                     ? target.getDeltaMovement().multiply(1, 0, 1).scale(from.distanceTo(aimAt) / 1.8)
                     : Vec3.ZERO;
-            shoot(from, aimAt.add(lead), Shot.STINGER, 7f, 1f, 1.6f + 0.6f * s, 3f);
+            shoot(from, aimAt.add(lead), Shot.STINGER, 7f, 1f, 1.6f * Math.min(1f, 10f * s) + 0.6f * s, 3f);
         }
         h.sound(h.position().add(0, 20 * s, 0), ModSounds.VOLLEY, 2.5f, 1f);
     }
@@ -1598,6 +1605,7 @@ public final class BellMoves {
             Belling b = new Belling(ModEntities.BELLING, level());
             b.setPos(at.x, at.y, at.z);
             b.setOwner(h);
+            HollowbellEntity.scaleMinion(b, h.bellScale()); // (as big and strong as he is)
             if (target != null) b.setTarget(target);
             level().addFreshEntity(b);
             // the shell breaking off the strand

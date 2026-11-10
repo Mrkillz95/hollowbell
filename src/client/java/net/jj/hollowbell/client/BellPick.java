@@ -83,7 +83,9 @@ public final class BellPick {
         Vector3f from = toModel.transformPosition((float) eye.x, (float) eye.y, (float) eye.z, new Vector3f());
         Vec3 u = look.normalize();
         Vector3f dir = toModel.transformDirection((float) u.x, (float) u.y, (float) u.z, new Vector3f());
-        return h.rig.raycast(h.state, h.pose, slices, from, dir, (float) max);
+        BellRig.Hit hit = h.rig.raycast(h.state, h.pose, slices, from, dir, (float) max);
+        // (a small one: anywhere in the box round him; see HollowbellEntity.smallHit)
+        return hit != null ? hit : h.smallHit(eye, look, max);
     }
 
     public static @Nullable HollowbellEntity looking() {

@@ -82,7 +82,7 @@ final class BellHolds {
         if (mv.t == Moves.REACH) {
             if (mv.target != null) {
                 // got it if it's within reach of the strand's end (or right under it)
-                double reach = 14 * s + 4;
+                double reach = 14 * s + 4 * Math.min(1f, 10f * s);
                 if (!mv.target.isAlive()
                         || !HollowbellEntity.canCarry(mv.target)
                         || (mv.target.position().distanceTo(tip) > reach
@@ -325,7 +325,7 @@ final class BellHolds {
                 return;
             }
             // it misses if they walk off, and lets go if they're hurt while it reaches: he tries again in a moment
-            boolean moved = who.position().distanceTo(mv.reachFrom) > 2.5 + 5 * s;
+            boolean moved = who.position().distanceTo(mv.reachFrom) > 2.5 * Math.min(1f, 10f * s) + 5 * s;
             boolean hurt = who.getHealth() < mv.reachHp - 0.01f || who.hurtTime > mv.reachHurt;
             mv.reachHurt = who.hurtTime;
             if (moved || hurt) {
@@ -357,7 +357,7 @@ final class BellHolds {
             float len =
                     cp.new Run(h.restOf(h.toModel(BellMoves.middle(who))), rig.crownY + 1 + mv.carryEnd(who)).length()
                             * s;
-            mv.carryLen = Mth.clamp(Mth.ceil(len / (0.12f + 1.0f * s)), 60, 20 * 30);
+            mv.carryLen = Mth.clamp(Mth.ceil(len / (0.12f * Math.min(1f, 10f * s) + 1.0f * s)), 60, 20 * 30);
             mv.carryT = 0;
             mv.carryU = 0f;
             h.sound(BellMoves.middle(who), ModSounds.GRAB, 2f, 1.1f);
@@ -486,7 +486,7 @@ final class BellHolds {
             var cp = mv.carryPath(mv.arg, mv.carryWho);
             h.ensurePose();
             float len = cp.new Run(h.restOf(h.aim()), rig.crownY + 1 + mv.carryEnd(mv.carryWho)).length() * s;
-            mv.carryLen = Mth.clamp(Mth.ceil(len / (0.12f + 1.0f * s)), 60, 20 * 30);
+            mv.carryLen = Mth.clamp(Mth.ceil(len / (0.12f * Math.min(1f, 10f * s) + 1.0f * s)), 60, 20 * 30);
             mv.carryPhase = BellMoves.PHASE_UP;
             mv.carryT = 0;
             return;
@@ -539,6 +539,7 @@ final class BellHolds {
             dropSeat(st);
             who.fallDistance = 0;
             who.setDeltaMovement(Vec3.ZERO);
+            h.capShove(who);
             who.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, false, false));
             if (who instanceof ServerPlayer sp)
                 sp.displayClientMessage(Component.translatable("message.hollowbell.set_down"), true);

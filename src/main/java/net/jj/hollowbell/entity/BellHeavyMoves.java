@@ -56,8 +56,8 @@ final class BellHeavyMoves {
         if (at.isEmpty()) at.add(h.position());
         for (Vec3 p : at) {
             double gy = h.groundAt(p.x, p.z);
-            AreaEffectCloud c = new AreaEffectCloud(mv.level(), p.x, Math.max(gy, Math.min(p.y, gy + 4 * s + 1)), p.z);
-            c.setRadius(3f + 5f * s);
+            AreaEffectCloud c = new AreaEffectCloud(mv.level(), p.x, Math.max(gy, Math.min(p.y, gy + 4 * s + 1 * Math.min(1f, 10f * s))), p.z);
+            c.setRadius(3f * Math.min(1f, 10f * s) + 5f * s);
             c.setDuration(260);
             c.setWaitTime(0);
             c.setRadiusPerTick(0f);
@@ -88,7 +88,7 @@ final class BellHeavyMoves {
             if (tg != null && tg.isAlive() && BellMoves.finite(tg.position())) {
                 Vec3 d = tg.position().subtract(c.position()).multiply(1, 0, 1);
                 if (d.length() > 1) {
-                    Vec3 step = d.normalize().scale(0.05 + 0.06 * s);
+                    Vec3 step = d.normalize().scale(0.05 * Math.min(1f, 10f * s) + 0.06 * s);
                     double gy = h.groundAt(c.getX() + step.x, c.getZ() + step.z);
                     c.setPos(c.getX() + step.x, Math.max(gy, c.getY() + (gy + 1 - c.getY()) * 0.1), c.getZ() + step.z);
                 }
@@ -99,7 +99,7 @@ final class BellHeavyMoves {
                 for (LivingEntity e : mv.level()
                         .getEntitiesOfClass(
                                 LivingEntity.class,
-                                new AABB(c.position(), c.position()).inflate(r, 3 + 3 * s, r),
+                                new AABB(c.position(), c.position()).inflate(r, 3 * Math.min(1f, 10f * s) + 3 * s, r),
                                 x -> h.fairGame(x) && h.fightingGiant(x))) {
                     if (Math.hypot(e.getX() - c.getX(), e.getZ() - c.getZ()) > r) continue;
                     e.invulnerableTime = 0;
@@ -120,10 +120,10 @@ final class BellHeavyMoves {
                 if (h.isPodPopped(i)) continue;
                 Vec3 pod = h.podWorld(i);
                 mv.fx(BigFx.SPARKS, pod, mv.px(4, 2), new Vec3(0, -1, 0), 0x9CFF6A);
-                mv.fx(BigFx.CLOUD, new Vec3(pod.x, h.groundAt(pod.x, pod.z), pod.z), 5 * s + 3, Vec3.ZERO, 0x9CFF6A);
+                mv.fx(BigFx.CLOUD, new Vec3(pod.x, h.groundAt(pod.x, pod.z), pod.z), 5 * s + 3 * Math.min(1f, 10f * s), Vec3.ZERO, 0x9CFF6A);
             }
         }
-        double r = 5 * s + 3;
+        double r = 5 * s + 3 * Math.min(1f, 10f * s);
         for (int i = 0; i < rig.pods.length; i++) {
             if (h.isPodPopped(i)) continue;
             Vec3 c = h.podWorld(i);
@@ -165,7 +165,7 @@ final class BellHeavyMoves {
                 ? mv.target.position()
                 : mv.forcedSpot != null ? mv.forcedSpot : mv.eggSpot != null ? mv.eggSpot : h.position();
         if (!BellMoves.finite(to)) to = h.position(); // (its place isn't a number: straight down under him)
-        double spread = 6 * s + 2;
+        double spread = 6 * s + 2 * Math.min(1f, 10f * s);
         to = to.add(
                 (h.getRandom().nextDouble() - 0.5) * 2 * spread,
                 0,
@@ -183,10 +183,11 @@ final class BellHeavyMoves {
             n++;
         }
         across = Math.max(1, across);
-        float r = 2.5f + 3f * s;
+        float r = 2.5f * Math.min(1f, 10f * s) + 3f * s;
         Shot sh = new Shot(mv.level(), h, Shot.EGG, 14f, r);
         sh.setPos(from.x, from.y, from.z);
         sh.setDeltaMovement((to.x - from.x) / across, 0, (to.z - from.z) / across);
+        h.capShove(sh);
         sh.setEgg(i, s, new Vec3(to.x, gy, to.z));
         mv.level().addFreshEntity(sh);
         h.sound(from, ModSounds.EGG_BURST, 2f, 1.1f);
@@ -207,7 +208,7 @@ final class BellHeavyMoves {
                     Moves.WHIRL_CRUSH - Moves.WHIRL_UP);
         if (mv.t > Moves.WHIRL_UP && mv.t < Moves.WHIRL_CRUSH) {
             if (mv.t % 20 == 0) h.sound(h.position(), ModSounds.CHURN, 3f, 0.7f);
-            double R = bell * 1.9 + 6;
+            double R = bell * 1.9 + 6 * Math.min(1f, 10f * h.bellScale());
             Vec3 c = h.position();
             for (LivingEntity e :
                     mv.near(h.bodyBox().inflate(R - bell + 4, 0, R - bell + 4).setMaxY(h.getY() + rig.rimY * s))) {
@@ -216,13 +217,14 @@ final class BellHeavyMoves {
                 if (d > R || d < 0.5) continue;
                 Vec3 n = in.normalize();
                 Vec3 round = new Vec3(-n.z, 0, n.x);
-                double pull = (0.10 + 0.06 * s) * (0.5 + 0.5 * d / R);
+                double pull = (0.10 * Math.min(1f, 10f * s) + 0.06 * s) * (0.5 + 0.5 * d / R);
                 e.setDeltaMovement(e.getDeltaMovement()
                         .scale(0.85)
                         .add(n.scale(pull))
-                        .add(round.scale(0.12 + 0.05 * s))
+                        .add(round.scale(0.12 * Math.min(1f, 10f * s) + 0.05 * s))
                         .add(0, 0.02, 0));
                 e.hurtMarked = true;
+                h.capShove(e);
                 if (d < bell && mv.every(e, 20)) {
                     mv.blow(e, 6f, c, 0, 0);
                     mv.sting(e);
@@ -231,7 +233,7 @@ final class BellHeavyMoves {
         }
         if (mv.t == Moves.WHIRL_CRUSH) {
             Vec3 c = h.position();
-            double r = bell * 0.75 + 4;
+            double r = bell * 0.75 + 4 * Math.min(1f, 10f * h.bellScale());
             for (LivingEntity e : mv.near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s))) {
                 if (h.horiz(mv.at(e)) > r) continue;
                 mv.blow(e, 55f, c, 1.2, 1.6);
@@ -262,9 +264,9 @@ final class BellHeavyMoves {
                 mv.diveWarned = true;
                 mv.fx(BigFx.DUST_RING, new Vec3(crown.x, gy, crown.z), mv.px(60, 12));
             }
-            if (crown.y <= gy + 1.5 * s + 0.5 || mv.t == back - 1) {
+            if (crown.y <= gy + 1.5 * s + 0.5 * Math.min(1f, 10f * s) || mv.t == back - 1) {
                 mv.landed = true;
-                double R = 75 * s + 24;
+                double R = 75 * s + 24 * Math.min(1f, 10f * s);
                 Vec3 c = new Vec3(crown.x, gy, crown.z);
                 mv.diveAt = c;
                 h.sound(c, ModSounds.SHOCK, 5f, 0.5f);
@@ -290,9 +292,9 @@ final class BellHeavyMoves {
         }
         // the blow runs out from where he landed as a ring
         if (mv.landed && mv.diveAt != null && mv.t >= back && mv.t <= back + BellMoves.DIVE_RING) {
-            double R = 75 * s + 24, r = R * (mv.t - back) / BellMoves.DIVE_RING;
+            double R = 75 * s + 24 * Math.min(1f, 10f * s), r = R * (mv.t - back) / BellMoves.DIVE_RING;
             Vec3 c = mv.diveAt;
-            for (LivingEntity e : mv.near(new AABB(c, c).inflate(R, 30 * s + 12, R))) {
+            for (LivingEntity e : mv.near(new AABB(c, c).inflate(R, 30 * s + 12 * Math.min(1f, 10f * s), R))) {
                 if (mv.struckThisMove.contains(e.getUUID())) continue;
                 double d = Math.hypot(mv.at(e).x - c.x, mv.at(e).z - c.z);
                 if (d > r) continue;
@@ -323,7 +325,7 @@ final class BellHeavyMoves {
             int k = mv.t / 36;
             h.pulse(1.2f + 0.2f * k);
             h.sound(mid, ModSounds.TOLL, 3f + 1.5f * k, 0.8f);
-            for (LivingEntity e : mv.near(h.bodyBox().inflate(40 * s + 20)))
+            for (LivingEntity e : mv.near(h.bodyBox().inflate(40 * s + 20 * Math.min(1f, 10f * s))))
                 e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 80 + 40 * k, 0));
             mv.fx(BigFx.DUST_RING, mv.under(), h.bellRadius() * (1.2 + 0.3 * k));
             mv.fx(BigFx.SHAKE, h.position(), mv.px(20 + 10 * k, 8));
@@ -345,10 +347,10 @@ final class BellHeavyMoves {
         if (mv.t == big + 4 || mv.t == big + 10) h.sound(mid, SoundEvents.AMETHYST_BLOCK_RESONATE, 4f, 0.5f);
         if (mv.t >= big && mv.t <= big + 25) {
             // (from right under him out, at the pace of the ring the players see)
-            double R = 120 * s + 40, r0 = h.bellRadius();
+            double R = 120 * s + 40 * Math.min(1f, 10f * s), r0 = h.bellRadius();
             double r = (mv.t - big) / 25.0 * R, rIn = (mv.t - big - 1) / 25.0 * R;
             Vec3 c = h.position();
-            for (LivingEntity e : mv.near(h.bodyBox().inflate(R - r0 + 4, 100 * s + 40, R - r0 + 4))) {
+            for (LivingEntity e : mv.near(h.bodyBox().inflate(R - r0 + 4, 100 * s + 40 * Math.min(1f, 10f * s), R - r0 + 4))) {
                 if (mv.struckThisMove.contains(e.getUUID())) continue;
                 double d = h.horiz(mv.at(e));
                 if (d > r) continue;
@@ -357,7 +359,7 @@ final class BellHeavyMoves {
                 e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 200, 0));
                 mv.knockDown(e);
             }
-            if (mv.griefing()) shatter(c, Math.max(0, rIn), r, 40 * s + 12);
+            if (mv.griefing()) shatter(c, Math.max(0, rIn), r, 40 * s + 12 * Math.min(1f, 10f * s));
         }
     }
 
@@ -414,19 +416,19 @@ final class BellHeavyMoves {
     /** the stinger storm: every strand flicks stingers up and out, and they rain down over a wide area */
     void stingerRain() {
         float s = mv.s();
-        double R = 90 * s + 24;
+        double R = 90 * s + 24 * Math.min(1f, 10f * s);
         Vec3 c = h.position();
         List<LivingEntity> near =
-                mv.near(h.bodyBox().inflate(R - h.bellRadius() + 4, 40 * s + 16, R - h.bellRadius() + 4));
+                mv.near(h.bodyBox().inflate(R - h.bellRadius() + 4, 40 * s + 16 * Math.min(1f, 10f * s), R - h.bellRadius() + 4));
         int n = 3 + (int) (3 * s);
         for (int k = 0; k < n; k++) {
             int strand = h.getRandom().nextInt(rig.strands.length);
             if (rig.strands[strand].hidden()) continue;
-            Vec3 from = h.strandTipWorld(strand).add(0, 2 + 3 * s, 0);
+            Vec3 from = h.strandTipWorld(strand).add(0, 2 * Math.min(1f, 10f * s) + 3 * s, 0);
             Vec3 to;
             if (!near.isEmpty() && h.getRandom().nextInt(3) > 0) {
                 LivingEntity e = near.get(h.getRandom().nextInt(near.size()));
-                double sp = 2 * s + 1.5;
+                double sp = 2 * s + 1.5 * Math.min(1f, 10f * s);
                 // (at another giant: at the bit of it that's in reach)
                 to = mv.at(e)
                         .add(
@@ -446,9 +448,10 @@ final class BellHeavyMoves {
             Shot sh = new Shot(mv.level(), h, Shot.STINGER, 10f, 1f);
             sh.setSize(s);
             sh.setPos(from.x, from.y, from.z);
-            double speed = 1.3 + 0.7 * s;
+            double speed = 1.3 * Math.min(1f, 10f * s) + 0.7 * s;
             double time = Math.max(8, horiz / speed);
             sh.setDeltaMovement(d.x / time, d.y / time + 0.5 * 0.02 * time, d.z / time);
+            h.capShove(sh);
             mv.level().addFreshEntity(sh);
             if (k == 0 && mv.t % 10 == 0) mv.fx(BigFx.SPARKS, to, mv.px(3, 1), Vec3.ZERO, 0xD8FFE0);
         }
@@ -471,7 +474,7 @@ final class BellHeavyMoves {
             for (int i = 0; i < 5; i++) mv.fx(BigFx.FLASH, h.spotWorld(i), mv.px(10, 3), Vec3.ZERO, 0xFFF2B0);
         if (mv.t % 20 == 0)
             h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.BEAM, 3f, 0.7f + 0.3f * frac);
-        double beamR = 2.5 + 2.5 * s;
+        double beamR = 2.5 * Math.min(1f, 10f * s) + 2.5 * s;
         for (int i = 0; i < 5; i++) {
             Vec3 top = h.spotWorld(i);
             Vec3 ground;
@@ -487,7 +490,7 @@ final class BellHeavyMoves {
                 Vec3 want = mv.target != null && mv.target.isAlive() ? mv.target.position() : h.position();
                 Vec3 was = mv.lance[4] == null ? new Vec3(h.getX(), mv.groundUnder(), h.getZ()) : mv.lance[4];
                 Vec3 d = want.subtract(was).multiply(1, 0, 1);
-                double step = 0.25 + 0.35 * s;
+                double step = 0.25 * Math.min(1f, 10f * s) + 0.35 * s;
                 Vec3 nx = d.length() > step ? was.add(d.normalize().scale(step)) : was.add(d);
                 ground = new Vec3(nx.x, h.groundAt(nx.x, nx.z), nx.z);
             }
@@ -523,19 +526,20 @@ final class BellHeavyMoves {
         double bell = h.bellRadius();
         Vec3 c = h.position();
         if (mv.t >= Moves.UNDERTOW_PULL && mv.t < Moves.UNDERTOW_SLAM) {
-            double R = bell * 2.2 + 8;
+            double R = bell * 2.2 + 8 * Math.min(1f, 10f * h.bellScale());
             if (mv.t == Moves.UNDERTOW_PULL) h.sound(c, ModSounds.CHURN, 4f, 0.5f);
             if (mv.t == Moves.UNDERTOW_PULL)
                 mv.fx(BigFx.WHIRL, mv.under(), R, Vec3.ZERO, Moves.UNDERTOW_SLAM - Moves.UNDERTOW_PULL);
-            for (LivingEntity e : mv.near(h.bodyBox().inflate(R - bell + 4, 20 * s + 8, R - bell + 4))) {
+            for (LivingEntity e : mv.near(h.bodyBox().inflate(R - bell + 4, 20 * s + 8 * Math.min(1f, 10f * s), R - bell + 4))) {
                 Vec3 in = new Vec3(c.x - mv.at(e).x, 0, c.z - mv.at(e).z);
                 double d = in.length();
                 if (d > R || d < 0.5) continue;
                 e.setDeltaMovement(e.getDeltaMovement()
                         .scale(0.8)
-                        .add(in.normalize().scale(0.16 + 0.1 * s))
+                        .add(in.normalize().scale(0.16 * Math.min(1f, 10f * s) + 0.1 * s))
                         .add(0, 0.05, 0));
                 e.hurtMarked = true;
+                h.capShove(e);
                 if (mv.every(e, 20)) mv.sting(e);
             }
             // dust dragged in by the strand ends round his edge
@@ -553,11 +557,12 @@ final class BellHeavyMoves {
             }
         }
         if (mv.t == Moves.UNDERTOW_SLAM) {
-            double r = bell * 0.95 + 5;
+            double r = bell * 0.95 + 5 * Math.min(1f, 10f * h.bellScale());
             for (LivingEntity e : mv.near(h.bodyBox().setMaxY(h.getY() + rig.rimY * s))) {
                 if (h.horiz(mv.at(e)) > r) continue;
                 mv.blow(e, 52f, c, 0.8, 0);
                 e.setDeltaMovement(e.getDeltaMovement().x, -1.5, e.getDeltaMovement().z);
+                h.capShove(e);
                 mv.knockDown(e);
             }
             h.sound(c, ModSounds.SLAM, 4f, 0.5f);

@@ -481,6 +481,13 @@ final class BellTargets {
                 hb.angerTicks = Math.max(hb.angerTicks, 600);
             }
         }
+        // a minigame world, an adventure's scripted giant, or a Guide's "go" he is on: no keeping out of anybody's
+        // way, and (the first two) no meetings at all
+        if (hb.noMeetings() || hb.goOrdered()) {
+            hb.meetAvoid = null;
+            hb.avoidAt = null;
+            if (hb.noMeetings()) return;
+        }
         // keeping out of another giant's way, until they're well apart
         if (hb.meetAvoid != null) {
             Entity o = sl.getEntity(hb.meetAvoid);

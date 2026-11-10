@@ -396,7 +396,7 @@ public class HollowbellEntity extends Monster implements SitHost {
             // (Part 4) a day sleeper gets up at dusk
             else if (tickCount % 20 == 0 && GiantsBehave.daySleeper(level()) && !level().isDay()) wakeUp();
             else if (huntsLikeAHunter() && !GiantsBehave.peaceful()) {
-                double r = 32 * bellScale() + 8;
+                double r = 32 * bellScale() + 8 * Math.min(1f, 10f * bellScale());
                 for (Player p : level().players())
                     if (targets.fairGame(p)
                             && horiz(p.position()) < r
@@ -482,7 +482,7 @@ public class HollowbellEntity extends Monster implements SitHost {
         double g = groundAt(at.x, at.z);
         int top = NoWait.height(level(), Heightmap.Types.MOTION_BLOCKING, Mth.floor(at.x), Mth.floor(at.z));
         if (top == NoWait.NOT_YET && !level().dimensionType().hasCeiling()) g = at.y;
-        if (cruise < 0) cruise = 6 * bellScale() + 1;
+        if (cruise < 0) cruise = 6 * bellScale() + 1 * Math.min(1f, 10f * bellScale());
         double y = g + cruise;
         if (sky) {
             y = Math.max(at.y, y);
@@ -1082,7 +1082,7 @@ public class HollowbellEntity extends Monster implements SitHost {
         Vec3 p = position().add(cVel);
         if (cTarget != null) {
             Vec3 err = cTarget.subtract(p);
-            if (err.lengthSqr() > Mth.square(24 * bellScale() + 12)) p = cTarget;
+            if (err.lengthSqr() > Mth.square(24 * bellScale() + 12 * Math.min(1f, 10f * bellScale()))) p = cTarget;
             else p = p.add(err.scale(0.14));
         }
         setPos(p.x, p.y, p.z);
@@ -1208,7 +1208,7 @@ public class HollowbellEntity extends Monster implements SitHost {
             sunkUntil = now + Math.max(5, BellConfig.V.sunkSeconds) * 20L;
             sound(position(), SoundEvents.ANVIL_LAND, 3f, 0.4f);
             for (ServerPlayer p : level() instanceof ServerLevel sl ? sl.players() : List.<ServerPlayer>of())
-                if (p.distanceToSqr(this) < Mth.square(120 * bellScale() + 60))
+                if (p.distanceToSqr(this) < Mth.square(120 * bellScale() + 60 * Math.min(1f, 10f * bellScale())))
                     net.jj.hollowbell.GiantsPlayers.moveLine(p, Component.translatable("message.hollowbell.sunk"), true);
         } else if (sunk > 0.5f && popped < need && now >= sunkUntil) entityData.set(DATA_SUNK, 0f);
     }
@@ -1333,11 +1333,11 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     /** how far he can see things to hunt */
     public double senseRange() {
-        return 150 * bellScale() + 60;
+        return 150 * bellScale() + 60 * Math.min(1f, 10f * bellScale());
     }
 
     public double guardRange() {
-        return 140 * bellScale() + 40;
+        return 140 * bellScale() + 40 * Math.min(1f, 10f * bellScale());
     }
     /** his bell's radius in the world */
     public double bellRadius() {
@@ -1548,7 +1548,143 @@ public class HollowbellEntity extends Monster implements SitHost {
         Vector3f o = toModel(from);
         Vec3 unit = dir.normalize();
         Vector3f d = dirToModel(unit);
-        return rig.raycast(state, pose, slicesNow(), o, d, (float) maxDist);
+        BellRig.Hit h = rig.raycast(state, pose, slicesNow(), o, d, (float) maxDist);
+        return h != null ? h : smallHit(from, unit, maxDist);
+    }
+
+    // ---- the giants' shared size rules (the same in all eight) ----
+
+    /** how hard a blow lands by size: a tenth-size one about 40{'S': 'bellScale()', 'base': '1'}s hard, double size about 1.4 times */
+    public static float sizeHit(float s) {
+        return net.minecraft.util.Mth.clamp(0.2f + 0.8f * (float) Math.pow(Math.max(0f, s), 0.6), 0.25f, 1.5f);
+    }
+
+    /**
+     * The hardest anything of his may set something moving, at a size: a tiny one about as hard as any mob's hit, a
+     * full-size one up to 2.5 blocks a tick (sideways and up together; a fall is left alone).
+     */
+    public static double shoveCap(float s) {
+        return 0.6 + 1.9 * Math.pow(Math.max(0f, s), 0.75);
+    }
+
+    /** after one of his shoves, throws or launches: e's motion cut back to what his size allows */
+    public void capShove(net.minecraft.world.entity.Entity e) {
+        capShove(e, bellScale());
+    }
+
+    public static void capShove(net.minecraft.world.entity.Entity e, float s) {
+        double c = shoveCap(s);
+        net.minecraft.world.phys.Vec3 v = e.getDeltaMovement();
+        double up = Math.max(0, v.y), len = Math.sqrt(v.x * v.x + up * up + v.z * v.z);
+        if (len > c) {
+            double k = c / len;
+            e.setDeltaMovement(v.x * k, v.y > 0 ? v.y * k : v.y, v.z * k);
+        }
+    }
+
+    /** how loud (and so how far heard) he is at a size: in step with his size to the 0.8 (his full-size loudness) */
+    public static float soundSize(float s) {
+        return 1f * (float) Math.pow(Math.max(0.01f, s), 0.8);
+    }
+
+    /** and a little higher the smaller he is (a third higher at his smallest), a little lower when huge */
+    public static float soundPitch(float pitch, float s) {
+        float k = s < 1f ? 1f + 0.3f * (1f - s) * (1f - s) : 1f - 0.1f * Math.min(1f, s - 1f);
+        return net.minecraft.util.Mth.clamp(pitch * k, 0.5f, 2f);
+    }
+
+    /** (tests) told of each of his sounds (its volume) and particle bursts (their spread), with his id */
+    public static volatile FxSpy fxSpy;
+
+    public interface FxSpy {
+        void saw(int id, String what, double v);
+    }
+
+    public void spy(String what, double v) {
+        FxSpy f = fxSpy;
+        if (f != null) f.saw(getId(), what, v);
+    }
+
+    /** a minion of his made to his size: its body, health and hit (full size: as it always was) */
+    public static float scaleMinion(net.minecraft.world.entity.LivingEntity mob, float s) {
+        float k = sizeHit(s);
+        var sc = mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE);
+        if (sc != null) sc.setBaseValue(k);
+        var hp = mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (hp != null) {
+            hp.setBaseValue(Math.max(1.0, hp.getBaseValue() * k));
+            mob.setHealth(mob.getMaxHealth());
+        }
+        var atk = mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (atk != null) atk.setBaseValue(atk.getBaseValue() * k);
+        return k;
+    }
+
+    /** small enough for him to pick up, hold or swallow: shorter than a fifth of how big he is drawn */
+    public boolean canHold(net.minecraft.world.entity.Entity e) {
+        net.minecraft.world.phys.AABB b = modelBox();
+        return b == null || e.getBbHeight() < Math.max(b.getXsize(), Math.max(b.getYsize(), b.getZsize())) * 0.2;
+    }
+
+    // ---- (end of the shared size rules) ----
+
+    /** a close box round where he is drawn now */
+    public @Nullable AABB modelBox() {
+        ensurePose();
+        net.jj.hollowbell.rig.BellModel mdl = net.jj.hollowbell.rig.BellModel.get();
+        double[] b = {1e30, 1e30, 1e30, -1e30, -1e30, -1e30};
+        for (int k = 0; k < rig.boneCount(); k++) {
+            float[] bb = mdl.bounds[k];
+            if (bb == null || !rig.shown(state, k)) continue;
+            for (int c = 0; c < 8; c++) {
+                Vec3 w = boneWorld(k, new Vector3f((c & 1) == 0 ? bb[0] : bb[3], (c & 2) == 0 ? bb[1] : bb[4],
+                        (c & 4) == 0 ? bb[2] : bb[5]));
+                b[0] = Math.min(b[0], w.x);
+                b[1] = Math.min(b[1], w.y);
+                b[2] = Math.min(b[2], w.z);
+                b[3] = Math.max(b[3], w.x);
+                b[4] = Math.max(b[4], w.y);
+                b[5] = Math.max(b[5], w.z);
+            }
+        }
+        return b[0] > b[3] ? null : new AABB(b[0], b[1], b[2], b[3], b[4], b[5]);
+    }
+
+    /**
+     * When he is small (under 4 blocks across): a look anywhere in the box round where he is drawn (at least 0.8
+     * across) hits him, on the part of him nearest that spot. Null when he's bigger, or the look misses.
+     */
+    public BellRig.@Nullable Hit smallHit(Vec3 from, Vec3 dir, double maxDist) {
+        if (bellScale() > 0.25f) return null;
+        AABB mb = modelBox();
+        if (mb == null) return null;
+        double[] b = {mb.minX, mb.minY, mb.minZ, mb.maxX, mb.maxY, mb.maxZ};
+        if (Math.max(b[3] - b[0], Math.max(b[4] - b[1], b[5] - b[2])) >= 4.0) return null;
+        for (int a = 0; a < 3; a++) {
+            double sz = b[a + 3] - b[a];
+            if (sz < 0.8) {
+                b[a] -= (0.8 - sz) / 2;
+                b[a + 3] += (0.8 - sz) / 2;
+            }
+        }
+        AABB box = new AABB(b[0], b[1], b[2], b[3], b[4], b[5]);
+        Vec3 d = dir.normalize();
+        Vec3 at = box.contains(from) ? from : box.clip(from, from.add(d.scale(maxDist))).orElse(null);
+        if (at == null) return null;
+        net.jj.hollowbell.rig.BellModel mdl = net.jj.hollowbell.rig.BellModel.get();
+        int best = -1;
+        double bd = Double.MAX_VALUE;
+        for (int k = 0; k < rig.boneCount(); k++) {
+            float[] bb = mdl.bounds[k];
+            if (bb == null || !rig.shown(state, k)) continue;
+            double dd = boneWorld(k, new Vector3f((bb[0] + bb[3]) / 2, (bb[1] + bb[4]) / 2, (bb[2] + bb[5]) / 2))
+                    .distanceToSqr(at);
+            if (dd < bd) {
+                bd = dd;
+                best = k;
+            }
+        }
+        return best < 0 ? null : new BellRig.Hit(best, (float) at.distanceTo(from), 0, 0, 0);
     }
 
     @Override
@@ -2059,15 +2195,18 @@ public class HollowbellEntity extends Monster implements SitHost {
         float v = vol * BellConfig.V.soundVolume;
         if (v <= 0f) return;
         float s = bellScale();
-        float size = Mth.clamp((float) Math.sqrt(s), 0.25f, 1.6f);
-        float p = Mth.clamp(
-                pitch * Mth.clamp(1.15f - 0.35f * (float) Math.log(Math.max(0.03f, s) * 2.2f) / 1.6f, 0.75f, 1.9f),
-                0.5f,
-                2f);
-        level().playSound(null, at.x, at.y, at.z, ev, SoundSource.HOSTILE, v * (0.45f + 0.55f * size), p);
+        // (the giants' shared rules: loudness in step with his size to the 0.8, a little higher when small)
+        float p = soundPitch(pitch, s);
+        spy("sound", v * soundSize(s));
+        level().playSound(null, at.x, at.y, at.z, ev, SoundSource.HOSTILE, v * soundSize(s), p);
     }
 
     public void particles(ParticleOptions p, Vec3 at, int n, double spread, double speed) {
+        // (never spread far past his own body, nor more of them than his size calls for)
+        float s = bellScale();
+        spread = Math.min(spread, 80 * s + 0.3 * Math.min(1f, 10f * s));
+        n = Math.min(n, (int) (10 * Math.min(1f, 10f * s) + 800 * s));
+        spy("spread", spread);
         if (level() instanceof ServerLevel sl)
             sl.sendParticles(p, at.x, at.y, at.z, n, spread, spread * 0.5, spread, speed);
     }
@@ -2115,7 +2254,7 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     /** bound to a circle, a spot too far outside it */
     private boolean pastCircle(Vec3 at) {
-        return bound() && Math.hypot(at.x - boundX, at.z - boundZ) > boundR + 110 * bellScale() + 40;
+        return bound() && Math.hypot(at.x - boundX, at.z - boundZ) > boundR + 110 * bellScale() + 40 * Math.min(1f, 10f * bellScale());
     }
 
     /** (roam wander) a far spot along the way he's travelling */
@@ -2208,7 +2347,7 @@ public class HollowbellEntity extends Monster implements SitHost {
             Vec3 c = position();
             float s = bellScale();
             sl.sendParticles(
-                    ParticleTypes.SQUID_INK, c.x, c.y + 60 * s + 2, c.z, 200, 50 * s + 4, 40 * s + 2, 50 * s + 4, 0.3);
+                    ParticleTypes.SQUID_INK, c.x, c.y + 60 * s + 2 * Math.min(1f, 10f * s), c.z, 200, 50 * s + 4 * Math.min(1f, 10f * s), 40 * s + 2 * Math.min(1f, 10f * s), 50 * s + 4 * Math.min(1f, 10f * s), 0.3);
             sound(c, ModSounds.DEATH, 4f, 0.6f);
             for (ServerPlayer p : sl.players())
                 if (p.distanceToSqr(this) < 400 * 400)
@@ -2275,6 +2414,30 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     @Nullable
     Vec3 avoidAt;
+
+    /** (a Guide "go") until this game time his order to fly somewhere beats keeping away from other giants */
+    private long goUntil = -1L;
+
+    /** told to go somewhere (the Guide's "go"): that wins over keeping away, for five minutes or the next order */
+    public void ordered(long until) {
+        goUntil = until;
+        meetAvoid = null;
+        avoidAt = null;
+    }
+
+    public boolean goOrdered() {
+        return level().getGameTime() < goUntil;
+    }
+
+    /** in a minigame world, or a giant an adventure has scripted: he never meets other giants at all */
+    public boolean noMeetings() {
+        return net.jj.hollowbell.GiantsMinigame.in(this) || getTags().contains("jj_giants.scripted");
+    }
+
+    /** (tests) the spot he is keeping away from, if any */
+    public @Nullable Vec3 avoidingSpot() {
+        return avoidAt;
+    }
     /** backed down: until when (game time); and running from where, until when */
     long yieldUntil, fleeUntil, yieldFor, fleeFor;
 
@@ -2550,7 +2713,7 @@ public class HollowbellEntity extends Monster implements SitHost {
         for (int i = 0; i < tops.size(); i += step) {
             int[] t = tops.get(i);
             Vec3 w = Solid.toWorld(c, f, new Vector3f(t[0] + 0.5f, t[1] + 0.5f, t[2] + 0.5f));
-            Solid.Runs r = Solid.column(this, w.x, w.z, w.y - 4 * s - 2, w.y + 120 * s + 4, false, new Solid.Runs());
+            Solid.Runs r = Solid.column(this, w.x, w.z, w.y - 4 * s - 2, w.y + 120 * s + 4 * Math.min(1f, 10f * s), false, new Solid.Runs());
             double best = Double.NaN;
             for (int j = 0; j < r.n; j++)
                 if (r.frame[j] == f && (Double.isNaN(best) || r.top[j] > best)) best = r.top[j];
@@ -2594,7 +2757,7 @@ public class HollowbellEntity extends Monster implements SitHost {
 
     /** how near another giant his body comes (the gap between their bodies): close enough for his arms and strands */
     public double contactGap() {
-        return 1 + 2 * bellScale();
+        return 1 * Math.min(1f, 10f * bellScale()) + 2 * bellScale();
     }
 
     /** gap to that giant's hull (below 0: overlapping), or null if either has none */

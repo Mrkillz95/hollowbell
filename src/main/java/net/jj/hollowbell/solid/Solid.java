@@ -416,7 +416,8 @@ public final class Solid {
     public static Vec3 freeSpot(SolidBody b, Entity e, Vec3 from, Vec3 push, boolean onHim) {
         var dim = e.getDimensions(e.getPose());
         if (clear(b, e, dim.makeBoundingBox(from))) return from;
-        AABB body = b.solidBox();
+        // (close round him: his drawing box keeps blocks of room round a small one, and sent people that far)
+        AABB body = b.solidTightBox();
         double step = Math.max(0.2, Math.min(0.75, 0.5 * columnWidth(b)));
         Vec3 best = null;
         double bestD = Double.MAX_VALUE;
@@ -518,7 +519,13 @@ public final class Solid {
             away = away.lengthSqr() < 1e-4 ? new Vec3(1, 0, 0) : away.normalize();
             Vec3 mv = motion(c, f, toRest(c, f, e.getX(), (r.bot[j] + r.top[j]) / 2, e.getZ(), new Vector3f()));
             Vec3 add = away.scale(0.08).add(mv.x * 0.5, 0, mv.z * 0.5);
-            e.setDeltaMovement(e.getDeltaMovement().add(add));
+            Vec3 v = e.getDeltaMovement().add(add);
+            // (a tiny one, under a tenth of his size, never nudges harder than his size allows: the giants' shared
+            // cap, 0.6 + 1.9 s^0.75 a tick; bigger ones as always, so nobody is left inside him)
+            double cap = 0.6 + 1.9 * Math.pow(Math.max(0f, b.solidScale()), 0.75);
+            double up = Math.max(0, v.y), len = Math.sqrt(v.x * v.x + up * up + v.z * v.z);
+            if (b.solidScale() < 0.1f && len > cap) v = new Vec3(v.x * cap / len, v.y > 0 ? v.y * cap / len : v.y, v.z * cap / len);
+            e.setDeltaMovement(v);
             if (!e.level().isClientSide) e.hurtMarked = true;
             return true;
         }

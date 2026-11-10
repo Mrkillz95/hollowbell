@@ -383,8 +383,11 @@ public final class BigFxClient {
                 if (show && quality > 0f) trail(lv, at, s, hx, hz, r, near);
             }
             case BigFx.SHAKE -> {
-                shake(d, 0.2f + s * 0.02f, 90 + s * 8);
-                sound(SoundEvents.MACE_SMASH_GROUND, at.x, at.y, at.z, 0.7f, 0.5f, 0, 100 + s * 6, p.seed());
+                // (strength and reach both grow with the size sent: a small one's shake is small, and nothing at all
+                // far off; a size-50 shake is as it always was)
+                shake(d, s * 0.024f, s * 9.8f);
+                sound(SoundEvents.MACE_SMASH_GROUND, at.x, at.y, at.z, Math.min(0.7f, s * 0.014f),
+                        0.5f + 0.3f * Math.max(0f, 1f - s / 50f), 0, s * 8f, p.seed());
             }
             case BigFx.WHIRL -> whirl(at, s, p.extra() > 0 ? p.extra() : 80, r, show, p.seed());
             case BigFx.CLOUD -> {

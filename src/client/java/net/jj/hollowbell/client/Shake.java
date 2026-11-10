@@ -15,7 +15,7 @@ public final class Shake {
     /** a foot has come down: how hard you feel it falls off with distance */
     public static void thump(double dist, float scale) {
         if (!BellConfig.V.screenShake) return;
-        double reach = 60 + 340 * scale;
+        double reach = 400 * scale + 4; // (no reach to speak of from a small one)
         if (dist > reach) return;
         float near = (float) (1.0 - dist / reach);
         amount = Math.min(1.4f, amount + (0.12f + 0.95f * scale) * near * near);
@@ -24,7 +24,7 @@ public final class Shake {
     /** a swim beat close by: the softest of nudges, gone a little way off, and next to nothing from a small one */
     public static void beat(double dist, float scale) {
         if (!BellConfig.V.screenShake) return;
-        double reach = 40 + 120 * scale;
+        double reach = 160 * scale + 4; // (no reach to speak of from a small one)
         if (dist > reach) return;
         float near = (float) (1.0 - dist / reach);
         amount = Math.max(amount, 0.22f * Math.min(1f, scale) * near * near);
@@ -33,10 +33,10 @@ public final class Shake {
     /** he has come down: one long shove instead of a footfall */
     public static void crash(double dist, float scale) {
         if (!BellConfig.V.screenShake) return;
-        double reach = 140 + 600 * scale;
+        double reach = 740 * scale + 4; // (no reach to speak of from a small one)
         if (dist > reach) return;
         float near = (float) (1.0 - dist / reach);
-        amount = Math.min(2.2f, amount + (0.8f + 1.4f * scale) * near);
+        amount = Math.min(2.2f, amount + 2.2f * (float) Math.pow(Math.min(scale, 1f), 0.7) * near); // (a small one's is weak)
     }
 
     public static void tick() {

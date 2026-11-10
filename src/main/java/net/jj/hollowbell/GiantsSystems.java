@@ -309,6 +309,8 @@ public final class GiantsSystems {
                 }
                 if (!Double.isFinite(x) || !Double.isFinite(z)) return null;
                 h.wanderToward(new Vec3(x, h.getY(), z));
+                // (the Guide's "go" beats keeping away from another giant)
+                h.ordered(h.level().getGameTime() + 6000);
                 return ok(WHO + ": on his way.");
             }
             default -> {

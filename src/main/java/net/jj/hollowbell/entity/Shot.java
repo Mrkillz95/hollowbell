@@ -263,6 +263,7 @@ public class Shot extends ThrowableItemProjectile {
         b.justHatched();
         if (h != null) {
             b.setOwner(h);
+            HollowbellEntity.scaleMinion(b, h.bellScale()); // (as big and strong as he is)
             if (h.getTarget() != null) b.setTarget(h.getTarget());
         }
         sl.addFreshEntity(b);
@@ -306,6 +307,7 @@ public class Shot extends ThrowableItemProjectile {
         float d = h != null ? h.dmg(damage, le) : damage;
         le.invulnerableTime = 0;
         le.hurt(damageSources().mobProjectile(this, h), d);
+        if (h != null) h.capShove(le); // (never harder than his size allows)
         le.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 1));
         le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
     }
