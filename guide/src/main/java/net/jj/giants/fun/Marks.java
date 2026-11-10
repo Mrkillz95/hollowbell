@@ -25,10 +25,14 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,10 +65,21 @@ public final class Marks {
         return g == null ? "giant" : AdminServer.nameOf(g);
     }
 
-    /** his name as it shows: "Grukk, Terror of the Bay"; with no name his own ("Wreckback, Terror of the Bay") */
+    /**
+     * his name as it shows: "Grukk, Terror of the Bay"; with no name his own ("Wreckback, Terror of the Bay"), or the
+     * title alone when his own name is left off ("Terror of the Bay")
+     */
     static String shownName(LivingEntity e, FunWorld.Mark m) {
-        String base = m.name.isEmpty() ? nameOf(e) : m.name;
-        return m.title.isEmpty() ? base : base + ", " + m.title;
+        String base = !m.name.isEmpty() ? m.name : ownName(e, m) ? nameOf(e) : "";
+        return m.title.isEmpty() ? base : base.isEmpty() ? m.title : base + ", " + m.title;
+    }
+
+    /** (tags) whether his own name goes before his title: his own choice, else his tag's, else yes */
+    public static boolean ownName(LivingEntity e, FunWorld.Mark m) {
+        if (m.ownName != null) return m.ownName;
+        if (m.tag.isEmpty() || e.getServer() == null) return true;
+        FunWorld.Tag t = FunWorld.get(e.getServer()).tag(m.tag);
+        return t == null || t.ownName;
     }
 
     /** his custom name made from his marks (none left: back to what he had before) */
@@ -86,6 +101,16 @@ public final class Marks {
     /** his name, title, colour and whether it shows over his head; null leaves that part as it is */
     public static AdminServer.Result name(MinecraftServer server, String who, LivingEntity e, @Nullable String name,
             @Nullable String title, @Nullable String colour, @Nullable Boolean shown) {
+        return name(server, who, e, name, title, colour, shown, null, false);
+    }
+
+    /**
+     * (tags) the same, and whether his own name goes before his title (ownName null leaves it; asTag: back to what his
+     * tag says)
+     */
+    public static AdminServer.Result name(MinecraftServer server, String who, LivingEntity e, @Nullable String name,
+            @Nullable String title, @Nullable String colour, @Nullable Boolean shown, @Nullable Boolean ownName,
+            boolean asTag) {
         FunWorld w = FunWorld.get(server);
         String id = e.getStringUUID();
         boolean fresh = w.markOf(id) == null;
@@ -100,10 +125,14 @@ public final class Marks {
         if (name != null) m.name = clean(name);
         if (title != null) m.title = clean(title);
         if (shown != null) m.shown = shown;
+        if (asTag) m.ownName = null;
+        else if (ownName != null) m.ownName = ownName;
         applyName(e, m);
         w.tidy(id);
         String now = m.name.isEmpty() && m.title.isEmpty() ? "" : shownName(e, m);
         String what = now.isEmpty() ? nameOf(e) + ": his own name again." : nameOf(e) + ": now \"" + now + "\".";
+        if (ownName != null || asTag) what += ownName(e, m) ? " His own name shows before a title."
+                : " His own name is left off: a title shows alone.";
         Fun.log(server, who, FunGiants.kindOf(e), "name", "name", now.isEmpty() ? "cleared" : now);
         Fun.changed();
         return new AdminServer.Result(true, List.of(what), List.of(who + (now.isEmpty() ? " cleared a " + nameOf(e)
@@ -392,8 +421,10 @@ public final class Marks {
         if (!say) return AdminServer.Result.said(said);
         Fun.log(server, who, kind, "tag", "tag", t.name);
         List<String> lines = new ArrayList<>();
-        lines.add(AdminServer.nameOf(g) + " wears the tag " + t.name + ": health x" + AdminSetting.plain(t.health)
-                + ", damage x" + AdminSetting.plain(t.damage) + ", speed x" + AdminSetting.plain(t.speed) + ".");
+        // "The Wreckback 2 now wears Event Boss: health x3, damage x2. His bar reads "Event Boss"."
+        lines.add("The " + FunGiants.label(server, e) + " now wears " + t.name + statWords(t) + "."
+                + (e.hasCustomName() && e.getCustomName() != null && !m.title.isEmpty() ? " His bar reads \""
+                        + e.getCustomName().getString() + "\"." : ""));
         lines.addAll(said);
         return new AdminServer.Result(true, lines, List.of(who + " gave a " + AdminServer.nameOf(g) + " the tag "
                 + t.name + "."));
@@ -439,6 +470,111 @@ public final class Marks {
         Fun.log(server, who, kind, "tag", "tag", "taken off (" + had + ")");
         return new AdminServer.Result(true, List.of(AdminServer.nameOf(g) + ": the tag " + had + " is off him."),
                 List.of(who + " took the tag " + had + " off a " + AdminServer.nameOf(g) + "."));
+    }
+
+    /** ": health x3, damage x2" (only what it changes; "" when it changes none of his stats) */
+    static String statWords(FunWorld.Tag t) {
+        List<String> w = new ArrayList<>();
+        if (Math.abs(t.health - 1) > 1e-9) w.add("health x" + AdminSetting.plain(t.health));
+        if (Math.abs(t.damage - 1) > 1e-9) w.add("damage x" + AdminSetting.plain(t.damage));
+        if (Math.abs(t.speed - 1) > 1e-9) w.add("speed x" + AdminSetting.plain(t.speed));
+        if (t.size > 0) w.add("size " + AdminSetting.plain(t.size));
+        return w.isEmpty() ? "" : ": " + String.join(", ", w);
+    }
+
+    // (tags) whom to give a tag to: the giant you look at, the nearest, every one of a kind
+
+    /** a giant in a minigame's own world (never given tags from outside it) */
+    private static boolean inGame(LivingEntity e) {
+        return net.jj.giants.minigames.Minigames.inMinigame(e);
+    }
+
+    /**
+     * the giant a player looks at, up to so far: the nearest one his look runs into (not through a wall), else the
+     * one his look passes closest to (within 5 degrees of his middle)
+     */
+    public static @Nullable LivingEntity lookedAt(ServerPlayer p, double far) {
+        Vec3 eye = p.getEyePosition(), dir = p.getViewVector(1f), to = eye.add(dir.scale(far));
+        BlockHitResult wallHit = p.level().clip(new ClipContext(eye, to, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, p));
+        double wall = wallHit.getType() == HitResult.Type.MISS ? far : wallHit.getLocation().distanceTo(eye);
+        LivingEntity hit = null, close = null;
+        double hd = Double.MAX_VALUE, best = Math.toRadians(5);
+        MinecraftServer server = p.getServer();
+        if (server == null) return null;
+        for (LivingEntity e : FunGiants.standing(server, null)) {
+            if (e.level() != p.level() || inGame(e)) continue;
+            AABB box = e.getBoundingBox().inflate(0.5 + 0.1 * e.getBbWidth());
+            java.util.Optional<Vec3> in = box.contains(eye) ? java.util.Optional.of(eye) : box.clip(eye, to);
+            if (in.isPresent()) {
+                double d = in.get().distanceTo(eye);
+                if (d <= wall + 1 && d < hd) {
+                    hd = d;
+                    hit = e;
+                }
+                continue;
+            }
+            Vec3 v = e.getBoundingBox().getCenter().subtract(eye);
+            double len = v.length();
+            if (len < 1e-6 || len > far) continue;
+            // (not through a wall: the wall has to be past his near side)
+            if (wall < len - Math.max(e.getBbWidth(), e.getBbHeight())) continue;
+            double a = Math.acos(Math.max(-1, Math.min(1, v.dot(dir) / len)));
+            if (a < best) {
+                best = a;
+                close = e;
+            }
+        }
+        return hit != null ? hit : close;
+    }
+
+    /** the giant standing nearest to there in that world (not one in a minigame) */
+    public static @Nullable LivingEntity nearest(MinecraftServer server, ServerLevel l, Vec3 at) {
+        LivingEntity best = null;
+        double bd = Double.MAX_VALUE;
+        for (LivingEntity e : FunGiants.standing(server, null)) {
+            if (e.level() != l || inGame(e)) continue;
+            double d = e.position().distanceToSqr(at);
+            if (d < bd) {
+                bd = d;
+                best = e;
+            }
+        }
+        return best;
+    }
+
+    /** gives a tag (null: takes his off) to the giant a player looks at, or the one nearest to him */
+    public static AdminServer.Result giveTo(MinecraftServer server, String who, ServerPlayer p, String to,
+            @Nullable FunWorld.Tag t) {
+        boolean look = !to.equals("nearest");
+        LivingEntity e = look ? lookedAt(p, Spots.LOOK) : nearest(server, p.serverLevel(), p.position());
+        if (e == null) return AdminServer.Result.fail(look ? "Look at a giant first (256 blocks at most)."
+                : "There's no giant standing in this world.");
+        return t == null ? take(server, who, e, true) : give(server, who, e, t, true);
+    }
+
+    /** gives a tag to every giant of that kind standing in the world now (the ones out of it aren't changed) */
+    public static AdminServer.Result giveEvery(MinecraftServer server, String who, String kind, FunWorld.Tag t) {
+        Giant g = AdminServer.giant(kind.toLowerCase(Locale.ROOT).strip());
+        if (g == null) return AdminServer.Result.fail("No giant called " + kind + ".");
+        String name = AdminServer.nameOf(g);
+        List<LivingEntity> all = new ArrayList<>();
+        for (LivingEntity e : FunGiants.standing(server, g.key())) if (!inGame(e)) all.add(e);
+        if (all.isEmpty()) return AdminServer.Result.fail("There's no " + name + " standing in the world now.");
+        List<String> more = new ArrayList<>();
+        for (LivingEntity e : all) {
+            AdminServer.Result r = give(server, who, e, t, false);
+            for (String l : r.lines()) if (!more.contains(l)) more.add(l);
+        }
+        int out = Math.max(0, FunGiants.liveIds(server, g).size() - all.size());
+        Fun.log(server, who, g.key(), "tag", "tag", t.name + " (every " + name + ", " + all.size() + ")");
+        List<String> lines = new ArrayList<>();
+        lines.add((all.size() == 1 ? "The " + name + " now wears " : "All " + all.size() + " " + name + (name.endsWith("s") ? "es" : "s")
+                + " now wear ")
+                + t.name + statWords(t) + "." + (out > 0 ? " (" + out + " out of the world " + (out == 1 ? "isn't"
+                        : "aren't") + " changed: give it to them when they're back.)" : ""));
+        lines.addAll(more);
+        return new AdminServer.Result(true, lines, List.of(who + " gave every " + name + " the tag " + t.name + "."));
     }
 
     private static boolean sameLoot(FunWorld.Loot a, FunWorld.Loot b) {

@@ -359,6 +359,183 @@ public class FunGameTests implements FabricGameTest {
 
     // the biome brush: erase
 
+    /** what a command said back */
+    static final class Heard implements net.minecraft.commands.CommandSource {
+        final List<String> lines = new ArrayList<>();
+
+        @Override
+        public void sendSystemMessage(net.minecraft.network.chat.Component m) {
+            lines.add(m.getString());
+        }
+
+        @Override
+        public boolean acceptsSuccess() {
+            return true;
+        }
+
+        @Override
+        public boolean acceptsFailure() {
+            return true;
+        }
+
+        @Override
+        public boolean shouldInformAdmins() {
+            return false;
+        }
+    }
+
+    /** a command as that player (what it said back in heard) */
+    static void run(MinecraftServer s, ServerPlayer p, Heard heard, String cmd) {
+        heard.lines.clear();
+        s.getCommands().performPrefixedCommand(p.createCommandSourceStack().withSource(heard), cmd);
+    }
+
+    // (tags) giving a tag: to the giant you look at, the nearest, every one of a kind
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "p7_tagto")
+    public void tagsGoToTheOneLookedAtTheNearestAndEveryOne(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = spot(h, 10);
+        ServerPlayer p = op(h, "tagger", at);
+        // one straight ahead (facing south, +z), a nearer one off to the side, one behind
+        IronGolem ahead = GiantsBridge.spawn(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() + 30.5);
+        IronGolem side = GiantsBridge.spawn(h.getLevel(), at.getX() + 8.5, at.getY(), at.getZ() + 0.5);
+        IronGolem behind = GiantsBridge.spawn(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() - 40.5);
+        Heard heard = new Heard();
+        h.runAfterDelay(20, () -> {
+            // (none left over from a run that stopped part way: their land is loaded by now)
+            for (IronGolem g : golems(h)) if (g != ahead && g != side && g != behind) g.discard();
+            p.teleportTo(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            h.assertTrue(Marks.lookedAt(p, 256) == ahead, "looked at: the one ahead");
+            h.assertTrue(Marks.nearest(s, h.getLevel(), p.position()) == side, "nearest: the one to the side");
+            // the command with no giant: the one looked at
+            run(s, p, heard, "giants admin tag give \"Event boss\"");
+            h.assertTrue("Event boss".equals(Marks.wears(ahead)) && Marks.wears(side) == null
+                    && Marks.wears(behind) == null, "only the one looked at: " + heard.lines);
+            h.assertTrue(heard.lines.size() > 0 && heard.lines.get(0).matches("The Fakefun \\d now wears Event boss: "
+                    + "health x3, damage x1\\.5, speed x1\\.1\\. His bar reads \"Fakefun, Event Boss\"\\."),
+                    "said plainly: " + heard.lines);
+            // nearest
+            run(s, p, heard, "giants admin tag give \"Event boss\" nearest");
+            h.assertTrue("Event boss".equals(Marks.wears(side)) && Marks.wears(behind) == null, "nearest: "
+                    + heard.lines);
+            // a wall between: not through it
+            BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+            for (int dx = -6; dx <= 6; dx++)
+                for (int y = 0; y < 8; y++)
+                    h.getLevel().setBlock(m.set(at.getX() + dx, at.getY() + y, at.getZ() + 12),
+                            Blocks.STONE.defaultBlockState(), 2);
+            h.assertTrue(Marks.lookedAt(p, 256) == null, "not through a wall");
+            run(s, p, heard, "giants admin tag give \"Event boss\"");
+            h.assertTrue(heard.lines.size() == 1 && heard.lines.get(0).startsWith("Look at a giant first"),
+                    "said why: " + heard.lines);
+            for (int dx = -6; dx <= 6; dx++)
+                for (int y = 0; y < 8; y++)
+                    h.getLevel().setBlock(m.set(at.getX() + dx, at.getY() + y, at.getZ() + 12),
+                            Blocks.AIR.defaultBlockState(), 2);
+            // looking a little off him still finds him (within a few degrees)
+            p.teleportTo(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 3, -2);
+            p.setYHeadRot(3);
+            h.assertTrue(Marks.lookedAt(p, 256) == ahead, "near the look");
+            // the book's request: the one looked at
+            FunWorld.Tag pocket = new FunWorld.Tag();
+            pocket.name = "Pocket menace";
+            pocket.damage = 2.5;
+            h.assertTrue(Marks.saveTag(s, "Tester", "", pocket).ok(), "made");
+            JsonObject o = new JsonObject();
+            o.addProperty("tag", "Pocket menace");
+            o.addProperty("to", "look");
+            var r = Fun.request(s, p, "tagger", "tag", o);
+            h.assertTrue(r != null && r.ok() && "Pocket menace".equals(Marks.wears(ahead)), "the book: " + (r == null
+                    ? null : r.lines()));
+            // every one of a kind
+            run(s, p, heard, "giants admin tag give \"Pocket menace\" every fakefun");
+            h.assertTrue(golems(h).stream().allMatch(g -> "Pocket menace".equals(Marks.wears(g))), "every one");
+            h.assertTrue(heard.lines.size() > 0 && heard.lines.get(0).equals(
+                    "All 3 Fakefuns now wear Pocket menace: damage x2.5."), "said: " + heard.lines);
+            o = new JsonObject();
+            o.addProperty("tag", "Event boss");
+            o.addProperty("to", "every");
+            o.addProperty("giant", "fakefun");
+            r = Fun.request(s, p, "tagger", "tag", o);
+            h.assertTrue(r != null && r.ok() && golems(h).stream().allMatch(g -> "Event boss".equals(Marks.wears(g))),
+                    "the book: every one");
+            // the old form still works, and a giant that isn't there is refused
+            run(s, p, heard, "giants admin tag give \"Pocket menace\" " + behind.getStringUUID());
+            h.assertTrue("Pocket menace".equals(Marks.wears(behind)), "by his id: " + heard.lines);
+            h.assertFalse(Marks.giveEvery(s, "Tester", "nothing", pocket).ok(), "no such kind");
+            // looking at nothing
+            p.teleportTo(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 90, 0);
+            // (a player looks where his head turns)
+            p.setYHeadRot(90);
+            h.assertTrue(Marks.lookedAt(p, 256) == null, "nothing looked at");
+            unspot(h, at);
+            done(h, p);
+        });
+    }
+
+    // (tags) his own name before his title, or the title alone
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "p7_ownname")
+    public void hisOwnNameCanBeLeftOff(GameTestHelper h) {
+        if (PlayersGameTests.realGiants(h)) return;
+        MinecraftServer s = fresh(h);
+        BlockPos at = spot(h, 11);
+        ServerPlayer p = op(h, "namer", at);
+        IronGolem g = GiantsBridge.spawn(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() + 10.5);
+        Heard heard = new Heard();
+        h.runAfterDelay(3, () -> {
+            // old saved tags (no ownName in them) keep his name
+            h.assertTrue(new com.google.gson.Gson().fromJson("{\"name\":\"Old\"}", FunWorld.Tag.class).ownName,
+                    "an old tag shows his name");
+            // the tag leaves his name off: the title alone on his bar
+            run(s, p, heard, "giants admin tag set \"Event boss\" showname off");
+            h.assertFalse(FunWorld.get(s).tag("Event boss").ownName, "tag set: " + heard.lines);
+            var r = Marks.give(s, "Tester", g, FunWorld.get(s).tag("Event boss"), true);
+            h.assertTrue(g.getCustomName().getString().equals("Event Boss"), "the title alone: "
+                    + g.getCustomName().getString());
+            h.assertTrue(r.lines().get(0).equals("The Fakefun now wears Event boss: health x3, damage x1.5, speed x1.1."
+                    + " His bar reads \"Event Boss\"."), "" + r.lines());
+            h.assertTrue(net.jj.giants.fights.FightGiants.shown(g).equals("Event Boss"), "a fight's bars too");
+            // his own choice over his tag's
+            run(s, p, heard, "giants admin showname " + g.getStringUUID() + " on");
+            h.assertTrue(g.getCustomName().getString().equals("Fakefun, Event Boss"), "his own on: " + heard.lines);
+            JsonObject page = Fun.state(s, p).getAsJsonObject("marks").getAsJsonObject(g.getStringUUID());
+            h.assertTrue(page.get("ownNameNow").getAsBoolean() && page.get("ownName").getAsBoolean(), "the page: " + page);
+            run(s, p, heard, "giants admin showname " + g.getStringUUID() + " tag");
+            h.assertTrue(g.getCustomName().getString().equals("Event Boss"), "as his tag says again");
+            // the tag changed: every wearer changes
+            FunWorld.Tag t = FunWorld.get(s).tag("Event boss").copyForTests();
+            t.ownName = true;
+            Marks.saveTag(s, "Tester", "Event boss", t);
+            h.assertTrue(g.getCustomName().getString().equals("Fakefun, Event Boss"), "tag on again");
+            // a name of his own is never left off: only the plain one is
+            Marks.name(s, "Tester", g, "Grukk", null, null, null, false, false);
+            h.assertTrue(g.getCustomName().getString().equals("Grukk, Event Boss"), "his given name stays");
+            // no tag: a title alone, from the book's request
+            Marks.take(s, "Tester", g, true);
+            JsonObject o = new JsonObject();
+            o.addProperty("giant", "fakefun");
+            o.addProperty("id", g.getStringUUID());
+            o.addProperty("name", "");
+            o.addProperty("title", "Terror of the Bay");
+            o.addProperty("ownName", "false");
+            var nr = Fun.request(s, p, "namer", "name", o);
+            h.assertTrue(nr != null && nr.ok() && g.getCustomName().getString().equals("Terror of the Bay"),
+                    "title alone: " + g.getCustomName().getString());
+            // Clear: all of it back (his own name with a title again)
+            o.addProperty("title", "");
+            o.addProperty("ownName", "tag");
+            Fun.request(s, p, "namer", "name", o);
+            h.assertTrue(g.getCustomName() == null && FunWorld.get(s).markOf(g.getStringUUID()) == null,
+                    "cleared, nothing kept");
+            g.discard();
+            unspot(h, at);
+            done(h, p);
+        });
+    }
+
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "p7_erase")
     public void eraseTakesOnlyGiantsBiomesBack(GameTestHelper h) {
         if (PlayersGameTests.realGiants(h)) return;

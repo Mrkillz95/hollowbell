@@ -1,6 +1,7 @@
 package net.jj.giants.test;
 
 import com.google.gson.JsonObject;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -86,7 +87,15 @@ public class FunGiantsGameTests implements FabricGameTest {
         h.assertTrue(Math.abs(FunGiants.sizeOf(e) - 0.15) < 0.05, key + ": size read as " + FunGiants.sizeOf(e));
         ServerPlayer p = PlayersGameTests.join(h, "fun_" + key.substring(0, 4), true);
         p.teleportTo(h.getLevel(), at.getX() + 0.5, at.getY(), at.getZ() - 20.5, 0, 0);
+        // (tags) his own name left off: the title alone, on every bar of his (checked below)
+        Marks.name(s, "Tester", e, "", "Event Boss", "gold", false, false, false);
+        h.assertTrue(e.getCustomName() != null && e.getCustomName().getString().equals("Event Boss"),
+                key + ": the title alone");
         h.runAfterDelay(20, () -> {
+            // (tags) his boss bars show the title alone (the Cerberus's: "Event Boss: Fire Head" and so on)
+            List<String> bars = bars(e);
+            h.assertTrue(!bars.isEmpty() && bars.stream().anyMatch(b -> b.startsWith("Event Boss"))
+                    && bars.stream().noneMatch(b -> b.contains(name + ", ")), key + ": his bars " + bars);
             JsonObject head = FunGiants.head(s, g);
             h.assertTrue(head != null, key + ": answers fun");
             h.assertTrue(FunGiants.does(s, g).containsAll(List.of("playas", "stats", "move")), key + ": does "
@@ -102,7 +111,7 @@ public class FunGiantsGameTests implements FabricGameTest {
             h.assertTrue(Marks.name(s, "Tester", e, "Grukk", "Event Boss", "gold", false).ok()
                     && e.getCustomName() != null && e.getCustomName().getString().equals("Grukk, Event Boss"),
                     key + ": named");
-            Marks.name(s, "Tester", e, "", "", "white", false);
+            Marks.name(s, "Tester", e, "", "", "white", false, null, true);
             // played as, and let go of
             JsonObject on = new JsonObject();
             on.addProperty("by", p.getStringUUID());
@@ -146,6 +155,32 @@ public class FunGiantsGameTests implements FabricGameTest {
             unpad(h, at);
             h.succeed();
         });
+    }
+
+    /** (tags) the names on his boss bars: every bar his own classes hold (in a field, an array, or one step in) */
+    static List<String> bars(Object o) {
+        List<String> out = new ArrayList<>();
+        walk(o, out, 0);
+        return out;
+    }
+
+    private static void walk(Object o, List<String> out, int depth) {
+        for (Class<?> c = o.getClass(); c != null && c.getName().startsWith("net.jj."); c = c.getSuperclass())
+            for (java.lang.reflect.Field f : c.getDeclaredFields()) {
+                if (java.lang.reflect.Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
+                Object v;
+                try {
+                    f.setAccessible(true);
+                    v = f.get(o);
+                } catch (ReflectiveOperationException | RuntimeException x) {
+                    continue;
+                }
+                if (v instanceof net.minecraft.world.BossEvent b) out.add(b.getName().getString());
+                else if (v instanceof net.minecraft.world.BossEvent[] bs) {
+                    for (var b : bs) if (b != null) out.add(b.getName().getString());
+                } else if (depth == 0 && v != null && !(v instanceof net.minecraft.world.entity.Entity)
+                        && v.getClass().getName().startsWith("net.jj.")) walk(v, out, 1);
+            }
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "p7g_pitchgut")

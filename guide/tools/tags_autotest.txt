@@ -1,0 +1,71 @@
+# Giant tags pictures: a tag's Give to… list, a giant's tag picker, the Name form's "His own name", and a Cerberus
+# wearing a tag with his own name left off (his three head bars read "Event Boss: Fire Head" and so on).
+#   withslot.ps1 <guide> runAutotest -Pgiants -Pscript=tools/tags_autotest.txt   (pictures in build/autotest/screenshots)
+wait 60
+guiscale 2
+wait 10
+adminintro seen
+adminmode simple
+adminscope world
+cmd time set 6000
+cmd gamerule doDaylightCycle false
+cmd weather clear
+cmd tp @s 0 -60 0 0 10
+wait 20
+cmd cerberus summon calm 0.1
+wait 10
+cmd tp @s 40 -60 0 0 10
+cmd wreckback summon calm 0.08
+wait 10
+cmd tp @s 80 -60 0 0 10
+cmd wreckback summon calm 0.08
+wait 10
+cmd tp @s 0 -60 -16 0 10
+wait 40
+cmd giants admin tag set "Event boss" showname off
+cmd giants admin tag give "Event boss" cerberus
+cmd giants admin tag make "Pocket menace"
+cmd giants admin tag set "Pocket menace" damage 2.5
+cmd giants admin tag set "Pocket menace" title Small but Angry
+cmd giants admin tag give "Pocket menace" wreckback.2
+cmd giants admin name wreckback.1 Grukk the Terrible
+wait 20
+# the Giant tags cards (Give to…, Edit…, Delete), at the bottom of the Fun page
+adminbook fun 99999
+wait 60
+mouse 2 2
+wait 25
+shot tags_cards
+close
+# a tag's Give to… list
+adminbook fun 0
+wait 60
+funask taggive
+wait 15
+mouse 2 2
+wait 10
+shot tags_give
+close
+# the Cerberus's tag picker (the tag he wears marked)
+adminbook fun 0
+wait 40
+funask tag
+wait 15
+mouse 2 2
+wait 10
+shot tags_pick
+close
+# the Name form: His own name
+adminbook fun 0
+wait 40
+funask name
+wait 15
+mouse 2 2
+wait 10
+shot tags_name
+close
+# the Cerberus wearing Event boss with his own name left off: his head bars
+cmd tp @s 0 -59 -14 0 10
+wait 60
+shot tags_bar
+quit

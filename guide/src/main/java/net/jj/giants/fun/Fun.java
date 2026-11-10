@@ -148,6 +148,9 @@ public final class Fun {
         for (var m : w.s.marks.entrySet()) {
             JsonObject j = GSON.toJsonTree(m.getValue()).getAsJsonObject();
             j.addProperty("lootWords", Marks.describe(m.getValue().loot));
+            // (tags) whether his own name shows before his title now (his own choice, else his tag's)
+            LivingEntity he = FunGiants.find(server, m.getKey());
+            if (he != null) j.addProperty("ownNameNow", Marks.ownName(he, m.getValue()));
             if (m.getValue().loot != null) j.addProperty("lootItems", m.getValue().loot.items.size());
             j.remove("oldName");
             marks.add(m.getKey(), j);
@@ -239,18 +242,26 @@ public final class Fun {
             case "name" -> {
                 LivingEntity e = giant(server, o);
                 if (e == null) yield notThere(server, o);
+                // (tags) his own name before his title: "true", "false", "tag" (as his tag says), or left as it is
+                String own = AdminJson.str(o, "ownName", 8);
                 yield Marks.name(server, who, e, AdminJson.str(o, "name", 64), AdminJson.str(o, "title", 64),
                         AdminJson.str(o, "colour", 16).isEmpty() ? null : AdminJson.str(o, "colour", 16),
-                        o.has("shown") ? !AdminJson.str(o, "shown", 8).equals("false") : null);
+                        o.has("shown") ? !AdminJson.str(o, "shown", 8).equals("false") : null,
+                        own.equals("true") ? Boolean.TRUE : own.equals("false") ? Boolean.FALSE : null,
+                        own.equals("tag"));
             }
             case "tag" -> {
+                String t = AdminJson.str(o, "tag", 32);
+                FunWorld.Tag tag = t.isEmpty() ? null : FunWorld.get(server).tag(t);
+                if (!t.isEmpty() && tag == null) yield AdminServer.Result.fail("There's no tag called " + t + ".");
+                // (tags) to: the giant you look at, the nearest one, every one of a kind; else the one named
+                String to = AdminJson.str(o, "to", 8);
+                if (to.equals("look") || to.equals("nearest")) yield Marks.giveTo(server, who, p, to, tag);
+                if (to.equals("every")) yield tag == null ? AdminServer.Result.fail("Which tag?")
+                        : Marks.giveEvery(server, who, AdminJson.str(o, "giant", 32), tag);
                 LivingEntity e = giant(server, o);
                 if (e == null) yield notThere(server, o);
-                String t = AdminJson.str(o, "tag", 32);
-                if (t.isEmpty()) yield Marks.take(server, who, e, true);
-                FunWorld.Tag tag = FunWorld.get(server).tag(t);
-                yield tag == null ? AdminServer.Result.fail("There's no tag called " + t + ".")
-                        : Marks.give(server, who, e, tag, true);
+                yield tag == null ? Marks.take(server, who, e, true) : Marks.give(server, who, e, tag, true);
             }
             case "tagsave" -> {
                 FunWorld.Tag t;

@@ -5070,7 +5070,10 @@ public class AdminBookScreen extends Screen {
         return key.equals(LIVE) || key.equals(FUN) || key.equals(WORLD);
     }
 
-    /** (the picture-taking) a Fun page question open: "name" or "loot" (the first giant's), "tagedit" (the first tag) */
+    /**
+     * (the picture-taking) a Fun page question open: "name", "loot" or "tag" (the first giant's), "tagedit" or
+     * "taggive" (the first tag)
+     */
     public static boolean testFunAsk(String what) {
         if (!(net.minecraft.client.Minecraft.getInstance().screen instanceof AdminBookScreen b)) return false;
         // (Part 10B) the fight script's questions: side A1's moves and more, and Save as
@@ -5087,10 +5090,11 @@ public class AdminBookScreen extends Screen {
             else b.openScriptMore(fs, "a", 1, fighters.get(0));
             return true;
         }
-        if (what.equals("tagedit")) {
+        if (what.equals("tagedit") || what.equals("taggive")) {
             List<JsonObject> tags = objects(AdminBookClient.fun(), "tags");
             if (tags.isEmpty()) return false;
-            b.openTagEdit(tags.get(0));
+            if (what.equals("taggive")) b.openTagGive(tags.get(0));
+            else b.openTagEdit(tags.get(0));
             return true;
         }
         List<JsonObject[]> gs = b.funGiants(true);
@@ -5201,6 +5205,7 @@ public class AdminBookScreen extends Screen {
             for (JsonObject t : tags) {
                 String name = str(t, "name");
                 rows.add(new LineRow(Component.literal(name), KEY, Component.literal(tagWords(t)), List.<Object[]>of(
+                        new Object[] {tr("fun.tags.give"), (Runnable) () -> openTagGive(t), tr("fun.tags.give.tip")},
                         new Object[] {tr("fun.tags.edit"), (Runnable) () -> openTagEdit(t), tr("fun.tags.edit.tip")},
                         new Object[] {tr("fun.tags.delete"), (Runnable) () -> confirm(tr("fun.tags.delete.title", name),
                                 tr("fun.tags.delete.body", name, (int) dbl(t, "wearing", 0)), tr("fun.tags.delete"),
@@ -5216,16 +5221,29 @@ public class AdminBookScreen extends Screen {
     }
 
     private String tagWords(JsonObject t) {
+        return tagWords(t, true);
+    }
+
+    /** (tags) what a tag does, and (wearing) how many wear it */
+    private String tagWords(JsonObject t, boolean wearing) {
         List<String> w = new ArrayList<>();
-        w.add(tr("fun.tags.stats", AdminSetting.plain(dbl(t, "health", 1)), AdminSetting.plain(dbl(t, "damage", 1)),
-                AdminSetting.plain(dbl(t, "speed", 1))).getString());
+        if (wearing) w.add(tr("fun.tags.stats", AdminSetting.plain(dbl(t, "health", 1)), AdminSetting.plain(dbl(t,
+                "damage", 1)), AdminSetting.plain(dbl(t, "speed", 1))).getString());
+        else {
+            // (the picker, short: only the stats it changes)
+            List<String> st = new ArrayList<>();
+            for (String k : List.of("health", "damage", "speed"))
+                if (Math.abs(dbl(t, k, 1) - 1) > 1e-9) st.add(k + " x" + AdminSetting.plain(dbl(t, k, 1)));
+            if (!st.isEmpty()) w.add(String.join(", ", st));
+        }
         if (dbl(t, "size", 0) > 0) w.add(tr("fun.tags.size", AdminSetting.plain(dbl(t, "size", 0))).getString());
-        if (!str(t, "title").isEmpty()) w.add("\"" + str(t, "title") + "\"");
+        if (!str(t, "title").isEmpty()) w.add("\"" + str(t, "title") + "\"" + (t.has("ownName") && !bool(t, "ownName")
+                ? " " + tr("fun.tags.alone").getString() : ""));
         if (bool(t, "glow")) w.add(tr("fun.tags.glow").getString());
         if (t.get("loot") instanceof JsonObject) w.add(str(t, "lootWords"));
-        int wearing = (int) dbl(t, "wearing", 0);
-        w.add(tr(wearing == 0 ? "fun.tags.wearing.none" : wearing == 1 ? "fun.tags.wearing.one" : "fun.tags.wearing",
-                wearing).getString());
+        int n = (int) dbl(t, "wearing", 0);
+        if (wearing) w.add(tr(n == 0 ? "fun.tags.wearing.none" : n == 1 ? "fun.tags.wearing.one" : "fun.tags.wearing",
+                n).getString());
         return String.join(" · ", w);
     }
 
@@ -5281,24 +5299,7 @@ public class AdminBookScreen extends Screen {
                 }
                 case "play" -> funRequest("playas", giantJson(key, id));
                 case "name" -> openNameAsk(key, id, label);
-                case "tag" -> {
-                    List<Object[]> cs = new ArrayList<>();
-                    for (JsonObject t : objects(AdminBookClient.fun(), "tags")) {
-                        String n = str(t, "name");
-                        cs.add(new Object[] {Component.literal(n), (Runnable) () -> {
-                            JsonObject o = giantJson(key, id);
-                            o.addProperty("tag", n);
-                            funRequest("tag", o);
-                        }});
-                    }
-                    cs.add(new Object[] {tr("fun.tag.none"), (Runnable) () -> {
-                        JsonObject o = giantJson(key, id);
-                        o.addProperty("tag", "");
-                        funRequest("tag", o);
-                    }});
-                    modal = new Choices(tr("fun.tag.title", label), tr("fun.tag.body"), cs);
-                    place();
-                }
+                case "tag" -> openTagPick(key, id, label);
                 case "loot" -> {
                     List<Object[]> cs = new ArrayList<>();
                     for (String mode : List.of("add", "replace"))
@@ -6266,6 +6267,10 @@ public class AdminBookScreen extends Screen {
         });
         fm.cycle(tr("fun.name.shown"), () -> tr(shown[0] ? "fun.name.shown.on" : "fun.name.shown.off"),
                 () -> shown[0] = !shown[0]);
+        // (tags) his own name before his title, or the title alone (as it is now: his own choice, else his tag's)
+        boolean ownWas = m == null || !m.has("ownNameNow") || bool(m, "ownNameNow");
+        boolean[] own = {ownWas};
+        fm.cycle(tr("fun.name.own"), () -> tr(own[0] ? "fun.name.own.on" : "fun.name.own.off"), () -> own[0] = !own[0]);
         fm.button(tr("fun.name.save"), () -> {
             closeModal();
             JsonObject o = giantJson(kind, id);
@@ -6273,6 +6278,7 @@ public class AdminBookScreen extends Screen {
             o.addProperty("title", title.getValue());
             o.addProperty("colour", colour[0]);
             o.addProperty("shown", String.valueOf(shown[0]));
+            if (own[0] != ownWas) o.addProperty("ownName", String.valueOf(own[0]));
             funRequest("name", o);
         });
         fm.button(tr("fun.name.clear"), () -> {
@@ -6282,12 +6288,218 @@ public class AdminBookScreen extends Screen {
             o.addProperty("title", "");
             o.addProperty("colour", "white");
             o.addProperty("shown", "false");
+            o.addProperty("ownName", "tag");
             funRequest("name", o);
         });
         fm.button(tr("cancel"), fm::cancel);
         fm.done();
         modal = fm;
         place();
+    }
+
+    /**
+     * (tags) one giant's tag: every tag a row with what it does, the one he wears marked, and No tag; a click gives it
+     */
+    private void openTagPick(String kind, String id, String label) {
+        JsonObject m = funMark(id);
+        String wears = m == null ? "" : str(m, "tag");
+        List<Pick> ps = new ArrayList<>();
+        for (JsonObject t : objects(AdminBookClient.fun(), "tags")) {
+            String n = str(t, "name");
+            ps.add(new Pick(null, "tag", Component.literal(n), tagWords(t, false), n.equalsIgnoreCase(wears), true, () -> {
+                JsonObject o = giantJson(kind, id);
+                o.addProperty("tag", n);
+                funRequest("tag", o);
+            }));
+        }
+        ps.add(new Pick(null, null, tr("fun.tag.none"), tr("fun.tag.none.sub").getString(), wears.isEmpty(), true,
+                () -> {
+                    JsonObject o = giantJson(kind, id);
+                    o.addProperty("tag", "");
+                    funRequest("tag", o);
+                }));
+        modal = new Picker(tr("fun.tag.title", label), tr("fun.tag.body"), ps, List.of());
+        place();
+    }
+
+    /**
+     * (tags) Give to…: every giant in the world a row (his picture, his name as his bar shows it, his kind, how far
+     * off, the tag he wears); and the giant you look at, or every one of a kind
+     */
+    private void openTagGive(JsonObject t) {
+        String n = str(t, "name");
+        var me = net.minecraft.client.Minecraft.getInstance().player;
+        List<JsonObject[]> all = new ArrayList<>(funGiants(false));
+        // the nearest first (the ones out of the world last)
+        all.sort(java.util.Comparator.comparingDouble(g -> away(me, g[1])));
+        List<Pick> ps = new ArrayList<>();
+        Map<String, Integer> kinds = new LinkedHashMap<>();
+        Map<String, String> kindNames = new HashMap<>();
+        for (JsonObject[] g : all) {
+            String key = str(g[0], "key"), gid = str(g[1], "id");
+            boolean here = str(g[1], "state").equals("here");
+            if (here) kinds.merge(key, 1, Integer::sum);
+            kindNames.put(key, str(g[0], "name"));
+            JsonObject m = funMark(gid);
+            String wears = m == null ? "" : str(m, "tag");
+            List<String> sub = new ArrayList<>();
+            sub.add(str(g[0], "name"));
+            double d = away(me, g[1]);
+            sub.add(!here ? tr(str(g[1], "state").equals("away") ? "live.state.away" : "live.state.unloaded").getString()
+                    : d == Double.MAX_VALUE ? dimName(str(g[1], "dim")) : tr("fun.give.far", Math.round(d)).getString());
+            sub.add(wears.isEmpty() ? tr("fun.give.notag").getString() : tr("fun.give.wears", wears).getString());
+            ps.add(new Pick(key, null, Component.literal(str(g[1], "label")), String.join(" · ", sub),
+                    wears.equalsIgnoreCase(n), here, () -> {
+                        JsonObject o = giantJson(key, gid);
+                        o.addProperty("tag", n);
+                        funRequest("tag", o);
+                    }));
+        }
+        List<Object[]> more = new ArrayList<>();
+        more.add(new Object[] {tr("fun.give.look"), (Runnable) () -> {
+            JsonObject o = new JsonObject();
+            o.addProperty("tag", n);
+            o.addProperty("to", "look");
+            funRequest("tag", o);
+        }, tr("fun.give.look.tip")});
+        if (!kinds.isEmpty()) more.add(new Object[] {tr("fun.give.every"), (Runnable) () -> {
+            List<Object[]> cs = new ArrayList<>();
+            for (var k : kinds.entrySet())
+                cs.add(new Object[] {tr("fun.give.every.kind", kindNames.get(k.getKey()), k.getValue()), (Runnable) () -> {
+                    JsonObject o = new JsonObject();
+                    o.addProperty("tag", n);
+                    o.addProperty("to", "every");
+                    o.addProperty("giant", k.getKey());
+                    funRequest("tag", o);
+                }});
+            modal = new Choices(tr("fun.give.every.title", n), tr("fun.give.every.body"), cs);
+            place();
+        }, tr("fun.give.every.tip")});
+        modal = new Picker(tr("fun.give.title", n), tr(all.isEmpty() ? "fun.give.none" : "fun.give.body"), ps, more);
+        place();
+    }
+
+    /** how far a giant is from you (blocks; another world, or out of it: as far as can be) */
+    private static double away(@Nullable net.minecraft.world.entity.player.Player me, JsonObject r) {
+        if (me == null || !str(r, "state").equals("here")
+                || !me.level().dimension().location().toString().equals(str(r, "dim"))) return Double.MAX_VALUE;
+        return Math.sqrt(Math.pow(dbl(r, "x", 0) - me.getX(), 2) + Math.pow(dbl(r, "y", me.getY()) - me.getY(), 2)
+                + Math.pow(dbl(r, "z", 0) - me.getZ(), 2));
+    }
+
+    /** (tags) one row of a Picker: a giant's picture (giant) or the book's own (own), a name, a line under it */
+    private record Pick(@Nullable String giant, @Nullable String own, Component name, String sub, boolean now,
+            boolean active, Runnable go) {}
+
+    /** (tags) a list to pick from: a row each (the one now marked), scrolled with the wheel; more buttons and Cancel */
+    private final class Picker extends Modal {
+        static final int RH = 26;
+        final Component title, body;
+        final List<Pick> picks;
+        int top;
+
+        Picker(Component title, Component body, List<Pick> picks, List<Object[]> more) {
+            this.title = title;
+            this.body = body;
+            this.picks = picks;
+            for (Object[] c : more) {
+                Button b = button((Component) c[0], () -> {
+                    closeModal();
+                    ((Runnable) c[1]).run();
+                });
+                if (c.length > 2) b.setTooltip(Tooltip.create((Component) c[2]));
+            }
+            button(tr("cancel"), this::cancel);
+            layout(buttonsW());
+            // the one now picked in view
+            for (int i = 0; i < picks.size(); i++) if (picks.get(i).now()) top = Math.max(0, i - shown() / 2);
+            top = Mth.clamp(top, 0, Math.max(0, picks.size() - shown()));
+        }
+
+        int shown() {
+            return Math.max(1, Math.min(picks.size(), Math.max(3, (height - 150) / RH)));
+        }
+
+        int listTop() {
+            return my0 + 26 + Math.min(body().size(), bodyRoom()) * 10 + 4;
+        }
+
+        @Override
+        int modalW() {
+            return Math.min(pw - 40, 420);
+        }
+
+        @Override
+        void layout(int buttonsW) {
+            super.layout(buttonsW);
+            int bottom = my0 + mh;
+            mh += shown() * RH + 6;
+            my0 = (height - mh) / 2;
+            int shift = my0 + mh - bottom;
+            for (Button b : buttons) b.setY(b.getY() + shift);
+        }
+
+        @Override
+        void extra(GuiGraphics g) {
+            int y0 = listTop(), x = mx0 + 8, w = mw - 16 - (picks.size() > shown() ? 6 : 0);
+            for (int i = top; i < Math.min(picks.size(), top + shown()); i++) {
+                Pick p = picks.get(i);
+                int y = y0 + (i - top) * RH;
+                boolean over = p.active() && lastMx >= x && lastMx < x + w && lastMy >= y && lastMy < y + RH - 2;
+                AdminStyle.card(g, x, y, w, RH - 2, over);
+                if (p.now()) {
+                    g.fill(x, y, x + w, y + RH - 2, 0x30C08020);
+                    g.renderOutline(x, y, w, RH - 2, 0xFFB07818);
+                }
+                if (p.giant() != null) icon(g, p.giant(), x + 3, y + 2, 20);
+                else if (p.own() != null) AdminStyle.icon(g, p.own(), x + 4, y + 3, 18);
+                int tx = x + 28;
+                int nx = g.drawString(font, cut(p.name().getString(), w - 100), tx, y + 3, p.active() ? KEY : DIM,
+                        false);
+                if (p.now()) g.drawString(font, tr("fun.pick.now"), nx + 6, y + 3, GOLD, false);
+                g.drawString(font, cut(p.sub(), w - 32), tx, y + 13, p.active() ? GREY : DIM, false);
+            }
+            if (picks.size() > shown()) {
+                int track = shown() * RH - 2, bar = Math.max(8, track * shown() / picks.size());
+                int by = y0 + (track - bar) * top / Math.max(1, picks.size() - shown());
+                g.fill(mx0 + mw - 12, y0, mx0 + mw - 10, y0 + track, 0x30503010);
+                g.fill(mx0 + mw - 12, by, mx0 + mw - 10, by + bar, 0xFF8A2A14);
+            }
+        }
+
+        @Override
+        boolean mouseClicked(double mx, double my, int button) {
+            int y0 = listTop(), x = mx0 + 8, w = mw - 16;
+            if (mx >= x && mx < x + w && my >= y0 && my < y0 + shown() * RH) {
+                int i = top + (int) ((my - y0) / RH);
+                if (i < picks.size() && picks.get(i).active()) {
+                    closeModal();
+                    picks.get(i).go().run();
+                }
+                return true;
+            }
+            return super.mouseClicked(mx, my, button);
+        }
+
+        @Override
+        void scrolled(double sy) {
+            top = Mth.clamp(top - (int) Math.signum(sy), 0, Math.max(0, picks.size() - shown()));
+        }
+
+        @Override
+        Component title() {
+            return title;
+        }
+
+        @Override
+        List<FormattedCharSequence> body() {
+            return font.split(body, modalW() - 16);
+        }
+
+        @Override
+        void cancel() {
+            closeModal();
+        }
     }
 
     /** a tag's form: new (t null) or changing one */
@@ -6310,6 +6522,8 @@ public class AdminBookScreen extends Screen {
         });
         fm.cycle(tr("fun.tagedit.glow"), () -> tr(glow[0] ? "fun.name.shown.on" : "fun.name.shown.off"),
                 () -> glow[0] = !glow[0]);
+        boolean[] own = {t == null || !t.has("ownName") || bool(t, "ownName")};
+        fm.cycle(tr("fun.name.own"), () -> tr(own[0] ? "fun.name.own.on" : "fun.name.own.off"), () -> own[0] = !own[0]);
         boolean hasLoot = t != null && t.get("loot") instanceof JsonObject;
         List<String> lootChoices = hasLoot ? List.of("keep", "none", "add", "replace") : List.of("none", "add",
                 "replace");
@@ -6327,6 +6541,7 @@ public class AdminBookScreen extends Screen {
             tag.addProperty("title", title.getValue());
             tag.addProperty("colour", colour[0]);
             tag.addProperty("glow", glow[0]);
+            tag.addProperty("ownName", own[0]);
             JsonObject o = new JsonObject();
             o.add("tag", tag);
             o.addProperty("old", t == null ? "" : str(t, "name"));
