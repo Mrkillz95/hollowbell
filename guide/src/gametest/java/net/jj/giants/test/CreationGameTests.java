@@ -156,18 +156,25 @@ public class CreationGameTests implements FabricGameTest {
                 new AdminCreation.Pending("someOtherWorld", d.bundle(), "Custom", "Alex"), folder);
         h.assertTrue(n == 0 && w.giantsWithValues().isEmpty(), "another world's choice went in");
         // this world's choice, as the early load step does it for a brand-new world
-        int logBefore = w.log().size();
+        List<AdminWorld.Change> logBefore = w.log();
+        AdminWorld.Change lastBefore = logBefore.isEmpty() ? null : logBefore.get(logBefore.size() - 1);
         n = AdminCreation.atLoad(s, s.overworld(),
                 new AdminCreation.Pending(folder, d.bundle(), "Far Frontier, changed", "Alex"), folder);
         h.assertTrue(n == 3, "3 settings in, not " + n);
         h.assertTrue(w.values("fakeadmin").get("power").getAsInt() == 8
                 && w.values("fakeadmin").get("landSize").getAsInt() == 650
                 && w.values("all").get("all.health").getAsDouble() == 2, "values " + w.values("fakeadmin"));
-        // (the log keeps the last 100: count the entries made since)
-        AdminWorld.Change c = w.log().get(w.log().size() - 1);
-        AdminWorld.Change before = w.log().size() > 1 ? w.log().get(w.log().size() - 2) : null;
-        h.assertTrue(logBefore == 0 || before != null && !before.id().equals(AdminCreation.LOG_ID)
-                || w.log().size() == logBefore + 1, "not one log entry");
+        // (the log keeps the last 100, and the test world keeps it from run to run: count the entries made since
+        // the one that was last, by identity)
+        List<AdminWorld.Change> logNow = w.log();
+        AdminWorld.Change c = logNow.get(logNow.size() - 1);
+        int since = logNow.size();
+        for (int i = logNow.size() - 1; i >= 0 && lastBefore != null; i--)
+            if (logNow.get(i) == lastBefore) {
+                since = logNow.size() - 1 - i;
+                break;
+            }
+        h.assertTrue(since == 1, "not one log entry: " + since);
 
         h.assertTrue(c.id().equals(AdminCreation.LOG_ID) && c.who().equals("Alex")
                 && AdminServer.changeText(c).equals("Set at world creation: Far Frontier, changed (3 changes)"),
