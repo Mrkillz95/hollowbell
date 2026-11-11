@@ -303,10 +303,14 @@ public class FightGameTests implements FabricGameTest {
                         "he runs, not bows");
                 h.assertTrue(GiantsBridge.called("fightact stop " + b.getUUID()), "the winner lets him go");
                 h.assertTrue("1.6".equals(tag(a, "jj_giants.fightx.speed=")), "(1.15) he runs off faster");
+                h.assertFalse(GiantsBridge.called("liveact home " + a.getUUID()), "he runs his own way first");
                 when(h, () -> !FightScript.busy(), 400, "the end", () -> {
                     h.assertTrue(a.isAlive(), "he got away alive");
                     h.assertTrue(tag(a, "jj_giants.fightx.speed=") == null, "his own speed again after");
-                    h.assertFalse(GiantsBridge.called("liveact home " + a.getUUID()), "he went his own way home");
+                    // (1.16) at the end he too drops every grudge, calms down for a minute and walks home
+                    h.assertTrue(GiantsBridge.called("liveact calm " + a.getUUID())
+                            && FightScript.cooling().contains(a.getUUID()), "he calms down too");
+                    h.assertTrue(GiantsBridge.called("liveact home " + a.getUUID()), "and walks home");
                     h.assertTrue(GiantsBridge.called("liveact home " + b.getUUID()), "the winner goes home");
                     done(h, at);
                 });
