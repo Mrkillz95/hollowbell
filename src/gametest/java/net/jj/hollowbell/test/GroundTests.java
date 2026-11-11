@@ -995,6 +995,10 @@ public class GroundTests implements FabricGameTest {
         e.moves().crack(c, r);
         int picked = Cracks.left() - before;
         h.assertTrue(picked == want.size(), "picked " + picked + " spots, not " + want.size());
+        // he goes now: the spots are all picked and the crack runs on without him. Left standing in it he drifts off
+        // (his own wander, from his first tick) and with griefing on his strand ends flatten the plants they drag
+        // through: now and then a spot he never picked lost its grass, and the test failed for no fault of the crack
+        e.discard();
         int[] ticks = {0};
         h.onEachTick(() -> {
             if (ticks[0] < 0) return;
@@ -1009,7 +1013,6 @@ public class GroundTests implements FabricGameTest {
                     if (cracked != w || gone != w) wrong[0]++;
                 }
             BellConfig.V.griefing = grief;
-            e.discard();
             HollowbellMod.LOG.info("crack test: {} spots cracked over {} ticks", want.size(), ticks[0]);
             ticks[0] = -1;
             h.assertTrue(wrong[0] == 0, wrong[0] + " spots not as his random picked them");
