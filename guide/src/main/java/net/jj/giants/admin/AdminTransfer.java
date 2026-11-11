@@ -145,10 +145,11 @@ public final class AdminTransfer {
                         + " of him and his finder, and one of him comes to them as their own.",
                 "", "", Map.of()));
         // Part 3: where the giants' grounds go (ADMIN_BRIDGE.md 18.9)
+        // (grounds of 400: at 500 the ninth giant often found no room left in the band)
         BUILT_IN.put("close_quarters", forEveryGiant("close_quarters", "Close Quarters",
                 "Every giant's ground begins 500 to 1,500 blocks from spawn, packed close together (smaller grounds,"
                         + " 50 blocks apart). Best for a new world: land already made stays as it is.",
-                "{\"groundNearest\":500,\"groundFarthest\":1500,\"groundGap\":50,\"homeRadius\":500}"));
+                "{\"groundNearest\":500,\"groundFarthest\":1500,\"groundGap\":50,\"homeRadius\":400}"));
         BUILT_IN.put("far_frontier", forEveryGiant("far_frontier", "Far Frontier",
                 "Every giant's ground is far out: it begins 5,000 to 20,000 blocks from spawn. Best for a new world:"
                         + " land already made stays as it is.",
