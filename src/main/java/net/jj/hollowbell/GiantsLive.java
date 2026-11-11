@@ -210,8 +210,12 @@ public final class GiantsLive {
                 // (as an op's /give of a new book: whoever has a fresh copy holds it, and the old one goes quiet)
                 ServerPlayer p = player(server, value);
                 if (p == null) return no("Pick a player who is online.");
+                // (20.18) at their Max giants per player: refused before any book is made (holding it already: no gain)
+                BookRule br = BookRule.get(server);
+                if (GiantsPlayers.mayOwn(p) && !p.getUUID().equals(br.holder()) && !GiantsPlayers.mayGain(p, false))
+                    return no(GiantsPlayers.opLine(p) + ". Raise their limit on the Players page first.");
                 ItemStack book = new ItemStack(ModItems.CODEX);
-                BookRule.get(server).given(p, book);
+                br.given(p, book);
                 if (!p.getInventory().add(book)) p.drop(book, false);
                 return ok(WHO + ": " + p.getGameProfile().getName() + " has his book now.");
             }

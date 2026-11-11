@@ -11,6 +11,7 @@
     "ChunkMapAccess",
     "BookPickupMixin",
     "BookSlotMixin",
+    "BookGiveMixin",
     "HollowsDecorateMixin",
     "HollowsNoiseMixin",
     "LogOffMixin",

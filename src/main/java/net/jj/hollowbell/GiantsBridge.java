@@ -71,6 +71,8 @@ public final class GiantsBridge {
         // (Part 5) the Guide's player rules, My Giant, the starting kit and fight music on players' games
         if (action.equals("players")) return GiantsPlayers.rules(arg);
         if (action.equals("playersclient")) return GiantsPlayers.client(arg);
+        // (20.18) Max giants per player: who owns him, for the Guide's count
+        if (action.equals("owners")) return GiantsPlayers.owners(server, arg);
         // (Part 12, ADMIN_BRIDGE.md §29) the giant editor: looks taken (server), the looks on this game (client)
         if (action.equals("look")) return GiantsLook.describe();
         if (action.equals("lookclient")) return GiantsLook.receive(arg);

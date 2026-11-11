@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.jj.hollowbell.GiantsPlayers;
 import net.jj.hollowbell.ModItems;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
@@ -133,15 +134,28 @@ public final class BookRule extends SavedData {
      * A fresh copy given to this player, as an op's /give: they hold the book from now on and any other copy goes
      * quiet (the Giants Guide's live control)
      */
-    public void given(ServerPlayer p, ItemStack s) {
-        // (Part 5) an admin's rule: this player may not own giants, so the copy stays quiet
-        if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) {
+    public boolean given(ServerPlayer p, ItemStack s) {
+        // (Part 5) an admin's rule: this player may not own giants, so the copy stays quiet; (20.18) the same at their
+        // Max giants per player, unless they hold it already (no gain)
+        if (!GiantsPlayers.mayOwn(p) || !p.getUUID().equals(holder) && !GiantsPlayers.mayGain(p, false)) {
             giveId(s);
             markQuiet(s, true);
-            return;
+            return false;
         }
         hold(p, giveId(s));
         markQuiet(s, false);
+        return true;
+    }
+
+    /**
+     * (20.18) an op's /give: every new copy (no id yet) in their pack is given as above; false when one stayed quiet
+     * because they're at their Max giants per player
+     */
+    public boolean givenNew(ServerPlayer p) {
+        boolean all = true;
+        for (ItemStack s : booksOf(p))
+            if (idOf(s) == null && ownerOf(s) == null && GiantsPlayers.mayOwn(p)) all &= given(p, s);
+        return all;
     }
 
     /** /hollowbell book free: nobody holds it now */
@@ -228,8 +242,14 @@ public final class BookRule extends SavedData {
         if (!net.jj.hollowbell.GiantsPlayers.mayOwn(p)) return false;
         // (My Giant) an own book: only its owner's, only while My Giant is on
         if (ownerOf(s) != null) return ownWorks(p, s);
-        // (a copy with no id yet is a new one an op or the creative menu gave: whoever has it holds the book now)
+        // (a copy with no id yet is a new one an op or the creative menu gave: whoever has it holds the book now; at
+        // their Max giants per player it stays quiet)
         if (idOf(s) == null) {
+            if (!p.getUUID().equals(holder) && !GiantsPlayers.mayGain(p, false)) {
+                giveId(s);
+                markQuiet(s, true);
+                return false;
+            }
             hold(p, giveId(s));
             markQuiet(s, false);
             return true;
@@ -249,6 +269,8 @@ public final class BookRule extends SavedData {
         UUID mark = ownerOf(s);
         if (mark != null) return mark.equals(p.getUUID());
         if (holder == null) {
+            // (20.18) taking up a free book is a gain: not past their Max giants per player
+            if (!GiantsPlayers.mayGain(p, true)) return false;
             hold(p, giveId(s));
             markQuiet(s, false);
             return true;
@@ -279,6 +301,12 @@ public final class BookRule extends SavedData {
             p.displayClientMessage(Component.translatable("message.hollowbell.own_book_theirs", ownerName(s)), true);
             return;
         }
+        // (20.18) nobody holds it: refused for their Max giants per player
+        String cap = holder == null ? GiantsPlayers.capLine(p.getUUID()) : null;
+        if (cap != null) {
+            p.displayClientMessage(Component.literal(cap), true);
+            return;
+        }
         p.displayClientMessage(Component.translatable("message.hollowbell.book_taken", holderName), true);
     }
 
@@ -300,6 +328,12 @@ public final class BookRule extends SavedData {
                     ? "message.hollowbell.own_book_theirs"
                     : !ownCurrent(mark, idOf(s)) ? "message.hollowbell.own_book_fell" : "message.hollowbell.own_book_off";
             p.displayClientMessage(Component.translatable(key, ownerName(s)), true);
+            return;
+        }
+        // (20.18) quiet because they're at their Max giants per player (nobody holds it)
+        String cap = holder == null ? GiantsPlayers.capLine(p.getUUID()) : null;
+        if (cap != null) {
+            p.displayClientMessage(Component.literal(cap), true);
             return;
         }
         p.displayClientMessage(Component.translatable("message.hollowbell.book_quiet", holderName), true);
@@ -338,6 +372,11 @@ public final class BookRule extends SavedData {
 
     public @Nullable Own own(UUID who) {
         return own.get(who);
+    }
+
+    /** every own book, by owner (for GiantsBridge "owners") */
+    public Map<UUID, Own> owns() {
+        return java.util.Collections.unmodifiableMap(own);
     }
 
     /** every own book's owner, by name (for book who) */
@@ -463,8 +502,10 @@ public final class BookRule extends SavedData {
             for (ItemStack s : booksOf(p))
                 if (idOf(s) == null) {
                     UUID id = giveId(s);
-                    // (Part 5: one who may not own giants keeps a quiet copy)
-                    if (net.jj.hollowbell.GiantsPlayers.mayOwn(p)) hold(p, id);
+                    // (Part 5: one who may not own giants keeps a quiet copy; 20.18: so does one at their Max giants
+                    // per player, unless they hold it already)
+                    if (GiantsPlayers.mayOwn(p) && (p.getUUID().equals(holder) || GiantsPlayers.mayGain(p, false)))
+                        hold(p, id);
                 }
         // (Part 5) an admin ruled the holder may not own giants: the book is let go of
         if (holder != null && !net.jj.hollowbell.GiantsPlayers.mayOwn(holder)) free();
@@ -480,7 +521,8 @@ public final class BookRule extends SavedData {
             for (ServerPlayer p : players) {
                 List<ItemStack> bs = new ArrayList<>(booksOf(p));
                 bs.removeIf(s -> ownerOf(s) != null); // (an own book never becomes the main one)
-                if (bs.isEmpty() || !net.jj.hollowbell.GiantsPlayers.mayOwn(p)) continue;
+                // (20.18: one at their Max giants per player is passed over like one who may not own giants)
+                if (bs.isEmpty() || !GiantsPlayers.mayOwn(p) || !GiantsPlayers.mayGain(p, false)) continue;
                 hold(p, idOf(bs.get(0)));
                 break;
             }

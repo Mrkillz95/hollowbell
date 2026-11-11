@@ -1,14 +1,20 @@
 package net.jj.hollowbell;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.jj.hollowbell.entity.HearthYards;
+import net.jj.hollowbell.item.BookRule;
 import net.jj.hollowbell.solid.SitHost;
 import net.jj.hollowbell.solid.Sitting;
 import net.minecraft.network.chat.Component;
@@ -32,11 +38,21 @@ public final class GiantsPlayers {
     /** the player switches this mod applies (listed in his admin header's "uses" after the multipliers) */
     public static final String[] USES = {
         "all.sit", "all.ride", "all.stand", "all.armourPowers", "all.bossBars", "all.fightMusic", "all.chatMeetings",
-        "all.chatMoves", "all.chatBackDown", "all.books", "all.bookOrders", GiantsMix.MIX
+        "all.chatMoves", "all.chatBackDown", "all.books", "all.bookOrders", GiantsMix.MIX, "all.maxGiants"
     };
 
-    /** one player's rules: may they own giants (hold a book), and do the giants leave them alone */
-    public record Rule(boolean own, boolean ignored) {}
+    /** (ADMIN_BRIDGE.md 20.18) the world's Max giants per player: "none" (absent) or "1".."9" */
+    public static final String MAX = "all.maxGiants";
+
+    /**
+     * one player's rules: may they own giants (hold a book), do the giants leave them alone, and the most giants they
+     * may own (-1: the world's Max giants per player, 0: no limit, 1..9)
+     */
+    public record Rule(boolean own, boolean ignored, int max) {
+        public Rule(boolean own, boolean ignored) {
+            this(own, ignored, -1);
+        }
+    }
 
     private static volatile Map<String, String> switches = Map.of();
     private static volatile Map<UUID, Rule> rules = Map.of();
@@ -75,6 +91,8 @@ public final class GiantsPlayers {
         GiantsMix.clear();
         switches = Map.of();
         rules = Map.of();
+        lastNo.clear();
+        noToldAt.clear();
     }
 
     private static boolean on(String id) {
@@ -185,7 +203,9 @@ public final class GiantsPlayers {
                 JsonObject v = e.getValue().getAsJsonObject();
                 boolean own = !v.has("own") || v.get("own").getAsBoolean();
                 boolean ignored = v.has("ignored") && v.get("ignored").getAsBoolean();
-                m.put(UUID.fromString(e.getKey()), new Rule(own, ignored));
+                // (20.18) absent: the world's Max giants per player; 0: no limit; 1..9 (clamped)
+                int max = v.has("max") ? Math.max(0, Math.min(9, v.get("max").getAsInt())) : -1;
+                m.put(UUID.fromString(e.getKey()), new Rule(own, ignored, max));
             }
         } catch (RuntimeException e) {
             return null;
@@ -243,5 +263,150 @@ public final class GiantsPlayers {
 
     public static void forget() {
         standing.clear();
+        lastNo.clear();
+        noToldAt.clear();
+    }
+
+    // (ADMIN_BRIDGE.md 20.18) Max giants per player: the Guide counts, the giants ask before a gain
+
+    /** each refused player's last line from the Guide ("You already own 2 giants, the most this world allows.") */
+    private static final Map<UUID, String> lastNo = new HashMap<>();
+    /** when each was last told it on the action bar (a pickup is tried every tick) */
+    private static final Map<UUID, Long> noToldAt = new HashMap<>();
+    /** (the tests, where the Guide isn't there) answers in its place: (action, arg) -> the Guide's answer */
+    public static volatile @Nullable BiFunction<String, String, List<String>> guideForTests;
+
+    private static final Pattern NUMBER = Pattern.compile("\\d+");
+
+    /** the most giants this player may own: their own rule, else the world's; 0 = no limit */
+    public static int maxFor(@Nullable UUID id) {
+        Rule r = id == null ? null : rules.get(id);
+        if (r != null && r.max() >= 0) return r.max();
+        String v = switches.get(MAX);
+        if (v == null) return 0;
+        try {
+            return Math.max(0, Math.min(9, Integer.parseInt(v.trim())));
+        } catch (NumberFormatException e) {
+            return 0; // ("none")
+        }
+    }
+
+    /** a limit is in force for them (with No limit nothing is ever asked) */
+    public static boolean capped(@Nullable UUID id) {
+        return maxFor(id) > 0;
+    }
+
+    /**
+     * May this player GAIN a giant: become the book's holder, or get an own book they didn't have? Never asked for one
+     * they already have, and never to take one away. With no limit for them: yes at once. Otherwise the Guide counts
+     * every giant's owners and answers; no Guide, or an older one: yes. A no is remembered (capLine) and, with tell,
+     * shown on the action bar at most every two seconds.
+     */
+    public static boolean mayGain(ServerPlayer p, boolean tell) {
+        if (!mayOwn(p)) return false;
+        UUID id = p.getUUID();
+        if (!capped(id)) return true;
+        JsonObject o = new JsonObject();
+        o.addProperty("players", VERSION);
+        o.addProperty("player", id.toString());
+        o.addProperty("giant", "hollowbell");
+        List<String> r = askGuide(p.server, "maygain", o.toString());
+        if (r == null || r.isEmpty() || !"no".equals(r.get(0))) {
+            lastNo.remove(id);
+            return true;
+        }
+        String line = r.size() > 1 && r.get(1) != null && !r.get(1).isBlank() ? r.get(1)
+                : "You already own as many giants as this world allows.";
+        lastNo.put(id, line);
+        if (tell) {
+            long now = p.serverLevel().getGameTime();
+            Long last = noToldAt.get(id);
+            if (last == null || now - last >= 40 || now < last) {
+                noToldAt.put(id, now);
+                p.displayClientMessage(Component.literal(line), true);
+            }
+        }
+        return false;
+    }
+
+    /** the last no the Guide gave this player, while a limit is in force for them (null: none) */
+    public static @Nullable String capLine(UUID id) {
+        return capped(id) ? lastNo.get(id) : null;
+    }
+
+    /** how many giants the Guide last said they own (the first number in its line; else their limit) */
+    public static int ownedCount(UUID id) {
+        String l = lastNo.get(id);
+        if (l != null) {
+            Matcher m = NUMBER.matcher(l);
+            if (m.find()) return Integer.parseInt(m.group());
+        }
+        return maxFor(id);
+    }
+
+    /** an op's line about somebody at their limit: "Alex already owns 2 giants, the most this world allows for them" */
+    public static String opLine(ServerPlayer p) {
+        int n = ownedCount(p.getUUID());
+        return p.getGameProfile().getName() + " already owns " + n + (n == 1 ? " giant" : " giants")
+                + ", the most this world allows for them";
+    }
+
+    /** an op's /give at their limit: their copy stays quiet (message.hollowbell.players.max_op) */
+    public static Component opGiveLine(ServerPlayer p) {
+        int n = ownedCount(p.getUUID());
+        String name = p.getGameProfile().getName();
+        return n == 1
+                ? Component.translatable("message." + HollowbellMod.MOD_ID + ".players.max_op_one", name)
+                : Component.translatable("message." + HollowbellMod.MOD_ID + ".players.max_op", name,
+                        String.valueOf(n));
+    }
+
+    private static @Nullable List<String> askGuide(MinecraftServer server, String action, String arg) {
+        BiFunction<String, String, List<String>> stub = guideForTests;
+        if (stub != null) return stub.apply(action, arg);
+        if (server == null) return null;
+        try {
+            Class<?> c = Class.forName("net.jj.giants.GuideBridge", true, GiantsPlayers.class.getClassLoader());
+            Method m = c.getMethod("guide", MinecraftServer.class, String.class, String.class);
+            Object r = m.invoke(null, server, action, arg);
+            if (!(r instanceof List<?> l)) return null;
+            return l.stream().map(String::valueOf).toList();
+        } catch (ClassNotFoundException e) {
+            return null; // (no Guide: no limit)
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            HollowbellMod.LOG.debug("Couldn't ask the Guide about a player's giants: {}", e.toString());
+            return null;
+        }
+    }
+
+    /**
+     * GiantsBridge "owners": {"owners":1} -> ["ok", {"owners":1,"main":"<uuid>","mainName":"..","own":[{"id","name"}]}].
+     * main is left out while nobody holds the book; own is empty while My Giant is off. Only the saved book data.
+     */
+    public static @Nullable List<String> owners(MinecraftServer server, String arg) {
+        try {
+            JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
+            if (o.get("owners").getAsInt() > VERSION) return null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+        if (server == null) return null;
+        BookRule r = BookRule.get(server);
+        JsonObject out = new JsonObject();
+        out.addProperty("owners", VERSION);
+        if (r.holder() != null) {
+            out.addProperty("main", r.holder().toString());
+            out.addProperty("mainName", r.holderName());
+        }
+        JsonArray own = new JsonArray();
+        if (myGiant())
+            for (Map.Entry<UUID, BookRule.Own> e : r.owns().entrySet()) {
+                JsonObject one = new JsonObject();
+                one.addProperty("id", e.getKey().toString());
+                one.addProperty("name", e.getValue().name());
+                own.add(one);
+            }
+        out.add("own", own);
+        return List.of("ok", out.toString());
     }
 }

@@ -540,6 +540,8 @@
   "controls.hollowbell.triple_crouch_sit.desc": "Crouch three times within two seconds while standing on him (on his safe list) to sit down there. Jump to get up.",
   "message.hollowbell.systems.weak": "Weak point!",
   "message.hollowbell.players.no_own": "You may not own giants in this world.",
+  "message.hollowbell.players.max_op": "%s already owns %s giants, the most this world allows for them: their copy stays quiet.",
+  "message.hollowbell.players.max_op_one": "%s already owns 1 giant, the most this world allows for them: their copy stays quiet.",
   "message.hollowbell.players.books_off": "Giants' books are turned off in this world.",
   "message.hollowbell.players.attacks_off": "Attack orders are turned off in this world.",
   "message.hollowbell.players.ride_off": "Riding giants is turned off in this world.",

@@ -88,6 +88,8 @@ public final class MyGiant {
         String holder = "";
         boolean spawned = false;
         String line;
+        // (20.18) at their Max giants per player: neither his book nor their own one (no gain), so only placed there
+        String capNo = null;
         if (!book || !mayOwn) {
             outcome = "placed";
             line = "Welcome to the " + NAME + "'s ground.";
@@ -106,16 +108,23 @@ public final class MyGiant {
                     if (!r.carriesOwn(p)) put(p, r.ownCopy(p));
                     own = "The " + NAME + " is yours: his book is in your pack.";
                 } else if (giant && (cap <= 0 || WorldOne.standing(server) < cap)) {
-                    HollowbellEntity e = WorldOne.companionNear(p.serverLevel(), p.position(),
-                            Math.max(12, 110 * BellConfig.V.worldScale), home, null);
-                    if (e != null) {
-                        e.setMyOwner(p.getUUID());
-                        put(p, r.makeOwn(p, e.getUUID()));
-                        own = "The " + NAME + " is yours: his book is in your pack, and he's coming to you.";
+                    // (20.18) a new own book is a gain: asked before one of him comes
+                    if (!GiantsPlayers.mayGain(p, false)) capNo = capLine(p);
+                    else {
+                        HollowbellEntity e = WorldOne.companionNear(p.serverLevel(), p.position(),
+                                Math.max(12, 110 * BellConfig.V.worldScale), home, null);
+                        if (e != null) {
+                            e.setMyOwner(p.getUUID());
+                            put(p, r.makeOwn(p, e.getUUID()));
+                            own = "The " + NAME + " is yours: his book is in your pack, and he's coming to you.";
+                        }
                     }
                 } else full = giant;
             }
-            if (own != null) {
+            if (capNo != null) {
+                outcome = "placed";
+                line = "";
+            } else if (own != null) {
                 outcome = "own";
                 holder = me;
                 spawned = true;
@@ -132,6 +141,10 @@ public final class MyGiant {
                         : holder + " has the " + NAME + " book, so you share theirs: you're on " + holder
                                 + "'s safe list and he won't hurt you.";
             }
+        } else if (r.holder() == null && !GiantsPlayers.mayGain(p, false)) {
+            capNo = capLine(p);
+            outcome = "placed";
+            line = "";
         } else {
             if (r.holder() == null) giveBook(p);
             holder = p.getGameProfile().getName();
@@ -151,8 +164,15 @@ public final class MyGiant {
                         + " out there: his book is in your pack.";
             }
         }
+        if (capNo != null) line = "Welcome to the " + NAME + "'s ground. " + capNo;
         done(server, p.getUUID(), outcome, spawned, holder);
         return line;
+    }
+
+    /** the Guide's line for a player refused a gain (20.18) */
+    private static String capLine(ServerPlayer p) {
+        String l = GiantsPlayers.capLine(p.getUUID());
+        return l != null ? l : "You already own as many giants as this world allows.";
     }
 
     /** a fresh book into their pack, held by them (BOOK_RULE.md) */
@@ -216,6 +236,8 @@ public final class MyGiant {
                 BookRule r = BookRule.get(server);
                 if (r.holder() != null && !r.holder().equals(p.getUUID()))
                     return List.of("no", r.holderName() + " has the " + NAME + " book.");
+                // (20.18) a gain: not past their Max giants per player
+                if (r.holder() == null && !GiantsPlayers.mayGain(p, false)) return List.of("no", capLine(p));
                 if (r.holder() == null) giveBook(p);
             }
             default -> {
