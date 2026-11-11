@@ -182,6 +182,12 @@ public class MaxGiantsGameTests implements FabricGameTest {
         GiantsBridge.own.put(a.getStringUUID(), "capped");
         h.assertTrue(mayGain(s, a).get(0).equals("no"), "main and own of one kind: 2");
         GiantsBridge.own.clear();
+        // one book that makes him Keeper of three of a kind (the Hearthstride's) counts 3
+        GiantsBridge.mainCount = 3;
+        set(h, s, "maxGiants", "3");
+        h.assertTrue(List.of("no", "You already own 3 giants, the most this world allows.").equals(mayGain(s, a)),
+                "one book for three: " + mayGain(s, a));
+        GiantsBridge.mainCount = 0;
         set(h, s, "maxGiants", "1");
         h.assertTrue(List.of("no", "You already own 1 giant, the most this world allows.").equals(mayGain(s, a)),
                 "one: " + mayGain(s, a));

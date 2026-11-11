@@ -69,7 +69,9 @@ public final class Owns {
             if (o != null) {
                 String main = id(AdminJson.str(o, "main", 40));
                 if (main != null) {
-                    add(claims, main, new Claim(g.key(), mainKind));
+                    // (a giant whose one book covers several of him says how many: each counts)
+                    int count = (int) Math.max(1, Math.min(64, AdminJson.num(o, "mainCount", 1)));
+                    for (int i = 0; i < count; i++) add(claims, main, new Claim(g.key(), mainKind));
                     String n = AdminJson.str(o, "mainName", 40);
                     if (!n.isEmpty()) names.putIfAbsent(main, n);
                 }

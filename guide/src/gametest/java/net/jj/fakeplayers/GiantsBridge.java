@@ -32,6 +32,8 @@ public final class GiantsBridge {
     /** (Max giants per player, 20.18) whether he answers "owners" (false: an older giant), and how often he was */
     public static boolean speaksOwners = true;
     public static int ownersCalls;
+    /** how many giants his one main book covers (0: not said, as an older giant) */
+    public static int mainCount;
     /** My Giant own books besides the bound ones: uuid -> name */
     public static final Map<String, String> own = new LinkedHashMap<>();
     /** what Live control may do with him, and the liveacts he was sent */
@@ -51,6 +53,7 @@ public final class GiantsBridge {
         gave.clear();
         speaksOwners = true;
         ownersCalls = 0;
+        mainCount = 0;
         own.clear();
         does.clear();
         acts.clear();
@@ -109,6 +112,7 @@ public final class GiantsBridge {
                 if (holder != null) {
                     a.addProperty("main", holder);
                     a.addProperty("mainName", holderName == null ? "" : holderName);
+                    if (mainCount > 0) a.addProperty("mainCount", mainCount);
                 }
                 com.google.gson.JsonArray l = new com.google.gson.JsonArray();
                 for (var e : own.entrySet()) {
