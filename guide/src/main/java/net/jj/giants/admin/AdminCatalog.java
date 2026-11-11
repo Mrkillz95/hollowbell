@@ -123,6 +123,12 @@ public final class AdminCatalog {
                     "A full set put on new players (a giant's name: his armour set)."),
             choice("all.kitBook", withGiven(List.of("none")), "Book in the kit",
                     "That giant's book for a new player, when nobody has it; else left out and they are told."),
+            // (Max giants per player, ADMIN_BRIDGE.md 20.18) counted by the Guide, kept by every giant
+            choice("all.maxGiants", List.of("none", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
+                    "Max giants per player",
+                    "The most giants one player may own at once: main books, My Giant books and the Hearthstride's"
+                            + " Keeper. At the limit they keep what they own but can't gain another. No limit: as"
+                            + " always."),
             flag("all.sit", true, "Sitting on giants",
                     "Players on a giant's safe list may sit on him (triple crouch or the key)."),
             flag("all.ride", true, "Riding giants",

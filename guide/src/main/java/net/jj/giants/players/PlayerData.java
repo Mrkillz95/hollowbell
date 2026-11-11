@@ -47,9 +47,14 @@ public final class PlayerData extends SavedData {
     public static final class Rule {
         public String name = "";
         public boolean own = true, ignored = false, noKit = false;
+        /**
+         * (Max giants per player, ADMIN_BRIDGE.md 20.18) the most giants they may own: -1 the world's setting
+         * (all.maxGiants), 0 no limit for them, 1..9 their own limit. Missing in older worlds reads as -1.
+         */
+        public int max = -1;
 
         public boolean any() {
-            return !own || ignored || noKit;
+            return !own || ignored || noKit || max >= 0;
         }
     }
 

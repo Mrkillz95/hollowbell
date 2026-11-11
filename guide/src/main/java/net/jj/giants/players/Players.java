@@ -186,10 +186,12 @@ public final class Players {
         JsonObject rules = new JsonObject();
         for (var e : d.s.rules.entrySet()) {
             PlayerData.Rule r = e.getValue();
-            if (r.own && !r.ignored) continue;
+            if (r.own && !r.ignored && r.max < 0) continue;
             JsonObject o = new JsonObject();
             o.addProperty("own", r.own);
             o.addProperty("ignored", r.ignored);
+            // (Max giants per player, 20.18) only an override; absent: the world's all.maxGiants
+            if (r.max >= 0) o.addProperty("max", Math.min(9, r.max));
             rules.add(e.getKey(), o);
         }
         // (Part 6) players standing in a safe area are ignored there
@@ -247,6 +249,58 @@ public final class Players {
         AdminBook.changed("players");
         String line = w.name() + " " + words + " in this world.";
         return new AdminServer.Result(true, List.of(line), List.of(who + ": " + line));
+    }
+
+    /**
+     * (Max giants per player, ADMIN_BRIDGE.md 20.18) a player's own limit, as /giants players <player> max and the
+     * book's Players page set it: "default" (the world's), "none" (no limit for them) or 1 to 9. Nothing they own is
+     * taken away, whatever it is lowered to.
+     */
+    public static AdminServer.Result setMax(MinecraftServer server, String who, String player, String value) {
+        String v = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
+        int max;
+        switch (v) {
+            case "default", "world" -> max = -1;
+            case "none" -> max = 0;
+            default -> {
+                try {
+                    max = Integer.parseInt(v);
+                } catch (NumberFormatException e) {
+                    max = -2;
+                }
+                if (max < 1 || max > 9) return AdminServer.Result.fail("Pick 1 to 9, none or default.");
+            }
+        }
+        Who w = who(server, player);
+        if (w == null) return AdminServer.Result.fail("No player called " + player + " has been on this server.");
+        PlayerData d = PlayerData.get(server);
+        PlayerData.Rule r = d.s.rules.computeIfAbsent(w.id(), k -> new PlayerData.Rule());
+        r.name = w.name();
+        r.max = max;
+        if (!r.any()) d.s.rules.remove(w.id());
+        d.setDirty();
+        pushRules(server, d);
+        int world = Owns.worldCap(server);
+        String words = max > 0 ? "may own at most " + max + (max == 1 ? " giant" : " giants")
+                : max == 0 ? "may own any number of giants (no limit)"
+                : "follows the world's limit on giants (" + (world > 0 ? String.valueOf(world) : "no limit") + ")";
+        AdminWorld.get(server).log(new AdminWorld.Change(System.currentTimeMillis(), who, AdminCatalog.ALL,
+                "players:max", w.name() + " " + words, "", max > 0 ? String.valueOf(max) : max == 0 ? "none"
+                        : "default", ""));
+        AdminBook.changed("players");
+        String line = w.name() + " " + words + " in this world.";
+        return new AdminServer.Result(true, List.of(line), List.of(who + ": " + line));
+    }
+
+    /** /giants players <player> max: what they own and their limit */
+    public static AdminServer.Result showMax(MinecraftServer server, String player) {
+        Who w = who(server, player);
+        if (w == null) return AdminServer.Result.fail("No player called " + player + " has been on this server.");
+        Owns.All a = Owns.all(server);
+        PlayerData.Rule r = PlayerData.get(server).rule(w.id());
+        int cap = Owns.cap(server, w.id());
+        String rule = r.max > 0 ? "Their own limit." : r.max == 0 ? "No limit for them." : "The world's limit.";
+        return AdminServer.Result.said(List.of(Owns.summary(w.name(), a.of(w.id()), cap), rule));
     }
 
     /** a player by name or UUID: online, known to this world's data, or the server's name cache */
@@ -328,7 +382,9 @@ public final class Players {
         String book = option(server, "kitBook");
         if (!book.equals("none") && !book.isEmpty() && on(server, "books")) {
             Giant g = AdminServer.giant(book);
-            List<String> r = g == null ? null : give(server, p, g, "book");
+            // (Max giants per player, 20.18) at their limit the kit's book is left out, the same way
+            Owns.Verdict v = g == null ? null : Owns.check(server, p.getStringUUID());
+            List<String> r = g == null ? null : !v.ok() ? List.of("no", v.line()) : give(server, p, g, "book");
             if (r != null && r.size() > 1 && r.get(0).equals("no"))
                 p.sendSystemMessage(Component.literal("Your starting kit has no " + AdminServer.nameOf(g) + " book: "
                         + r.get(1)).withStyle(ChatFormatting.GRAY));
@@ -401,6 +457,7 @@ public final class Players {
         Map<String, Double> all = allValues(server);
         PlayerData d = PlayerData.get(server);
         boolean mayOwn = d.rule(viewer.getStringUUID()).own && on(server, "books");
+        Owns.All[] all0 = {null};
         for (Giant g : pickable(server)) {
             JsonObject j = new JsonObject();
             j.addProperty("key", g.key());
@@ -421,8 +478,12 @@ public final class Players {
             // (the main book's holder: with My Giant's own books a live line's owner may be an own book's)
             String holder = mainHolder(server, g, live);
             boolean other = holder != null && !holder.equals(viewer.getGameProfile().getName());
+            // (Max giants per player, 20.18) at their limit: his ground without his book
+            String capped = mayOwn ? cappedFor(server, viewer.getStringUUID(), g, all0) : null;
             // (1.11.0, BOOK_RULE.md's My Giant exception) with room, a picker gets their own book and their own one
             if (!mayOwn) note = "You'd go to his ground; you may not own giants in this world.";
+            else if (capped != null) note = capped.substring(0, capped.length() - 1)
+                    + ": you'd go to his ground without his book.";
             else if (other && full) note = "As many as the world allows: you'd share " + holder + "'s book.";
             else if (other) note = holder + " has his book: you'd get your own book and your own one of him.";
             else if (full) note = "As many as the world allows: you'd take charge of them.";
@@ -432,6 +493,19 @@ public final class Players {
         o.add("giants", a);
         o.addProperty("picked", d.s.picks.containsKey(viewer.getStringUUID()));
         return o;
+    }
+
+    /**
+     * (Max giants per player, 20.18) the line for a player who may not gain this giant now (at their limit and not
+     * already holding one of his books), else null. pass: one count shared by a whole list (filled on first use).
+     */
+    static @Nullable String cappedFor(MinecraftServer server, String id, Giant g, Owns.All[] pass) {
+        int cap = Owns.cap(server, id);
+        if (cap <= 0) return null;
+        if (pass[0] == null) pass[0] = Owns.all(server);
+        List<Owns.Claim> mine = pass[0].of(id);
+        for (Owns.Claim c : mine) if (c.giant().equals(g.key())) return null;
+        return mine.size() < cap ? null : Owns.line(mine.size(), cap);
     }
 
     static Map<String, Double> allValues(MinecraftServer server) {
@@ -528,7 +602,9 @@ public final class Players {
         JsonObject o = new JsonObject();
         o.addProperty("players", 1);
         o.addProperty("player", p.getStringUUID());
-        o.addProperty("book", on(server, "books") && d.rule(p.getStringUUID()).own);
+        String capped = on(server, "books") && d.rule(p.getStringUUID()).own
+                ? cappedFor(server, p.getStringUUID(), g, new Owns.All[1]) : null;
+        o.addProperty("book", on(server, "books") && d.rule(p.getStringUUID()).own && capped == null);
         o.addProperty("finder", true);
         o.addProperty("giant", true);
         List<String> r = AdminServer.call(server, g, "mygiant", o.toString());
@@ -539,7 +615,11 @@ public final class Players {
                     : AdminServer.nameOf(g) + " can't be picked right now.");
         }
         AdminBook.changed("players");
-        return AdminServer.Result.said(r.subList(1, r.size()));
+        if (capped == null) return AdminServer.Result.said(r.subList(1, r.size()));
+        List<String> said = new ArrayList<>(r.subList(1, r.size()));
+        // (a giant that knows the limit says it himself)
+        if (said.stream().noneMatch(l -> l.contains(capped))) said.add(capped);
+        return AdminServer.Result.said(said);
     }
 
     /** GuideBridge "mygiantdone": what came of a pick */

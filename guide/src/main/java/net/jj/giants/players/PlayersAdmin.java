@@ -23,7 +23,7 @@ public final class PlayersAdmin {
 
     public static final String KIND = "players";
     /** the book's requests this class answers */
-    public static final List<String> DOS = List.of("prule", "repick", "voteopen", "voteclose", "votecancel",
+    public static final List<String> DOS = List.of("prule", "pmax", "repick", "voteopen", "voteclose", "votecancel",
             "boardremove");
 
     public static AdminBookStatePayload page(MinecraftServer server) {
@@ -48,6 +48,15 @@ public final class PlayersAdmin {
             PlayerData.Stats st = d.s.stats.get(e.getKey());
             people.computeIfAbsent(e.getKey(), k -> person(k, st == null ? k.substring(0, 8) : st.name));
         }
+        // (Max giants per player, 20.18) one count of every giant's owners for the whole page; whoever owns one is
+        // listed too, online or not
+        Owns.All owns = Owns.all(server);
+        for (String id : owns.claims().keySet()) {
+            PlayerData.Stats st = d.s.stats.get(id);
+            String n = owns.names().getOrDefault(id, st == null ? id.substring(0, 8) : st.name);
+            people.computeIfAbsent(id, k -> person(k, n));
+        }
+        int world = Owns.worldCap(server);
         JsonArray rules = new JsonArray();
         for (JsonObject j : people.values()) {
             String id = j.get("id").getAsString();
@@ -55,6 +64,12 @@ public final class PlayersAdmin {
             j.addProperty("own", r.own);
             j.addProperty("ignored", r.ignored);
             j.addProperty("nokit", r.noKit);
+            j.addProperty("owns", owns.count(id));
+            j.addProperty("max", r.max >= 0 ? Math.min(9, r.max) : world);
+            j.addProperty("maxRule", Math.min(9, r.max));
+            JsonArray claims = new JsonArray();
+            for (Owns.Claim c : owns.of(id)) claims.add(c.words());
+            j.add("claims", claims);
             PlayerData.Pick pk = d.s.picks.get(id);
             if (pk != null) {
                 Giant g = AdminServer.giant(pk.giant);
@@ -102,6 +117,7 @@ public final class PlayersAdmin {
         return switch (what) {
             case "prule" -> Players.setRule(server, who, AdminJson.str(o, "player", 40),
                     AdminJson.str(o, "rule", 16), Boolean.parseBoolean(AdminJson.str(o, "on", 8)));
+            case "pmax" -> Players.setMax(server, who, AdminJson.str(o, "player", 40), AdminJson.str(o, "max", 8));
             case "repick" -> Players.repick(server, who, AdminJson.str(o, "player", 40));
             case "voteopen" -> Votes.open(server, who, Arrays.asList(AdminJson.str(o, "options", 2000).split(",")),
                     (int) AdminJson.num(o, "minutes", 5), Boolean.parseBoolean(AdminJson.str(o, "auto", 8)));

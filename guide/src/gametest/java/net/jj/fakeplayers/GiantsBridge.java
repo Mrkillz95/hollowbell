@@ -29,6 +29,16 @@ public final class GiantsBridge {
     public static final List<String> gave = new ArrayList<>();
     /** where his ground's middle is (the test sets it) */
     public static double gx, gy, gz;
+    /** (Max giants per player, 20.18) whether he answers "owners" (false: an older giant), and how often he was */
+    public static boolean speaksOwners = true;
+    public static int ownersCalls;
+    /** My Giant own books besides the bound ones: uuid -> name */
+    public static final Map<String, String> own = new LinkedHashMap<>();
+    /** what Live control may do with him, and the liveacts he was sent */
+    public static final List<String> does = new ArrayList<>();
+    public static final List<String> acts = new ArrayList<>();
+    /** the last My Giant pick's book flag */
+    public static Boolean lastBook;
 
     public static void reset() {
         all = new JsonObject();
@@ -39,6 +49,12 @@ public final class GiantsBridge {
         standing.clear();
         boundTo.clear();
         gave.clear();
+        speaksOwners = true;
+        ownersCalls = 0;
+        own.clear();
+        does.clear();
+        acts.clear();
+        lastBook = null;
     }
 
     public static List<String> giants(MinecraftServer s, String action, String arg) {
@@ -64,7 +80,7 @@ public final class GiantsBridge {
             }
             case "live" -> {
                 out.add("{\"live\":1,\"giant\":\"fakeplayers\",\"name\":\"Fakeplayers\",\"moods\":[\"calm\"],"
-                        + "\"size\":[0.1,2],\"does\":[]}");
+                        + "\"size\":[0.1,2],\"does\":" + new com.google.gson.Gson().toJson(does) + "}");
                 for (String id : standing.keySet()) {
                     JsonObject g = new JsonObject();
                     g.addProperty("id", id);
@@ -82,6 +98,45 @@ public final class GiantsBridge {
                     }
                     out.add(g.toString());
                 }
+            }
+            case "owners" -> {
+                if (!speaksOwners) return null;
+                JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
+                if (o.get("owners").getAsInt() != 1) return null;
+                ownersCalls++;
+                JsonObject a = new JsonObject();
+                a.addProperty("owners", 1);
+                if (holder != null) {
+                    a.addProperty("main", holder);
+                    a.addProperty("mainName", holderName == null ? "" : holderName);
+                }
+                com.google.gson.JsonArray l = new com.google.gson.JsonArray();
+                for (var e : own.entrySet()) {
+                    JsonObject j = new JsonObject();
+                    j.addProperty("id", e.getKey());
+                    j.addProperty("name", e.getValue());
+                    l.add(j);
+                }
+                for (String[] b : boundTo.values()) {
+                    JsonObject j = new JsonObject();
+                    j.addProperty("id", b[0]);
+                    j.addProperty("name", b[1]);
+                    l.add(j);
+                }
+                a.add("own", l);
+                out.add("ok");
+                out.add(a.toString());
+            }
+            case "liveact" -> {
+                JsonObject o = JsonParser.parseString(arg).getAsJsonObject();
+                acts.add(o.get("do").getAsString() + " " + o.get("value").getAsString());
+                if (o.get("do").getAsString().equals("owner")) {
+                    holder = o.get("value").getAsString();
+                    ServerPlayer p = s.getPlayerList().getPlayer(UUID.fromString(holder));
+                    holderName = p == null ? "?" : p.getGameProfile().getName();
+                }
+                out.add("ok");
+                out.add("Done.");
             }
             case "info" -> out.add("Fakeplayers: alive" + (holder == null ? "" : ", owned by " + holderName)
                     + ", health x1, damage x1.");
@@ -105,6 +160,7 @@ public final class GiantsBridge {
                 p.teleportTo(s.overworld(), gx, gy, gz, 0f, 0f);
                 gave.add("finder " + p.getStringUUID());
                 boolean book = o.get("book").getAsBoolean();
+                lastBook = book;
                 String outcome;
                 boolean spawned = false;
                 String line;

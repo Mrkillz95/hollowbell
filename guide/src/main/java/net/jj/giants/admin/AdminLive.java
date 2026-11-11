@@ -114,6 +114,12 @@ public final class AdminLive {
         String name = AdminServer.nameOf(g), a = act.toLowerCase(Locale.ROOT);
         if (!does(server, g).contains(a))
             return AdminServer.Result.fail(name + ": this version can't do that from the book.");
+        // (Max giants per player, ADMIN_BRIDGE.md 20.18) Set owner on someone at their limit is refused here, before
+        // the giant is asked, so an older giant is held to it too
+        if (a.equals("owner")) {
+            String why = ownerAtCap(server, g, value);
+            if (why != null) return AdminServer.Result.fail(why);
+        }
         JsonObject arg = new JsonObject();
         arg.addProperty("live", VERSION);
         arg.addProperty("id", id);
@@ -129,6 +135,22 @@ public final class AdminLive {
         String who = p.getGameProfile().getName();
         return new AdminServer.Result(true, List.of(line),
                 a.equals("tp") ? List.of() : List.of(who + " " + told(a, name) + " (Live control)."));
+    }
+
+    /** why this player can't be made his book's holder now (at their limit), or null */
+    static @Nullable String ownerAtCap(MinecraftServer server, Giant g, @Nullable String player) {
+        if (player == null || player.isBlank()) return null;
+        net.jj.giants.players.Players.Who w = net.jj.giants.players.Players.who(server, player.trim());
+        if (w == null) return null;
+        int cap = net.jj.giants.players.Owns.cap(server, w.id());
+        if (cap <= 0) return null;
+        net.jj.giants.players.Owns.All all = net.jj.giants.players.Owns.all(server);
+        // (holding his main book already: not one more)
+        for (net.jj.giants.players.Owns.Claim c : all.of(w.id()))
+            if (c.giant().equals(g.key()) && !c.kind().equals("own")) return null;
+        int n = all.count(w.id());
+        if (n < cap) return null;
+        return net.jj.giants.players.Owns.opLine(w.name(), n, cap) + " Raise their limit on the Players page first.";
     }
 
     /**

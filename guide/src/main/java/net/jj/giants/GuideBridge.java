@@ -15,6 +15,10 @@ import org.jetbrains.annotations.Nullable;
  * UUID>|-"}}. It goes through exactly what /giants admin set does (checked, kept with the world, logged, told to the
  * other operators, sent to the giants). Answers {@code ["ok", <what /giants admin set says>...]} or {@code ["no", <why
  * not>]}; null for an argument it can't read or a newer protocol.
+ *
+ * <p>{@code maygain} (ADMIN_BRIDGE.md 20.18): {@code {"players":1,"player":"<uuid>","giant":"<key>"}}: may that
+ * player own one more giant now. Answers {@code ["ok"]} or {@code ["no", <the line to show them>]}, counted fresh on
+ * every call; null for an argument it can't read or a newer version (the giant then allows it).
  */
 public final class GuideBridge {
     private GuideBridge() {}
@@ -32,6 +36,8 @@ public final class GuideBridge {
             // (Part 10B) may a giant fight start now; a giant's fight began or he backed down (ADMIN_BRIDGE.md §27)
             case "fightok" -> net.jj.giants.fights.Fights.ok(server, arg);
             case "fightnews" -> net.jj.giants.fights.Fights.news(server, arg);
+            // may this player gain one more giant: Max giants per player (ADMIN_BRIDGE.md 20.18)
+            case "maygain" -> net.jj.giants.players.Owns.mayGain(server, arg);
             default -> null;
         };
     }

@@ -346,6 +346,15 @@ public class AdminBookScreen extends Screen {
         return s.id().startsWith("move.");
     }
 
+    /** a choice's option as the button says it: its own words in the lang file if it has some, else the option */
+    static Component optionWords(AdminSetting s, String option) {
+        String k = s.key() + "." + option;
+        if (s.giant().equals(AdminCatalog.ALL) && !s.key().isEmpty()
+                && net.minecraft.client.resources.language.I18n.exists(k)) return Component.translatable(k);
+        // (Part 10B) an option's words with spaces ("back down", "run away")
+        return Component.literal(option.replace('_', ' '));
+    }
+
     /** a value as the book shows it: on/off, x2 for multipliers, 0.5-1.5 for a range */
     static String show(AdminSetting s, JsonElement v) {
         boolean times = mult(s) || s.id().endsWith(".cooldown") || s.id().endsWith(".wind");
@@ -1031,7 +1040,7 @@ public class AdminBookScreen extends Screen {
             }
             case CHOICE -> {
                 // (Part 10B) an option's words with spaces ("back down", "run away")
-                Button b = Button.builder(Component.literal(AdminSetting.text(shown(s)).replace('_', ' ')), x -> {
+                Button b = Button.builder(optionWords(s, AdminSetting.text(shown(s))), x -> {
                             int i = s.options().indexOf(shown(s).getAsString());
                             commit(s, new JsonPrimitive(s.options().get((i + 1) % s.options().size())));
                         })
@@ -3167,9 +3176,12 @@ public class AdminBookScreen extends Screen {
             for (int i = buttons.size() - 1; i >= 0; i--) {
                 Object[] b = buttons.get(i);
                 Component c = (Component) b[0];
-                Button bt = Button.builder(c, x -> ((Runnable) b[1]).run())
-                        .bounds(0, 0, font.width(c) + 12, 16)
-                        .build();
+                // (b[4], a Runnable: what a right-click does, e.g. a value back one)
+                Button bt = b.length > 4 && b[4] instanceof Runnable back
+                        ? new TwoWay(c, (Runnable) b[1], back, font.width(c) + 12)
+                        : Button.builder(c, x -> ((Runnable) b[1]).run())
+                                .bounds(0, 0, font.width(c) + 12, 16)
+                                .build();
                 if (b.length > 2 && b[2] != null) bt.setTooltip(Tooltip.create((Component) b[2]));
                 if (b.length > 3) bt.active = (boolean) b[3];
                 bts.add(bt);
@@ -3203,6 +3215,38 @@ public class AdminBookScreen extends Screen {
             boolean cutOff = !m.equals(main.getString()) || (subLines == null && font.width(sub) > textW);
             if (cutOff && mx >= x && mx < x + textW && my >= Math.max(y, ly0) && my < Math.min(y + h, ly1))
                 setTooltipForNextRenderPass(tip);
+        }
+    }
+
+    /** a button that also takes a right-click (the other way through its values) */
+    private static final class TwoWay extends Button {
+        private final Runnable back;
+        private int with;
+
+        TwoWay(Component c, Runnable go, Runnable back, int w) {
+            super(0, 0, w, 16, c, x -> go.run(), DEFAULT_NARRATION);
+            this.back = back;
+        }
+
+        @Override
+        protected boolean isValidClickButton(int b) {
+            return b == 0 || b == 1;
+        }
+
+        @Override
+        public boolean mouseClicked(double mx, double my, int b) {
+            with = b;
+            try {
+                return super.mouseClicked(mx, my, b);
+            } finally {
+                with = 0;
+            }
+        }
+
+        @Override
+        public void onPress() {
+            if (with == 1) back.run();
+            else super.onPress();
         }
     }
 
@@ -3695,10 +3739,56 @@ public class AdminBookScreen extends Screen {
     private static final String[][] PLAYER_GROUPS = {
         {"players.pages", "all.myGiant", "all.rulesPage", "all.votes", "all.boards", "all.boardSlayers",
             "all.boardOwners", "all.boardFriends", "all.achievements"},
+        // (Max giants per player, ADMIN_BRIDGE.md 20.18)
+        {"players.owning", "all.maxGiants"},
         {"players.kit", "all.kitGuide", "all.kitFinders", "all.kitFinder", "all.kitArmour", "all.kitBook"},
         {"players.features", "all.sit", "all.ride", "all.stand", "all.armourPowers", "all.bossBars",
             "all.fightMusic", "all.chatMeetings", "all.chatMoves", "all.chatBackDown", "all.books", "all.bookOrders",
             "all.findersCraftable"}};
+
+    /** (Max giants per player) "none" or 1..9 as a limit: 0 for none */
+    private static int maxNumber(String v) {
+        try {
+            return Mth.clamp(Integer.parseInt(v.trim()), 0, 9);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** a player's own limit after this one, or before it: world (-1), 1..9, no limit (0), world again */
+    static int maxNext(int rule, boolean back) {
+        if (!back) return rule < 0 ? 1 : rule == 0 ? -1 : rule >= 9 ? 0 : rule + 1;
+        return rule < 0 ? 0 : rule == 0 ? 9 : rule == 1 ? -1 : rule - 1;
+    }
+
+    private static String maxValue(int rule) {
+        return rule < 0 ? "default" : rule == 0 ? "none" : String.valueOf(rule);
+    }
+
+    /**
+     * (Max giants per player, ADMIN_BRIDGE.md 20.18) under each player: how many giants they own of how many they
+     * may (gold at or over it), and their limit's button (click: the next, right-click: back), the giants in its tip
+     */
+    private Row ownsRow(JsonObject j, String id, int worldMax) {
+        int owns = (int) dbl(j, "owns", 0), rule = (int) dbl(j, "maxRule", -1);
+        int cap = rule >= 0 ? rule : worldMax;
+        Component line = cap <= 0 ? tr(owns == 1 ? "players.owns.none1" : "players.owns.none", owns)
+                : owns > cap ? tr("players.owns.over", owns, cap)
+                : tr(cap == 1 ? "players.owns.of1" : "players.owns.of", owns, cap);
+        Component label = rule > 0 ? tr("players.max.n", rule) : rule == 0 ? tr("players.max.none")
+                : tr("players.max.world", worldMax > 0 ? Component.literal(String.valueOf(worldMax))
+                        : tr("players.max.nolimit"));
+        List<String> claims = new ArrayList<>();
+        if (j.get("claims") instanceof JsonArray a)
+            for (JsonElement e : a)
+                if (e.isJsonPrimitive()) claims.add(e.getAsString());
+        MutableComponent tip = (claims.isEmpty() ? tr("players.max.owns.none")
+                : tr("players.max.owns", String.join(", ", claims))).append(" ").append(tr("players.max.tip"));
+        return new LineRow(Component.literal("  ").append(line), cap > 0 && owns >= cap ? GOLD : GREY,
+                Component.empty(), List.<Object[]>of(new Object[] {label,
+                    (Runnable) () -> request("pmax", "player", id, "max", maxValue(maxNext(rule, false))), tip, true,
+                    (Runnable) () -> request("pmax", "player", id, "max", maxValue(maxNext(rule, true)))}));
+    }
 
     /** the vote being made: the presets ticked, how long, whether the winner goes on by itself */
     private static final java.util.LinkedHashSet<String> voteTicked = new java.util.LinkedHashSet<>();
@@ -3721,7 +3811,7 @@ public class AdminBookScreen extends Screen {
             return;
         }
         rows.add(new Note(tr("players.note"), GREY));
-        String[] pics = {"players", "loot", "taming"};
+        String[] pics = {"players", "taming", "loot", "taming"};
         for (int gi = 0; gi < PLAYER_GROUPS.length; gi++) {
             String[] grp = PLAYER_GROUPS[gi];
             List<AdminSetting> in = new ArrayList<>();
@@ -3743,6 +3833,9 @@ public class AdminBookScreen extends Screen {
                 .folding(PLAYERS + "/each", "general", people.size());
         rows.add(each);
         if (people.isEmpty()) rows.add(new Note(tr("players.nobody"), GREY));
+        int worldMax = 0;
+        for (AdminSetting s : p.settings())
+            if (s.id().equals("all.maxGiants")) worldMax = maxNumber(AdminSetting.text(shown(s)));
         for (JsonObject j : each.shut() ? List.<JsonObject>of() : people) {
             String id = str(j, "id"), name = str(j, "name");
             boolean own = bool(j, "own"), ignored = bool(j, "ignored"), nokit = bool(j, "nokit");
@@ -3765,6 +3858,7 @@ public class AdminBookScreen extends Screen {
                     tr("players.repick.body", name), tr("players.repick"), () -> request("repick", "player", id)),
                     tr("players.repick.tip")});
             rows.add(new LineRow(Component.literal(name), !own || ignored || nokit ? GOLD : TEXT, sub, bs));
+            rows.add(ownsRow(j, id, worldMax));
         }
         // the vote
         Head voteHead = new Head(tr("players.vote"), tr("players.vote.note"), null)

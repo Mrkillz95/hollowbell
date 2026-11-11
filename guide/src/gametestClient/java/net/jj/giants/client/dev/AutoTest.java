@@ -399,6 +399,27 @@ public final class AutoTest implements ClientModInitializer {
                 continue;
             }
             // leakscan: what still holds a thrown-away minigame world (the log)
+            // (Max giants per player) fakepeople N: N made-up players with a rule each (some with their own limit) on
+            // the Players page, for the layout check; fakepeople 0 takes them away again
+            if (s.startsWith("fakepeople ")) {
+                int n = Integer.parseInt(s.substring(11).trim());
+                MinecraftServer srv = mc.getSingleplayerServer();
+                if (srv != null) srv.execute(() -> {
+                    var d = net.jj.giants.players.PlayerData.get(srv);
+                    d.s.rules.values().removeIf(r -> r.name.startsWith("Fakeperson"));
+                    for (int i = 0; i < n; i++) {
+                        var r = new net.jj.giants.players.PlayerData.Rule();
+                        r.name = "Fakeperson" + i;
+                        r.max = i % 11 - 1;
+                        r.own = i % 3 != 1;
+                        r.ignored = i % 4 == 2;
+                        d.s.rules.put(java.util.UUID.nameUUIDFromBytes(r.name.getBytes()).toString(), r);
+                    }
+                    d.setDirty();
+                    net.jj.giants.admin.AdminBook.changed("players");
+                });
+                continue;
+            }
             if (s.equals("leakscan")) {
                 MinecraftServer srv = mc.getSingleplayerServer();
                 if (srv != null) srv.execute(() -> {

@@ -1,0 +1,175 @@
+# Max giants per player (ADMIN_BRIDGE.md 20.18): the admin book's Players page with its Owning giants group and
+# each player's Owns line and Max button, with just you, and with 30 made-up players (fakepeople), at every width
+# the layout check uses (854x480 is the slim book). Overlaps are "layout:" lines in the log, 0 expected.
+#   withslot.ps1 <guide> runAutotest -Pscript=tools/maxown_autotest.txt
+wait 60
+adminintro seen
+adminmode advanced
+adminscope world
+cmd gamemode creative @s
+cmd giants admin set all maxGiants 2
+wait 20
+window 1280 720
+wait 20
+guiscale 2
+wait 20
+fakepeople 0
+wait 5
+adminbook players
+wait 60
+layoutviews 1280x720s2-you players
+close
+wait 5
+fakepeople 30
+wait 5
+adminbook players
+wait 60
+layoutviews 1280x720s2-30 players
+adminscrollto Each player
+wait 10
+mouse 2 2
+wait 5
+shot maxown_1280x720s2
+close
+wait 5
+window 1280 720
+wait 20
+guiscale 3
+wait 20
+fakepeople 0
+wait 5
+adminbook players
+wait 60
+layoutviews 1280x720s3-you players
+close
+wait 5
+fakepeople 30
+wait 5
+adminbook players
+wait 60
+layoutviews 1280x720s3-30 players
+adminscrollto Each player
+wait 10
+mouse 2 2
+wait 5
+shot maxown_1280x720s3
+close
+wait 5
+window 1280 720
+wait 20
+guiscale 4
+wait 20
+fakepeople 0
+wait 5
+adminbook players
+wait 60
+layoutviews 1280x720s4-you players
+close
+wait 5
+fakepeople 30
+wait 5
+adminbook players
+wait 60
+layoutviews 1280x720s4-30 players
+adminscrollto Each player
+wait 10
+mouse 2 2
+wait 5
+shot maxown_1280x720s4
+close
+wait 5
+window 854 480
+wait 20
+guiscale 2
+wait 20
+fakepeople 0
+wait 5
+adminbook players
+wait 60
+layoutviews 854x480s2-you players
+close
+wait 5
+fakepeople 30
+wait 5
+adminbook players
+wait 60
+layoutviews 854x480s2-30 players
+adminscrollto Each player
+wait 10
+mouse 2 2
+wait 5
+shot maxown_854x480s2
+close
+wait 5
+window 1920 1080
+wait 20
+guiscale 2
+wait 20
+fakepeople 0
+wait 5
+adminbook players
+wait 60
+layoutviews 1920x1080s2-you players
+close
+wait 5
+fakepeople 30
+wait 5
+adminbook players
+wait 60
+layoutviews 1920x1080s2-30 players
+adminscrollto Each player
+wait 10
+mouse 2 2
+wait 5
+shot maxown_1920x1080s2
+close
+wait 5
+window 1920 1080
+wait 20
+guiscale 3
+wait 20
+fakepeople 0
+wait 5
+adminbook players
+wait 60
+layoutviews 1920x1080s3-you players
+close
+wait 5
+fakepeople 30
+wait 5
+adminbook players
+wait 60
+layoutviews 1920x1080s3-30 players
+adminscrollto Each player
+wait 10
+mouse 2 2
+wait 5
+shot maxown_1920x1080s3
+close
+wait 5
+window 1920 1080
+wait 20
+guiscale 4
+wait 20
+fakepeople 0
+wait 5
+adminbook players
+wait 60
+layoutviews 1920x1080s4-you players
+close
+wait 5
+fakepeople 30
+wait 5
+adminbook players
+wait 60
+layoutviews 1920x1080s4-30 players
+adminscrollto Each player
+wait 10
+mouse 2 2
+wait 5
+shot maxown_1920x1080s4
+close
+wait 5
+fakepeople 0
+wait 5
+quit

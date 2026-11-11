@@ -76,6 +76,20 @@ public final class PlayersCommand {
                                                             StringArgumentType.getString(c, "rule"),
                                                             on.equals("on")));
                                                 })))))
+                        // (Max giants per player, 20.18) /giants players <player> max [1-9|none|default]
+                        .then(Commands.argument("player", StringArgumentType.word())
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(
+                                        c.getSource().getOnlinePlayerNames(), b))
+                                .then(Commands.literal("max")
+                                        .executes(c -> say(c, Players.showMax(server(c),
+                                                StringArgumentType.getString(c, "player"))))
+                                        .then(Commands.argument("value", StringArgumentType.word())
+                                                .suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("1",
+                                                        "2", "3", "4", "5", "6", "7", "8", "9", "none", "default"),
+                                                        b))
+                                                .executes(c -> say(c, Players.setMax(server(c), who(c),
+                                                        StringArgumentType.getString(c, "player"),
+                                                        StringArgumentType.getString(c, "value")))))))
                         .then(Commands.literal("repick")
                                 .then(Commands.argument("player", StringArgumentType.word())
                                         .suggests((c, b) -> SharedSuggestionProvider.suggest(
@@ -177,6 +191,8 @@ public final class PlayersCommand {
             if (!r.own) w.add("may not own giants");
             if (r.ignored) w.add("ignored by giants");
             if (r.noKit) w.add("no starting kit");
+            if (r.max > 0) w.add("may own at most " + r.max + (r.max == 1 ? " giant" : " giants"));
+            if (r.max == 0) w.add("no limit on giants");
             lines.add("  " + r.name + ": " + String.join(", ", w));
         }
         if (lines.isEmpty()) return AdminServer.Result.said(List.of("No player has a rule in this world."));
