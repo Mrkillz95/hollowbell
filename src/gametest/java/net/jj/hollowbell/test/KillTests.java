@@ -51,9 +51,20 @@ public class KillTests implements FabricGameTest {
             e.moves().letGoOfEverything(false);
             release(h, e);
         };
-        h.runAfterDelay(30, () -> {
+        // (the sweep is swung from down low, as in a fight, his strand ends on the ground: he hunts with them at its
+        // feet. From the height he happens to drift at just after he comes, 1 to 16 blocks up and still sinking, the
+        // ends swung over the zombie or short of it as often as one run in three)
+        int start = move == Moves.SWEEP ? 140 : 30;
+        if (move == Moves.SWEEP)
+            h.runAfterDelay(20, () -> {
+                e.setStay(true);
+                e.setCruise(0);
+            });
+        double[] over = new double[1];
+        h.runAfterDelay(start, () -> {
             try {
                 e.setStay(true);
+                over[0] = e.getY() - e.groundAt(e.getX(), e.getZ());
                 Vec3 at = under(e);
                 if (move == Moves.SLAM) {
                     Vec3 tip = e.armTipWorld(0);
@@ -83,22 +94,24 @@ public class KillTests implements FabricGameTest {
                 throw ex;
             }
         });
-        for (int k = 31; k < 30 + within; k++) {
+        for (int k = start + 1; k < start + within; k++) {
             int kk = k;
             h.runAfterDelay(k, () -> {
                 if (m[0] == null || !m[0].isAlive()) return;
-                if (kk % 5 == 0) moves.append(kk - 30).append(':').append(e.moveNow()).append(' ');
+                if (kk % 5 == 0) moves.append(kk - start).append(':').append(e.moveNow()).append(' ');
                 for (int i = 0; i < e.rig.strands.length; i++)
                     nearest[0] = Math.min(nearest[0], e.strandTipWorld(i).distanceTo(m[0].position()));
             });
         }
-        h.runAfterDelay(30 + within, () -> {
+        h.runAfterDelay(start + within, () -> {
             try {
                 h.assertTrue(
                         !m[0].isAlive(),
                         "the " + type.getDescription().getString() + " (" + hp[0] + " health) lived through "
                                 + Moves.NAMES[move] + " with " + m[0].getHealth() + " left (it at "
-                                + m[0].position() + ", him at " + e.position() + ", the nearest a strand end came "
+                                + m[0].position() + ", him at " + e.position() + String.format(
+                                        ", his strand ends %.1f over the ground", over[0])
+                                + ", the nearest a strand end came "
                                 + String.format("%.1f", nearest[0]) + ", his moves " + moves + "difficulty "
                                 + h.getLevel().getDifficulty() + ")");
             } finally {
