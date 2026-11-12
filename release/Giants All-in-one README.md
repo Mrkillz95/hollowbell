@@ -11,20 +11,20 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.15.0 |
-| Pitchgut | 1.35.44 |
-| Furrowmaw | 1.17.41 |
-| Fire & Ice Cerberus | 2.18.41 |
-| Hollowbell | 1.12.44 |
-| Lantern Willow | 1.10.44 |
-| Wreckback | 1.2.49 |
-| The Swarmforge | 1.4.47 |
-| The Gloamwick | 1.2.28 |
-| The Hearthstride | 1.0.0 |
+| Giants Guide | 1.16.0 |
+| Pitchgut | 1.35.45 |
+| Furrowmaw | 1.17.42 |
+| Fire & Ice Cerberus | 2.18.42 |
+| Hollowbell | 1.12.45 |
+| Lantern Willow | 1.10.45 |
+| Wreckback | 1.2.50 |
+| The Swarmforge | 1.4.48 |
+| The Gloamwick | 1.2.29 |
+| The Hearthstride | 1.1.0 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.17.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.17.1), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -32,7 +32,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…`, `gloamwick-…` and `hearthstride-…` out of your mods folder, and the old
-`giants-all-…` jar too, then put `giants-all-1.17.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-…` jar too, then put `giants-all-1.17.1.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -132,6 +132,97 @@ A book about every giant you have. Right-click it to open it.
   gain more; also `/giants players <player> max`), the Hearthstride's page tells how to drive him from his helm and
   what's left when he falls, the Close Quarters preset's grounds are a little smaller so all nine giants fit, and a
   Speedrun won right at Go still keeps a best time.
+
+## New in 1.17.1
+
+A big update for the Hearthstride, safe ground round him for every giant, a limit on how many giants one player may
+own, and fixes for each giant.
+
+### The Hearthstride
+
+- **Drive him yourself** from his helm, the map table by his hearth, in every form. W goes, S stops, A and D turn
+  him, Space strides (other forms climb, the Wingfold goes up), Shift settles or lands him, V looks out at him, G
+  leaves. Only his Keeper drives him, plus residents if the Keeper allows it.
+- **His Hearth Book works like the other giants' books.** It shows his distance, health, form and what he's doing,
+  with clear buttons: Come to me, Follow me, Walk where I look, Send him to a spot, Where is he?, Stay, Wander. It's
+  in the creative Tools tab too, and one book covers every Hearthstride you are Keeper of.
+- **His rooms match his outside:** the rooms you see through his windows and door are the ones you walk into, storey
+  by storey, with no jump at the door. They're lit and furnished, with glass panes in the windows and a stairwell,
+  and they never poke out through his walls or roof.
+- **Living in him feels like being your own size:** your view bobs, and sounds and particles are those of a normal
+  house.
+- **Real doors and real blocks:** his doors really shut (you can't walk through them at any size), and every block in
+  his rooms has its real shape.
+- **Blocks you build in him work as they do in the world.** Furnaces, smokers and blast furnaces cook while he walks.
+  Beds, crafting tables, doors, gates, levers, anvils and looms all work. Ladders, vines and scaffolding can be
+  climbed, fences, panes and walls join up, and stairs turn corners. Filled shulker boxes, named banners and heads
+  come back exactly as they were.
+- His Keeper can take out the furniture and inside walls he was built with, and put it all back from his book
+  (residents too, if allowed).
+- Things dropped in his rooms, including your items if you die in him, land on his floors, ride with him and stay
+  through rebuilds and saves.
+- **Much more solid** to stand on and ride in, at every size and in every form: no slipping through, bouncing or
+  getting stuck. His floors no longer lurch when he turns, the Bastion most of all.
+- Logging out in him, changing worlds, teleporting, or your bed in him being far off now always brings you back in his
+  rooms or safely on the ground. You can't go in when he's too small for his doors.
+- **New look:** slim chicken ankles with splayed toes and a back toe, no lone block at the toe tips, matching legs,
+  far less clipping, and he sits flush on slopes. The Wingfold now stands and walks on its legs on the ground, tucks
+  them up to fly and lets them down to land.
+- **His moves show real things** (hay bales, banners, pages, an iron wall, a horn) instead of glows. Dust, ground
+  cracks and splinters fly at his heavy moments, with a little screen shake. Both can be turned down in the settings.
+- You can see him on the skyline from far off (1,024 blocks by default).
+- **Docking:** giants owned by people who live in him can dock beside him (from his book or `/hearthdock`). They
+  rest, heal twice as fast, follow when he walks off, and can go for whatever hits him.
+- **No more relighting:** when he falls his ruin stays a ruin, and his storage and everything built in him is in
+  chests by the cold hearth. A new wild one comes 3 days later. When he's taken away by a command or an admin, nobody
+  is left in the air and his things are left in chests.
+- The Giants Guide's pause (and `/giants freeze`) now holds him still too.
+- Fixes: `/hearthstride tp` reaches him even in unloaded land, his Beacon no longer makes monsters already saved
+  nearby vanish when their land loads, and there is less lag when lots of creatures are around.
+
+### All giants
+
+- **Max giants per player** (admin book, Players page): a limit of 1 to 9 for the whole world or for one player, or
+  no limit. Every giant a player owns counts toward it, and so does being a Hearthstride's Keeper. At the limit they
+  keep the giants they have but can't get more: a giant's book won't come to them, a copy they're given stays quiet
+  and tells them why, and an op who gives them a book is told they're at their limit. There's also a command:
+  `/giants players <player> max`.
+- **Safe ground round the Hearthstride:** in the yard round his home, and round him wherever he stands, no fight
+  between giants starts, and the giants leave the players there alone and break no blocks. A giant resting beside
+  him won't start fights either. Pitchgut and the Cerberus can still go for the Hearthstride himself.
+- **Held to their size:** a small Furrowmaw, Wreckback or Hollowbell can no longer knock you further than his size
+  allows, and nor can a crowd of Furrowlings or Bellings. That covers the Furrowmaw's hits and thrown magma clods,
+  Wreckback's claw squeeze, holds, eye beams, lightning and bell's toll, and the Hollowbell's spore clouds, stings,
+  eggs and pods. A very small Cerberus stays big enough to hit, every part of him, while he moves as well as while he
+  stands still.
+- Steadier tests behind the scenes for the Furrowmaw, the Cerberus and Wreckback (nothing changes for players).
+
+### Each giant
+
+- **Pitchgut:** if you're hit while riding him, you're thrown off right away, even where his land hasn't fully loaded
+  yet or the server is busy. His feet no longer come down a block inside the ground when he steps onto a ledge or
+  into a hole his goo ate.
+- **Furrowmaw:** when he shudders on stepped ground, his rings no longer dip into the ground. When he comes back after
+  travelling unseen, he comes up facing where he's going (before, he could turn to the nearest player and crawl off
+  backwards).
+- **Cerberus:** after a long ride he still knows you're his rider, so his steps beside you as you get off no longer
+  hurt you. The game now knows which way he's facing, so a teleport or reloading the world no longer turns him round.
+- **Hollowbell:** Egg rain's eggs land right on their markers on the ground, when he drops them from low down, when
+  he aims them far off, and far out in the world. If you're standing on him and one of his arms curls up around you,
+  you're lifted up onto the arm instead of pushed off its edge.
+- **Lantern Willow:** very far out in the world (millions of blocks from spawn), his roots and strands land exactly
+  where he aims, and you hit the part of him you point at. Lantern Willows in a minigame no longer count toward how
+  many this world holds, so this world's own Lantern Willows (and My Giant ones) still come.
+- **Swarmforge:** at the giant limit his book stays where it is (on the ground or in the chest) and tells you why,
+  and My Giant takes you to his ground without a book. Picking him again with My Giant when he's already yours never
+  counts as a new giant, even if he's still waiting for the land around you to load before he rolls in.
+- **Giants Guide:** the Hearthstride's page explains how to drive him from his helm, and what happens when he falls:
+  his things are kept in chests by his cold hearth, the hearth can't be lit again, and a new wild one comes later. The
+  Close Quarters preset makes each giant's ground a little smaller, so all nine giants fit. In the Speedrun minigame,
+  bringing a giant down right at Go now still counts as a best time.
+
+Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Cerberus 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
+Wreckback 1.2.50, Swarmforge 1.4.48, Gloamwick 1.2.29, Hearthstride 1.1.0, Giants Guide 1.16.0.
 
 ## New in 1.17.0
 
