@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.44
+# Hollowbell (Java mod), version 1.12.45
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,18 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- **Egg rain**: his eggs come down right on their markers on the ground, even when he lets them go low down or aims
+  them far off, and far out in the world.
+- His spore clouds, stings, eggs, his pods and his Bellings never knock you harder than his size allows, so a small
+  Hollowbell, or a crowd of Bellings round you, can't send you flying.
+- Standing on him when one of his arms curls up round you: you're lifted up onto the arm, not pushed off its edge.
+- The **Hearthstride's yard** is safe ground: no fight between giants starts there or right round him, and the
+  Hollowbell leaves players in it alone.
+- **Max giants per player** (admin book, Players page): a player who already owns as many giants as the limit can't
+  take up his book. It stays quiet and says why; giants they own already stay theirs.
+
+### 1.12.44
 
 - Knows the **Hearthstride**, the ninth giant (a walking house): he's in `/giants`, the giant lists and the meeting table. He keeps away from the Hearthstride, and starts no fight with another giant near him.
 

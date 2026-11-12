@@ -127,6 +127,11 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.14.2: the Wreck Cove Rescue's guard is a real threat and the lost giant keeps to the road,
   giant tags can be given from the book (from a list, the one you look at, or every one of a kind) and shown without
   his own name, and the Guide's go beats a giant's keeping away.
+- New in the Guide 1.16.0: **Max giants per player** on the admin book's Players page (a limit of 1 to 9 for the
+  world or for one player, or no limit; every giant a player owns counts, and at the limit they keep theirs but can't
+  gain more; also `/giants players <player> max`), the Hearthstride's page tells how to drive him from his helm and
+  what's left when he falls, the Close Quarters preset's grounds are a little smaller so all nine giants fit, and a
+  Speedrun won right at Go still keeps a best time.
 
 ## New in 1.17.0
 
