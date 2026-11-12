@@ -83,6 +83,17 @@ public class Belling extends Monster {
         return hit;
     }
 
+    /**
+     * bumping into something shoves it no harder than its Hollowbell's size allows either: a crowd of them round
+     * somebody adds their bumps up, on top of a shove of his that was already as hard as his size allows
+     */
+    @Override
+    protected void doPush(net.minecraft.world.entity.Entity e) {
+        super.doPush(e);
+        HollowbellEntity h = owner();
+        if (h != null && !level().isClientSide) h.capShove(e);
+    }
+
     private @Nullable HollowbellEntity owner() {
         if (owner == null || !(level() instanceof ServerLevel sl)) return null;
         return sl.getEntity(owner) instanceof HollowbellEntity h ? h : null;
@@ -156,6 +167,7 @@ public class Belling extends Monster {
                 && getBoundingBox().inflate(0.4).intersects(t.getBoundingBox())) {
             stingIn = 20;
             t.hurt(damageSources().mobAttack(this), t instanceof Player ? 3f : 5f);
+            if (h != null) h.capShove(t); // (the game's own knock with it: no harder than his size allows)
             t.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0));
             t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0));
             playSound(ModSounds.STING, 0.8f, 1.4f);

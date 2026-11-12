@@ -424,6 +424,7 @@ public class Shot extends ThrowableItemProjectile {
         for (LivingEntity e : hit) {
             e.invulnerableTime = 0;
             e.hurt(damageSources().mobProjectile(this, h), h != null ? h.dmg(damage, e) : damage);
+            if (h != null) h.capShove(e); // (the game's own knock with it: no harder than his size allows)
             e.addEffect(new MobEffectInstance(MobEffects.POISON, 60, 0));
         }
         // it lies there squashed; most of the time something is moving in it

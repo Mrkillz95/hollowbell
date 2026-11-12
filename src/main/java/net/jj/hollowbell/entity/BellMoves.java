@@ -1594,7 +1594,7 @@ public final class BellMoves {
             // (a hit also sends a player the speed the server has for them, which isn't how they really move)
             e.setDeltaMovement(v);
             e.hurtMarked = marked;
-        }
+        } else h.capShove(e); // (the game's own knock with it: no harder than his size allows)
         h.sound(e.position(), ModSounds.STING, 1f, 1f);
         // the poison going in
         fx(BigFx.SPARKS, e.position().add(0, e.getBbHeight() * 0.6, 0), 1.2, Vec3.ZERO, POISON);

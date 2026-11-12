@@ -762,6 +762,7 @@ final class BellHolds {
                 if (in.age % (player ? 40 : 20) == 0 && !(in.e instanceof Player p && p.isCreative())) {
                     in.e.invulnerableTime = 0;
                     in.e.hurt(h.damageSources().mobAttack(h), h.dmg(player ? 4f : 8f, in.e));
+                    h.capShove(in.e); // (the game's own knock with it: no harder than his size allows)
                     in.e.addEffect(new MobEffectInstance(MobEffects.POISON, 60, player ? 0 : 1));
                 }
             } else if (in.tree != null && in.age > 20 * 60 * 3) {

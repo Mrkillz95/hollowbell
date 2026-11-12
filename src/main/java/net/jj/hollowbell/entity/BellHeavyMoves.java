@@ -104,6 +104,7 @@ final class BellHeavyMoves {
                     if (Math.hypot(e.getX() - c.getX(), e.getZ() - c.getZ()) > r) continue;
                     e.invulnerableTime = 0;
                     e.hurt(h.damageSources().indirectMagic(c, h), h.dmg(5f, e));
+                    h.capShove(e); // (the game's own knock with it: no harder than his size allows)
                     e.addEffect(new MobEffectInstance(MobEffects.POISON, 80, 1));
                 }
             }
