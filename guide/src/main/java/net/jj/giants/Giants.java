@@ -3,7 +3,9 @@ package net.jj.giants;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.locale.Language;
 
 /**
  * Every giant the guide knows. Adding one is one entry here plus his lines in the language file
@@ -296,50 +298,91 @@ public final class Giants {
                                 "eclipse"
                             }),
                     Set.of("pitchgut", "cerberus", "lanternwillow", "swarmforge")),
-            // he never fights: his moves are grouped by how long he rests after each (12 s, 40 s, a minute or more)
+            // he never fights: his moves are grouped by how long he rests after each (up to 20 s, up to 40 s,
+            // a minute or more)
             new Giant(
                     "hearthstride",
                     "hearthstride",
                     "hearthstride",
                     "net.jj.hearthstride.GiantsBridge",
                     moves(
-                            "book.hearthstride.moves.",
+                            "book.hearthstride.move_name.",
                             "book.hearthstride.move.",
                             new String[] {
-                                "shoo_kick=book.hearthstride.moves.cottage.1",
-                                "door_snap=book.hearthstride.moves.cottage.2",
-                                "chimney_smoke=book.hearthstride.moves.cottage.5",
-                                "call_inside=book.hearthstride.moves.cottage.4",
-                                "blunt_volley=book.hearthstride.moves.bastion.2",
-                                "drawbridge_slam=book.hearthstride.moves.bastion.3",
-                                "gust=book.hearthstride.moves.wingfold.1",
-                                "swoop_rescue=book.hearthstride.moves.wingfold.2",
-                                "feather_fall=book.hearthstride.moves.wingfold.3",
-                                "updraft=book.hearthstride.moves.wingfold.5",
-                                "dash=book.hearthstride.moves.scuttler.1",
-                                "trip=book.hearthstride.moves.scuttler.3",
-                                "decoy_door=book.hearthstride.moves.scuttler.5",
-                                "patch_up=book.hearthstride.moves.workshop.1",
-                                "bellows_blast=book.hearthstride.moves.workshop.4",
-                                "page_storm=book.hearthstride.moves.library_tower.2"
+                                "shoo_kick",
+                                "door_snap",
+                                "chimney_smoke",
+                                "call_inside",
+                                "blunt_volley",
+                                "drawbridge_slam",
+                                "gust",
+                                "swoop_rescue",
+                                "feather_fall",
+                                "updraft",
+                                "dash",
+                                "trip",
+                                "decoy_door",
+                                "patch_up",
+                                "bellows_blast",
+                                "page_storm",
+                                "scarecrow",
+                                "auger",
+                                "closing_time",
+                                "blinding_beam",
+                                "bow_wave"
                             },
                             new String[] {
-                                "shutters=book.hearthstride.moves.cottage.3",
-                                "rally_horn=book.hearthstride.moves.bastion.4",
-                                "cloud_cover=book.hearthstride.moves.wingfold.4",
-                                "hide=book.hearthstride.moves.scuttler.2",
-                                "burrow_tuck=book.hearthstride.moves.scuttler.4",
-                                "iron_wall=book.hearthstride.moves.workshop.3",
-                                "lullaby=book.hearthstride.moves.library_tower.4"
+                                "shutters",
+                                "rally_horn",
+                                "cloud_cover",
+                                "hide",
+                                "burrow_tuck",
+                                "iron_wall",
+                                "lullaby",
+                                "well_spring",
+                                "ore_sense",
+                                "blessing",
+                                "bell_toll",
+                                "peace",
+                                "stink_cloud",
+                                "moonbeam",
+                                "sound_the_alarm",
+                                "far_watch",
+                                "signal_flare",
+                                "batten_down"
                             },
                             new String[] {
-                                "shield_dome=book.hearthstride.moves.bastion.1",
-                                "hold_fast=book.hearthstride.moves.bastion.5",
-                                "spark_fence=book.hearthstride.moves.workshop.2",
-                                "mend_self=book.hearthstride.moves.workshop.5",
-                                "ward=book.hearthstride.moves.library_tower.1",
-                                "beacon=book.hearthstride.moves.library_tower.3",
-                                "recall=book.hearthstride.moves.library_tower.5"
+                                "shield_dome",
+                                "hold_fast",
+                                "spark_fence",
+                                "mend_self",
+                                "ward",
+                                "beacon",
+                                "recall",
+                                "seed_rain",
+                                "harvest_basket",
+                                "barn_call",
+                                "lamplight",
+                                "shore_up",
+                                "miners_cheer",
+                                "hearty_meal",
+                                "good_company",
+                                "open_market",
+                                "bell_for_guests",
+                                "mend_the_faithful",
+                                "sanctuary",
+                                "brew_mist",
+                                "lengthen",
+                                "fill_the_flasks",
+                                "swift_draught",
+                                "starlight",
+                                "star_chart",
+                                "spyglass_sweep",
+                                "star_reading",
+                                "lighthouse_beam",
+                                "man_overboard",
+                                "fair_wind",
+                                "cast_nets"
                             }),
                     Set.of()));
 
@@ -355,6 +398,21 @@ public final class Giants {
                 out.add(new Giant.Move(id, t, eq < 0 ? name + id : s.substring(eq + 1), what + id));
             }
         return List.copyOf(out);
+    }
+
+    /**
+     * his moves as his mod here has them: one it has no name and no text for is left out (a Hearthstride with only
+     * his first six forms); a mod with none of these keys at all keeps every move, in the guide's own words
+     */
+    public static List<Giant.Move> known(Giant g) {
+        Language lang = Language.getInstance();
+        return known(g, lang::has);
+    }
+
+    public static List<Giant.Move> known(Giant g, Predicate<String> has) {
+        List<Giant.Move> his = new ArrayList<>();
+        for (Giant.Move m : g.moves()) if (has.test(m.nameKey()) || has.test(m.whatKey())) his.add(m);
+        return his.isEmpty() ? g.moves() : his;
     }
 
     public static Giant byKey(String key) {

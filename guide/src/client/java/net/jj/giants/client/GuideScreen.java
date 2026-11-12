@@ -531,17 +531,18 @@ public class GuideScreen extends Screen {
     private void movesPage(Giant g) {
         List<String> intro = new ArrayList<>();
         for (int n = 1; n <= Giants.MAX_LINES && has(g.lineKey("moves", n)); n++) intro.add(raw(g.lineKey("moves", n)));
+        List<Giant.Move> moves = Giants.known(g);
         int leftW = 40;
-        for (Giant.Move m : g.moves()) leftW = Math.max(leftW, font.width(moveName(g, m)) + 6);
+        for (Giant.Move m : moves) leftW = Math.max(leftW, font.width(moveName(g, m)) + 6);
         leftW = Math.min(leftW, (int) (cw * 0.4f));
         for (String s : intro) line(s, leftW);
         int[] colours = {0xFFFFFFFF, 0xFFFFAA00, 0xFFFF5555, 0xFF55FFFF};
         for (int t = 0; t < Giants.TIER_NAMES.length; t++) {
             final int tier = t;
-            if (g.moves().stream().noneMatch(m -> m.tier() == tier)) continue;
+            if (moves.stream().noneMatch(m -> m.tier() == tier)) continue;
             heading(Component.translatable(tierKey(g, "tier", t)), colours[t]);
             para(Component.translatable(tierKey(g, "tier_note", t)), GREY, 0);
-            for (Giant.Move m : g.moves()) if (m.tier() == t) row(moveName(g, m), moveWhat(g, m), leftW, colours[t]);
+            for (Giant.Move m : moves) if (m.tier() == t) row(moveName(g, m), moveWhat(g, m), leftW, colours[t]);
         }
     }
 

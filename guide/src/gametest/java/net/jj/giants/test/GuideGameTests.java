@@ -191,7 +191,7 @@ public class GuideGameTests implements FabricGameTest {
         List<String> wrong = new ArrayList<>();
         for (String mod : GIANT_MODS)
             if (Giants.ALL.stream().noneMatch(g -> g.modId().equals(mod))) wrong.add("no entry for " + mod);
-        int movesChecked = 0, ownChecked = 0;
+        int movesChecked = 0, ownChecked = 0, leftOut = 0;
         for (Giant g : Giants.ALL) {
             for (String k :
                     new String[] {g.nameKey(), g.roleKey(), g.sizeKey(), "guide.jj_giants." + g.key() + ".short"})
@@ -206,12 +206,15 @@ public class GuideGameTests implements FabricGameTest {
                     wrong.add(g.key() + " has no " + Giants.TIER_NAMES[t] + " moves");
             }
             boolean loaded = Giants.loaded(g);
+            // (a move his mod here has neither key for isn't on his page: a Hearthstride with only six forms)
+            List<Giant.Move> his = Giants.known(g);
             for (Giant.Move m : g.moves()) {
                 movesChecked++;
                 if (!text(l, g.moveNameCopy(m))) wrong.add("no name for " + g.key() + " " + m.id());
                 if (!text(l, g.moveWhatCopy(m))) wrong.add("no text for " + g.key() + " " + m.id());
+                if (loaded && !his.contains(m)) leftOut++;
                 // with his mod here, its own keys are the ones shown: they must be real
-                if (loaded) {
+                if (loaded && his.contains(m)) {
                     ownChecked++;
                     if (!Language.getInstance().has(m.nameKey())) wrong.add(g.modId() + " has no " + m.nameKey());
                     if (!Language.getInstance().has(m.whatKey())) wrong.add(g.modId() + " has no " + m.whatKey());
@@ -228,11 +231,25 @@ public class GuideGameTests implements FabricGameTest {
             if (!text(l, "guide.jj_giants.together." + page + ".1")) wrong.add("no together " + page + " page");
         }
         GiantsGuideMod.LOG.info(
-                "guide data: {} giants, {} moves, {} checked against the giants' own language files",
+                "guide data: {} giants, {} moves, {} checked against the giants' own language files, {} not in them",
                 Giants.ALL.size(),
                 movesChecked,
-                ownChecked);
+                ownChecked,
+                leftOut);
         h.assertTrue(wrong.isEmpty(), String.join("; ", wrong));
+        h.succeed();
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE)
+    public void movesHisModDoesNotHaveAreLeftOffHisPage(GameTestHelper h) {
+        Giant g = Giants.byKey("hearthstride");
+        Giant.Move first = g.moves().get(0);
+        Giant.Move last = g.moves().get(g.moves().size() - 1);
+        // his mod has the name of one and only the text of another: those two are his
+        List<Giant.Move> some = Giants.known(g, k -> k.equals(first.nameKey()) || k.equals(last.whatKey()));
+        h.assertTrue(some.equals(List.of(first, last)), "only the moves his mod has are his, got " + some);
+        // a mod with none of the keys: every move, in the guide's own words
+        h.assertTrue(Giants.known(g, k -> false).equals(g.moves()), "a mod with no move keys keeps every move");
         h.succeed();
     }
 
