@@ -136,7 +136,7 @@ A book about every giant you have. Right-click it to open it.
 ## New in 1.17.1
 
 A big update for the Hearthstride, safe ground round him for every giant, a limit on how many giants one player may
-own, and fixes for each giant.
+own, and fixes for most giants.
 
 ### The Hearthstride
 
@@ -144,7 +144,7 @@ own, and fixes for each giant.
   him, Space strides (other forms climb, the Wingfold goes up), Shift settles or lands him, V looks out at him, G
   leaves. Only his Keeper drives him, plus residents if the Keeper allows it.
 - **His Hearth Book works like the other giants' books.** It shows his distance, health, form and what he's doing,
-  with clear buttons: Come to me, Follow me, Walk where I look, Send him to a spot, Where is he?, Stay, Wander. It's
+  with clear buttons: Come to me, Follow me, Walk where I look, Send him to a spot, Where is he?, Stay here, Let him wander. It's
   in the creative Tools tab too, and one book covers every Hearthstride you are Keeper of.
 - **His rooms match his outside:** the rooms you see through his windows and door are the ones you walk into, storey
   by storey, with no jump at the door. They're lit and furnished, with glass panes in the windows and a stairwell,
@@ -164,7 +164,8 @@ own, and fixes for each giant.
 - **Much more solid** to stand on and ride in, at every size and in every form: no slipping through, bouncing or
   getting stuck. His floors no longer lurch when he turns, the Bastion most of all.
 - Logging out in him, changing worlds, teleporting, or your bed in him being far off now always brings you back in his
-  rooms or safely on the ground. You can't go in when he's too small for his doors.
+  rooms or safely on the ground. You can't go in when he's too small for his doors, and anyone inside when he shrinks
+  that small is set down beside him. Going out of his door sets you down past his porch.
 - **New look:** slim chicken ankles with splayed toes and a back toe, no lone block at the toe tips, matching legs,
   far less clipping, and he sits flush on slopes. The Wingfold now stands and walks on its legs on the ground, tucks
   them up to fly and lets them down to land.
@@ -172,10 +173,10 @@ own, and fixes for each giant.
   cracks and splinters fly at his heavy moments, with a little screen shake. Both can be turned down in the settings.
 - You can see him on the skyline from far off (1,024 blocks by default).
 - **Docking:** giants owned by people who live in him can dock beside him (from his book or `/hearthdock`). They
-  rest, heal twice as fast, follow when he walks off, and can go for whatever hits him.
+  rest, heal twice as fast, follow when he walks off, and, if you allow it, go for whatever hits him (never a player).
 - **No more relighting:** when he falls his ruin stays a ruin, and his storage and everything built in him is in
   chests by the cold hearth. A new wild one comes 3 days later. When he's taken away by a command or an admin, nobody
-  is left in the air and his things are left in chests.
+  is left in the air and his things are left in chests. His "most at once" limit never takes away someone's home.
 - The Giants Guide's pause (and `/giants freeze`) now holds him still too.
 - Fixes: `/hearthstride tp` reaches him even in unloaded land, his Beacon no longer makes monsters already saved
   nearby vanish when their land loads, and there is less lag when lots of creatures are around.
@@ -193,11 +194,10 @@ own, and fixes for each giant.
 - **Held to their size:** a small Furrowmaw, Wreckback or Hollowbell can no longer knock you further than his size
   allows, and nor can a crowd of Furrowlings or Bellings. That covers the Furrowmaw's hits and thrown magma clods,
   Wreckback's claw squeeze, holds, eye beams, lightning and bell's toll, and the Hollowbell's spore clouds, stings,
-  eggs and pods. A very small Cerberus stays big enough to hit, every part of him, while he moves as well as while he
+  eggs and stingers, and his grip when he has taken you in. A very small Cerberus stays big enough to hit, every part of him, while he moves as well as while he
   stands still.
-- Steadier tests behind the scenes for the Furrowmaw, the Cerberus and Wreckback (nothing changes for players).
 
-### Each giant
+### Each giant, and the Guide
 
 - **Pitchgut:** if you're hit while riding him, you're thrown off right away, even where his land hasn't fully loaded
   yet or the server is busy. His feet no longer come down a block inside the ground when he steps onto a ledge or
@@ -213,8 +213,7 @@ own, and fixes for each giant.
 - **Lantern Willow:** very far out in the world (millions of blocks from spawn), his roots and strands land exactly
   where he aims, and you hit the part of him you point at. Lantern Willows in a minigame no longer count toward how
   many this world holds, so this world's own Lantern Willows (and My Giant ones) still come.
-- **Swarmforge:** at the giant limit his book stays where it is (on the ground or in the chest) and tells you why,
-  and My Giant takes you to his ground without a book. Picking him again with My Giant when he's already yours never
+- **Swarmforge:** picking him again with My Giant when he's already yours never
   counts as a new giant, even if he's still waiting for the land around you to load before he rolls in.
 - **Giants Guide:** the Hearthstride's page explains how to drive him from his helm, and what happens when he falls:
   his things are kept in chests by his cold hearth, the hearth can't be lit again, and a new wild one comes later. The

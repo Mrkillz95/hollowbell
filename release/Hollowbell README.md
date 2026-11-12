@@ -10,8 +10,8 @@ into his hollow dome and see what he's caught.
 
 - **Egg rain**: his eggs come down right on their markers on the ground, even when he lets them go low down or aims
   them far off, and far out in the world.
-- His spore clouds, stings, eggs, his pods and his Bellings never knock you harder than his size allows, so a small
-  Hollowbell, or a crowd of Bellings round you, can't send you flying.
+- His spore clouds, stings, eggs and stingers, his grip when he has taken you in, and his Bellings' bites and bumps
+  are now held to his size, so a small Hollowbell, or a crowd of Bellings round you, can't send you flying.
 - Standing on him when one of his arms curls up round you: you're lifted up onto the arm, not pushed off its edge.
 - The **Hearthstride's yard** is safe ground: no fight between giants starts there or right round him, and the
   Hollowbell leaves players in it alone.
