@@ -438,7 +438,27 @@ public final class Solid {
             double ang = base + turn * Math.PI / 4;
             for (double dd = step; dd < Math.min(bestD, far); dd += step) {
                 Vec3 c = from.add(Math.cos(ang) * dd, 0, Math.sin(ang) * dd);
-                if (!clear(b, e, dim.makeBoundingBox(c))) continue;
+                if (!clear(b, e, dim.makeBoundingBox(c))) {
+                    // (one that stood on him: up onto the part beside them, if it is a climb of a block or so, as
+                    // they'd step up onto it. A curled part they stood in, rising round them, otherwise pushes them
+                    // out level and off its edge)
+                    if (!onHim) continue;
+                    Vec3 up = null;
+                    for (double dy = step * 0.5; dy <= 1.5 && dd + dy * 0.66 < bestD; dy += step * 0.5) {
+                        Vec3 u = c.add(0, dy, 0);
+                        if (clear(b, e, dim.makeBoundingBox(u)) && floorUnder(b, u)) {
+                            up = u;
+                            break;
+                        }
+                    }
+                    if (up == null) continue;
+                    double cost = (dd + (up.y - c.y) * 0.66) * (turn == 0 ? 1.0 : 1.15);
+                    if (cost < bestD) {
+                        best = up;
+                        bestD = cost;
+                    }
+                    break;
+                }
                 boolean floor = !onHim || floorUnder(b, c);
                 // (off him, for one that stood on him: only if nothing of his to stand on is near)
                 double cost = dd * (turn == 0 ? 1.0 : 1.15) * (floor ? 1.0 : 3.0);
