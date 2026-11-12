@@ -63,14 +63,17 @@ public final class Speedrun extends Coop {
 
     @Override
     public void giantFell(MgGame g, MgGiants.G giant) {
-        g.data.put("time", g.roundTicks);
+        // (a fall is found before the round's clock ticks on in the same tick: this tick counts. A giant brought
+        // down right at Go would otherwise take 0:00.0, which is no time at all and never kept as a best)
+        int time = g.roundTicks + 1;
+        g.data.put("time", time);
         MgData d = MgData.get(g.server);
         for (MgGame.P p : g.players()) {
             MgData.Player rec = d.player(p.id.toString(), p.name);
-            if (rec.best <= 0 || g.roundTicks < rec.best) {
-                rec.best = g.roundTicks;
+            if (rec.best <= 0 || time < rec.best) {
+                rec.best = time;
                 ServerPlayer sp = g.online(p);
-                if (sp != null) sp.sendSystemMessage(Component.literal("Your best time yet: " + time(g.roundTicks) + "!")
+                if (sp != null) sp.sendSystemMessage(Component.literal("Your best time yet: " + time(time) + "!")
                         .withStyle(ChatFormatting.GOLD));
             }
         }
