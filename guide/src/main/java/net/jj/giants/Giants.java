@@ -2,6 +2,7 @@ package net.jj.giants;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import net.fabricmc.loader.api.FabricLoader;
@@ -413,6 +414,46 @@ public final class Giants {
         List<Giant.Move> his = new ArrayList<>();
         for (Giant.Move m : g.moves()) if (has.test(m.nameKey()) || has.test(m.whatKey())) his.add(m);
         return his.isEmpty() ? g.moves() : his;
+    }
+
+    /**
+     * one form of a giant who rebuilds himself (the Hearthstride): its own name in his mod, and its moves in his
+     * book's order. His moves page lists his moves form by form
+     */
+    public record Form(String id, List<String> moves) {
+        /** his mod's own lang key for the form's name */
+        public String nameKey(Giant g) {
+            return "form." + g.modId() + "." + id;
+        }
+
+        /** the guide's own copy of the name, used when his mod doesn't have the key */
+        public String nameCopy(Giant g) {
+            return "guide.jj_giants." + g.key() + ".form." + id;
+        }
+    }
+
+    /** the giants with forms, by key: every move of theirs is in one form */
+    public static final Map<String, List<Form>> FORMS = Map.of(
+            "hearthstride",
+            List.of(
+                    new Form("cottage", List.of("door_snap", "shutters", "shoo_kick", "chimney_smoke", "call_inside")),
+                    new Form("bastion", List.of("shield_dome", "blunt_volley", "drawbridge_slam", "rally_horn", "hold_fast")),
+                    new Form("wingfold", List.of("gust", "swoop_rescue", "feather_fall", "cloud_cover", "updraft")),
+                    new Form("scuttler", List.of("dash", "hide", "trip", "burrow_tuck", "decoy_door")),
+                    new Form("workshop", List.of("patch_up", "spark_fence", "iron_wall", "bellows_blast", "mend_self")),
+                    new Form("library_tower", List.of("ward", "page_storm", "beacon", "lullaby", "recall")),
+                    new Form("farmstead", List.of("seed_rain", "harvest_basket", "barn_call", "well_spring", "scarecrow")),
+                    new Form("delver", List.of("lamplight", "ore_sense", "auger", "shore_up", "miners_cheer")),
+                    new Form("inn", List.of("hearty_meal", "good_company", "open_market", "closing_time", "bell_for_guests")),
+                    new Form("chapel", List.of("blessing", "bell_toll", "mend_the_faithful", "peace", "sanctuary")),
+                    new Form("alchemist", List.of("brew_mist", "lengthen", "fill_the_flasks", "stink_cloud", "swift_draught")),
+                    new Form("observatory", List.of("starlight", "star_chart", "spyglass_sweep", "moonbeam", "star_reading")),
+                    new Form("watchtower", List.of("sound_the_alarm", "far_watch", "signal_flare", "blinding_beam", "lighthouse_beam")),
+                    new Form("ark", List.of("bow_wave", "man_overboard", "fair_wind", "cast_nets", "batten_down"))));
+
+    /** his forms, none for a giant who has only the one shape */
+    public static List<Form> forms(Giant g) {
+        return FORMS.getOrDefault(g.key(), List.of());
     }
 
     public static Giant byKey(String key) {

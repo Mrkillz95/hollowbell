@@ -527,7 +527,10 @@ public class GuideScreen extends Screen {
         });
     }
 
-    /** made from his list of moves: a part for light, medium and heavy, each move's name and what it does */
+    /**
+     * made from his list of moves: a part for light, medium and heavy, each move's name and what it does (a giant
+     * with forms: a part for each form, the move's colour telling its kind)
+     */
     private void movesPage(Giant g) {
         List<String> intro = new ArrayList<>();
         for (int n = 1; n <= Giants.MAX_LINES && has(g.lineKey("moves", n)); n++) intro.add(raw(g.lineKey("moves", n)));
@@ -537,6 +540,30 @@ public class GuideScreen extends Screen {
         leftW = Math.min(leftW, (int) (cw * 0.4f));
         for (String s : intro) line(s, leftW);
         int[] colours = {0xFFFFFFFF, 0xFFFFAA00, 0xFFFF5555, 0xFF55FFFF};
+        // a giant with forms: what each colour means, then a heading for each form and its moves in that colour
+        List<Giants.Form> forms = Giants.forms(g);
+        if (!forms.isEmpty()) {
+            for (int t = 0; t < Giants.TIER_NAMES.length; t++) {
+                final int tier = t;
+                if (moves.stream().noneMatch(m -> m.tier() == tier)) continue;
+                row(
+                        Component.translatable(tierKey(g, "tier", t)),
+                        Component.translatable(tierKey(g, "tier_note", t)),
+                        leftW,
+                        colours[t]);
+            }
+            List<Giant.Move> left = new ArrayList<>(moves);
+            for (Giants.Form f : forms) {
+                List<Giant.Move> his = new ArrayList<>();
+                for (String id : f.moves()) for (Giant.Move m : moves) if (m.id().equals(id)) his.add(m);
+                if (his.isEmpty()) continue;
+                heading(Component.translatable(has(f.nameKey(g)) ? f.nameKey(g) : f.nameCopy(g)), GOLD);
+                for (Giant.Move m : his) row(moveName(g, m), moveWhat(g, m), leftW, colours[m.tier()]);
+                left.removeAll(his);
+            }
+            // (a move in no form would be listed after them, by its kind, as every other giant's are)
+            moves = left;
+        }
         for (int t = 0; t < Giants.TIER_NAMES.length; t++) {
             final int tier = t;
             if (moves.stream().noneMatch(m -> m.tier() == tier)) continue;

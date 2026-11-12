@@ -253,6 +253,42 @@ public class GuideGameTests implements FabricGameTest {
         h.succeed();
     }
 
+    /** the Hearthstride's moves page goes form by form: 14 forms, five moves each, every move of his in just one */
+    @GameTest(template = EMPTY_STRUCTURE)
+    public void theHearthstridesMovesAreListedFormByForm(GameTestHelper h) {
+        JsonObject l = lang();
+        Giant g = Giants.byKey("hearthstride");
+        List<Giants.Form> forms = Giants.forms(g);
+        List<String> wrong = new ArrayList<>();
+        if (forms.size() != 14) wrong.add(forms.size() + " forms, not 14");
+        List<String> seen = new ArrayList<>();
+        for (Giants.Form f : forms) {
+            if (f.moves().size() != 5) wrong.add(f.id() + " has " + f.moves().size() + " moves, not 5");
+            if (!text(l, f.nameCopy(g))) wrong.add("no name for the form " + f.id());
+            if (Giants.loaded(g) && !Language.getInstance().has(f.nameKey(g)))
+                wrong.add(g.modId() + " has no " + f.nameKey(g));
+            for (String id : f.moves()) {
+                if (g.moves().stream().noneMatch(m -> m.id().equals(id))) wrong.add(id + " is no move of his");
+                if (seen.contains(id)) wrong.add(id + " is in two forms");
+                seen.add(id);
+            }
+        }
+        for (Giant.Move m : g.moves()) if (!seen.contains(m.id())) wrong.add(m.id() + " is in no form");
+        // the About page names every form too
+        StringBuilder about = new StringBuilder();
+        for (int n = 1; n <= Giants.MAX_LINES && l.has(g.lineKey("about", n)); n++)
+            about.append(l.get(g.lineKey("about", n)).getAsString()).append('\n');
+        for (Giants.Form f : forms) {
+            String name = l.has(f.nameCopy(g)) ? l.get(f.nameCopy(g)).getAsString() : f.id();
+            if (!about.toString().contains("| " + name + " | ")) wrong.add("his About page leaves out the " + name);
+        }
+        // only he has forms
+        for (Giant o : Giants.ALL)
+            if (o != g && !Giants.forms(o).isEmpty()) wrong.add(o.key() + " has forms");
+        h.assertTrue(wrong.isEmpty(), String.join("; ", wrong));
+        h.succeed();
+    }
+
     private static void checkLine(GameTestHelper h, String s, String where, List<String> wrong) {
         if (s.startsWith("@item ")) {
             for (String id : s.substring(6).split(" \\| ")[0].split(",")) {
