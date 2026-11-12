@@ -210,7 +210,13 @@ public final class BellMoves {
 
     public void setCooldown(int c) {
         cooldown = c;
+        // (a wait set from outside holds right through any move he is made to do: a move's end sets its own wait,
+        // which mustn't cut this one short)
+        holdUntil = h.level().getGameTime() + Math.max(0, c);
     }
+
+    /** the game time a wait set from outside (setCooldown) runs to: no move of his own before it */
+    long holdUntil;
 
     public float lift() {
         return lift;
@@ -249,6 +255,7 @@ public final class BellMoves {
         h.setTired(false);
         heavyReadyAt = 0;
         cooldown = 0;
+        holdUntil = 0;
         fightSince = 0;
     }
 
@@ -581,6 +588,7 @@ public final class BellMoves {
     /** for the operator's commands: every wait between moves let off */
     public void clearCooldowns() {
         cooldown = 0;
+        holdUntil = 0;
         heavyReadyAt = 0;
         tired = 0;
         h.setTired(false);
@@ -614,6 +622,8 @@ public final class BellMoves {
         // (the admin book's wait for this move and for all giants: x1 changes nothing)
         float waitTimes = net.jj.hollowbell.GiantsAdmin.moveCooldown(was);
         if (waitTimes != 1f) cooldown = Math.round(cooldown * waitTimes);
+        long held = holdUntil - h.level().getGameTime();
+        if (held > cooldown) cooldown = (int) Math.min(Integer.MAX_VALUE, held);
         if (tier == Moves.HEAVY && was != Moves.NONE) {
             // worn out: slower, drooping, nothing for a few seconds; and a while before the next heavy one
             tired = 100;
