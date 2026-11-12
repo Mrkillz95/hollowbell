@@ -58,6 +58,10 @@ public class Shot extends ThrowableItemProjectile {
     /** an egg: where it will land (the marker on the ground), and the height it was dropped from */
     private static final EntityDataAccessor<Vector3f> DATA_LAND =
             SynchedEntityData.defineId(Shot.class, EntityDataSerializers.VECTOR3);
+    /** where it lands, as a block (with DATA_LAND the bit of it past that: far out in the world a float alone can't
+     * hold a spot to within a block) */
+    private static final EntityDataAccessor<net.minecraft.core.BlockPos> DATA_LAND_AT =
+            SynchedEntityData.defineId(Shot.class, EntityDataSerializers.BLOCK_POS);
 
     private static final EntityDataAccessor<Float> DATA_FROM_Y =
             SynchedEntityData.defineId(Shot.class, EntityDataSerializers.FLOAT);
@@ -96,6 +100,7 @@ public class Shot extends ThrowableItemProjectile {
         b.define(DATA_EGG, 0);
         b.define(DATA_SIZE, 1f);
         b.define(DATA_LAND, new Vector3f());
+        b.define(DATA_LAND_AT, net.minecraft.core.BlockPos.ZERO);
         b.define(DATA_FROM_Y, 0f);
         b.define(DATA_STAGE, FALLING);
         b.define(DATA_STAGE_AT, 0);
@@ -115,7 +120,8 @@ public class Shot extends ThrowableItemProjectile {
 
     public Vec3 landing() {
         Vector3f v = entityData.get(DATA_LAND);
-        return new Vec3(v.x, v.y, v.z);
+        net.minecraft.core.BlockPos b = entityData.get(DATA_LAND_AT);
+        return new Vec3(b.getX() + (double) v.x, b.getY() + (double) v.y, b.getZ() + (double) v.z);
     }
 
     public float fromY() {
@@ -140,8 +146,15 @@ public class Shot extends ThrowableItemProjectile {
     public void setEgg(int egg, float size, Vec3 land) {
         entityData.set(DATA_EGG, egg);
         entityData.set(DATA_SIZE, size);
-        entityData.set(DATA_LAND, new Vector3f((float) land.x, (float) land.y, (float) land.z));
+        setLanding(land);
         entityData.set(DATA_FROM_Y, (float) getY());
+    }
+
+    private void setLanding(Vec3 land) {
+        net.minecraft.core.BlockPos b = net.minecraft.core.BlockPos.containing(land);
+        entityData.set(DATA_LAND_AT, b);
+        entityData.set(DATA_LAND, new Vector3f((float) (land.x - b.getX()), (float) (land.y - b.getY()),
+                (float) (land.z - b.getZ())));
     }
 
     /** a stinger: how big he is (it's drawn bigger off a bigger one) */
@@ -451,8 +464,7 @@ public class Shot extends ThrowableItemProjectile {
         if (tag.contains("Life")) life = tag.getInt("Life"); // an old save without it keeps the usual life
         entityData.set(DATA_EGG, tag.getInt("Egg"));
         entityData.set(DATA_SIZE, tag.contains("Size") ? tag.getFloat("Size") : 1f);
-        entityData.set(DATA_LAND, new Vector3f((float) tag.getDouble("LandX"), (float) tag.getDouble("LandY"), (float)
-                tag.getDouble("LandZ")));
+        setLanding(new Vec3(tag.getDouble("LandX"), tag.getDouble("LandY"), tag.getDouble("LandZ")));
         entityData.set(DATA_FROM_Y, tag.getFloat("FromY"));
     }
 

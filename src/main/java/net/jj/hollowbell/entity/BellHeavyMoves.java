@@ -172,26 +172,61 @@ final class BellHeavyMoves {
                 (h.getRandom().nextDouble() - 0.5) * 2 * spread);
         double gy = h.groundAt(to.x, to.z);
         // the way it really falls (a step, then the air slows it, then it drops faster): how many ticks to the
-        // ground, and how far across it gets for each block a tick it starts with, so it lands on its marker
-        double y = from.y, vy = 0, across = 0, k = 1;
+        // ground, and how far across it gets for each block a tick it starts with, so it lands on its marker. Never
+        // set going harder than his size allows (shoveCap, sideways and up together): a low egg aimed far is tossed
+        // up a little first, so it gets there in time at a speed he may give it, and lands on its marker, never
+        // short of it
+        double cap = HollowbellEntity.shoveCap(s);
+        double dist = Math.hypot(to.x - from.x, to.z - from.z);
+        double up = 0, across = eggAcross(from.y, gy, 0), side = Math.min(cap, dist / across);
+        if (dist / across > cap) {
+            // (the toss that gets it furthest at the most he may give it, or the gentlest that gets it there)
+            double best = cap * across;
+            for (double u = 0.05; u < cap; u += 0.05) {
+                double a = eggAcross(from.y, gy, u), most = Math.sqrt(cap * cap - u * u);
+                if (most * a > best) {
+                    best = most * a;
+                    up = u;
+                    across = a;
+                    side = Math.min(most, dist / a);
+                    if (dist / a <= most) break;
+                }
+            }
+        }
+        float r = 2.5f * Math.min(1f, 10f * s) + 3f * s;
+        Shot sh = new Shot(mv.level(), h, Shot.EGG, 14f, r);
+        sh.setPos(from.x, from.y, from.z);
+        double dx = dist < 1e-6 ? 0 : (to.x - from.x) / dist, dz = dist < 1e-6 ? 0 : (to.z - from.z) / dist;
+        sh.setDeltaMovement(dx * side, up, dz * side);
+        h.capShove(sh);
+        // (too far off for any toss he may give it: the marker goes where it will really come down)
+        double gone = side * across;
+        if (gone < dist - 0.05) {
+            to = new Vec3(from.x + dx * gone, to.y, from.z + dz * gone);
+            gy = h.groundAt(to.x, to.z);
+        }
+        sh.setEgg(i, s, new Vec3(to.x, gy, to.z));
+        mv.level().addFreshEntity(sh);
+        h.sound(from, ModSounds.EGG_BURST, 2f, 1.1f);
+        mv.lastEggs.add(sh);
+    }
+
+    /**
+     * An egg let go at height y with up (blocks a tick) upward: how far across it gets, for each block a tick it
+     * starts with sideways, by the time it is down at gy (it falls as a Shot does: a step, then the air slows it by
+     * 1 in 100, then gravity, 0.05 a tick)
+     */
+    static double eggAcross(double y, double gy, double up) {
+        double vy = up, across = 0, k = 1;
         int n = 0;
-        while (y > gy && n < 400) {
+        while ((y > gy || vy > 0) && n < 400) {
             y += vy;
             across += k;
             k *= 0.99;
             vy = vy * 0.99 - 0.05;
             n++;
         }
-        across = Math.max(1, across);
-        float r = 2.5f * Math.min(1f, 10f * s) + 3f * s;
-        Shot sh = new Shot(mv.level(), h, Shot.EGG, 14f, r);
-        sh.setPos(from.x, from.y, from.z);
-        sh.setDeltaMovement((to.x - from.x) / across, 0, (to.z - from.z) / across);
-        h.capShove(sh);
-        sh.setEgg(i, s, new Vec3(to.x, gy, to.z));
-        mv.level().addFreshEntity(sh);
-        h.sound(from, ModSounds.EGG_BURST, 2f, 1.1f);
-        mv.lastEggs.add(sh);
+        return Math.max(1, across);
     }
 
     /** the whirlpool: he spins, and his strands drag everything in a wide ring in toward the middle under him */
