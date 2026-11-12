@@ -546,6 +546,19 @@ public class BehaviourTests implements FabricGameTest {
             h.assertFalse(e.bigEnoughToHold(), "that small he holds nobody");
             h.assertFalse(e.comeAndGetMe(p[0]), "nor carries anybody up to his crown");
         });
+        // (the test players aren't ticked by a game, so they'd hang wherever they are put: one pushed up out of him
+        // would stay up there, he'd go up after it and push it higher. Their own game lets them fall)
+        double[] fall = {0, 0};
+        for (int t = 11; t < 250; t++)
+            h.runAfterDelay(t, () -> {
+                for (int i = 0; i < 2; i++) {
+                    ServerPlayer q = p[i];
+                    if (q == null) continue;
+                    fall[i] = Math.min(1.4, (fall[i] + 0.08) * 0.98);
+                    q.move(net.minecraft.world.entity.MoverType.SELF, new Vec3(0, -fall[i], 0));
+                    if (q.onGround()) fall[i] = 0;
+                }
+            });
         for (int t = 20; t < 250; t += 10)
             h.runAfterDelay(t, () -> {
                 if (e.getTarget() == p[0] || e.getTarget() == p[1]) hunted[0] = true;
