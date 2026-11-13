@@ -210,3 +210,8 @@ tasks.register('poseLabClasspath') {
     dependsOn 'gametestClasses'
     doLast { new File(buildDir, 'poselab-cp.txt').text = sourceSets.gametest.runtimeClasspath.asPath }
 }
+
+// Each game-test run starts from an empty test world, so old runs never pile up on disk.
+tasks.matching { it.name == 'runGametest' }.configureEach {
+    doFirst { project.delete(project.layout.buildDirectory.dir('gametest/world')) }
+}
