@@ -11,7 +11,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.16.1 |
+| Giants Guide | 1.16.2 |
 | Pitchgut | 1.35.45 |
 | Furrowmaw | 1.17.42 |
 | Fire & Ice Cerberus | 2.18.42 |
@@ -20,11 +20,11 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Wreckback | 1.2.50 |
 | The Swarmforge | 1.4.48 |
 | The Gloamwick | 1.2.29 |
-| The Hearthstride | 1.2.0 |
+| The Hearthstride | 1.3.0 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.17.2), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.18.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -32,7 +32,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…`, `gloamwick-…` and `hearthstride-…` out of your mods folder, and the old
-`giants-all-…` jar too, then put `giants-all-1.17.2.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-…` jar too, then put `giants-all-1.18.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -134,6 +134,53 @@ A book about every giant you have. Right-click it to open it.
   Speedrun won right at Go still keeps a best time.
 - New in the Guide 1.16.1: the Hearthstride's page knows all 14 forms and all 70 of his moves by name, says which
   form each move belongs to, and tells about building on him and who his foes are.
+- New in the Guide 1.16.2: the Hearthstride's page says he only fights his foes.
+
+## New in 1.18.0
+
+The Hearthstride gets to work: lasting works for every form, and a Switches page in his book.
+
+### The Hearthstride 1.3.0
+
+- **Works:** every form has three lasting works, 42 in all. Pick one on the Orders page of his book and he stays
+  put and keeps at it, a little at a time, while he's parked in that form. **Stop work** stops him, **Pack up** takes
+  down what his works built (dug ground stays dug), **Show work area** marks its edge. What he gathers goes into his
+  storage.
+  - Cottage: Homestead, Hearth Kitchen, Rest Stop
+  - Bastion: Hold the Line, Garrison, Moat
+  - Wingfold: Roost, Courier, Scout Flights
+  - Scuttler: Forager, Den, Path Maker
+  - Workshop: Forge, Smelter, Tinker
+  - Library Tower: Study, Ward Circle, Archive
+  - Farmstead: Tend the Fields, Ranch, Orchard
+  - Delver: Dig a Mine, Quarry, Light the Caves
+  - Inn: Open House, Market, Tavern
+  - Chapel: Hallowed Ground, Grave Keeper, Healing Font
+  - Alchemist's Cottage: Brewery, Herb Garden, Potion Rack
+  - Observatory: Survey, Weather Watch, Giant Tracker
+  - Watchtower: Keep Watch, Lighthouse, Alarm Bells
+  - Ark: Fishery, Dock, Kelp Farm
+- Works only break natural ground, never anything built, keep out of spawn protection and follow the mob griefing
+  rule. Each work's tip in the book says what it does.
+- **The Switches page:** over 40 things he does, each with a tip, to turn on or off, in five groups: looking after his
+  household, in a fight, getting about, home and works, looks and sound (rescue the hurt, guard his household, hit
+  back, follow me, wander when idle, change form himself, work by himself, pack up when leaving, lights at night,
+  chimney smoke and more). **Strangers are foes** is one of them now. On the Moves page each move has a **By
+  himself** row.
+- **Batten Down, redone:** the Ark's Batten Down lasts 15 seconds: blows land at less than a third, arrows glance off
+  and his household is braced. Its boards lie flat on his hull.
+- **Fixes:** raid waves always come, even near a work that keeps foes away; works and switches only stop natural
+  spawns, so spawn eggs, spawners and commands work as usual. Blocks a work put down drop nothing when broken (what's
+  in a chest still falls out), Dock boats break into nothing, and Garrison golems left behind are taken away. Survey
+  draws only land that's been explored and makes no new land. Light the Caves leaves players' roofed rooms dark. The
+  Wingfold's Roost pad lies just before his door.
+
+### The Giants Guide 1.16.2
+
+- The Hearthstride's page says he only fights his foes (it said nobody needs to fight him).
+
+Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Cerberus 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
+Wreckback 1.2.50, Swarmforge 1.4.48, Gloamwick 1.2.29, Hearthstride 1.3.0, Giants Guide 1.16.2.
 
 ## New in 1.17.2
 
