@@ -11,7 +11,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.16.0 |
+| Giants Guide | 1.16.1 |
 | Pitchgut | 1.35.45 |
 | Furrowmaw | 1.17.42 |
 | Fire & Ice Cerberus | 2.18.42 |
@@ -20,11 +20,11 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Wreckback | 1.2.50 |
 | The Swarmforge | 1.4.48 |
 | The Gloamwick | 1.2.29 |
-| The Hearthstride | 1.1.0 |
+| The Hearthstride | 1.2.0 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.17.1), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.17.2), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -32,7 +32,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…`, `gloamwick-…` and `hearthstride-…` out of your mods folder, and the old
-`giants-all-…` jar too, then put `giants-all-1.17.1.jar` (from the Releases page) in. Keep Fabric API in there.
+`giants-all-…` jar too, then put `giants-all-1.17.2.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -132,6 +132,46 @@ A book about every giant you have. Right-click it to open it.
   gain more; also `/giants players <player> max`), the Hearthstride's page tells how to drive him from his helm and
   what's left when he falls, the Close Quarters preset's grounds are a little smaller so all nine giants fit, and a
   Speedrun won right at Go still keeps a best time.
+- New in the Guide 1.16.1: the Hearthstride's page knows all 14 forms and all 70 of his moves by name, says which
+  form each move belongs to, and tells about building on him and who his foes are.
+
+## New in 1.17.2
+
+A big update for the Hearthstride: eight new forms, real move effects, and players and giants as his foes.
+
+### The Hearthstride 1.2.0
+
+- **Eight new forms**, 14 in all: the Farmstead (a long barn with a silo and a water wheel), the Delver (a mine-head
+  on digging claws), the Inn (a coaching inn with a market under it), the Chapel (a stone chapel with a bell tower),
+  the Alchemist's Cottage (a tall tower house of jars and cauldrons), the Observatory (a domed tower with a
+  telescope), the Watchtower (a lighthouse on long legs: knock at the foot of his tower to come in) and the Ark (a
+  ship with his house at the bow: on deep water he floats and sails). Each has its own lit, furnished rooms on its
+  own storeys and its own helm, and five moves of its own: 40 new moves.
+- **Big, real move effects:** his moves show real things instead of odd light: crops shooting up from tilled beds, a
+  well geyser, a drill on a shaft and great lamps on booms, a great bell, a rose window, a big cauldron and thrown
+  flasks, stars and an armillary, a flare shot high with a wide red glow, rope nets, lifebuoys and bellied sails. The
+  Wingfold's wings fold alike, with a white cloud, wind streaks and swoop trails. Ore Sense counts the ores about him,
+  Star Reading names the nearest village and giant, Sound the Alarm counts the foes and giants about him.
+- **Build on his outside:** his household can build on his walls and roof with any block. It moves, grows and shrinks
+  with him and belongs to the form it was built on. Beds there set your respawn and furnaces cook. His Keeper says
+  whether residents may build there; admins can turn it off or set how many blocks each form carries.
+- **Smoother ride inside:** no lurch on lag, a gentler bob, steady stairs.
+- **He stands and steps properly:** the feet holding him stay on the ground in every move, his legs fold at the
+  joints when he settles, his moves dip and lean in one smooth curve, and he lunges into quick strikes with a foot
+  forward. His chimney no longer clips through his roof.
+- **His foes:** monsters, plus players (when the server allows PvP) and giants who hurt him or his household in the
+  last half minute. His moves push, slow and light up foes; a player or giant is never laid down, and a giant is only
+  nudged. His household, their giants and his Keeper's team are never his foes. His Keeper can turn on **Treat
+  strangers as foes** in his book. Docked giants go for a player or giant only when it's his foe. Two new admin rows:
+  **Players can be his foes** and **Giants can be his foes** (both on by default).
+
+### The Giants Guide 1.16.1
+
+- The Hearthstride's page knows all 14 forms and all 70 of his moves by name, says which form each move belongs to,
+  and tells about building on him and who his foes are.
+
+Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Cerberus 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
+Wreckback 1.2.50, Swarmforge 1.4.48, Gloamwick 1.2.29, Hearthstride 1.2.0, Giants Guide 1.16.1.
 
 ## New in 1.17.1
 
