@@ -427,7 +427,7 @@ public final class Giants {
                                 "gear_storm",
                                 "temporal_anchor"
                             }),
-                    Set.of("cerberus", "wreckback", "swarmforge", "gloamwick")));
+                    Set.of("furrowmaw", "cerberus", "wreckback", "swarmforge", "gloamwick")));
 
     private Giants() {}
 

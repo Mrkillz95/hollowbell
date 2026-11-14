@@ -341,6 +341,7 @@ public class GuideGameTests implements FabricGameTest {
             {"swarmforge", "gloamwick"},
             {"pitchgut", "hearthstride"},
             {"cerberus", "hearthstride"},
+            {"furrowmaw", "tickmoor"},
             {"cerberus", "tickmoor"},
             {"wreckback", "tickmoor"},
             {"swarmforge", "tickmoor"},
