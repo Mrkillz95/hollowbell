@@ -35,7 +35,8 @@ public class MeetGiantsTests implements FabricGameTest {
 
     private static final String[] KINDS = {
         "mountain_breathes", "furrowmaw", "fire_ice_cerberus", "hollowbell",
-        "lanternwillow", "wreckback", "swarmforge", "gloamwick", "hearthstride"
+        "lanternwillow", "wreckback", "swarmforge", "gloamwick", "hearthstride",
+        "tickmoor"
     };
 
     private static void set(GameTestHelper h, String values) {

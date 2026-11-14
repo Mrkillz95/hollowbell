@@ -63,7 +63,8 @@ public final class BellGen {
             "wreckback",
             "swarmforge",
             "gloamwick",
-            "hearthstride");
+            "hearthstride",
+            "tickmoor");
 
     /** everything a generator thread may know. Never changed once made; a new claim makes a new one. */
     public static final class Snap {
