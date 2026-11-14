@@ -56,7 +56,8 @@ public final class GiantsCommand {
         "net.jj.wreckback.GiantsBridge",
         "net.jj.swarmforge.GiantsBridge",
         "net.jj.gloamwick.GiantsBridge",
-        "net.jj.hearthstride.GiantsBridge"
+        "net.jj.hearthstride.GiantsBridge",
+        "net.jj.tickmoor.GiantsBridge"
     };
 
     /**
@@ -151,7 +152,7 @@ public final class GiantsCommand {
     /** the name /giants takes for each bridge, in the same order as BRIDGES */
     public static final String[] TP_NAMES = {
         "cerberus", "furrowmaw", "hollowbell", "willow", "pitchgut", "wreckback", "swarmforge", "gloamwick",
-        "hearthstride"
+        "hearthstride", "tickmoor"
     };
 
     /** every loaded bridge's answer, in order */
@@ -423,7 +424,8 @@ public final class GiantsCommand {
         "wreckback:wreckback",
         "swarmforge:swarmforge",
         "gloamwick:gloamwick",
-        "hearthstride:hearthstride"
+        "hearthstride:hearthstride",
+        "tickmoor:tickmoor"
     };
 
     /** which bridge (index into BRIDGES) owns this entity as a giant's main body, or -1 */

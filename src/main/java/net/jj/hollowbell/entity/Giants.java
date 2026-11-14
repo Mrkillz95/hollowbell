@@ -18,8 +18,8 @@ import net.minecraft.world.entity.projectile.Projectile;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The giants: the nine of them (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback,
- * the Swarmforge, the Gloamwick and the Hearthstride). They all follow the same rules with each other: a blow from
+ * The giants: the ten of them (Pitchgut, the Furrowmaw, the Cerberus, the Hollowbell, the Lantern Willow, Wreckback,
+ * the Swarmforge, the Gloamwick, the Hearthstride and Tickmoor). They all follow the same rules with each other: a blow from
  * one giant lands on another by the other's own armour against giants, and none of them ever picks another up,
  * swallows it or drags it about. Each one tags itself {@link #TAG}; the ids below catch the others even from older
  * versions that don't.
@@ -40,7 +40,8 @@ public final class Giants {
             "hollowbell:hollowbell", "lanternwillow:lanternwillow",
             "wreckback:wreckback", "swarmforge:swarmforge",
             "gloamwick:gloamwick",
-            "hearthstride:hearthstride");
+            "hearthstride:hearthstride",
+            "tickmoor:tickmoor");
     private static final Set<String> MODS = Set.of(
             "mountain_breathes",
             "furrowmaw",
@@ -50,7 +51,8 @@ public final class Giants {
             "wreckback",
             "swarmforge",
             "gloamwick",
-            "hearthstride");
+            "hearthstride",
+            "tickmoor");
 
     /** one of the giants, or a part of one */
     public static boolean isGiant(@Nullable Entity e) {
@@ -73,7 +75,7 @@ public final class Giants {
     }
 
     /**
-     * The tag each giant's helpers carry, followed by their giant's id (jj_giant_of:&lt;uuid&gt;): the same in all nine
+     * The tag each giant's helpers carry, followed by their giant's id (jj_giant_of:&lt;uuid&gt;): the same in all ten
      * mods, so a giant hurt by another's helper holds it against that giant.
      */
     public static final String OF = "jj_giant_of:";
