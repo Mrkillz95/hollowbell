@@ -351,4 +351,9 @@ public class SystemsGiantsGameTests implements FabricGameTest {
     public void gloamwickRemains(GameTestHelper h) {
         remains(h, "gloamwick", 7);
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1600, batch = "bones_tickmoor")
+    public void tickmoorRemains(GameTestHelper h) {
+        remains(h, "tickmoor", 8);
+    }
 }

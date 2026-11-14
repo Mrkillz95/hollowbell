@@ -37,7 +37,7 @@ public final class FunGiants {
             "pitchgut", new int[] {185, 265}, "furrowmaw", new int[] {45, 600}, "cerberus", new int[] {200, 280},
             "hollowbell", new int[] {200, 200}, "lanternwillow", new int[] {200, 200},
             "wreckback", new int[] {208, 323}, "swarmforge", new int[] {152, 225}, "gloamwick", new int[] {200, 277},
-            "hearthstride", new int[] {145, 85});
+            "hearthstride", new int[] {145, 85}, "tickmoor", new int[] {151, 255});
 
     /** his height at this size, in blocks */
     public static double height(String kind, double size) {

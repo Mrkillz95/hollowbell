@@ -4,7 +4,9 @@
 import zipfile, json, glob, os, re, sys
 REPOS = {'pitchgut': 'pitchgut-', 'furrowmaw': 'furrowmaw-', 'cerberus': 'fire-ice-cerberus-',
          'hollowbell': 'hollowbell-', 'lanternwillow': 'lanternwillow-', 'wreckback': 'wreckback-', 'swarmforge': 'swarmforge-',
-         'gloamwick': 'gloamwick-', 'hearthstride': 'hearthstride-'}
+         'gloamwick': 'gloamwick-', 'hearthstride': 'hearthstride-', 'tickmoor': 'tickmoor-'}
+# (a giant whose repo folder isn't his name)
+FOLDER = {'tickmoor': 'tickmoor-mod'}
 def ver(p):
     m = re.search(r'-(\d+(?:\.\d+)*)\.jar$', p)
     return tuple(int(x) for x in m.group(1).split('.')) if m else ()
@@ -14,7 +16,7 @@ out = os.path.join(here, 'run-mods')
 os.makedirs(out, exist_ok=True)
 for f in glob.glob(os.path.join(out, '*.jar')): os.remove(f)
 for repo, pre in REPOS.items():
-    js = [p for p in glob.glob(os.path.join(root, repo, 'release', pre + '*.jar')) if ver(p)]
+    js = [p for p in glob.glob(os.path.join(root, FOLDER.get(repo, repo), 'release', pre + '*.jar')) if ver(p)]
     if not js: print(repo, 'none'); continue
     p = max(js, key=ver)
     with zipfile.ZipFile(p) as zin, zipfile.ZipFile(os.path.join(out, repo + '.jar'), 'w', zipfile.ZIP_DEFLATED) as zout:

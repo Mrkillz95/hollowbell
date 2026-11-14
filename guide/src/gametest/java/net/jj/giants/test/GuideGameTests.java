@@ -49,7 +49,8 @@ public class GuideGameTests implements FabricGameTest {
             "wreckback",
             "swarmforge",
             "gloamwick",
-            "hearthstride");
+            "hearthstride",
+            "tickmoor");
 
     @SuppressWarnings("deprecation")
     private static ServerPlayer player(GameTestHelper h, UUID id) {
@@ -339,12 +340,16 @@ public class GuideGameTests implements FabricGameTest {
             {"lanternwillow", "gloamwick"},
             {"swarmforge", "gloamwick"},
             {"pitchgut", "hearthstride"},
-            {"cerberus", "hearthstride"}
+            {"cerberus", "hearthstride"},
+            {"cerberus", "tickmoor"},
+            {"wreckback", "tickmoor"},
+            {"swarmforge", "tickmoor"},
+            {"gloamwick", "tickmoor"}
         };
         int n = 0;
         for (Giant a : Giants.ALL)
             for (Giant b : Giants.ALL) if (a.key().compareTo(b.key()) < 0 && Giants.fight(a, b)) n++;
-        h.assertTrue(n == fights.length, "nineteen pairs fight (" + n + ")");
+        h.assertTrue(n == fights.length, fights.length + " pairs fight (" + n + ")");
         for (String[] f : fights)
             h.assertTrue(Giants.fight(Giants.byKey(f[0]), Giants.byKey(f[1])), f[0] + " fights " + f[1]);
         h.succeed();

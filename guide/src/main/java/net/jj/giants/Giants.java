@@ -114,7 +114,8 @@ public final class Giants {
                             "wreckback",
                             "swarmforge",
                             "gloamwick",
-                            "hearthstride")),
+                            "hearthstride",
+                            "tickmoor")),
             new Giant(
                     "hollowbell",
                     "hollowbell",
@@ -223,7 +224,7 @@ public final class Giants {
                                 "storm_call",
                                 "riptide_charge"
                             }),
-                    Set.of("pitchgut", "furrowmaw", "cerberus")),
+                    Set.of("pitchgut", "furrowmaw", "cerberus", "tickmoor")),
             new Giant(
                     "swarmforge",
                     "swarmforge",
@@ -255,7 +256,7 @@ public final class Giants {
                                 "mortar_crawler"
                             },
                             new String[] {"crane_slam", "furnace_blast", "ram_charge", "overclock"}),
-                    Set.of("pitchgut", "furrowmaw", "cerberus", "lanternwillow", "gloamwick")),
+                    Set.of("pitchgut", "furrowmaw", "cerberus", "lanternwillow", "gloamwick", "tickmoor")),
             new Giant(
                     "gloamwick",
                     "gloamwick",
@@ -298,7 +299,7 @@ public final class Giants {
                                 "soul_pyre",
                                 "eclipse"
                             }),
-                    Set.of("pitchgut", "cerberus", "lanternwillow", "swarmforge")),
+                    Set.of("pitchgut", "cerberus", "lanternwillow", "swarmforge", "tickmoor")),
             // he never fights: his moves are grouped by how long he rests after each (up to 20 s, up to 40 s,
             // a minute or more)
             new Giant(
@@ -385,18 +386,66 @@ public final class Giants {
                                 "fair_wind",
                                 "cast_nets"
                             }),
-                    Set.of()));
+                    Set.of()),
+            // his dash, Time Skip, is with his light moves: his book's tip for it is its order's ("Time skip to there")
+            new Giant(
+                    "tickmoor",
+                    "tickmoor",
+                    "tickmoor",
+                    "net.jj.tickmoor.GiantsBridge",
+                    moves(
+                            "move.tickmoor.",
+                            "codex.tickmoor.move_tip.",
+                            new String[] {
+                                "minute_slash",
+                                "raptor_jab",
+                                "tick_stamp",
+                                "cog_volley",
+                                "wing_buzz",
+                                "slow_pulse",
+                                "time_skip=|codex.tickmoor.order_tip.time_skip"
+                            },
+                            new String[] {
+                                "hour_hand_cleave",
+                                "minute_hand_flurry",
+                                "pinning_grasp",
+                                "stopwatch",
+                                "hourglass_flip",
+                                "echo_strike",
+                                "step_back",
+                                "rust_breath",
+                                "fast_forward"
+                            },
+                            new String[] {
+                                "midnight_strike",
+                                "midnight",
+                                "grand_rewind",
+                                "time_collapse",
+                                "echo_legion",
+                                "blur_rush",
+                                "sundial_sweep",
+                                "gear_storm",
+                                "temporal_anchor"
+                            }),
+                    Set.of("cerberus", "wreckback", "swarmforge", "gloamwick")));
 
     private Giants() {}
 
-    /** "id" uses the usual keys; "id=key" gives the name its own key (a move his book names differently) */
+    /**
+     * "id" uses the usual keys; "id=key" gives the name its own key (a move his book names differently);
+     * "id=key|whatKey" gives its text one too ("id=|whatKey": only the text)
+     */
     private static List<Giant.Move> moves(String name, String what, String[]... tiers) {
         List<Giant.Move> out = new ArrayList<>();
         for (int t = 0; t < tiers.length; t++)
             for (String s : tiers[t]) {
                 int eq = s.indexOf('=');
                 String id = eq < 0 ? s : s.substring(0, eq);
-                out.add(new Giant.Move(id, t, eq < 0 ? name + id : s.substring(eq + 1), what + id));
+                String own = eq < 0 ? "" : s.substring(eq + 1);
+                int bar = own.indexOf('|');
+                String nameKey = bar < 0 ? own : own.substring(0, bar), whatKey = bar < 0 ? "" : own.substring(bar + 1);
+                out.add(new Giant.Move(id, t, nameKey.isEmpty() ? name + id : nameKey,
+                        whatKey.isEmpty() ? what + id : whatKey));
             }
         return List.copyOf(out);
     }

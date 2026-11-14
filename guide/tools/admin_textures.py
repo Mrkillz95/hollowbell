@@ -27,6 +27,8 @@ def shade(c, f):
 MARKS = {
     'pitchgut': '#e8a0a8', 'furrowmaw': '#e04a1c', 'cerberus': '#58b4f0', 'hollowbell': '#40d0c0',
     'lanternwillow': '#7ccc3c', 'wreckback': '#f0ece0', 'swarmforge': '#f0961e', 'gloamwick': '#b896ff',
+    # (not on the cover yet: its eight gem spots are full, as for the Hearthstride)
+    'tickmoor': '#e0c050',
 }
 
 # ---------------------------------------------------------------- the item

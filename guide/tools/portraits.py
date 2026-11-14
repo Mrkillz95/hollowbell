@@ -1,7 +1,8 @@
 # Makes the giants' 64x64 pictures for the guide's list from the autotest shots (tools/autotest_portraits.txt):
 #   python3 tools/portraits.py <screenshots dir>
 # Furrowmaw dives under the ground in a flat test world, so his comes from his own mod's picture of him asleep;
-# the Gloamwick's from his own mod's autotest shot, the Hearthstride's from his own mod's picture of him walking.
+# the Gloamwick's from his own mod's autotest shot, the Hearthstride's from his own mod's picture of him walking,
+# Tickmoor's from his own mod's picture of him at size 1 (phase 2, three quarter, day).
 import sys, os
 from PIL import Image
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -9,10 +10,11 @@ shots = sys.argv[1]
 # centre x, centre y, square size, in the 1280x720 shot
 BOX = {'cerberus': (625, 370, 620), 'hollowbell': (640, 415, 500), 'lanternwillow': (645, 385, 480), 'pitchgut': (665, 370, 380),
        'furrowmaw': (636, 300, 560), 'gloamwick': (592, 345, 420),
-       'hearthstride': (643, 305, 340)}
+       'hearthstride': (643, 305, 340), 'tickmoor': (642, 398, 500)}
 SRC = {'furrowmaw': '/home/user/furrowmaw/pictures/sleep/sleep_curled.png',
        'gloamwick': '/home/user/gloamwick/build/autotest/screenshots/size1_three_quarter.png',
-       'hearthstride': '/home/user/housegiant/pictures/phase2/p2_walk_quarter_0.png'}
+       'hearthstride': '/home/user/housegiant/pictures/phase2/p2_walk_quarter_0.png',
+       'tickmoor': '/home/user/tickmoor/pictures/phase2/100_threequarter_day.png'}
 for key, (cx, cy, size) in BOX.items():
     src = SRC.get(key, os.path.join(shots, f'portrait_{key}.png'))
     im = Image.open(src).convert('RGB')

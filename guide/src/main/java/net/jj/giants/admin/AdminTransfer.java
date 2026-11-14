@@ -63,7 +63,7 @@ public final class AdminTransfer {
 
     /** the giants a built-in preset names (every one the Guide knows, installed or not) */
     private static final String[] EVERY_GIANT = {"pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow",
-        "wreckback", "swarmforge", "gloamwick", "hearthstride"};
+        "wreckback", "swarmforge", "gloamwick", "hearthstride", "tickmoor"};
 
     /** a preset that sets the same values for every giant ("replace": false: it changes only what it names) */
     private static String forEveryGiant(String id, String name, String about, String values) {
@@ -120,13 +120,14 @@ public final class AdminTransfer {
             "cerberus", "\"worldScale\":0.011", "hollowbell", "\"worldScale\":0.011",
             "lanternwillow", "\"worldScale\":0.011", "wreckback", "\"worldScale\":0.011",
             "swarmforge", "\"worldScale\":0.015", "gloamwick", "\"worldScale\":0.011",
-            "hearthstride", "\"worldScale\":0.014");
+            "hearthstride", "\"worldScale\":0.014", "tickmoor", "\"worldScale\":0.014");
 
     /** Lite: ambient sounds off where the server decides them (the Hollowbell's are each player's own) */
     private static final Map<String, String> LITE_OWN = Map.of(
             "pitchgut", "\"ambientSounds\":false", "furrowmaw", "\"ambientSounds\":false",
             "cerberus", "\"ambientSounds\":false", "lanternwillow", "\"ambientSounds\":false",
             "wreckback", "\"ambientSounds\":false", "gloamwick", "\"ambientSounds\":false",
+            "tickmoor", "\"ambientSounds\":false",
             "swarmforge", "\"ambientSounds\":false,\"robotLimit\":120,\"armyPoints\":150");
 
     private static final String TITAN_ALL = "\"all.health\":2.5,\"all.damage\":3,\"all.speed\":1.25,"

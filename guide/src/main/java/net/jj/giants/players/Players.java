@@ -61,7 +61,7 @@ public final class Players {
             "cerberus", "fire_ice_cerberus:cerberus", "hollowbell", "hollowbell:hollowbell",
             "lanternwillow", "lanternwillow:lanternwillow", "wreckback", "wreckback:wreckback",
             "swarmforge", "swarmforge:swarmforge", "gloamwick", "gloamwick:gloamwick",
-            "hearthstride", "hearthstride:hearthstride");
+            "hearthstride", "hearthstride:hearthstride", "tickmoor", "tickmoor:tickmoor");
 
     /** each giant's finder and book (for the crafting switches) */
     public static final Map<String, String> FINDERS = Map.of(
@@ -69,13 +69,13 @@ public final class Players {
             "cerberus", "fire_ice_cerberus:cerberus_finder", "hollowbell", "hollowbell:hollowbell_finder",
             "lanternwillow", "lanternwillow:lanternwillow_finder", "wreckback", "wreckback:wreckback_finder",
             "swarmforge", "swarmforge:swarmforge_finder", "gloamwick", "gloamwick:gloamwick_finder",
-            "hearthstride", "hearthstride:hearth_lantern");
+            "hearthstride", "hearthstride:hearth_lantern", "tickmoor", "tickmoor:tickmoor_finder");
     public static final Map<String, String> BOOKS = Map.of(
             "pitchgut", "mountain_breathes:mountain_codex", "furrowmaw", "furrowmaw:furrowmaw_codex",
             "cerberus", "fire_ice_cerberus:cerberus_codex", "hollowbell", "hollowbell:hollowbell_codex",
             "lanternwillow", "lanternwillow:lanternwillow_codex", "wreckback", "wreckback:wreckback_codex",
             "swarmforge", "swarmforge:swarmforge_codex", "gloamwick", "gloamwick:gloamwick_codex",
-            "hearthstride", "hearthstride:hearth_book");
+            "hearthstride", "hearthstride:hearth_book", "tickmoor", "tickmoor:tickmoor_codex");
 
     /**
      * how hard each one is to beat as shipped (the pick screen's danger, before the world's settings). JJ (Nov 3): the
@@ -84,7 +84,7 @@ public final class Players {
      */
     public static final Map<String, Integer> BASE_DANGER = Map.of(
             "pitchgut", 3, "furrowmaw", 3, "cerberus", 3, "hollowbell", 3, "lanternwillow", 3, "wreckback", 3,
-            "swarmforge", 3, "gloamwick", 3, "hearthstride", 3);
+            "swarmforge", 3, "gloamwick", 3, "hearthstride", 3, "tickmoor", 3);
 
     /** how a page goes to a player: over the network, or (in the tests) to a catcher */
     public static BiConsumer<ServerPlayer, PlayersStatePayload> sender = (p, s) -> {

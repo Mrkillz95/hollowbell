@@ -18,6 +18,7 @@ public final class Designs {
         add(new LanternWillowRemains());
         add(new PitchgutRemains());
         add(new FurrowmawRemains());
+        add(new TickmoorRemains());
     }
 
     private static void add(Design d) {

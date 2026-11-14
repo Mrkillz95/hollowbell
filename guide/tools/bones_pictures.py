@@ -3,9 +3,10 @@
 import math, sys, json, os
 ONLY = os.environ.get('VARIANTS', '').split(',') if os.environ.get('VARIANTS') else None
 ALIVE = {'pitchgut': (185, 265), 'furrowmaw': (45, 600), 'cerberus': (200, 280), 'hollowbell': (200, 200),
-         'lanternwillow': (200, 200), 'wreckback': (208, 323), 'swarmforge': (152, 225), 'gloamwick': (200, 277)}
+         'lanternwillow': (200, 200), 'wreckback': (208, 323), 'swarmforge': (152, 225), 'gloamwick': (200, 277),
+         'tickmoor': (151, 255)}
 EXT = json.load(open(__file__.replace('bones_pictures.py', 'bones_extents.json')))
-ks = sys.argv[1].split(',') if len(sys.argv) > 1 else ['pitchgut','furrowmaw','cerberus','hollowbell','lanternwillow','wreckback','swarmforge','gloamwick']
+ks = sys.argv[1].split(',') if len(sys.argv) > 1 else ['pitchgut','furrowmaw','cerberus','hollowbell','lanternwillow','wreckback','swarmforge','gloamwick','tickmoor']
 sizes = [float(s) for s in sys.argv[2].split(',')] if len(sys.argv) > 2 else [1.0, 0.25]
 G = -60
 L = ['# Remains pictures (bones pass): set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants',

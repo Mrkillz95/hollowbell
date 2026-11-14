@@ -139,7 +139,7 @@ public class EditorGameTests implements FabricGameTest {
         AdminServer.push(s, w);
         // as shipped: nothing to send, every one a systems setting kept by the Guide, live
         // (4 for each giant; the Hearthstride, who never fights, has no fight music to change)
-        h.assertTrue(SoundCatalog.SETTINGS.size() == 35, "4 for each of the 9, less one: "
+        h.assertTrue(SoundCatalog.SETTINGS.size() == 39, "4 for each of the 10, less one: "
                 + SoundCatalog.SETTINGS.size());
         h.assertTrue(!SoundCatalog.ours("all.music.hearthstride") && !SoundCatalog.MUSIC.contains("hearthstride")
                 && SoundCatalog.ours("all.voicePitch.hearthstride"), "his sounds, but no fight music");

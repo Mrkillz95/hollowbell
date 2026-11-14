@@ -43,7 +43,7 @@ public class ControlsGameTests implements FabricGameTest {
         return new ControlKey(name, cat, key, def);
     }
 
-    /** the keys the nine giants and the guide register today (their src/client), plus some of Minecraft's */
+    /** the keys the ten giants and the guide register today (their src/client), plus some of Minecraft's */
     private static List<ControlKey> today() {
         List<ControlKey> l = new ArrayList<>();
         l.add(k("key.jump", "key.categories.movement", "key.keyboard.space"));
@@ -68,6 +68,9 @@ public class ControlsGameTests implements FabricGameTest {
         l.add(k("key.gloamwick.armour_power", "key.categories.gloamwick", "key.keyboard.r"));
         l.add(k("key.gloamwick.attack_look", "key.categories.gloamwick", "key.keyboard.v"));
         l.add(k("key.hearthstride.sit_on_giant", "key.categories.hearthstride", ControlKey.NONE));
+        l.add(k("key.tickmoor.sit_on_giant", "key.categories.tickmoor", ControlKey.NONE));
+        l.add(k("key.tickmoor.attack_look", "key.categories.tickmoor", "key.keyboard.v"));
+        l.add(k("key.tickmoor.armour_power", "key.categories.tickmoor", "key.keyboard.r"));
         l.add(k("key.othermod.thing", "key.categories.othermod", "key.keyboard.k"));
         return l;
     }
@@ -126,10 +129,10 @@ public class ControlsGameTests implements FabricGameTest {
             ControlsCatalog.Clash c = ControlsCatalog.clash(x, all, who);
             h.assertFalse(c.any(), x.name() + " doesn't clash as it comes: " + c.clashes());
         }
-        h.assertTrue(ControlsCatalog.clash(hb, all, who).shared().size() == 7, "Hollowbell's R is shared with the other 7");
+        h.assertTrue(ControlsCatalog.clash(hb, all, who).shared().size() == 8, "Hollowbell's R is shared with the other 8");
         h.assertTrue(ControlsCatalog.role("key.swarmforge.go_after_look").equals("attack_look"), "Swarmforge's look key's job");
         ControlKey sv = all.stream().filter(x -> x.name().equals("key.swarmforge.go_after_look")).findFirst().orElseThrow();
-        h.assertTrue(ControlsCatalog.clash(sv, all, who).shared().size() == 6, "his V is shared with the six other look keys");
+        h.assertTrue(ControlsCatalog.clash(sv, all, who).shared().size() == 7, "his V is shared with the seven other look keys");
 
         // moved onto Jump: a clash both ways
         List<ControlKey> moved = new ArrayList<>(all);
@@ -144,7 +147,7 @@ public class ControlsGameTests implements FabricGameTest {
         ControlKey onV = k(hb.name(), hb.category(), "key.keyboard.v", "key.keyboard.r");
         v.set(v.indexOf(hb), onV);
         ControlsCatalog.Clash cv = ControlsCatalog.clash(onV, v, who);
-        h.assertTrue(cv.clashes().size() == 7, "on V it clashes with all seven look keys: " + cv.clashes().size());
+        h.assertTrue(cv.clashes().size() == 8, "on V it clashes with all eight look keys: " + cv.clashes().size());
         // his own two keys on one: a clash too
         h.assertTrue(cv.clashes().stream().anyMatch(x -> x.name().equals("key.hollowbell.attack_look")), "with his own look key");
         // the guide's key and another mod's are never "shared"

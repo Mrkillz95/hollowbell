@@ -640,10 +640,11 @@ public class FunGameTests implements FabricGameTest {
             "lanternwillow", List.of(Blocks.MANGROVE_ROOTS, Blocks.LANTERN, Blocks.WATER),
             "wreckback", List.of(Blocks.WATER, Blocks.DARK_OAK_PLANKS, Blocks.SAND),
             "swarmforge", List.of(Blocks.IRON_BLOCK, Blocks.CAMPFIRE, Blocks.BRICKS),
-            "gloamwick", List.of(Blocks.SOUL_LANTERN, Blocks.CHISELED_DEEPSLATE, Blocks.DARK_OAK_LOG));
+            "gloamwick", List.of(Blocks.SOUL_LANTERN, Blocks.CHISELED_DEEPSLATE, Blocks.DARK_OAK_LOG),
+            "tickmoor", List.of(Blocks.WAXED_COPPER_BLOCK, Blocks.QUARTZ_PILLAR, Blocks.POLISHED_DEEPSLATE));
 
     static final List<String> KINDS = List.of("pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow",
-            "wreckback", "swarmforge", "gloamwick");
+            "wreckback", "swarmforge", "gloamwick", "tickmoor");
 
     @SuppressWarnings("unchecked")
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 1200, batch = "p7_denplans")

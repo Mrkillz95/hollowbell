@@ -5,7 +5,8 @@
 import math, sys
 
 SIZE = {"pitchgut": (185, 265), "furrowmaw": (45, 600), "cerberus": (200, 280), "hollowbell": (200, 200),
-        "lanternwillow": (200, 200), "wreckback": (208, 323), "swarmforge": (152, 225), "gloamwick": (200, 277)}
+        "lanternwillow": (200, 200), "wreckback": (208, 323), "swarmforge": (152, 225), "gloamwick": (200, 277),
+        "tickmoor": (151, 255)}
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 kinds = args or list(SIZE)
 sizes = [1.0, 0.25]

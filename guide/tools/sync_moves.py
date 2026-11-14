@@ -6,15 +6,18 @@ import json, os, re, collections
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 lang_path = os.path.join(here, 'src/main/resources/assets/jj_giants/lang/en_us.json')
 src = open(os.path.join(here, 'src/main/java/net/jj/giants/Giants.java')).read()
-REPO = {'pitchgut': 'pitchgut', 'furrowmaw': 'furrowmaw', 'cerberus': 'cerberus', 'hollowbell': 'hollowbell', 'lanternwillow': 'lanternwillow', 'wreckback': 'wreckback', 'swarmforge': 'swarmforge', 'gloamwick': 'gloamwick', 'hearthstride': 'hearthstride'}
+REPO = {'pitchgut': 'pitchgut', 'furrowmaw': 'furrowmaw', 'cerberus': 'cerberus', 'hollowbell': 'hollowbell', 'lanternwillow': 'lanternwillow', 'wreckback': 'wreckback', 'swarmforge': 'swarmforge', 'gloamwick': 'gloamwick', 'hearthstride': 'hearthstride', 'tickmoor': 'tickmoor-mod'}
 lang = json.load(open(lang_path), object_pairs_hook=collections.OrderedDict)
 # each entry: new Giant("key", "modid", ... moves("namePrefix", "whatPrefix", {light}, {medium}, {heavy})
-for m in re.finditer(r'new Giant\("(\w+)", "(\w+)".*?moves\("([\w.]+)", "([\w.]+)",(.*?)\}\),\s*Set\.of', src, re.S):
+# (the entries are one argument a line: whitespace, line ends included, between them)
+for m in re.finditer(r'new Giant\(\s*"(\w+)",\s*"(\w+)".*?moves\(\s*"([\w.]+)",\s*"([\w.]+)",(.*?)\}\),\s*Set\.of', src, re.S):
     key, mod, npre, wpre, body = m.groups()
     theirs = json.load(open(f'/home/user/{REPO[key]}/src/main/resources/assets/{mod}/lang/en_us.json'))
-    for item in re.findall(r'"([\w=.]+)"', body):
+    for item in re.findall(r'"([\w=.|]+)"', body):
+        # "id", "id=nameKey", "id=nameKey|whatKey" or "id=|whatKey" (Giants.moves)
         mid, _, own = item.partition('=')
-        name_key, what_key = own or npre + mid, wpre + mid
+        own_name, _, own_what = own.partition('|')
+        name_key, what_key = own_name or npre + mid, own_what or wpre + mid
         for k, ck in ((name_key, f'guide.jj_giants.{key}.move.{mid}'), (what_key, f'guide.jj_giants.{key}.move.{mid}.what')):
             if k not in theirs: raise SystemExit(f'{mod} has no {k}')
             lang[ck] = theirs[k]

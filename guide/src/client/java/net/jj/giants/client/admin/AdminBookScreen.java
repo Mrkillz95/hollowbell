@@ -2442,7 +2442,7 @@ public class AdminBookScreen extends Screen {
 
     /**
      * his height and length at full size, in blocks, and his shape: q four legs, w a worm, d a dome, t a tree, h a
-     * house on two legs
+     * house on two legs, m a mantis (a tall tower at the front, a long body low behind)
      */
     static double[] body(String key) {
         return switch (key) {
@@ -2455,6 +2455,7 @@ public class AdminBookScreen extends Screen {
             case "swarmforge" -> new double[] {152, 225, 'q'};
             case "gloamwick" -> new double[] {200, 277, 'q'};
             case "hearthstride" -> new double[] {145, 85, 'h'};
+            case "tickmoor" -> new double[] {151, 255, 'm'};
             default -> new double[] {200, 260, 'q'};
         };
     }
@@ -2506,6 +2507,19 @@ public class AdminBookScreen extends Screen {
                     int half = gw * (roofH - r) / (2 * roofH);
                     g.fill(gx + gw / 2 - half, wallTop - r - 1, gx + gw / 2 + half + 1, wallTop - r, col);
                 }
+            }
+            case 'm' -> {
+                // four thin legs, the long body low behind, the clock tower at the front, his head on it and his
+                // folded forelegs hanging in front (on the right)
+                int lw = Math.max(1, gw / 24), bodyTop = ground - gt * 46 / 100, bodyBot = ground - gt * 28 / 100;
+                for (double f : new double[] {0.08, 0.3, 0.5, 0.62})
+                    g.fill(gx + (int) (gw * f), bodyBot - 1, gx + (int) (gw * f) + lw, ground, col);
+                ellipse(g, gx, bodyTop, gw * 64 / 100, Math.max(1, bodyBot - bodyTop) * 2, bodyBot, col);
+                int tx = gx + gw * 60 / 100, tw = Math.max(1, gw * 9 / 100);
+                g.fill(tx, ground - gt * 82 / 100, tx + tw, bodyBot, col);
+                ellipse(g, tx - tw / 3, ground - gt, Math.max(1, tw * 5 / 3), Math.max(1, gt * 22 / 100), ground, col);
+                int ax = tx + tw, aw = Math.max(1, gw * 6 / 100);
+                g.fill(ax, ground - gt * 68 / 100, ax + aw, ground - gt * 34 / 100, col);
             }
             case 't' -> {
                 int tw = Math.max(1, gw / 7);
@@ -4365,6 +4379,7 @@ public class AdminBookScreen extends Screen {
             case "swarmforge" -> 0xFFD0761E;
             case "gloamwick" -> 0xFF8A66D8;
             case "hearthstride" -> 0xFFC0702A;
+            case "tickmoor" -> 0xFFB0902C;
             default -> 0xFF806040;
         };
     }

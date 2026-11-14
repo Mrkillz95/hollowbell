@@ -6,8 +6,8 @@ import org.jetbrains.annotations.Nullable;
  * (Part 7, ADMIN_BRIDGE.md 23.3) A den for each giant, sized to him (r round, his height h at that size), built column
  * by column like the arena (Builds). Each is its own plan: Pitchgut's scorched crater (Crater), Furrowmaw's burrow pit
  * (Burrow), the Cerberus's three-part yard and throne (Kennel), the Hollowbell's roost (Roost), the Lantern Willow's
- * bog (Mire), Wreckback's cove and wrecks (Cove), the Swarmforge's scrap yard and forge (Yard) and the Gloamwick's
- * dark glade (Glade).
+ * bog (Mire), Wreckback's cove and wrecks (Cove), the Swarmforge's scrap yard and forge (Yard), the Gloamwick's
+ * dark glade (Glade) and Tickmoor's Great Dial (Dial).
  */
 final class Dens {
     private Dens() {}
@@ -26,6 +26,7 @@ final class Dens {
             case "wreckback" -> new Cove(r, h);
             case "swarmforge" -> new Yard(r, h);
             case "gloamwick" -> new Glade(r, h);
+            case "tickmoor" -> new Dial(r, h);
             default -> null;
         };
         return p == null ? null : p.made();

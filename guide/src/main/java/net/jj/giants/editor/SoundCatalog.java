@@ -29,7 +29,7 @@ public final class SoundCatalog {
     public static final Map<String, String> NAMESPACE = Map.of("pitchgut", "mountain_breathes", "furrowmaw",
             "furrowmaw", "cerberus", "fire_ice_cerberus", "hollowbell", "hollowbell", "lanternwillow",
             "lanternwillow", "wreckback", "wreckback", "swarmforge", "swarmforge", "gloamwick", "gloamwick",
-            "hearthstride", "hearthstride");
+            "hearthstride", "hearthstride", "tickmoor", "tickmoor");
 
     /** the giants with no fight music (the Hearthstride never fights: his hearth theme is his own, left as it is) */
     public static final Set<String> NO_FIGHT_MUSIC = Set.of("hearthstride");
@@ -37,7 +37,7 @@ public final class SoundCatalog {
     /** each giant's own fight tracks past the three every one has (fight, fight_dark, fight_last) */
     public static final Map<String, String> SPECIAL = Map.of("furrowmaw", "music.fight_under", "lanternwillow",
             "music.fight_drink", "wreckback", "music.fight_sea", "swarmforge", "music.fight_core", "gloamwick",
-            "music.fight_eclipse", "hollowbell", "music.fight_sunk");
+            "music.fight_eclipse", "hollowbell", "music.fight_sunk", "tickmoor", "music.fight_still");
 
     /** his voice: the sounds his pitch setting changes (his own body's, not his moves' blows) */
     public static final Map<String, List<String>> VOICE = Map.of(
@@ -50,7 +50,8 @@ public final class SoundCatalog {
             "swarmforge", List.of("hurt", "death", "tired", "horn", "alarm", "wave_alarm", "power_down", "power_up"),
             "gloamwick", List.of("bellow", "groan", "hurt", "death", "breath", "whisper", "wail", "toll"),
             "hollowbell", List.of("hum", "hurt", "hurt_heavy", "death", "tired", "toll", "toll_big"),
-            "hearthstride", List.of("creak", "cluck", "rattle", "breath", "hurt", "collapse", "death"));
+            "hearthstride", List.of("creak", "cluck", "rattle", "breath", "hurt", "collapse", "death"),
+            "tickmoor", List.of("call", "hurt", "death", "idle", "chime", "strike", "midnight"));
 
     /** the music choice: his own, none, or another giant's tracks */
     public static final List<String> MUSIC;

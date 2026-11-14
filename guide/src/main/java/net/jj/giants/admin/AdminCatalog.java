@@ -66,7 +66,7 @@ public final class AdminCatalog {
 
     /** every giant the Guide knows, as option ids (the kit's choices) */
     public static final List<String> KEYS = List.of("pitchgut", "furrowmaw", "cerberus", "hollowbell",
-            "lanternwillow", "wreckback", "swarmforge", "gloamwick", "hearthstride");
+            "lanternwillow", "wreckback", "swarmforge", "gloamwick", "hearthstride", "tickmoor");
 
     /**
      * the giants earned by trust alone (the Hearthstride gives his book to whoever he trusts): never picked for My

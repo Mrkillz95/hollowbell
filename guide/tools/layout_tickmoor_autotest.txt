@@ -1,0 +1,244 @@
+# Tickmoor's Guide pages and his admin book page: overlaps are "layout:" lines; shots of each page
+#   set GUIDE_SCRIPT=<this file>; withslot.ps1 <guide> runAutotest -Pgiants (his jar in run-mods)
+wait 60
+adminintro seen
+adminmode advanced
+cmd gamemode creative @s
+wait 40
+window 1280 720
+wait 10
+guiscale 2
+wait 20
+guide tickmoor 0 0
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-0-0
+shot tick_guide_s2_0_0
+close
+wait 5
+guide tickmoor 0 400
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-0-400
+shot tick_guide_s2_0_400
+close
+wait 5
+guide tickmoor 0 800
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-0-800
+shot tick_guide_s2_0_800
+close
+wait 5
+guide tickmoor 1 0
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-1-0
+shot tick_guide_s2_1_0
+close
+wait 5
+guide tickmoor 1 400
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-1-400
+shot tick_guide_s2_1_400
+close
+wait 5
+guide tickmoor 1 800
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-1-800
+shot tick_guide_s2_1_800
+close
+wait 5
+guide tickmoor 2 0
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-2-0
+shot tick_guide_s2_2_0
+close
+wait 5
+guide tickmoor 2 400
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-2-400
+shot tick_guide_s2_2_400
+close
+wait 5
+guide tickmoor 2 800
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-2-800
+shot tick_guide_s2_2_800
+close
+wait 5
+guide tickmoor 3 0
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-3-0
+shot tick_guide_s2_3_0
+close
+wait 5
+guide tickmoor 3 400
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-3-400
+shot tick_guide_s2_3_400
+close
+wait 5
+guide tickmoor 3 800
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-3-800
+shot tick_guide_s2_3_800
+close
+wait 5
+guide tickmoor 4 0
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-4-0
+shot tick_guide_s2_4_0
+close
+wait 5
+guide tickmoor 4 400
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-4-400
+shot tick_guide_s2_4_400
+close
+wait 5
+guide tickmoor 4 800
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-4-800
+shot tick_guide_s2_4_800
+close
+wait 5
+guide tickmoor 5 0
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-5-0
+shot tick_guide_s2_5_0
+close
+wait 5
+guide tickmoor 5 400
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-5-400
+shot tick_guide_s2_5_400
+close
+wait 5
+guide tickmoor 5 800
+wait 30
+layoutcheck 1280x720s2 guide-tickmoor-5-800
+shot tick_guide_s2_5_800
+close
+wait 5
+adminbook tickmoor
+wait 80
+layoutbook 1280x720s2tick
+shot tick_admin_s2
+close
+wait 5
+window 1280 720
+wait 10
+guiscale 3
+wait 20
+guide tickmoor 0 0
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-0-0
+shot tick_guide_s3_0_0
+close
+wait 5
+guide tickmoor 0 400
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-0-400
+shot tick_guide_s3_0_400
+close
+wait 5
+guide tickmoor 0 800
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-0-800
+shot tick_guide_s3_0_800
+close
+wait 5
+guide tickmoor 1 0
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-1-0
+shot tick_guide_s3_1_0
+close
+wait 5
+guide tickmoor 1 400
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-1-400
+shot tick_guide_s3_1_400
+close
+wait 5
+guide tickmoor 1 800
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-1-800
+shot tick_guide_s3_1_800
+close
+wait 5
+guide tickmoor 2 0
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-2-0
+shot tick_guide_s3_2_0
+close
+wait 5
+guide tickmoor 2 400
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-2-400
+shot tick_guide_s3_2_400
+close
+wait 5
+guide tickmoor 2 800
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-2-800
+shot tick_guide_s3_2_800
+close
+wait 5
+guide tickmoor 3 0
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-3-0
+shot tick_guide_s3_3_0
+close
+wait 5
+guide tickmoor 3 400
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-3-400
+shot tick_guide_s3_3_400
+close
+wait 5
+guide tickmoor 3 800
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-3-800
+shot tick_guide_s3_3_800
+close
+wait 5
+guide tickmoor 4 0
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-4-0
+shot tick_guide_s3_4_0
+close
+wait 5
+guide tickmoor 4 400
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-4-400
+shot tick_guide_s3_4_400
+close
+wait 5
+guide tickmoor 4 800
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-4-800
+shot tick_guide_s3_4_800
+close
+wait 5
+guide tickmoor 5 0
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-5-0
+shot tick_guide_s3_5_0
+close
+wait 5
+guide tickmoor 5 400
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-5-400
+shot tick_guide_s3_5_400
+close
+wait 5
+guide tickmoor 5 800
+wait 30
+layoutcheck 1280x720s3 guide-tickmoor-5-800
+shot tick_guide_s3_5_800
+close
+wait 5
+adminbook tickmoor
+wait 80
+layoutbook 1280x720s3tick
+shot tick_admin_s3
+close
+wait 5
+quit
