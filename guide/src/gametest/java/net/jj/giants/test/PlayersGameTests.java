@@ -117,6 +117,8 @@ public class PlayersGameTests implements FabricGameTest {
         Connection c = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(c);
         h.getLevel().getServer().getPlayerList().placeNewPlayer(c, p, cookie);
+        // (the giants' part of the kit, at once as a tick would)
+        net.jj.giants.players.Players.kitsNow();
         return p;
     }
 
@@ -331,6 +333,8 @@ public class PlayersGameTests implements FabricGameTest {
         Connection cn = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(cn);
         s.getPlayerList().placeNewPlayer(cn, d, cookie);
+        // (the giants' part of the kit, at once as a tick would)
+        net.jj.giants.players.Players.kitsNow();
         h.assertTrue(count(d, GiantsGuideMod.GUIDE) == 0 && !net.jj.fakeplayers.GiantsBridge.gave.contains("finder "
                 + id), "no kit at all for them");
         done(h, a, b, c, d);

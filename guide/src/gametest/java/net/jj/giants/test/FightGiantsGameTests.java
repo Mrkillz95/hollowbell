@@ -110,6 +110,11 @@ public class FightGiantsGameTests implements FabricGameTest {
         each(h, "gloamwick", 47);
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 200, batch = "f10bg_tickmoor")
+    public void tickmoor(GameTestHelper h) {
+        each(h, "tickmoor", 50);
+    }
+
     /** a quick staged fight between two real kinds: the chosen winner wins with real blows, the loser bows out */
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 9000, batch = "f10bg_staged")
     public void aStagedFightBetweenTwoKindsIsWonByTheChosenWinner(GameTestHelper h) {

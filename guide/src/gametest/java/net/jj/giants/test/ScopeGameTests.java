@@ -286,4 +286,14 @@ public class ScopeGameTests implements FabricGameTest {
         realGiant(h, "gloamwick", "Gloamwick", "gloamwick.json", "gloamwick");
         h.succeed();
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 40)
+    public void tickmoorScopesForRealWhenHeIsHere(GameTestHelper h) {
+        if (!Giants.loaded(Giants.byKey("tickmoor"))) {
+            h.succeed();
+            return;
+        }
+        realGiant(h, "tickmoor", "Tickmoor", "tickmoor.json", "tickmoor");
+        h.succeed();
+    }
 }

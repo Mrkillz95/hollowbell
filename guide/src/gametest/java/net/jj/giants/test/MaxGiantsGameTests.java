@@ -86,6 +86,8 @@ public class MaxGiantsGameTests implements FabricGameTest {
         Connection c = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(c);
         s.getPlayerList().placeNewPlayer(c, p, cookie);
+        // (the giants' part of the kit, at once as a tick would)
+        net.jj.giants.players.Players.kitsNow();
         return p;
     }
 

@@ -137,4 +137,9 @@ public class EditorGiantsGameTests implements FabricGameTest {
     public void gloamwickLooks(GameTestHelper h) {
         each(h, "gloamwick", 67);
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "p12g_tickmoor")
+    public void tickmoorLooks(GameTestHelper h) {
+        each(h, "tickmoor", 68);
+    }
 }

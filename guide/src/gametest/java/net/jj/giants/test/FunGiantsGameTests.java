@@ -61,6 +61,11 @@ public class FunGiantsGameTests implements FabricGameTest {
                 h.getLevel().setChunkForced(cx, cz, false);
     }
 
+    /** "the " before his plain name where it takes one (the Tickmoor is just "Tickmoor") */
+    private static String the(String key) {
+        return key.equals("tickmoor") ? "" : "the ";
+    }
+
     /** one of him, fresh, by his own summon at that spot (calm, small) */
     static LivingEntity summon(GameTestHelper h, Giant g, BlockPos at, double size) {
         MinecraftServer s = h.getLevel().getServer();
@@ -117,16 +122,16 @@ public class FunGiantsGameTests implements FabricGameTest {
             on.addProperty("by", p.getStringUUID());
             on.addProperty("on", true);
             r = FunGiants.act(s, g, e.getStringUUID(), "playas", on);
-            h.assertTrue(r.ok() && r.lines().get(0).startsWith("You're playing as the " + name), key + ": playas "
-                    + r.lines());
+            h.assertTrue(r.ok() && r.lines().get(0).startsWith("You're playing as " + the(key) + name),
+                    key + ": playas " + r.lines());
         });
         h.runAfterDelay(40, () -> {
             JsonObject off = new JsonObject();
             off.addProperty("by", p.getStringUUID());
             off.addProperty("on", false);
             var r = FunGiants.act(s, g, e.getStringUUID(), "playas", off);
-            h.assertTrue(r.ok() && r.lines().get(0).startsWith("You've stepped out of the " + name), key + ": off "
-                    + r.lines());
+            h.assertTrue(r.ok() && r.lines().get(0).startsWith("You've stepped out of " + the(key) + name),
+                    key + ": off " + r.lines());
             // moved and staying
             JsonObject mv = new JsonObject();
             mv.addProperty("dim", "minecraft:overworld");
@@ -221,6 +226,11 @@ public class FunGiantsGameTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "p7g_gloamwick")
     public void gloamwick(GameTestHelper h) {
         everything(h, "gloamwick", 7);
+    }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 600, batch = "p7g_tickmoor")
+    public void tickmoor(GameTestHelper h) {
+        everything(h, "tickmoor", 9);
     }
 
     @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 400, batch = "p7g_fight")

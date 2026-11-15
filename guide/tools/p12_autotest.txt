@@ -205,6 +205,30 @@ cmd giants admin look kind gloamwick none
 cmd giants unfreeze
 cmd gloamwick kill
 wait 20
+# tickmoor
+cmd tp @s 15000 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd tickmoor summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 15073.5 -34 73.5 facing 15000 -35 0
+gui off
+wait 100
+shot p12_tickmoor_own
+cmd giants admin look kind tickmoor frost
+wait 200
+shot p12_tickmoor_frost
+cmd giants admin look kind tickmoor gold
+wait 200
+shot p12_tickmoor_gold
+gui on
+cmd giants admin look kind tickmoor none
+cmd giants unfreeze
+cmd tickmoor kill
+wait 20
 # one giant of his own look beside his kind's: two Wreckbacks, the kind in Shadow, one of them Festive
 cmd tp @s 20000 -60 3000 0 0
 wait 30

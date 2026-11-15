@@ -475,43 +475,100 @@ cmd giants remove
 wait 20
 cmd kill @e[type=!minecraft:player]
 wait 20
+# tickmoor at 1.0: r 147
 cmd tp @s 11900.5 37 0.5 0 10
+wait 60
+cmd giants admin build den tickmoor 1.0
+wait 956
+cmd tp @s 12005.0 152.8 105.0 135 36
+wait 400
+shot den_tickmoor_10_34
+cmd time set 18000
+wait 60
+shot den_tickmoor_10_night
+cmd time set 6000
+wait 20
+cmd tp @s 11900.5 235.6 0.5 180 90
+wait 300
+shot den_tickmoor_10_top
+cmd tp @s 11900.5 37 0.5 0 0
+wait 10
+cmd tickmoor summon calm 1.0
+wait 60
+cmd giants admin settle tickmoor here
+wait 40
+cmd giants freeze
+wait 10
+cmd tp @s 12066.5 172.9 166.5 135 23
+wait 200
+shot den_tickmoor_10_giant
+cmd giants remove
+wait 20
+cmd kill @e[type=!minecraft:player]
+wait 20
+# tickmoor at 0.25: r 37
+cmd tp @s 12600.5 37 0.5 0 10
+wait 60
+cmd giants admin build den tickmoor 0.25
+wait 247
+cmd tp @s 12631.4 71.7 31.4 135 36
+wait 400
+shot den_tickmoor_025_34
+cmd tp @s 12600.5 96.4 0.5 180 90
+wait 300
+shot den_tickmoor_025_top
+cmd tp @s 12600.5 37 0.5 0 0
+wait 10
+cmd tickmoor summon calm 0.25
+wait 60
+cmd giants admin settle tickmoor here
+wait 40
+cmd giants freeze
+wait 10
+cmd tp @s 12644.8 71.0 44.8 135 21
+wait 200
+shot den_tickmoor_025_giant
+cmd giants remove
+wait 20
+cmd kill @e[type=!minecraft:player]
+wait 20
+cmd tp @s 13300.5 37 0.5 0 10
 wait 60
 cmd giants admin build arena small
 wait 248
-cmd tp @s 11938.3 79.2 38.3 135 36
+cmd tp @s 13338.3 79.2 38.3 135 36
 wait 400
 shot arena_small_34
-cmd tp @s 11900.5 109.4 0.5 180 90
+cmd tp @s 13300.5 109.4 0.5 180 90
 wait 300
 shot arena_small_top
-cmd tp @s 11900.5 48 50.0 180 12
+cmd tp @s 13300.5 48 50.0 180 12
 wait 60
 shot arena_small_stands
-cmd tp @s 12600.5 37 0.5 0 10
+cmd tp @s 14000.5 37 0.5 0 10
 wait 60
 cmd giants admin build arena medium
 wait 322
-cmd tp @s 12654.1 96.7 54.1 135 36
+cmd tp @s 14054.1 96.7 54.1 135 36
 wait 400
 shot arena_medium_34
-cmd tp @s 12600.5 139.3 0.5 180 90
+cmd tp @s 14000.5 139.3 0.5 180 90
 wait 300
 shot arena_medium_top
-cmd tp @s 12600.5 48 74.0 180 12
+cmd tp @s 14000.5 48 74.0 180 12
 wait 60
 shot arena_medium_stands
-cmd tp @s 13300.5 37 0.5 0 10
+cmd tp @s 14700.5 37 0.5 0 10
 wait 60
 cmd giants admin build arena large
 wait 476
-cmd tp @s 13374.8 119.5 74.8 135 36
+cmd tp @s 14774.8 119.5 74.8 135 36
 wait 400
 shot arena_large_34
-cmd tp @s 13300.5 178.4 0.5 180 90
+cmd tp @s 14700.5 178.4 0.5 180 90
 wait 300
 shot arena_large_top
-cmd tp @s 13300.5 48 106.0 180 12
+cmd tp @s 14700.5 48 106.0 180 12
 wait 60
 shot arena_large_stands
 quit

@@ -67,6 +67,10 @@ adminbook gloamwick 1800
 mouse 2 2
 wait 25
 shot ab_s2_gloamwick_players
+adminbook tickmoor
+mouse 2 2
+wait 25
+shot ab_s2_tickmoor
 adminbook home 0 heal
 mouse 2 2
 wait 25
@@ -180,6 +184,10 @@ adminbook gloamwick 1800
 mouse 2 2
 wait 25
 shot ab_s1_gloamwick_players
+adminbook tickmoor
+mouse 2 2
+wait 25
+shot ab_s1_tickmoor
 adminbook home 0 heal
 mouse 2 2
 wait 25
@@ -263,6 +271,10 @@ adminbook gloamwick 1800
 mouse 2 2
 wait 25
 shot ab_s3_gloamwick_players
+adminbook tickmoor
+mouse 2 2
+wait 25
+shot ab_s3_tickmoor
 adminbook home 0 heal
 mouse 2 2
 wait 25
@@ -303,6 +315,7 @@ cmd giants admin savepreset Weekend Fun
 cmd wreckback summon 0.1
 cmd cerberus summon calm 0.1
 cmd gloamwick summon 0.15
+cmd tickmoor summon 0.15
 cmd hollowbell summon 0.1
 wait 60
 adminbook live

@@ -232,6 +232,11 @@ public class SystemsGiantsGameTests implements FabricGameTest {
         everything(h, "gloamwick", 7);
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 300, batch = "p8_real_tickmoor")
+    public void tickmoor(GameTestHelper h) {
+        everything(h, "tickmoor", 8);
+    }
+
     // his remains, from his own model (the bones pass)
 
     private void remains(GameTestHelper h, String key, int slot) {

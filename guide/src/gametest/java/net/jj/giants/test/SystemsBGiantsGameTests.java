@@ -256,4 +256,9 @@ public class SystemsBGiantsGameTests implements FabricGameTest {
     public void gloamwick(GameTestHelper h) {
         everything(h, "gloamwick", 7);
     }
+
+    @GameTest(template = EMPTY_STRUCTURE, timeoutTicks = 900, batch = "p9_real_tickmoor")
+    public void tickmoor(GameTestHelper h) {
+        everything(h, "tickmoor", 8);
+    }
 }

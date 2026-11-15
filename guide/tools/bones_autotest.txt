@@ -873,4 +873,112 @@ shot bones_gloamwick_025_alive
 cmd giants unfreeze
 cmd gloamwick kill
 wait 20
+cmd tp @s 41679 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 1.0 skeleton
+wait 1
+cmd tp @s 41841.5 58.8 74.7 118.8 27.7
+wait 840
+shot bones_tickmoor_1_skeleton
+cmd tp @s 41531.8 50.7 -137.2 -50.2 25.1
+wait 40
+shot bones_tickmoor_1_skeleton_b
+cmd tp @s 41678.5 156.6 -15.0 0 90
+wait 50
+shot bones_tickmoor_1_skeleton_top
+cmd tp @s 42265 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 1.0 corpse 0
+wait 1
+cmd tp @s 42427.5 58.8 74.7 118.8 27.7
+wait 840
+shot bones_tickmoor_1_corpse0
+cmd tp @s 42117.8 50.7 -137.2 -50.2 25.1
+wait 40
+shot bones_tickmoor_1_corpse0_b
+cmd tp @s 42264.5 156.6 -15.0 0 90
+wait 50
+shot bones_tickmoor_1_corpse0_top
+cmd tp @s 42851 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 1.0 corpse 1
+wait 1
+cmd tp @s 43013.5 58.8 74.7 118.8 27.7
+wait 840
+shot bones_tickmoor_1_corpse1
+cmd tp @s 43437 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 1.0 corpse 2
+wait 1
+cmd tp @s 43599.5 58.8 74.7 118.8 27.7
+wait 840
+shot bones_tickmoor_1_corpse2
+cmd tp @s 44023 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 1.0 corpse 3
+wait 1
+cmd tp @s 44185.5 58.8 74.7 118.8 27.7
+wait 840
+shot bones_tickmoor_1_corpse3
+cmd tp @s 44376 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 0.25 skeleton
+wait 1
+cmd tp @s 44422.6 -26.7 22.0 118.8 27.7
+wait 183
+shot bones_tickmoor_025_skeleton
+cmd tp @s 44333.8 -29.0 -38.8 -50.2 25.1
+wait 40
+shot bones_tickmoor_025_skeleton_b
+cmd tp @s 44375.9 1.4 -3.8 0 90
+wait 50
+shot bones_tickmoor_025_skeleton_top
+cmd tp @s 44729 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 0.25 corpse 0
+wait 1
+cmd tp @s 44775.6 -26.7 22.0 118.8 27.7
+wait 183
+shot bones_tickmoor_025_corpse0
+cmd tp @s 44686.8 -29.0 -38.8 -50.2 25.1
+wait 40
+shot bones_tickmoor_025_corpse0_b
+cmd tp @s 44728.9 1.4 -3.8 0 90
+wait 50
+shot bones_tickmoor_025_corpse0_top
+cmd tp @s 45082 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 0.25 corpse 1
+wait 1
+cmd tp @s 45128.6 -26.7 22.0 118.8 27.7
+wait 183
+shot bones_tickmoor_025_corpse1
+cmd tp @s 45435 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 0.25 corpse 2
+wait 1
+cmd tp @s 45481.6 -26.7 22.0 118.8 27.7
+wait 183
+shot bones_tickmoor_025_corpse2
+cmd tp @s 45788 -60 0 0 0
+wait 30
+cmd giants admin systems remains tickmoor 0.25 corpse 3
+wait 1
+cmd tp @s 45834.6 -26.7 22.0 118.8 27.7
+wait 183
+shot bones_tickmoor_025_corpse3
+cmd tp @s 46141 -60 0 0 0
+wait 30
+cmd gamemode creative
+cmd tickmoor summon calm 0.25
+wait 4
+cmd giants freeze
+wait 30
+cmd gamemode spectator
+cmd tp @s 46198.9 -22.9 43.4 126.9 12.7
+wait 80
+shot bones_tickmoor_025_alive
+cmd giants unfreeze
+cmd tickmoor kill
+wait 20
 quit

@@ -27,6 +27,7 @@ cmd lanternwillow away off
 cmd wreckback away off
 cmd swarmforge away off
 cmd gloamwick away off
+cmd tickmoor away off
 cmd giants admin set all corpseDays 30
 cmd tp @s 0 37 0 0 10
 wait 20

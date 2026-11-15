@@ -20,6 +20,7 @@ cmd lanternwillow away off
 cmd wreckback away off
 cmd swarmforge away off
 cmd gloamwick away off
+cmd tickmoor away off
 wait 20
 wait 200
 wait 60

@@ -24,6 +24,7 @@ cmd lanternwillow away off
 cmd wreckback away off
 cmd swarmforge away off
 cmd gloamwick away off
+cmd tickmoor away off
 cmd tp @s 0 -60 0 0 10
 wait 20
 # some of them on, so the page shows them

@@ -97,6 +97,8 @@ public final class Players {
         ServerPlayNetworking.registerGlobalReceiver(PlayersAskPayload.TYPE,
                 (p, ctx) -> ctx.server().execute(() -> ask(ctx.server(), ctx.player(), p.json())));
         ServerPlayConnectionEvents.JOIN.register((h, s, server) -> join(h.getPlayer()));
+        ServerTickEvents.START_SERVER_TICK.register(server -> kitsNow());
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> KITS_LATER.clear());
         ServerLivingEntityEvents.AFTER_DEATH.register(Players::died);
         // (several giants die their own way, with a death of their own and then gone, never through the game's
         // own death: caught when the one who was dying leaves the world)
@@ -352,13 +354,50 @@ public final class Players {
         f.mark(p.getUUID());
         if (PlayerData.get(server).rule(p.getStringUUID()).noKit) return false;
         if (on(server, "kitGuide")) GiantsGuideMod.give(p);
+        String armour = option(server, "kitArmour");
+        switch (armour) {
+            case "leather" -> wear(p, Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, Items.LEATHER_LEGGINGS,
+                    Items.LEATHER_BOOTS);
+            case "iron" -> wear(p, Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS);
+            case "diamond" -> wear(p, Items.DIAMOND_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS,
+                    Items.DIAMOND_BOOTS);
+            default -> {}
+        }
+        // (1.17) the giants' own things just after: Fabric's JOIN comes before the player is on the server's list,
+        // so a giant who looks them up to hand them his finder, armour or book found nobody and gave nothing. The
+        // kit is what the world said when they joined.
+        String finders = option(server, "kitFinders"), which = option(server, "kitFinder"),
+                book = option(server, "kitBook");
+        boolean books = on(server, "books");
+        Runnable giantsPart = () -> {
+            if (server.getPlayerList().getPlayer(p.getUUID()) == p) giantKit(server, p, finders, which, armour, book,
+                    books);
+        };
+        if (server.getPlayerList().getPlayer(p.getUUID()) == p) giantsPart.run();
+        else KITS_LATER.add(giantsPart);
+        return true;
+    }
+
+    /** the giants' part of kits of players who had only just joined (given at the start of the next tick) */
+    private static final List<Runnable> KITS_LATER = new ArrayList<>();
+
+    /** the giants' part of every kit waiting for its player to be on the server's list (each tick; tests at once) */
+    public static void kitsNow() {
+        if (KITS_LATER.isEmpty()) return;
+        List<Runnable> now = new ArrayList<>(KITS_LATER);
+        KITS_LATER.clear();
+        for (Runnable r : now) r.run();
+    }
+
+    /** the kit's finders, giant's armour and book (each giant hands out his own) */
+    private static void giantKit(MinecraftServer server, ServerPlayer p, String finders, String which, String armour,
+            String book, boolean books) {
         List<Giant> giants = AdminServer.giants();
-        switch (option(server, "kitFinders")) {
+        switch (finders) {
             case "all" -> {
                 for (Giant g : giants) give(server, p, g, "finder");
             }
             case "one" -> {
-                String which = option(server, "kitFinder");
                 Giant g = which.equals("random") || AdminServer.giant(which) == null
                         ? giants.isEmpty() ? null : giants.get(p.getRandom().nextInt(giants.size()))
                         : AdminServer.giant(which);
@@ -366,21 +405,11 @@ public final class Players {
             }
             default -> {}
         }
-        String armour = option(server, "kitArmour");
-        switch (armour) {
-            case "none", "" -> {}
-            case "leather" -> wear(p, Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, Items.LEATHER_LEGGINGS,
-                    Items.LEATHER_BOOTS);
-            case "iron" -> wear(p, Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS);
-            case "diamond" -> wear(p, Items.DIAMOND_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS,
-                    Items.DIAMOND_BOOTS);
-            default -> {
-                Giant g = AdminServer.giant(armour);
-                if (g != null) give(server, p, g, "armour");
-            }
+        if (!List.of("none", "", "leather", "iron", "diamond").contains(armour)) {
+            Giant g = AdminServer.giant(armour);
+            if (g != null) give(server, p, g, "armour");
         }
-        String book = option(server, "kitBook");
-        if (!book.equals("none") && !book.isEmpty() && on(server, "books")) {
+        if (!book.equals("none") && !book.isEmpty() && books) {
             Giant g = AdminServer.giant(book);
             // (Max giants per player, 20.18) at their limit the kit's book is left out, the same way
             Owns.Verdict v = g == null ? null : Owns.check(server, p.getStringUUID());
@@ -389,7 +418,6 @@ public final class Players {
                 p.sendSystemMessage(Component.literal("Your starting kit has no " + AdminServer.nameOf(g) + " book: "
                         + r.get(1)).withStyle(ChatFormatting.GRAY));
         }
-        return true;
     }
 
     private static @Nullable List<String> give(MinecraftServer server, ServerPlayer p, Giant g, String what) {

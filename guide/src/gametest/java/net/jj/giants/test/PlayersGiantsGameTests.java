@@ -149,7 +149,7 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         MinecraftServer s = h.getLevel().getServer();
         List<String> keys = new java.util.ArrayList<>();
         for (String k : List.of("pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow", "wreckback",
-                "swarmforge", "gloamwick")) if (here(k)) keys.add(k);
+                "swarmforge", "gloamwick", "tickmoor")) if (here(k)) keys.add(k);
         if (keys.isEmpty()) {
             h.succeed();
             return;
@@ -248,7 +248,7 @@ public class PlayersGiantsGameTests implements FabricGameTest {
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_rules", timeoutTicks = 40)
     public void everyGiantTakesTheSwitchesAndRules(GameTestHelper h) {
         String[] keys = {"pitchgut", "furrowmaw", "cerberus", "hollowbell", "lanternwillow", "wreckback",
-            "swarmforge", "gloamwick"};
+            "swarmforge", "gloamwick", "tickmoor"};
         int n = 0;
         for (String k : keys)
             if (here(k)) {
@@ -351,6 +351,12 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         else h.succeed();
     }
 
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_pick_tickmoor", timeoutTicks = 12000)
+    public void tickmoorPickedForReal(GameTestHelper h) {
+        if (here("tickmoor")) pickForReal(h, "tickmoor");
+        else h.succeed();
+    }
+
     /** the Hearthstride is earned by trust: never picked, no book in the kit, but his lantern is a kit finder */
     @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_earned")
     public void theHearthstrideIsEarnedNotPicked(GameTestHelper h) {
@@ -369,24 +375,72 @@ public class PlayersGiantsGameTests implements FabricGameTest {
         AdminServer.set(s, "Tester", "all", "kitFinders", "one");
         AdminServer.set(s, "Tester", "all", "kitFinder", "hearthstride");
         h.assertTrue(!AdminServer.set(s, "Tester", "all", "kitBook", "hearthstride").ok(), "no book of his in the kit");
-        try {
-            ServerPlayer a = PlayersGameTests.join(h, "hs_kit", false);
-            var lantern = BuiltInRegistries.ITEM.get(ResourceLocation.parse(Players.FINDERS.get("hearthstride")));
-            h.assertTrue(a.getInventory().contains(new ItemStack(lantern)), "his Hearth Lantern in the kit");
-            s.getPlayerList().remove(a);
-        } finally {
-            AdminServer.reset(s, "Tester", "all", "kitFinders");
-            AdminServer.reset(s, "Tester", "all", "kitFinder");
-            clean(s);
-        }
-        h.succeed();
+        ServerPlayer a = PlayersGameTests.join(h, "hs_kit", false);
+        // (the giants' part of the kit comes a moment after joining)
+        h.runAfterDelay(3, () -> {
+            try {
+                var lantern = BuiltInRegistries.ITEM.get(ResourceLocation.parse(Players.FINDERS.get("hearthstride")));
+                h.assertTrue(a.getInventory().hasAnyMatching(st -> st.is(lantern)), "his Hearth Lantern in the kit: "
+                        + inv(a));
+            } finally {
+                s.getPlayerList().remove(a);
+                AdminServer.reset(s, "Tester", "all", "kitFinders");
+                AdminServer.reset(s, "Tester", "all", "kitFinder");
+                clean(s);
+            }
+            h.succeed();
+        });
     }
 
+    /** the Tickmoor in the starting kit: his finder, his Codex (the book) and his Carapace worn */
+    @GameTest(template = EMPTY_STRUCTURE, batch = "p5g_kit_tickmoor", timeoutTicks = 60)
+    public void theTickmoorsKitIsHisFinderBookAndArmour(GameTestHelper h) {
+        if (!here("tickmoor")) {
+            h.succeed();
+            return;
+        }
+        MinecraftServer s = h.getLevel().getServer();
+        clean(s);
+        Giant g = Giants.byKey("tickmoor");
+        freeBook(s, g);
+        AdminServer.set(s, "Tester", "all", "kitFinders", "one");
+        AdminServer.set(s, "Tester", "all", "kitFinder", "tickmoor");
+        AdminServer.set(s, "Tester", "all", "kitArmour", "tickmoor");
+        h.assertTrue(AdminServer.set(s, "Tester", "all", "kitBook", "tickmoor").ok(), "his book in the kit");
+        ServerPlayer a = PlayersGameTests.join(h, "tm_kit", false);
+        // (the giants' part of the kit comes a moment after joining, once they are on the server's list)
+        h.runAfterDelay(3, () -> {
+            try {
+                var finder = BuiltInRegistries.ITEM.get(ResourceLocation.parse(Players.FINDERS.get("tickmoor")));
+                var book = BuiltInRegistries.ITEM.get(ResourceLocation.parse(Players.BOOKS.get("tickmoor")));
+                h.assertTrue(a.getInventory().hasAnyMatching(st -> st.is(finder)), "his finder in the kit: " + inv(a));
+                h.assertTrue(a.getInventory().hasAnyMatching(st -> st.is(book)), "his Codex in the kit: " + inv(a));
+                for (var slot : List.of(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                        net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS,
+                        net.minecraft.world.entity.EquipmentSlot.FEET)) {
+                    ItemStack worn = a.getItemBySlot(slot);
+                    h.assertTrue(!worn.isEmpty() && BuiltInRegistries.ITEM.getKey(worn.getItem()).getNamespace()
+                            .equals("tickmoor"), "his armour worn on " + slot + ": " + worn);
+                }
+            } finally {
+                AdminServer.call(s, g, "players", "{\"players\":1,\"rules\":{\"" + a.getStringUUID()
+                        + "\":{\"own\":false}}}");
+                s.getPlayerList().remove(a);
+                noRules(s, a);
+                freeBook(s, g);
+                for (String id : List.of("kitFinders", "kitFinder", "kitArmour", "kitBook"))
+                    AdminServer.reset(s, "Tester", "all", id);
+                clean(s);
+            }
+            h.succeed();
+        });
+    }
 
-
-
-
-
-
-
+    /** what they carry (for a failure's line) */
+    private static String inv(ServerPlayer p) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++)
+            if (!p.getInventory().getItem(i).isEmpty()) b.append(p.getInventory().getItem(i)).append(' ');
+        return b.toString();
+    }
 }
