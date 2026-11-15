@@ -16,8 +16,8 @@ target is then not an even edge but ln edge_XY = -per * (E_X - E_Y): each escape
 import csv, math, sys
 from collections import defaultdict
 
-ORDER = ['P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G']
-ARMOR = {'P': 0.32, 'F': 0.63, 'C': 1.30, 'H': 1.13, 'W': 0.48, 'WB': 0.33, 'S': 0.45, 'G': 0.55}
+ORDER = ['P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G', 'T']
+ARMOR = {'P': 0.32, 'F': 0.63, 'C': 1.30, 'H': 1.13, 'W': 0.48, 'WB': 0.33, 'S': 0.45, 'G': 0.55, 'T': 0.62}
 
 
 def rates(rows):

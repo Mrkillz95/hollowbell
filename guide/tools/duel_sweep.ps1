@@ -1,4 +1,4 @@
-# Runs the giant duel harness over all 28 pairs, a few pairs per server (one server runs out of memory after about
+# Runs the giant duel harness over all 36 pairs (-Pairs T: only the Tickmoor's 8), a few pairs per server (one server runs out of memory after about
 # 20 full-size duels), through the shared Gradle slots. Every run appends to build/duels/<Out>.csv.
 # -Parallel N: N shards at once, each in its own copy of this project (build/shards/<Out>-<i>, so their Gradle builds, run
 # folders and worlds never meet) and its own slot; their CSVs are merged into build/duels/<Out>*.csv at the end.
@@ -16,10 +16,12 @@ $main = Split-Path -Parent $PSScriptRoot
 if (-not $Guide) { $Guide = $main }
 $withslot = 'C:\Users\jeria\giants\slots\withslot.ps1'
 $csv = Join-Path $Guide "build\duels\$Out.csv"
-$codes = 'P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G'
-$all = if ($Pairs) { $Pairs -split ',' } else {
+$codes = 'P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G', 'T'
+# (one code alone: that giant against each of the others)
+# (@(): one pair alone stays a list, not a string to index into)
+$all = @(if ($Pairs -and $codes -contains $Pairs) { @($codes | Where-Object { $_ -ne $Pairs } | ForEach-Object { "$_-$Pairs" }) } elseif ($Pairs) { $Pairs -split ',' } else {
     for ($i = 0; $i -lt $codes.Count; $i++) { for ($j = $i + 1; $j -lt $codes.Count; $j++) { "$($codes[$i])-$($codes[$j])" } }
-}
+})
 
 if ($Parallel -gt 1) {
     $jobs = @()
@@ -81,12 +83,13 @@ for ($k = 0; $k -lt $all.Count; $k += $PerServer) {
         Start-Sleep -Seconds 20
         $now = Rows
         if ($now -ne $rows) { $rows = $now; $since = Get-Date; continue }
-        if (((Get-Date) - $since).TotalMinutes -lt $StallMinutes) { continue }
         # (this project copy's own server only: its launch config sits under its folder)
         $server = Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
             Where-Object { $_.CommandLine -like "*$Guide\.gradle\loom-cache*" -and $_.CommandLine -match 'KnotServer' }
-        # (no server yet: still waiting for a Gradle slot or starting up, not hung)
+        # (no server yet: still waiting for a Gradle slot or starting up, not hung; the clock starts when it is up,
+        #  checked every poll: a server that came up late in a long slot wait was once stopped a minute into its first duel)
         if (-not $server) { $since = Get-Date; continue }
+        if (((Get-Date) - $since).TotalMinutes -lt $StallMinutes) { continue }
         $mc = Join-Path $Guide 'build\duels\logs\latest.log'
         $batch = (Select-String -Path $mc -Pattern "Running test batch '([^']+)'" | Select-Object -Last 1).Matches.Groups[1].Value
         Add-Content (Join-Path $Guide "build\duels\$Out-hung.txt") "$(Get-Date -Format o) $batch"
