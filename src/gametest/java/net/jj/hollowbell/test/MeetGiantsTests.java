@@ -256,13 +256,13 @@ public class MeetGiantsTests implements FabricGameTest {
             // (the stand-in comes now, so no wild meeting can start before the checks)
             Mob z = fakeGiant(h, e.position().add(6, 0, 6), "fire_ice_cerberus");
             try {
-                h.assertFalse(HearthYards.noFight(e, z), "no yard yet, and he'd fight the Cerberus");
+                h.assertFalse(HearthYards.noFight(e, z), "no yard yet, and he'd fight the Emberfrost Hound");
                 HearthYards.put(dim, yard, e.getX(), e.getZ(), 12);
                 h.assertTrue(HearthYards.noFight(e, z), "the yard round him doesn't count");
                 h.assertFalse(e.startMeeting(z), "he started a fight in the yard");
-                h.assertTrue(e.meetFoe() == null, "he took on the Cerberus anyway");
+                h.assertTrue(e.meetFoe() == null, "he took on the Emberfrost Hound anyway");
                 h.assertTrue(e.startMeeting(z, true), "an order didn't start the fight");
-                h.assertTrue(z.getUUID().equals(e.meetFoe()), "not fighting the Cerberus");
+                h.assertTrue(z.getUUID().equals(e.meetFoe()), "not fighting the Emberfrost Hound");
             } finally {
                 HearthYards.remove(dim, yard);
                 z.discard();
@@ -281,7 +281,7 @@ public class MeetGiantsTests implements FabricGameTest {
                 e.addTag(HearthYards.DOCKED + UUID.randomUUID());
                 h.assertTrue(HearthYards.docked(e) && HearthYards.noFight(e, z), "docked doesn't count");
                 h.assertFalse(e.startMeeting(z), "a docked giant started a fight");
-                h.assertTrue(e.meetFoe() == null, "he took on the Cerberus anyway");
+                h.assertTrue(e.meetFoe() == null, "he took on the Emberfrost Hound anyway");
                 h.assertTrue(e.startMeeting(z, true), "an order didn't start the fight");
             } finally {
                 z.discard();

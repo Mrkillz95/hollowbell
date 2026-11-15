@@ -89,7 +89,7 @@ public class ControlsGameTests implements FabricGameTest {
         h.assertTrue(new ArrayList<>(g.keySet()).equals(want), "groups in order: " + g.keySet());
         h.assertTrue(g.get("pitchgut").size() == 2, "Pitchgut's two keys (his mod is mountain_breathes)");
         h.assertTrue(g.get("furrowmaw").size() == 1, "Furrowmaw's one key");
-        h.assertTrue(g.get("cerberus").size() == 2, "the Cerberus's two keys (fire_ice_cerberus)");
+        h.assertTrue(g.get("cerberus").size() == 2, "the Emberfrost Hound's two keys (fire_ice_cerberus)");
         h.assertTrue(g.get(ControlsCatalog.GUIDE).size() == 1, "the guide's own key");
         // Swarmforge's build keys (their own category) join his group, and his categories stay together
         List<ControlKey> sw = g.get("swarmforge");

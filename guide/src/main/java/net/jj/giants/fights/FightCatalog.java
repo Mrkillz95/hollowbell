@@ -84,7 +84,7 @@ public final class FightCatalog {
         out.add(choice(p + "Music", List.of("usual", "on", "off"), "Fight music",
                 "usual: each player's own choice. on: plays for players near the fight. off: never during it."));
         out.add(flag(p + "News", false, "Fight news",
-                "Players near and the owners are told (\"Your Cerberus is fighting the Wreckback\"), owners with a "
+                "Players near and the owners are told (\"Your Emberfrost Hound is fighting the Wreckback\"), owners with a "
                         + "Stand down button."));
         out.add(flag(p + "Grow", false, "Winner grows",
                 "With Growth on, a win where the loser backs down counts too (a fall always counts)."));

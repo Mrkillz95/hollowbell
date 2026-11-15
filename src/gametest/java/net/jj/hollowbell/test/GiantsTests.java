@@ -296,7 +296,7 @@ public class GiantsTests implements FabricGameTest {
                         "the table isn't the same both ways for " + k[a] + ", " + k[b]);
             }
         h.assertTrue(Meeting.way("hollowbell", "minecraft") == Meeting.Way.NONE, "an unknown kind");
-        h.assertTrue(Meeting.name("fire_ice_cerberus", false).equals("the Cerberus"), "names");
+        h.assertTrue(Meeting.name("fire_ice_cerberus", false).equals("the Emberfrost Hound"), "names");
         h.assertTrue(
                 Meeting.name("swarmforge", true).equals("The Swarmforge"),
                 "his name: " + Meeting.name("swarmforge", true));
@@ -335,7 +335,7 @@ public class GiantsTests implements FabricGameTest {
             h.assertTrue(e.getTags().contains(Meeting.KIND + "hollowbell"), "he has no kind tag");
             var z = giantOfKind(h, under(e).add(20, 0, 0), "fire_ice_cerberus");
             h.runAfterDelay(60, () -> {
-                h.assertTrue(e.getTarget() == z, "he didn't go for the Cerberus: " + e.getTarget());
+                h.assertTrue(e.getTarget() == z, "he didn't go for the Emberfrost Hound: " + e.getTarget());
                 h.assertTrue(z.getUUID().equals(e.meetFoe()), "it isn't a meeting");
                 h.assertTrue(e.meetCooldownLeft(z.getUUID()) > 20 * 60 * 9, "no wait before they meet again");
                 z.discard();

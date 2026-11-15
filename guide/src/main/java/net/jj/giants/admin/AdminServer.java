@@ -75,7 +75,7 @@ public final class AdminServer {
         String key = switch (n) {
             case "willow", "lantern_willow" -> "lanternwillow";
             case "mountain", "mountain_breathes" -> "pitchgut";
-            case "fire_ice_cerberus" -> "cerberus";
+            case "fire_ice_cerberus", "emberfrost", "emberfrost_hound", "hound" -> "cerberus";
             default -> n;
         };
         for (Giant g : giants()) if (g.key().equals(key)) return g;
@@ -88,6 +88,7 @@ public final class AdminServer {
     public static String nameOf(Giant g) {
         return switch (g.key()) {
             case "lanternwillow" -> "Lantern Willow";
+            case "cerberus" -> "Emberfrost Hound";
             default -> Character.toUpperCase(g.key().charAt(0)) + g.key().substring(1);
         };
     }

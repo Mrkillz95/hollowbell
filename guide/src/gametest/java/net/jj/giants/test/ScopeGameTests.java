@@ -253,7 +253,7 @@ public class ScopeGameTests implements FabricGameTest {
             h.succeed();
             return;
         }
-        realGiant(h, "cerberus", "Cerberus", "fire_ice_cerberus.json", "cerberus");
+        realGiant(h, "cerberus", "Emberfrost Hound", "fire_ice_cerberus.json", "cerberus");
         h.succeed();
     }
 
