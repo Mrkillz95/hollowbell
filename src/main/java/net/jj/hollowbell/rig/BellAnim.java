@@ -652,10 +652,12 @@ public final class BellAnim {
                         }
                         // (eased back a quarter of the way each tick, a little at a time: snapped straight to the
                         // limit, a strand was yanked along whole when his bell came down hard)
-                        // (lying on the ground or knocked against it, held to the limit outright: there the ground
-                        // would otherwise fold it right back on itself)
+                        // (lying on the ground or knocked against it, held to the limit much harder: there the ground
+                        // would otherwise fold it right back on itself; but not all at once: bent straight back in one
+                        // go, a strand the sweep dragged over the ground, or the drop came down on, flicked its end
+                        // tens of blocks in a tick)
                         boolean onGround = steps - groundKnockAt[c] <= 8;
-                        float to = ang - (ang - lim) * (onGround ? 1f : 0.25f);
+                        float to = ang - (ang - lim) * (onGround ? 0.6f : 0.25f);
                         float cl = Mth.cos(to), sn = Mth.sin(to);
                         dx = bx * cl + sx / sl * sn;
                         dy = by * cl + sy / sl * sn;
@@ -663,7 +665,7 @@ public final class BellAnim {
                         // and never more than a little way in a tick
                         float ox = (dx - ux) * want, oy = (dy - uy) * want, oz = (dz - uz) * want;
                         float ol = (float) Math.sqrt(ox * ox + oy * oy + oz * oz),
-                                cap = onGround ? Float.MAX_VALUE : 0.3f;
+                                cap = onGround ? 3f : 0.3f;
                         if (ol > cap) {
                             float f = cap / ol;
                             dx = ux + (dx - ux) * f;
