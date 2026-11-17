@@ -151,6 +151,11 @@ final class BellHolds {
                 return;
             }
         }
+        if (mv.t == into0 && mv.grabbed == null && mv.grabbedTree == null) {
+            // let go of on the way up (the book's "let go"): nothing to swallow, so no gulp on nothing
+            mv.end();
+            return;
+        }
         if (mv.t == into0) {
             mv.grabPod = mv.grabbed instanceof Player ? freePod(mv.intoFrom) : -1;
             // (where it leaves the strand, kept in his own space so it goes with him if he drifts on)
