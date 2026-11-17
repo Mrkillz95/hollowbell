@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.jj.hollowbell.GiantsPerf;
+import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.fx.BigFx;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -969,18 +970,20 @@ public final class BigFxClient {
             boolean wet = at.water;
             FxWorld.emit(FxWorld.emitter(ticks, age -> {
                 RandomSource q = RandomSource.create(seed + age);
-                float turn = age * 0.12f;
+                // (round the way his whirlpool pulls: Moves.WHIRL_WAY)
+                int way = Moves.WHIRL_WAY;
+                float turn = -way * age * 0.12f;
                 for (int i = 0; i < each; i++) {
                     float u = rnd(q, 0.1f, 1f);
-                    float a = turn + (i % 3) * Mth.TWO_PI / 3 + u * 4f + (q.nextFloat() - 0.5f) * 0.4f;
+                    float a = turn + (i % 3) * Mth.TWO_PI / 3 - way * u * 4f + (q.nextFloat() - 0.5f) * 0.4f;
                     float rad = s * u;
                     double x = at.x + Mth.cos(a) * rad, z = at.z + Mth.sin(a) * rad;
                     FxWorld.Puff p =
                             FxWorld.puff(x, at.y + 0.3, z, Math.max(1f, s * rnd(q, 0.08f, 0.16f)), 26 + q.nextInt(20));
                     if (p == null) return;
                     float sp = s * 0.035f * (1.2f - u * 0.6f);
-                    p.vx = -Mth.sin(a) * sp - Mth.cos(a) * sp * 0.3f;
-                    p.vz = Mth.cos(a) * sp - Mth.sin(a) * sp * 0.3f;
+                    p.vx = way * Mth.sin(a) * sp - Mth.cos(a) * sp * 0.3f;
+                    p.vz = -way * Mth.cos(a) * sp - Mth.sin(a) * sp * 0.3f;
                     p.vy = 0;
                     p.drag = 0.97f;
                     p.floor = at.y + 0.1;

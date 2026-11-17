@@ -869,6 +869,27 @@ public class HollowbellEntity extends Monster implements SitHost {
         return boneWorld(rig.crownBone, new Vector3f(0, rig.crownY + 1, 0));
     }
 
+    /** the middle of his rim as it is posed now (brought down, squeezed, tipped): where a toll or shock rings out */
+    public Vec3 rimWorld() {
+        Vec3 sum = Vec3.ZERO;
+        int n = rig.sectors.length;
+        for (int k = 0; k < 4; k++)
+            sum = sum.add(boneWorld(rig.sectors[k * n / 4].bone(), new Vector3f(0, rig.rimY, 0)));
+        return sum.scale(0.25);
+    }
+
+    /** the middle of his glowing spots as they are posed now: where a flash of his light comes from */
+    public Vec3 glowWorld() {
+        Vec3 sum = Vec3.ZERO;
+        for (int k = 0; k < rig.spots.length; k++) sum = sum.add(spotWorld(k));
+        return sum.scale(1.0 / rig.spots.length);
+    }
+
+    /** the middle of his bell as it is posed now */
+    public Vec3 bellWorld() {
+        return boneWorld(rig.bellBone, rig.centre());
+    }
+
     // places on him things are held
 
     /** places inside the dome to hang things: the first four right under the glowing balls, then round the vase */

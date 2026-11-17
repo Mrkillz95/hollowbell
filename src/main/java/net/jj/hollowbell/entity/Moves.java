@@ -134,7 +134,9 @@ public final class Moves {
         };
     }
 
-    public static final int REACH = 30, LIFT = 190, INTO = 24;
+    public static final int REACH = 30, LIFT = 190, INTO = 40;
+    /** when, into the swallow, the bell shuts on what it has drawn in (a share of INTO) */
+    public static final float GULP = 0.7f;
     /** the grab's phase from here up is a carry onto his crown (see Moves.pose) */
     public static final float CARRY_PHASE = 2f;
     /** the drop: the warning (the bell lifts and glows), the fall, down, and back up */
@@ -160,6 +162,11 @@ public final class Moves {
     public static float EGG_TIP = -0.32f;
     /** the whirlpool: wind up, spinning, the crush at the end */
     public static final int WHIRL_UP = 40, WHIRL_CRUSH = 140;
+    /**
+     * the way the whirlpool goes round, seen from above: his bell, the pull on everything and the dust all turn this
+     * way (1: from +x toward -z, the way a turn about +y goes)
+     */
+    public static final int WHIRL_WAY = 1;
     /** the sky dive: up, turning over, the fall (ends early when he lands), and turning back */
     public static final int DIVE_CLIMB = 90, DIVE_TURN = 24, DIVE_FALL = 80, DIVE_BACK = 46;
     /** the deep toll: three tolls, then the big one */
@@ -192,6 +199,16 @@ public final class Moves {
         if (t < at) return 0f;
         float u = (t - at) / over;
         return (float) (Math.exp(-4 * u) * Math.cos(9 * u));
+    }
+
+    /**
+     * a kick past where a swing comes to at tick at: from nothing, out past and back, dying away over about `over`
+     * ticks (a recoil that starts at nothing, so the swing never jumps to it)
+     */
+    static float kick(float t, float at, float over) {
+        if (t < at) return 0f;
+        float u = (t - at) / over;
+        return (float) (1.6 * Math.exp(-4 * u) * Math.sin(9 * u));
     }
 
     /** a lean toward model x z by angle a (the sign as EGG_TIP: negative tips his mouth that way) */
@@ -262,7 +279,7 @@ public final class Moves {
         in.moveT = t;
         int len = length(move);
         switch (move) {
-            case GRAB, HARVEST -> poseGrab(rig, st, move, t, arg, tx, ty, tz, phase, carryD, carryEnd);
+            case GRAB, HARVEST -> poseGrab(rig, st, in, move, t, arg, tx, ty, tz, phase, carryD, carryEnd);
             case CURTAIN -> poseCurtain(st, in, t, tx, tz, len);
             case SWEEP -> {
                 // wound back toward what it's aimed at and held there shivering, then swung right across through it
@@ -379,6 +396,7 @@ public final class Moves {
     private static void poseGrab(
             BellRig rig,
             BellState st,
+            BellAnim.In in,
             int move,
             float t,
             int arg,
@@ -403,13 +421,36 @@ public final class Moves {
         }
         st.grabStrand = arg;
         // (the end overshoots as it catches and coils round)
-        st.grabReach = smooth(t / REACH) + 0.12f * recoil(t, REACH, 16f);
+        st.grabReach = smooth(t / REACH) + 0.12f * kick(t, REACH, 16f);
         float lift = phase >= 0f ? phase : Mth.clamp((t - REACH) / LIFT, 0f, 1f);
         st.grabLift = lift;
         st.grabReach *= 1f - 0.7f * lift; // it comes back to hanging straight as it pulls up
         st.grabX = tx;
         st.grabY = ty;
         st.grabZ = tz;
+        if (t > REACH + LIFT) {
+            // (the strand lets go of it to the bell and swings back to hanging)
+            float k = (t - REACH - LIFT) / INTO;
+            st.grabReach *= 1f - smooth(k / 0.4f);
+            swallow(in, k);
+        }
+    }
+
+    /**
+     * Swallowing what the strand pulled up (k 0-1 through it): the bell opens wide and he sinks a little toward it as
+     * it is sucked in under the rim, then at the gulp it shuts hard on it (the server's beat), glows, the rim rings
+     * and he dips with the weight, and settles.
+     */
+    static void swallow(BellAnim.In in, float k) {
+        // (in ticks of the swallow)
+        float t = k * INTO, g = GULP * INTO;
+        float open = hump(t, 0f, 0.4f * INTO, 0.5f * INTO, g);
+        float gulp = hump(t, g - 2f, g + 2f, g + 5f, INTO);
+        in.squeezeAdd = -0.6f * open + 0.3f * gulp;
+        in.lowerAdd = 3f * open + 2.5f * gulp;
+        in.glow = 0.4f * open + 0.9f * hump(t, g - 1f, g + 1f, g + 3f, INTO);
+        in.rippleAdd = t < g ? 0f : 1.6f * (float) Math.exp(-(t - g) / 10f);
+        in.snap = hump(t, g - 3f, g - 1f, g + 2f, g + 6f);
     }
 
     private static void poseCurtain(BellState st, BellAnim.In in, float t, float tx, float tz, int len) {
@@ -422,7 +463,7 @@ public final class Moves {
         if (t > CURTAIN_CLOSE && t < CURTAIN_CLOSE + CURTAIN_HOLD)
             k += 0.15f * (float) Math.sin((t - CURTAIN_CLOSE) * 0.3f);
         // he settles over you as it closes, and it cinches when it's shut
-        if (t >= CURTAIN_CLOSE) k += 0.15f * recoil(t, CURTAIN_CLOSE, 20f);
+        if (t >= CURTAIN_CLOSE) k += 0.15f * kick(t, CURTAIN_CLOSE, 20f);
         st.curtain = k;
         st.curtainX = tx;
         st.curtainZ = tz;
@@ -545,7 +586,7 @@ public final class Moves {
         in.spinning = true;
         // one whole turn, winding up and easing off, so he ends square (his strands swirl round the rest of
         // the way: two turns spun the rim faster than his strands can follow)
-        in.spin = (float) (2 * Math.PI) * smoother(Mth.clamp((t - 20f) / (WHIRL_CRUSH - 5f), 0f, 1f));
+        in.spin = WHIRL_WAY * (float) (2 * Math.PI) * smoother(Mth.clamp((t - 20f) / (WHIRL_CRUSH - 5f), 0f, 1f));
         in.glow = 0.7f * hump(t, 0, WHIRL_UP, WHIRL_UP, WHIRL_UP + 20);
         if (t > WHIRL_CRUSH - 10 && t < WHIRL_CRUSH + 20)
             st.curtain = hump(t, WHIRL_CRUSH - 10, WHIRL_CRUSH, WHIRL_CRUSH + 4, WHIRL_CRUSH + 20);
@@ -682,7 +723,7 @@ public final class Moves {
         if (t < 21f) return -1f + 0.04f * Mth.sin(t * 2.2f);
         if (t < 38f) return Mth.lerp(fall((t - 21f) / 17f), -1f, 1.2f);
         float settle = 1f - smooth((t - 38f) / 32f);
-        return (1.2f + 0.15f * recoil(t, 38f, 20f)) * settle;
+        return (1.2f + 0.15f * kick(t, 38f, 20f)) * settle;
     }
 
     /** how far down the bell is in the drop, 0-1 */

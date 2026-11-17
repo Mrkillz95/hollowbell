@@ -13,6 +13,7 @@ import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.fx.BigFx;
 import net.jj.hollowbell.rig.BellRig;
 import net.jj.hollowbell.rig.CarryPath;
+import net.jj.hollowbell.rig.IntoDome;
 import net.jj.hollowbell.solid.Solid;
 import net.jj.hollowbell.world.NoWait;
 import net.minecraft.core.BlockPos;
@@ -150,12 +151,25 @@ final class BellHolds {
                 return;
             }
         }
-        if (mv.t == into0) mv.grabPod = mv.grabbed instanceof Player ? freePod(mv.intoFrom) : -1;
+        if (mv.t == into0) {
+            mv.grabPod = mv.grabbed instanceof Player ? freePod(mv.intoFrom) : -1;
+            // (where it leaves the strand, kept in his own space so it goes with him if he drifts on)
+            mv.intoModel = h.toModel(mv.intoFrom);
+        }
         int slot = mv.grabPod >= 0 ? -1 : freeSlot();
         float k = Mth.clamp((mv.t - into0) / (float) Moves.INTO, 0f, 1f);
         // a player is shut in one of his pods; anything else goes in the dome
         Vec3 to = mv.grabPod >= 0 ? h.seatSpot(Seat.POD, mv.grabPod, mv.grabbed) : mv.slotWorld(slot, mv.grabbed);
-        Vec3 at = mv.intoFrom.lerp(to, k * k * (3 - 2 * k));
+        // sucked in under the rim and up into the hollow (a pod hangs outside: straight to it)
+        Vec3 at = mv.grabPod >= 0
+                ? mv.intoFrom.lerp(to, k * k * (3 - 2 * k))
+                : h.toWorld(IntoDome.at(rig, mv.intoModel, h.toModel(to), k, new Vector3f()));
+        if (mv.t == into0 + Math.round(Moves.GULP * Moves.INTO)) {
+            // the gulp: the bell shuts hard on it
+            h.pulse(1.5f);
+            h.sound(at, ModSounds.PULSE, 2.5f, 0.55f);
+            mv.fx(BigFx.SPARKS, at, mv.px(5, 2), new Vec3(0, 1, 0), BellMoves.GLOW);
+        }
         if (mv.grabSeat != null) {
             mv.grabSeat.follow(Seat.FREE, 0);
             mv.grabSeat.moveTo(at.x, at.y, at.z);

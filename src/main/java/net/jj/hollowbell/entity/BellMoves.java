@@ -91,6 +91,8 @@ public final class BellMoves {
     float strandHits;
     boolean gentle;
     Vec3 intoFrom = Vec3.ZERO;
+    /** the same, in his own space */
+    Vector3f intoModel = new Vector3f();
     /**
      * Carrying somebody up onto his crown (a gentle grab, see runCarry): back once the strand is on its way back down
      * (they're on the crown, or were let go); ticks into the
@@ -828,6 +830,15 @@ public final class BellMoves {
         return ends.isEmpty();
     }
 
+    /** whether light from c reaches e's eyes (a wall or a hill between them keeps a flash off) */
+    boolean seesLight(Vec3 c, LivingEntity e) {
+        // (at another giant: at the bit of it in reach, which nothing of the world stands in front of)
+        if (giantAt.containsKey(e)) return true;
+        var hit = level().clip(
+                new ClipContext(c, e.getEyePosition(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, h));
+        return hit.getType() == HitResult.Type.MISS;
+    }
+
     /** a place that is all numbers (not NaN, not infinite) */
     public static boolean finite(@Nullable Vec3 v) {
         return v != null && Double.isFinite(v.x) && Double.isFinite(v.y) && Double.isFinite(v.z);
@@ -986,8 +997,9 @@ public final class BellMoves {
         if (t == 22) h.sound(low, ModSounds.SWOOP, 3.5f, 0.7f);
         if (t == 30) h.sound(h.position().add(0, 30 * s, 0), ModSounds.WHIP, 3f, 0.4f);
         if (t == 26 || t == 34) h.sound(under(), SoundEvents.ROOTED_DIRT_BREAK, 3.5f, 0.5f);
-        // what any strand passes through between one tick and the next, while they swing across, is hit
-        if (t < 20 || t > 44) {
+        // what any strand passes through between one tick and the next, while they swing across, is hit (from the
+        // swing's start at 21: wound back and held, shivering, they hit nothing)
+        if (t < 21 || t > 44) {
             sweepWas = null;
             return;
         }
@@ -1035,21 +1047,23 @@ public final class BellMoves {
     }
 
     private void runPulse(float s, double bell) {
-        // (the bell shuts a moment before the shock goes out)
+        // (the bell shuts a moment before the shock goes out of its rim)
+        Vec3 rim = h.rimWorld();
         if (t == Moves.PULSE_AT - 5) {
             h.pulse(1.6f);
-            h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.PULSE, 3.5f, 0.6f);
+            h.sound(rim, ModSounds.PULSE, 3.5f, 0.6f);
         }
         if (t == Moves.PULSE_AT) {
-            h.sound(h.position().add(0, rig.rimY * s, 0), ModSounds.SHOCK, 3f, 0.8f);
+            pulseAt = rim;
+            h.sound(rim, ModSounds.SHOCK, 3f, 0.8f);
             thump(h.position(), 0.6f);
             fx(BigFx.DUST_RING, under(), h.bellRadius() + px(70, 30));
-            fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), px(30, 8), Vec3.ZERO, GLOW);
+            fx(BigFx.FLASH, rim, px(30, 8), Vec3.ZERO, GLOW);
         }
         if (t > Moves.PULSE_AT && t <= Moves.PULSE_AT + 24) {
-            // the shock goes out from the rim in a ring
+            // the shock goes out from the rim in a ring (from where the rim was as it went off)
             double r = bell + (t - Moves.PULSE_AT) / 24.0 * (70 * s + 30 * Math.min(1f, 10f * s));
-            Vec3 c = h.position().add(0, rig.rimY * s, 0);
+            Vec3 c = pulseAt != null ? pulseAt : rim;
             for (LivingEntity e : near(h.bodyBox().inflate(80 * s + 34 * Math.min(1f, 10f * s), 90 * s + 40 * Math.min(1f, 10f * s), 80 * s + 34 * Math.min(1f, 10f * s)))) {
                 if (struckThisMove.contains(e.getUUID())) continue;
                 double d = at(e).distanceTo(c);
@@ -1061,6 +1075,9 @@ public final class BellMoves {
             }
         }
     }
+
+    /** where the pulse wave's shock went out from */
+    private @Nullable Vec3 pulseAt;
 
     private void runDrop(float s, double bell) {
         int hit = Moves.DROP_WIND + Moves.DROP_FALL;
@@ -1096,7 +1113,8 @@ public final class BellMoves {
         Vec3[] now = strandLine(arg);
         Vec3[] was = lashWas;
         lashWas = now;
-        if (was == null || t < Moves.LASH_AT - 5 || t > Moves.LASH_AT + 8) return;
+        // (from when it whips forward: winding back, it hits nothing)
+        if (was == null || t < Moves.LASH_AT - 4 || t > Moves.LASH_AT + 8) return;
         Vec3 tip = now[now.length - 1], tipWas = was[was.length - 1];
         Vec3 way = tip.subtract(tipWas).multiply(1, 0, 1);
         way = way.lengthSqr() > 1e-6 ? way.normalize() : Vec3.ZERO;
@@ -1162,9 +1180,10 @@ public final class BellMoves {
         if (t == Moves.FLASH_AT) {
             boolean night = h.level().getSkyDarken() > 6 || h.level().isThundering();
             double r = 50 * s + 30 * Math.min(1f, 10f * s);
-            Vec3 c = h.position().add(0, (rig.rimY + 30) * s, 0);
+            // (out of his glowing spots, wherever they are now)
+            Vec3 c = h.glowWorld();
             for (LivingEntity e : near(new AABB(c, c).inflate(r))) {
-                if (at(e).distanceTo(c) > r) continue;
+                if (at(e).distanceTo(c) > r || !seesLight(c, e)) continue;
                 e.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, night ? 200 : 100, 0));
                 e.addEffect(new MobEffectInstance(MobEffects.DARKNESS, night ? 160 : 60, 0));
                 if (night) e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 160, 0));

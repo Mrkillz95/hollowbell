@@ -129,8 +129,12 @@ final class BellHeavyMoves {
             if (h.isPodPopped(i)) continue;
             Vec3 c = h.podWorld(i);
             double gy = h.groundAt(c.x, c.z);
+            // (only as far down as the goo has poured: it reaches the ground 5 ticks after it bursts out)
+            double front = Mth.lerp(Mth.clamp((mv.t - Moves.POD_AT) / 5.0, 0, 1), c.y, gy);
             for (LivingEntity e : mv.near(new AABB(c.x - r, gy - 1, c.z - r, c.x + r, c.y, c.z + r))) {
-                if (mv.struckThisMove.contains(e.getUUID()) || Math.hypot(mv.at(e).x - c.x, mv.at(e).z - c.z) > r)
+                if (mv.struckThisMove.contains(e.getUUID())
+                        || Math.hypot(mv.at(e).x - c.x, mv.at(e).z - c.z) > r
+                        || mv.at(e).y + e.getBbHeight() < front)
                     continue;
                 mv.struckThisMove.add(e.getUUID());
                 mv.blow(e, 18f, c, 0, 0);
@@ -147,9 +151,9 @@ final class BellHeavyMoves {
      */
     void eggRain() {
         float s = mv.s();
-        if (mv.t == Moves.EGG_AT - 8) h.sound(h.position().add(0, (rig.rimY + 20) * s, 0), ModSounds.TOLL, 3f, 1.35f);
-        if (mv.t == Moves.EGG_AT)
-            mv.fx(BigFx.FLASH, h.position().add(0, rig.rimY * s, 0), mv.px(20, 6), Vec3.ZERO, BellMoves.GLOW);
+        if (mv.t == Moves.EGG_AT - 8) h.sound(h.bellWorld(), ModSounds.TOLL, 3f, 1.35f);
+        // (out of his mouth, tipped toward you)
+        if (mv.t == Moves.EGG_AT) mv.fx(BigFx.FLASH, h.rimWorld(), mv.px(20, 6), Vec3.ZERO, BellMoves.GLOW);
         if (mv.t >= Moves.EGG_AT && mv.t <= Moves.EGG_AT + 24 && (mv.t - Moves.EGG_AT) % 4 == 0) dropEgg();
     }
 
@@ -252,7 +256,7 @@ final class BellHeavyMoves {
                 double d = in.length();
                 if (d > R || d < 0.5) continue;
                 Vec3 n = in.normalize();
-                Vec3 round = new Vec3(-n.z, 0, n.x);
+                Vec3 round = new Vec3(-n.z, 0, n.x).scale(Moves.WHIRL_WAY);
                 double pull = (0.10 * Math.min(1f, 10f * s) + 0.06 * s) * (0.5 + 0.5 * d / R);
                 e.setDeltaMovement(e.getDeltaMovement()
                         .scale(0.85)
@@ -348,7 +352,8 @@ final class BellHeavyMoves {
      * His glass bell hitting the ground at tick at: a low note of the bell itself, then the glass ringing on.
      */
     void bellTone(int at) {
-        Vec3 c = h.position().add(0, rig.rimY * mv.s(), 0);
+        if (mv.t != at && mv.t != at + 6) return;
+        Vec3 c = h.rimWorld();
         if (mv.t == at) h.sound(c, ModSounds.TOLL, 4f, 0.5f);
         if (mv.t == at + 6) h.sound(c, SoundEvents.AMETHYST_BLOCK_RESONATE, 4f, 0.5f);
     }
@@ -356,7 +361,8 @@ final class BellHeavyMoves {
     /** the deep toll: three tolls, louder each time, then a massive shock ring that throws everything far */
     void deepToll() {
         float s = mv.s();
-        Vec3 mid = h.position().add(0, (rig.rimY + 20) * s, 0);
+        // (the bell itself rings, wherever it is as he rises and swings with each toll)
+        Vec3 mid = h.bellWorld();
         if (mv.t == 1 || mv.t == 37 || mv.t == 73) {
             int k = mv.t / 36;
             h.pulse(1.2f + 0.2f * k);
@@ -386,10 +392,12 @@ final class BellHeavyMoves {
             double R = 120 * s + 40 * Math.min(1f, 10f * s), r0 = h.bellRadius();
             double r = (mv.t - big) / 25.0 * R, rIn = (mv.t - big - 1) / 25.0 * R;
             Vec3 c = h.position();
+            // (the ring runs out along the ground and up as high as his rim: nothing high over it)
+            double top = h.rimWorld().y + 12 * s + 4 * Math.min(1f, 10f * s);
             for (LivingEntity e : mv.near(h.bodyBox().inflate(R - r0 + 4, 100 * s + 40 * Math.min(1f, 10f * s), R - r0 + 4))) {
                 if (mv.struckThisMove.contains(e.getUUID())) continue;
                 double d = h.horiz(mv.at(e));
-                if (d > r) continue;
+                if (d > r || mv.at(e).y > top) continue;
                 mv.struckThisMove.add(e.getUUID());
                 mv.blow(e, 50f * (float) (1 - 0.4 * d / R), c, 3.4, 1.1);
                 e.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 200, 0));
@@ -538,9 +546,14 @@ final class BellHeavyMoves {
             // the ground hisses and crackles where each beam burns
             if (mv.t % 10 == i * 2) h.sound(ground, SoundEvents.FIRE_EXTINGUISH, 1.6f, 0.6f);
             if (mv.t % 14 == i * 3) h.sound(ground, SoundEvents.FIRE_AMBIENT, 2.5f, 0.7f);
-            for (LivingEntity e : mv.near(new AABB(
-                    ground.x - beamR, ground.y - 2, ground.z - beamR, ground.x + beamR, top.y, ground.z + beamR))) {
-                if (Math.hypot(mv.at(e).x - ground.x, mv.at(e).z - ground.z) > beamR || !mv.every(e, 10)) continue;
+            // (all along the beam, from his spot down to where it burns)
+            AABB along = new AABB(top, ground).inflate(beamR + 2);
+            for (LivingEntity e : mv.near(along)) {
+                Vec3 p = mv.at(e);
+                double d = Math.min(
+                        BellMoves.toSegment(p, top, ground),
+                        BellMoves.toSegment(p.add(0, e.getBbHeight(), 0), top, ground));
+                if (d > beamR + e.getBbWidth() * 0.5 || !mv.every(e, 10)) continue;
                 mv.blow(e, 16f, ground, 0.3, 0.2);
                 e.igniteForSeconds(4);
             }

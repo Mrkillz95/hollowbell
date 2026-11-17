@@ -236,8 +236,8 @@ public final class MoveFx {
             }
             case Moves.FLASH -> {
                 if (at(from, t, Moves.FLASH_AT)) {
-                    // the light bursts out as far as it blinds: 50s + 30 round the middle of him
-                    Vec3 c = h.position().add(0, (RIG.rimY + 30) * s, 0);
+                    // the light bursts out of his glowing spots as far as it blinds: 50s + 30 round them
+                    Vec3 c = h.glowWorld();
                     float reach = Math.max((float) bell * 1.1f, 50 * s + 30);
                     Ring a = ring(GiantsPerf.f("fx.flashes"), AIR, c.x, c.y, c.z, (float) bell * 0.9f, reach, 10, 1.2f, s);
                     a.c = new float[] {1f, 1f, 0.9f};
@@ -439,11 +439,7 @@ public final class MoveFx {
 
     /** the middle of his rim as it is posed now (brought down in a drop, tipped in a dive) */
     private static Vec3 rimNow(HollowbellEntity h) {
-        Vec3 sum = Vec3.ZERO;
-        int n = RIG.sectors.length;
-        for (int k = 0; k < 4; k++)
-            sum = sum.add(h.boneWorld(RIG.sectors[k * n / 4].bone(), new Vector3f(0, RIG.rimY, 0)));
-        return sum.scale(0.25);
+        return h.rimWorld();
     }
 
     /** the glass and copper of his rim ringing: glints running round it */
@@ -966,7 +962,8 @@ public final class MoveFx {
             for (int i = 0; i < n; i++) {
                 float u = i / (n - 1f);
                 float rr = R * (1f - run) * (1f - 0.25f * u) + R * 0.05f;
-                double ang = seed + (round ? (1f - rr / R) * 2.6f + t * 0.05f + u * 0.5f : 0f);
+                // (round the way the pull goes: Moves.WHIRL_WAY)
+                double ang = seed - (round ? Moves.WHIRL_WAY * ((1f - rr / R) * 2.6f + t * 0.05f + u * 0.5f) : 0f);
                 double x = cx + Math.cos(ang) * rr, z = cz + Math.sin(ang) * rr;
                 double y = (i % 3 == 0 ? ground(h, x, z) : gy) + 0.6 * s + 0.3;
                 p[3 * i] = x;
@@ -1025,7 +1022,8 @@ public final class MoveFx {
         float fl = GiantsPerf.f("fx.flashes");
         if (fl <= 0f) return;
         burst *= fl;
-        Vec3 c = h.position().add(0, (RIG.rimY + 30) * s, 0);
+        // (out of his glowing spots, where they are drawn this frame)
+        Vec3 c = h.glowWorld().subtract(h.position()).add(h.getPosition(Draw.partial));
         // (the spots are under his dome: their light is drawn out at his skin, toward you, so it shows)
         Vec3 toCam = new Vec3(Draw.cx - c.x, Draw.cy - c.y, Draw.cz - c.z).normalize();
         double skin = h.bellRadius() * 0.9;
