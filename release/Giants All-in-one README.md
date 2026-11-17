@@ -1,8 +1,8 @@
-# JJ's Giants: all nine in one jar
+# Giants: all ten in one jar
 
-One jar with all nine giants inside: Pitchgut, Furrowmaw, the Emberfrost Hound, the Hollowbell, the Lantern
-Willow, Wreckback, the Swarmforge, the Gloamwick and the Hearthstride, and the **Giants Guide**, a book about all of
-them. It works the same as having the nine jars.
+One jar with all ten giants inside: Pitchgut, Furrowmaw, the Emberfrost Hound, the Hollowbell, the Lantern
+Willow, Wreckback, the Swarmforge, the Gloamwick, the Hearthstride and Tickmoor, and the **Giants Guide**, a book
+about all of them. It works the same as having the ten jars.
 Each giant keeps its own name inside, so your worlds keep working.
 The Emberfrost Hound used to be called the Fire & Ice Cerberus: only his name changed (his `/cerberus` command,
 now also `/emberfrost`, his items and your worlds are the same).
@@ -13,28 +13,29 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.16.2 |
+| Giants Guide | 1.17.0 |
 | Pitchgut | 1.35.45 |
 | Furrowmaw | 1.17.42 |
-| Emberfrost Hound | 2.18.42 |
+| Emberfrost Hound | 2.18.43 |
 | Hollowbell | 1.12.45 |
 | Lantern Willow | 1.10.45 |
 | Wreckback | 1.2.50 |
 | The Swarmforge | 1.4.48 |
 | The Gloamwick | 1.2.29 |
 | The Hearthstride | 1.3.0 |
+| Tickmoor | 1.0.0 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.18.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.19.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
 the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
-`wreckback-…`, `swarmforge-…`, `gloamwick-…` and `hearthstride-…` out of your mods folder, and the old
-`giants-all-…` jar too, then put `giants-all-1.18.0.jar` (from the Releases page) in. Keep Fabric API in there.
+`wreckback-…`, `swarmforge-…`, `gloamwick-…`, `hearthstride-…` and `tickmoor-…` out of your mods folder, and the
+old `giants-all-…` jar too, then put `giants-all-1.19.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -137,6 +138,42 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.16.1: the Hearthstride's page knows all 14 forms and all 70 of his moves by name, says which
   form each move belongs to, and tells about building on him and who his foes are.
 - New in the Guide 1.16.2: the Hearthstride's page says he only fights his foes.
+- New in the Guide 1.17.0: Tickmoor's pages, the Emberfrost Hound's new name everywhere, the starting kit's
+  finders, armour and books now really come with the giants, and a giant's page leaves off gear his mod hasn't got.
+
+## New in 1.19.0
+
+Tickmoor, the tenth giant, and the Cerberus has a new name: the Emberfrost Hound.
+
+### Tickmoor 1.0.0
+
+- **The giant of time:** a wise old clockwork praying mantis as tall as a clock tower. His eyes are clock dials,
+  his forelegs end in the hour and minute hands, a pendulum swings in his glass chest and an hourglass glows in his
+  abdomen. He slows time, speeds it up, stops it and turns it back round him (never the world's clock).
+- **24 moves** and his Time Skip dash: Slow, Quick and Still fields, Midnight, Grand Rewind, Temporal Anchor and
+  more. Hit his pendulum, crack his hourglass and jam his joints.
+- **The Stillfields**, his own biome: honey-gold grass under a pale gold sky, trees of every season, rain hanging
+  still, clock-dust drifting, and the Great Dial where he sleeps. His Broken Pocket Watch finds him.
+- **His loot:** the Minute Blade, carapace armour, the Stopped Clock (his ward) and the Tickmoor Codex, his book:
+  orders, all his moves, time fields over your farm or a fight, and a cabin in his chest to ride in.
+- He goes for the Furrowmaw, the Emberfrost Hound, Wreckback, the Swarmforge and the Gloamwick, and keeps away from
+  the rest. The other giants learn about him in their next updates.
+
+### The Emberfrost Hound 2.18.43
+
+- The Fire & Ice Cerberus is now the Emberfrost Hound ("Emberfrost" for short), with the Emberfrost Codex, Pelt,
+  Skull and Loot Cache. `/emberfrost` works as well as `/cerberus`. Only his name changed: your worlds and his items
+  are the same.
+- He knows Tickmoor and fights him when they meet.
+
+### The Giants Guide 1.17.0
+
+- Tickmoor's pages, and the Emberfrost Hound's new name everywhere.
+- The starting kit's finders, armour and books now really come with the giants (they were lost on joining).
+- A giant's page leaves off gear his installed mod hasn't got yet.
+
+Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Emberfrost Hound 2.18.43, Hollowbell 1.12.45, Lantern Willow 1.10.45,
+Wreckback 1.2.50, Swarmforge 1.4.48, Gloamwick 1.2.29, Hearthstride 1.3.0, Tickmoor 1.0.0, Giants Guide 1.17.0.
 
 ## New in 1.18.0
 
