@@ -621,6 +621,9 @@ public final class BellRig {
         final boolean[] has = new boolean[boneCount()];
         final Matrix4f[] hang = new Matrix4f[chains.length];
         final boolean[] hasHang = new boolean[chains.length];
+        /** per chain: each piece's turn (see turnOn), worked out down the chain as far as asked for so far */
+        final Quaternionf[][] turns = new Quaternionf[chains.length][];
+        final int[] turnsDone = new int[chains.length];
 
         Poser() {
             for (int i = 0; i < hang.length; i++) hang[i] = new Matrix4f();
@@ -631,6 +634,7 @@ public final class BellRig {
             m = into != null ? into : own;
             Arrays.fill(has, false);
             Arrays.fill(hasHang, false);
+            Arrays.fill(turnsDone, 0);
             BellRig.this.body(st, body);
             bodyRotation(st, brot);
         }
@@ -644,7 +648,10 @@ public final class BellRig {
                 case RIM -> sector(st, part[b], body, out);
                 case CROWN -> band(st, crownY - 3, body, out);
                 case SPOT -> spot(st, part[b], body, out);
-                case ARM, STRAND -> segmentPose(chains[chainOf[b]], seg[b], st.chain[chainOf[b]], brot, out, s);
+                case ARM, STRAND -> {
+                    int ci = chainOf[b];
+                    segmentPose(chains[ci], seg[b], st.chain[ci], turned(ci, seg[b], s), out, s);
+                }
                 case POD, EGG -> {
                     // hung where it touches its strand or arm, just as that is drawn there
                     Matrix4f base = Float.isNaN(blobU[b])
@@ -655,6 +662,20 @@ public final class BellRig {
             }
             has[b] = true;
             return out;
+        }
+
+        /** how piece i of chain ci is turned (each piece on from the one above, from his body's turn) */
+        Quaternionf turned(int ci, int i, Scratch s) {
+            Chain c = chains[ci];
+            Quaternionf[] r = turns[ci];
+            if (r == null) {
+                r = turns[ci] = new Quaternionf[c.bones.length];
+                for (int j = 0; j < r.length; j++) r[j] = new Quaternionf();
+            }
+            float[] pts = st.chain[ci];
+            for (int j = turnsDone[ci]; j <= i; j++) turnOn(c, j, pts, r[j].set(j == 0 ? brot : r[j - 1]), s);
+            turnsDone[ci] = Math.max(turnsDone[ci], i + 1);
+            return r[i];
         }
 
         /** what chain c hangs from, as drawn where it hangs */
@@ -721,14 +742,13 @@ public final class BellRig {
      * One segment of a chain laid between its two points: turned from its built direction to the way it points
      * now (the least turn, on top of the way his body is turned), stretched or squashed along it to fit.
      */
-    private void segmentPose(Chain c, int i, float[] pts, Quaternionf from, Matrix4f out, Scratch s) {
+    private void segmentPose(Chain c, int i, float[] pts, Quaternionf r, Matrix4f out, Scratch s) {
         Vector3f j0 = c.joints[i], j1 = c.joints[i + 1];
         Vector3f d0 = s.v.set(j1).sub(j0);
         float l0 = d0.length();
         Vector3f d =
                 s.v2.set(pts[3 * i + 3] - pts[3 * i], pts[3 * i + 4] - pts[3 * i + 1], pts[3 * i + 5] - pts[3 * i + 2]);
         float l = d.length();
-        Quaternionf r = turned(c, i, pts, from, s.q2);
         out.identity().translate(pts[3 * i], pts[3 * i + 1], pts[3 * i + 2]).rotate(r);
         float k = l0 > 1e-4f ? l / l0 : 1f;
         if (Math.abs(k - 1f) > 0.01f) {
@@ -757,25 +777,16 @@ public final class BellRig {
      * the least turn that takes the way it went (turned as the piece above is) to the way it goes now, starting from
      * his body's turn. Turned straight from his body's turn instead, a piece swung up past level (a strand flung up and
      * round in the whirlpool) has no one least turn, and it spun right round about its own length from one tick to
-     * the next.
+     * the next. (out: the piece above's turn, or his body's for the first; turned on to this piece's in place)
      */
-    private Quaternionf turned(Chain c, int i, float[] pts, Quaternionf from, Quaternionf out) {
-        out.set(from);
-        Vector3f d0 = turnA.get(), d = turnB.get();
-        Quaternionf q = turnQ.get();
-        for (int j = 0; j <= i; j++) {
-            d0.set(c.joints[j + 1]).sub(c.joints[j]);
-            out.transform(d0);
-            d.set(pts[3 * j + 3] - pts[3 * j], pts[3 * j + 4] - pts[3 * j + 1], pts[3 * j + 5] - pts[3 * j + 2]);
-            if (d0.lengthSquared() < 1e-8f || d.lengthSquared() < 1e-8f) continue;
-            out.premul(q.rotationTo(d0.normalize(), d.normalize()));
-        }
-        return out;
+    private static Quaternionf turnOn(Chain c, int j, float[] pts, Quaternionf out, Scratch s) {
+        Vector3f d0 = s.v.set(c.joints[j + 1]).sub(c.joints[j]);
+        out.transform(d0);
+        Vector3f d =
+                s.v2.set(pts[3 * j + 3] - pts[3 * j], pts[3 * j + 4] - pts[3 * j + 1], pts[3 * j + 5] - pts[3 * j + 2]);
+        if (d0.lengthSquared() < 1e-8f || d.lengthSquared() < 1e-8f) return out;
+        return out.premul(s.q3.rotationTo(d0.normalize(), d.normalize()));
     }
-
-    private static final ThreadLocal<Vector3f> turnA = ThreadLocal.withInitial(Vector3f::new),
-            turnB = ThreadLocal.withInitial(Vector3f::new);
-    private static final ThreadLocal<Quaternionf> turnQ = ThreadLocal.withInitial(Quaternionf::new);
 
     /** a piece squashed shorter than this (of its built length) is drawn in: it shrinks across as well */
     public static final float DRAWN_IN = 0.15f;
