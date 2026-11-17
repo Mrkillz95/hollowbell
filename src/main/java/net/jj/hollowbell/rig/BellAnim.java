@@ -31,9 +31,14 @@ public final class BellAnim {
     /** per chain: how much a move has hold of it right now, eased in quickly and let go slowly */
     private final float[] held;
     /** each chain's length as drawn now (a strand reeled in to lift something is shorter) */
-    private final float[] stretchNow;
+    private final float[] stretchNow, stretchVel;
     /** per chain: the last step one of its joints was pushed by the ground or his bell (a knock, not a swing) */
     private final long[] knockedAt;
+    /**
+     * per chain: the last step one of its joints was pushed by the ground (not his bell: a strand swept by his bell
+     * turning over, held to its bend outright like one lying on the ground, was flung tens of blocks in a tick)
+     */
+    private final long[] groundKnockAt;
 
     private boolean started;
     private long steps;
@@ -132,18 +137,32 @@ public final class BellAnim {
         eased = new float[nc][];
         held = new float[nc];
         stretchNow = new float[nc];
+        stretchVel = new float[nc];
         Arrays.fill(stretchNow, 1f);
         knockedAt = new long[nc];
         Arrays.fill(knockedAt, -100);
+        groundKnockAt = new long[nc];
+        Arrays.fill(groundKnockAt, -100);
         groundAt = new float[nc];
         Arrays.fill(groundAt, Float.NaN);
+        shapeUsed = new float[nc][];
+        shapeOff = new float[nc][];
+        shapeAge = new int[nc];
+        shapeLen = new int[nc];
+        for (int c = 0; c < nc; c++) {
+            int n = 3 * rig.chains[c].points();
+            shapeUsed[c] = new float[n];
+            shapeOff[c] = new float[n];
+        }
         soleFix = new float[nc][];
+        soleWant = new float[nc][];
         onFloor = new boolean[nc][];
         groundJ = new float[nc][];
         for (int c = 0; c < nc; c++) {
             groundJ[c] = new float[rig.chains[c].joints.length];
             Arrays.fill(groundJ[c], Float.NaN);
             soleFix[c] = new float[rig.chains[c].joints.length];
+            soleWant[c] = new float[rig.chains[c].joints.length];
             onFloor[c] = new boolean[rig.chains[c].joints.length];
         }
         for (int c = 0; c < nc; c++) {
@@ -316,19 +335,27 @@ public final class BellAnim {
 
     // a move cut off, or one following another
 
-    /** how many ticks what a move asked of his body takes to let go after it ends or is cut off */
-    static final int LET_GO = 16;
+    /** the fewest and most ticks what a move asked of his body takes to let go after it ends or is cut off */
+    static final int LET_GO = 16, LET_GO_MAX = 90;
 
     private static final int NA = 5;
-    private final float[] askRaw = new float[NA], askUsed = new float[NA], askOff = new float[NA];
-    private int askMove = Integer.MIN_VALUE, askAge = LET_GO;
+    private final float[] askRaw = new float[NA],
+            askUsed = new float[NA],
+            askWas = new float[NA],
+            askOff = new float[NA],
+            askVel = new float[NA];
+    private int askMove = Integer.MIN_VALUE, askAge, askLen;
     private float askT;
+    /** the move changed this tick (it ended, was cut off, or another began): what it asked is being let go of */
+    private boolean moveChanged;
 
     /**
      * The bell brought down, squeezed, lowered or turned over by a move is asked for afresh each tick, so a move cut
      * off halfway (or one starting where another left off) would snap those asks to new values in one tick: his body
      * springs would jump and every strand hung off it would be flung (a drop cut off as he landed threw his strands
-     * like whips). Instead, at the change what was asked is held, and eased over to the new move's asks.
+     * like whips). Instead, at the change what was asked is held, and eased over to the new move's asks: the further
+     * it has to go, the longer (a drop cut off with his bell on the ground lifts him over seconds, the way he swims
+     * back up), leaving at the speed it was going and coming to rest without going past.
      */
     private void letGoOfAsks(In in, boolean first) {
         float[] raw = askRaw;
@@ -338,23 +365,50 @@ public final class BellAnim {
         raw[3] = in.flipX;
         raw[4] = in.flipZ;
         boolean changed = in.move != askMove || in.moveT < askT;
+        moveChanged = changed && !first;
         askMove = in.move;
         askT = in.moveT;
         if (first) {
             Arrays.fill(askOff, 0f);
-            askAge = LET_GO;
+            Arrays.fill(askVel, 0f);
+            System.arraycopy(raw, 0, askUsed, 0, NA);
+            System.arraycopy(raw, 0, askWas, 0, NA);
+            askLen = 0;
         } else if (changed) {
             for (int k = 0; k < NA; k++) askOff[k] = askUsed[k] - raw[k];
+            // (as model blocks of him: the bell brought all the way down is about 110, a squeeze about 12, a whole
+            // turn over about 150 at the rim)
+            float far = Math.max(
+                    Math.max(Math.abs(askOff[0]) * 110f, Math.abs(askOff[1]) * 12f),
+                    Math.max(Math.abs(askOff[2]), 150f * Math.max(Math.abs(askOff[3]), Math.abs(askOff[4]))));
+            askLen = Mth.clamp(Math.round(far / 3f), LET_GO, LET_GO_MAX);
             askAge = 0;
+            for (int k = 0; k < NA; k++) askVel[k] = leaving(askOff[k], (askUsed[k] - askWas[k]) * askLen);
         }
-        float w = askAge >= LET_GO ? 0f : 1f - smoothK(askAge / (float) LET_GO);
-        if (askAge < LET_GO) askAge++;
-        for (int k = 0; k < NA; k++) askUsed[k] = raw[k] + askOff[k] * w;
+        float w = 0f, wv = 0f;
+        if (askLen > 0) {
+            askAge++;
+            float k = Math.min(1f, askAge / (float) askLen);
+            w = 1f - smoothK(k);
+            wv = k * (1f - k) * (1f - k);
+            if (askAge >= askLen) askLen = 0;
+        }
+        System.arraycopy(askUsed, 0, askWas, 0, NA);
+        for (int k = 0; k < NA; k++) askUsed[k] = raw[k] + askOff[k] * w + askVel[k] * wv;
         in.drop = Mth.clamp(askUsed[0], 0f, 1f);
         in.squeezeAdd = askUsed[1];
         in.lowerAdd = askUsed[2];
         in.flipX = askUsed[3];
         in.flipZ = askUsed[4];
+    }
+
+    /**
+     * the speed a let-go starts at (over the whole easing), from the speed it was going m: kept from carrying it past
+     * where it comes to rest (no more than 3 times how far it has to go, toward it) or far on the way it was going
+     * (twice, away)
+     */
+    private static float leaving(float off, float m) {
+        return Math.abs(off) < 1e-6f ? 0f : Mth.clamp(m / off, -3f, 2f) * off;
     }
 
     private static float smoothK(float k) {
@@ -383,6 +437,14 @@ public final class BellAnim {
             qLocal = new Quaternionf(),
             qTmp = new Quaternionf();
     private final Vector3f tv = new Vector3f(), tv2 = new Vector3f();
+    /** how far a strand inside his bell is pushed back out from under it in a tick, at most (model blocks) */
+    static final float UNDER_PUSH = 4f;
+    /** how far a strand's piece may turn about the joint above in a tick, a share of its length (about 20 deg) */
+    static final float TURN = 0.35f;
+    /** how much of the way to what the fitting of the soles found goes in a tick */
+    static final float SOLE_EASE = 0.25f;
+    /** how much of the way to the ground just looked at a joint's ground goes in a tick */
+    static final float GROUND_EASE = 0.3f;
     /** how far a piece lying on the ground slides out along it in a tick, at most (model blocks) */
     private static final float SLIDE = 1.5f;
 
@@ -403,10 +465,18 @@ public final class BellAnim {
             rig.anchor(st, ch, mBody, mAnchor);
             // a strand drawn in to lift something pays out again slowly when it lets go, a heavy wet rope dropping
             // back, not at once
+            // (as a weight on a spring: it starts paying out slowly and slows as it comes to its length, never jerked)
             float reel = !ch.arm && ch.index == st.grabStrand ? 1f - 0.8f * st.grabLift : 1f;
-            stretchNow[c] =
-                    first ? reel : stretchNow[c] + (reel - stretchNow[c]) * (reel > stretchNow[c] ? 0.06f : 0.3f);
+            if (first) {
+                stretchNow[c] = reel;
+                stretchVel[c] = 0f;
+            } else {
+                float k = reel > stretchNow[c] ? 0.006f : 0.09f;
+                stretchVel[c] += k * (reel - stretchNow[c]) - 2f * (float) Math.sqrt(k) * stretchVel[c];
+                stretchNow[c] += stretchVel[c];
+            }
             targets(ch, st, mAnchor, raw, stretchNow[c]);
+            blendOut(c, raw, first);
             if (first) {
                 System.arraycopy(raw, 0, tg, 0, raw.length);
                 System.arraycopy(raw, 0, p, 0, raw.length);
@@ -422,7 +492,9 @@ public final class BellAnim {
             // toward the same way: so a move started, ended or cut off halfway never yanks an arm or a strand
             boolean scripted = scripted(ch, st);
             held[c] += ((scripted ? 1f : 0f) - held[c]) * (scripted ? 0.3f : 0.06f);
-            float ease = scripted ? (ch.arm ? 0.55f : 0.35f) : 0.07f + 0.05f * (1f - held[c]);
+            // (as it lets go, the shape it eases toward is itself let go of smoothly, see blendOut: so it keeps
+            // following that closely, and only slowly goes back to its own easy sway)
+            float ease = Mth.lerp(held[c], 0.12f, ch.arm ? 0.55f : 0.35f);
             // eased in the frame of the joint above, so the ease never drags a chain away from where it hangs. A
             // strand's piece eases from the way it pointed a tick ago (from the joint above's new place, every piece
             // grows longer when what it hangs from moves fast), and keeps the length asked for
@@ -430,9 +502,22 @@ public final class BellAnim {
             // the ground under this one, looked at now and then (and kept level with the world as he rises and sinks)
             // (under each joint, so a strand lying over a bump or into a dip lies on it)
             float[] gj = groundJ[c];
-            if ((tick + c) % 4 == 0) for (int i = 0; i <= m; i++) gj[i] = in.ground.at(p[3 * i], p[3 * i + 2]);
-            else for (int i = 0; i <= m; i++) gj[i] -= in.shiftY;
+            // (a joint lying on the ground or just over it looks every tick, so it goes up a step as it comes to it
+            // and not a few ticks after, and the ground under it is eased to, so a step lifts it over a couple of ticks
+            // instead of all at once: a strand dragged over uneven ground jerked up a block each time it looked)
+            boolean look = (tick + c) % 4 == 0;
+            float[] sole = rig.sole()[c];
+            for (int i = 0; i <= m; i++) {
+                float g = gj[i] - in.shiftY;
+                if (look || onFloor[c][i] || p[3 * i + 1] - g < 2f * sole[i] + 6f) {
+                    float now = in.ground.at(p[3 * i], p[3 * i + 2]);
+                    g = Float.isNaN(g) || Float.isNaN(now) ? now : g + (now - g) * GROUND_EASE;
+                }
+                gj[i] = g;
+            }
             groundAt[c] = gj[m];
+            float[] fix = soleFix[c], fixWant = soleWant[c];
+            for (int i = 0; i <= m; i++) fix[i] += (fixWant[i] - fix[i]) * SOLE_EASE;
             float hk = held[c];
             float k0, damp, abs;
             if (ch.arm) {
@@ -445,6 +530,7 @@ public final class BellAnim {
                 abs = Mth.lerp(hk, 0.1f, 0.7f);
             }
             // the top joint goes where it hangs from
+            float rx0 = p[0], ry0 = p[1], rz0 = p[2];
             p[0] = tg[0];
             p[1] = tg[1];
             p[2] = tg[2];
@@ -483,6 +569,24 @@ public final class BellAnim {
                     mx *= f;
                     my *= f;
                     mz *= f;
+                }
+                if (!ch.arm) {
+                    // a strand piece turns only so far about the joint above in a tick: whipped by the strand it hangs
+                    // from, a short one was flung right over itself in a couple of ticks, the pods on it spinning
+                    // (the piece as it was last tick: the root never moved with the water, the rest did)
+                    float ox = i == 1 ? q[o] + in.shiftX - rx0 : q[o] - q[o - 3],
+                            oy = i == 1 ? q[o + 1] + in.shiftY - ry0 : q[o + 1] - q[o - 2],
+                            oz = i == 1 ? q[o + 2] + in.shiftZ - rz0 : q[o + 2] - q[o - 1];
+                    float dx = p[o] + mx - p[o - 3] - ox, dy = p[o + 1] + my - p[o - 2] - oy,
+                            dz = p[o + 2] + mz - p[o - 1] - oz;
+                    float seg = (float) Math.sqrt(ox * ox + oy * oy + oz * oz), dl = dx * dx + dy * dy + dz * dz;
+                    float most = TURN * seg;
+                    if (seg > 1e-3f && dl > most * most) {
+                        float f = most / (float) Math.sqrt(dl);
+                        mx = p[o - 3] + ox + dx * f - p[o];
+                        my = p[o - 2] + oy + dy * f - p[o + 1];
+                        mz = p[o - 1] + oz + dz * f - p[o + 2];
+                    }
                 }
                 p[o] += mx;
                 p[o + 1] += my;
@@ -550,7 +654,7 @@ public final class BellAnim {
                         // limit, a strand was yanked along whole when his bell came down hard)
                         // (lying on the ground or knocked against it, held to the limit outright: there the ground
                         // would otherwise fold it right back on itself)
-                        boolean onGround = steps - knockedAt[c] <= 8;
+                        boolean onGround = steps - groundKnockAt[c] <= 8;
                         float to = ang - (ang - lim) * (onGround ? 1f : 0.25f);
                         float cl = Mth.cos(to), sn = Mth.sin(to);
                         dx = bx * cl + sx / sl * sn;
@@ -573,7 +677,7 @@ public final class BellAnim {
                 p[o + 1] = p[o - 2] + dy / d * want;
                 p[o + 2] = p[o - 1] + dz / d * want;
                 // never up through his own bell: kept under it, in his own body's frame
-                if (!ch.arm) underBell(c, p, o);
+                if (!ch.arm) underBell(c, p, q, o);
                 // never into the ground: it rests on it and drags
                 if (!Float.isNaN(gy)) onTheGround(ch, c, p, q, o, gy, want);
             }
@@ -587,6 +691,66 @@ public final class BellAnim {
             carryChain = -1;
             carryP0 = null;
         }
+    }
+
+    // a move's shape let go of
+
+    /** per chain: the shape it was asked for last tick (after the letting go) */
+    private final float[][] shapeUsed;
+    /** per chain: what the old move's shape was off the new one's at the change, piece by piece */
+    private final float[][] shapeOff;
+    /** per chain: ticks into letting go of the old shape, and how many it takes (0: not letting go) */
+    private final int[] shapeAge, shapeLen;
+
+    /** the fewest and most ticks a move's shape of an arm or strand takes to let go */
+    static final int SHAPE_MIN = 10, SHAPE_MAX = 40;
+
+    /**
+     * The shape a move asks of an arm or strand ends at once when the move does (or is cut off): a strand swung right
+     * across in a sweep would be asked to hang straight again from one tick to the next, and the stiff hold the move
+     * had on it would fling it back. Instead, at the change, how far each piece of the old shape was off the new one
+     * is kept, and eased out over 10 to 40 ticks (the further its end is off, the longer). The pieces (each joint from
+     * the one above) are what is eased, so the blend never pulls a chain away from where it hangs. (Carrying on at the
+     * speed the old shape was going flung a strand cut off mid-whip on further.)
+     */
+    private void blendOut(int c, float[] raw, boolean first) {
+        float[] used = shapeUsed[c], off = shapeOff[c];
+        int n = raw.length;
+        if (first) {
+            System.arraycopy(raw, 0, used, 0, n);
+            shapeLen[c] = 0;
+            return;
+        }
+        if (moveChanged) {
+            float ex = 0f, ey = 0f, ez = 0f;
+            for (int i = 3; i < n; i += 3) {
+                off[i] = (used[i] - used[i - 3]) - (raw[i] - raw[i - 3]);
+                off[i + 1] = (used[i + 1] - used[i - 2]) - (raw[i + 1] - raw[i - 2]);
+                off[i + 2] = (used[i + 2] - used[i - 1]) - (raw[i + 2] - raw[i - 1]);
+                ex += off[i];
+                ey += off[i + 1];
+                ez += off[i + 2];
+            }
+            // (how long: by how far its end is off where the new shape puts it)
+            float far = (float) Math.sqrt(ex * ex + ey * ey + ez * ez);
+            int len = Mth.clamp(Math.round(far / 4f), SHAPE_MIN, SHAPE_MAX);
+            shapeLen[c] = len;
+            shapeAge[c] = 0;
+        }
+        float w = 0f;
+        if (shapeLen[c] > 0) {
+            w = 1f - smoothK(Math.min(1f, ++shapeAge[c] / (float) shapeLen[c]));
+            if (shapeAge[c] >= shapeLen[c]) shapeLen[c] = 0;
+        }
+        if (w == 0f) {
+            System.arraycopy(raw, 0, used, 0, n);
+            return;
+        }
+        used[0] = raw[0];
+        used[1] = raw[1];
+        used[2] = raw[2];
+        for (int i = 3; i < n; i++) used[i] = used[i - 3] + (raw[i] - raw[i - 3]) + off[i] * w;
+        System.arraycopy(used, 0, raw, 0, n);
     }
 
     /** the asked-for shape eased toward, piece by piece in the frame of the joint above */
@@ -624,14 +788,21 @@ public final class BellAnim {
         }
     }
 
-    private void underBell(int c, float[] p, int o) {
+    private void underBell(int c, float[] p, float[] q, int o) {
         tv.set(p[o], p[o + 1], p[o + 2]);
         mInv.transformPosition(tv);
         float top = rig.rimY - 2f;
         if (tv.y > top && tv.x * tv.x + tv.z * tv.z < 95f * 95f) {
-            tv.y = top;
+            // (out a little at a time: his bell turning over sweeps through his strands, and pushed out all at once
+            // they were flung tens of blocks in a tick)
+            tv.y = Math.max(top, tv.y - UNDER_PUSH);
             knockedAt[c] = steps;
             mBody.transformPosition(tv);
+            // (where it was a tick ago goes with it: pushed out from under his bell as it turns over or comes down,
+            // it is carried, not flung on at the speed of the push)
+            q[o] += tv.x - p[o];
+            q[o + 1] += tv.y - p[o + 1];
+            q[o + 2] += tv.z - p[o + 2];
             p[o] = tv.x;
             p[o + 1] = tv.y;
             p[o + 2] = tv.z;
@@ -684,6 +855,7 @@ public final class BellAnim {
             p[o + 2] += sz;
             p[o + 1] = floor;
             knockedAt[c] = steps;
+            groundKnockAt[c] = steps;
             if (q[o + 1] < floor) q[o + 1] = floor;
             q[o] += (p[o] - q[o]) * 0.35f;
             q[o + 2] += (p[o + 2] - q[o + 2]) * 0.35f;
@@ -696,6 +868,11 @@ public final class BellAnim {
      * bends between its joints).
      */
     private final float[][] soleFix;
+    /**
+     * what the fitting last found each should be: eased to a little each tick (taken at once, a piece lying on the
+     * ground dropped or rose by up to a block or two every fourth tick, and shook)
+     */
+    private final float[][] soleWant;
 
     private final boolean[][] onFloor;
     /** how far he sinks for the strand lash (Moves: lowerAdd), in his own blocks */
@@ -757,7 +934,7 @@ public final class BellAnim {
                 float sole = rig.sole()[c][at];
                 // (a piece buckled under itself is pushed up only so far, so a coil never lifts a whole arm)
                 gap = Mth.clamp(gap, -sole - 2f, sole + 2f);
-                soleFix[c][at] = Mth.clamp(soleFix[c][at] - 0.8f * gap, -0.9f * sole, 3f * sole + 4f);
+                soleWant[c][at] = Mth.clamp(soleFix[c][at] - 0.8f * gap, -0.9f * sole, 3f * sole + 4f);
             }
         }
     }
