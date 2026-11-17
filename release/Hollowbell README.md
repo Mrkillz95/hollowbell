@@ -28,7 +28,7 @@ into his hollow dome and see what he's caught.
 - His moves, particles, sounds and screen shake now shrink with him at every size, and his minions do too.
 - Health, damage, armour and speed follow one size rule shared by all eight giants. At size 0.01 every giant has 60 health (the Swarmforge 40).
 - The Guide's **go** now beats his keeping away from another giant. In minigame worlds and scripted adventures giants never hold meetings.
-- When he's small he flies a little slower now, so he never outruns Cerberus, the fastest giant. From about a third of his size up he's as fast as before.
+- When he's small he flies a little slower now, so he never outruns the Emberfrost Hound, the fastest giant. From about a third of his size up he's as fast as before.
 
 ### 1.12.42
 

@@ -1,9 +1,11 @@
 # JJ's Giants: all nine in one jar
 
-One jar with all nine giants inside: Pitchgut, Furrowmaw, the Fire & Ice Cerberus, the Hollowbell, the Lantern
+One jar with all nine giants inside: Pitchgut, Furrowmaw, the Emberfrost Hound, the Hollowbell, the Lantern
 Willow, Wreckback, the Swarmforge, the Gloamwick and the Hearthstride, and the **Giants Guide**, a book about all of
 them. It works the same as having the nine jars.
 Each giant keeps its own name inside, so your worlds keep working.
+The Emberfrost Hound used to be called the Fire & Ice Cerberus: only his name changed (his `/cerberus` command,
+now also `/emberfrost`, his items and your worlds are the same).
 
 Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reserved.
 
@@ -14,7 +16,7 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giants Guide | 1.16.2 |
 | Pitchgut | 1.35.45 |
 | Furrowmaw | 1.17.42 |
-| Fire & Ice Cerberus | 2.18.42 |
+| Emberfrost Hound | 2.18.42 |
 | Hollowbell | 1.12.45 |
 | Lantern Willow | 1.10.45 |
 | Wreckback | 1.2.50 |
@@ -71,7 +73,7 @@ A book about every giant you have. Right-click it to open it.
   what it does. Click a key and press the one you want; it's the same key as in Minecraft's Controls. Keys that
   clash show red, and each has a Reset, with Reset all at the top.
 - Setting: `giveOnFirstJoin` in `config/jj_giants.json` (on). Turn it off and nobody gets one on joining.
-- New in the Guide 1.4.11: every giant's moves match his own book again, with the Cerberus's triple breath, rift
+- New in the Guide 1.4.11: every giant's moves match his own book again, with the Emberfrost Hound's triple breath, rift
   and leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and his ward, the
   Gloam Lantern.
 - New in the Guide 1.4.12: the Gloamwick's Eclipse has the Hush, his shadow got up, that hunts by sound while the
@@ -85,7 +87,7 @@ A book about every giant you have. Right-click it to open it.
   crouch.
 - New in the Guide 1.4.16: the Drawing setting (in Detail on Giants Performance): Fast to start with, Classic for
   the old drawing.
-- New in the Guide 1.4.17: the new healing rule for every giant, and the right number of Cerberus pelts.
+- New in the Guide 1.4.17: the new healing rule for every giant, and the right number of Emberfrost Hound pelts.
 - New in the Guide 1.5.0: admin settings for operators. `/giants admin list|get|set|reset|log|preset|export|import`
   changes any giant's settings, and the all-giants multipliers, for this world only, with a log of every change.
   Every command that changes a setting takes `world` (this world, the same as saying nothing) or `allworlds` (the
@@ -179,7 +181,7 @@ The Hearthstride gets to work: lasting works for every form, and a Switches page
 
 - The Hearthstride's page says he only fights his foes (it said nobody needs to fight him).
 
-Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Cerberus 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
+Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Emberfrost Hound 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
 Wreckback 1.2.50, Swarmforge 1.4.48, Gloamwick 1.2.29, Hearthstride 1.3.0, Giants Guide 1.16.2.
 
 ## New in 1.17.2
@@ -217,7 +219,7 @@ A big update for the Hearthstride: eight new forms, real move effects, and playe
 - The Hearthstride's page knows all 14 forms and all 70 of his moves by name, says which form each move belongs to,
   and tells about building on him and who his foes are.
 
-Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Cerberus 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
+Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Emberfrost Hound 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
 Wreckback 1.2.50, Swarmforge 1.4.48, Gloamwick 1.2.29, Hearthstride 1.2.0, Giants Guide 1.16.1.
 
 ## New in 1.17.1
@@ -277,11 +279,11 @@ own, and fixes for most giants.
   `/giants players <player> max`.
 - **Safe ground round the Hearthstride:** in the yard round his home, and round him wherever he stands, no fight
   between giants starts, and the giants leave the players there alone and break no blocks. A giant resting beside
-  him won't start fights either. Pitchgut and the Cerberus can still go for the Hearthstride himself.
+  him won't start fights either. Pitchgut and the Emberfrost Hound can still go for the Hearthstride himself.
 - **Held to their size:** a small Furrowmaw, Wreckback or Hollowbell can no longer knock you further than his size
   allows, and nor can a crowd of Furrowlings or Bellings. That covers the Furrowmaw's hits and thrown magma clods,
   Wreckback's claw squeeze, holds, eye beams, lightning and bell's toll, and the Hollowbell's spore clouds, stings,
-  eggs and stingers, and his grip when he has taken you in. A very small Cerberus stays big enough to hit, every part of him, while he moves as well as while he
+  eggs and stingers, and his grip when he has taken you in. A very small Emberfrost Hound stays big enough to hit, every part of him, while he moves as well as while he
   stands still.
 
 ### Each giant, and the Guide
@@ -292,7 +294,7 @@ own, and fixes for most giants.
 - **Furrowmaw:** when he shudders on stepped ground, his rings no longer dip into the ground. When he comes back after
   travelling unseen, he comes up facing where he's going (before, he could turn to the nearest player and crawl off
   backwards).
-- **Cerberus:** after a long ride he still knows you're his rider, so his steps beside you as you get off no longer
+- **Emberfrost Hound:** after a long ride he still knows you're his rider, so his steps beside you as you get off no longer
   hurt you. The game now knows which way he's facing, so a teleport or reloading the world no longer turns him round.
 - **Hollowbell:** Egg rain's eggs land right on their markers on the ground, when he drops them from low down, when
   he aims them far off, and far out in the world. If you're standing on him and one of his arms curls up around you,
@@ -307,7 +309,7 @@ own, and fixes for most giants.
   Close Quarters preset makes each giant's ground a little smaller, so all nine giants fit. In the Speedrun minigame,
   bringing a giant down right at Go now still counts as a best time.
 
-Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Cerberus 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
+Inside: Pitchgut 1.35.45, Furrowmaw 1.17.42, Emberfrost Hound 2.18.42, Hollowbell 1.12.45, Lantern Willow 1.10.45,
 Wreckback 1.2.50, Swarmforge 1.4.48, Gloamwick 1.2.29, Hearthstride 1.1.0, Giants Guide 1.16.0.
 
 ## New in 1.17.0
@@ -332,12 +334,12 @@ front door is a mouth and his two upper windows are eyes.
   and his yard. Find him with a Hearth Lantern.
 - **When he falls** he leaves a ruined cottage and a cold hearth. His Keeper can light it again (16 logs, 16
   cobblestone and a lantern) and he stands up there.
-- Pitchgut and the Cerberus may go for him. Every other giant keeps away from him, and won't start a fight with
+- Pitchgut and the Emberfrost Hound may go for him. Every other giant keeps away from him, and won't start a fight with
   another giant near him.
 - The Giants Guide has his page, the admin book has his settings, and the Performance screen his chimney smoke and
   lit windows. He never fights in minigames, and he's earned by trust, so he isn't one of My Giant's picks.
 
-Inside: Pitchgut 1.35.44, Furrowmaw 1.17.41, Cerberus 2.18.41, Hollowbell 1.12.44, Lantern Willow 1.10.44,
+Inside: Pitchgut 1.35.44, Furrowmaw 1.17.41, Emberfrost Hound 2.18.41, Hollowbell 1.12.44, Lantern Willow 1.10.44,
 Wreckback 1.2.49, Swarmforge 1.4.47, Gloamwick 1.2.28, Hearthstride 1.0.0, Giants Guide 1.15.0.
 
 ## New in 1.16.2
@@ -363,9 +365,9 @@ Wreck Cove Rescue's guard and giving tags from the book.
 
 ### Speeds
 
-- **Cerberus is the fastest giant**, at every size: about 15 blocks a second at full size.
+- **The Emberfrost Hound is the fastest giant**, at every size: about 15 blocks a second at full size.
 - **Wreckback is faster:** about 5 blocks a second on land, 6 when he comes after you, 6.5 in the sea.
-- Furrowmaw and Hollowbell are a little slower when they're small, so they never outrun Cerberus. At full size they're
+- Furrowmaw and Hollowbell are a little slower when they're small, so they never outrun the Emberfrost Hound. At full size they're
   as fast as before.
 
 ### Giants and the Guide
@@ -389,7 +391,7 @@ Wreck Cove Rescue's guard and giving tags from the book.
 - A tag's title can be shown alone: set **His own name** to *Left off* and his boss bar says just "Terror of the Bay"
   instead of "Wreckback, Terror of the Bay".
 
-Inside: Pitchgut 1.35.43, Furrowmaw 1.17.40, Cerberus 2.18.40, Hollowbell 1.12.43, Lantern Willow 1.10.43,
+Inside: Pitchgut 1.35.43, Furrowmaw 1.17.40, Emberfrost Hound 2.18.40, Hollowbell 1.12.43, Lantern Willow 1.10.43,
 Wreckback 1.2.48, Swarmforge 1.4.46, Gloamwick 1.2.27, Giants Guide 1.14.2.
 
 ## New in 1.16.1
@@ -420,7 +422,7 @@ full test run: every changed mod was built and the jar was checked on a server.
 - Swarmforge's Special and Behaviour pages: the robot switches no longer overlap.
 - Question buttons wrap their text onto a second line instead of running off the button.
 
-Inside: Pitchgut 1.35.42, Furrowmaw 1.17.39, Cerberus 2.18.39, Hollowbell 1.12.42, Lantern Willow 1.10.42,
+Inside: Pitchgut 1.35.42, Furrowmaw 1.17.39, Emberfrost Hound 2.18.39, Hollowbell 1.12.42, Lantern Willow 1.10.42,
 Wreckback 1.2.47, Swarmforge 1.4.45, Gloamwick 1.2.26, Giants Guide 1.14.1.
 
 ## New in 1.16.0
@@ -448,7 +450,7 @@ mod was built and the jar was load-checked on a server.
   near the fight right after Stop.
 - The Wreck Cove Rescue's giants are smaller, so both fit the cove.
 
-Inside: Pitchgut 1.35.42, Furrowmaw 1.17.39, Cerberus 2.18.39, Hollowbell 1.12.41, Lantern Willow 1.10.42,
+Inside: Pitchgut 1.35.42, Furrowmaw 1.17.39, Emberfrost Hound 2.18.39, Hollowbell 1.12.41, Lantern Willow 1.10.42,
 Wreckback 1.2.47, Swarmforge 1.4.45, Gloamwick 1.2.26, Giants Guide 1.14.0.
 
 ## New in 1.15.0
@@ -479,7 +481,7 @@ Wreckback 1.2.47, Swarmforge 1.4.45, Gloamwick 1.2.26, Giants Guide 1.14.0.
 - Left as shipped, every new setting matches 1.14.0: giant fights go exactly as before, and nothing starts until an
   admin starts it.
 
-Inside: Pitchgut 1.35.41, Furrowmaw 1.17.38, Cerberus 2.18.38, Hollowbell 1.12.40, Lantern Willow 1.10.41,
+Inside: Pitchgut 1.35.41, Furrowmaw 1.17.38, Emberfrost Hound 2.18.38, Hollowbell 1.12.40, Lantern Willow 1.10.41,
 Wreckback 1.2.46, Swarmforge 1.4.44, Gloamwick 1.2.25, Giants Guide 1.13.0.
 
 ## New in 1.14.0
@@ -487,7 +489,7 @@ Wreckback 1.2.46, Swarmforge 1.4.44, Gloamwick 1.2.25, Giants Guide 1.13.0.
 - **Seven more systems** on the admin book's Systems page, under "The world around them" (every one off until an
   admin turns it on): **Village reactions** (villagers flee from a wild giant, hide as for a raid, or gather round a
   calm one, look up at him and leave him bread each day; iron golems can go for wild giants), **Mob followers** (each
-  wild giant gathers a band of his own kind of creature: Pitchgut magma cubes, Furrowmaw husks, Cerberus wither
+  wild giant gathers a band of his own kind of creature: Pitchgut magma cubes, Furrowmaw husks, Emberfrost Hound wither
   skeletons, Hollowbell phantoms, the Willow slimes, Wreckback drowned, the Swarmforge vindicators, the Gloamwick
   vexes; they fight beside him and drop nothing), **Weather Gods** (each giant brings his own weather to the land
   round him, seen only by players near him: ash, dust, sleet and embers, a storm, mist, a squall, smog, gloaming),
@@ -500,7 +502,7 @@ Wreckback 1.2.46, Swarmforge 1.4.44, Gloamwick 1.2.25, Giants Guide 1.13.0.
 - **Remains made from each giant's own body**: with corpses or skeletons on, a fallen giant lies where he fell, his
   real size and heading; a corpse rots away in four stages down to his skeleton, and a skeleton stays for good.
   Admins can lay one anywhere: `/giants admin systems remains <giant> <size> skeleton|corpse [stage]`.
-- **Dens and arenas with real detail** (World tools): Pitchgut's crater, the Furrowmaw's burrow, the Cerberus's
+- **Dens and arenas with real detail** (World tools): Pitchgut's crater, the Furrowmaw's burrow, the Emberfrost Hound's
   kennel, the Hollowbell's roost, the Willow's mire, Wreckback's cove, the Swarmforge's yard and the Gloamwick's
   glade, each big enough for him to fit inside, and arenas with seats, banners and a clear floor. Nothing in them
   traps or slows you, grows, spreads or falls.
@@ -508,11 +510,11 @@ Wreckback 1.2.46, Swarmforge 1.4.44, Gloamwick 1.2.25, Giants Guide 1.13.0.
   where they hit and getting off him sets you clear of his body; the Swarmforge's brutes hit what they swing at; the
   Willow's Nether shrine stands on the floor; the Hollowbell stops a little further back when following you and a
   rider's press up lifts him sooner; two gaps in the Furrowmaw's body are closed and jumping up from a seat sets you
-  right on him; standing up from a seat on the Cerberus sets you clear of his edge.
+  right on him; standing up from a seat on the Emberfrost Hound sets you clear of his edge.
 - Steadier game tests behind the scenes.
 - Left as shipped, every new system is off and the giants play as in 1.13.0 apart from these fixes.
 
-Inside: Pitchgut 1.35.40, Furrowmaw 1.17.37, Cerberus 2.18.37, Hollowbell 1.12.39, Lantern Willow 1.10.40,
+Inside: Pitchgut 1.35.40, Furrowmaw 1.17.37, Emberfrost Hound 2.18.37, Hollowbell 1.12.39, Lantern Willow 1.10.40,
 Wreckback 1.2.45, Swarmforge 1.4.43, Gloamwick 1.2.24, Giants Guide 1.12.0.
 
 ## New in 1.13.0
@@ -541,7 +543,7 @@ Wreckback 1.2.45, Swarmforge 1.4.43, Gloamwick 1.2.24, Giants Guide 1.12.0.
   The pick screen shows every giant as Normal danger.
 - Left as shipped, nothing about the giants changes except Follow me's distances.
 
-Inside: Pitchgut 1.35.39, Furrowmaw 1.17.36, Cerberus 2.18.36, Hollowbell 1.12.38, Lantern Willow 1.10.39,
+Inside: Pitchgut 1.35.39, Furrowmaw 1.17.36, Emberfrost Hound 2.18.36, Hollowbell 1.12.38, Lantern Willow 1.10.39,
 Wreckback 1.2.44, Swarmforge 1.4.42, Gloamwick 1.2.23, Giants Guide 1.11.0.
 
 ## New in 1.12.0
@@ -565,7 +567,7 @@ Wreckback 1.2.44, Swarmforge 1.4.42, Gloamwick 1.2.23, Giants Guide 1.11.0.
   mode also keeps the fun tools' notes to other admins out of chat (the change log keeps them).
 - Left as shipped, nothing changes: nothing is paused, quiet, scheduled or kept out until an admin sets it.
 
-Inside: Pitchgut 1.35.38, Furrowmaw 1.17.35, Cerberus 2.18.35, Hollowbell 1.12.37, Lantern Willow 1.10.38,
+Inside: Pitchgut 1.35.38, Furrowmaw 1.17.35, Emberfrost Hound 2.18.35, Hollowbell 1.12.37, Lantern Willow 1.10.38,
 Wreckback 1.2.43, Swarmforge 1.4.41, Gloamwick 1.2.22, Giants Guide 1.10.0.
 
 ## New in 1.11.0
@@ -585,10 +587,10 @@ Wreckback 1.2.43, Swarmforge 1.4.41, Gloamwick 1.2.22, Giants Guide 1.10.0.
   giant at once on All giants (`/giants admin setall`), See all changes on preset previews, and a big Giants button
   on Create World's first tab.
 - **Meeting other giants**, a new setting for every giant: decide (as always), fight, run away or ignore.
-- **Follow me** fixed on the Cerberus, Hollowbell, Wreckback, Lantern Willow and Gloamwick.
+- **Follow me** fixed on the Emberfrost Hound, Hollowbell, Wreckback, Lantern Willow and Gloamwick.
 - Left as shipped, nothing changes: My Giant is off and every player switch is on.
 
-Inside: Pitchgut 1.35.37, Furrowmaw 1.17.34, Cerberus 2.18.34, Hollowbell 1.12.36, Lantern Willow 1.10.37,
+Inside: Pitchgut 1.35.37, Furrowmaw 1.17.34, Emberfrost Hound 2.18.34, Hollowbell 1.12.36, Lantern Willow 1.10.37,
 Wreckback 1.2.42, Swarmforge 1.4.40, Gloamwick 1.2.21, Giants Guide 1.9.0.
 
 ## New in 1.10.0
@@ -605,7 +607,7 @@ Wreckback 1.2.42, Swarmforge 1.4.40, Gloamwick 1.2.21, Giants Guide 1.9.0.
 - **One Life**: once a giant's own one falls, his kind never comes back to that world.
 - Left as shipped, every new setting keeps the giants exactly as before. My Giant comes next.
 
-Inside: Pitchgut 1.35.36, Furrowmaw 1.17.33, Cerberus 2.18.33, Hollowbell 1.12.35, Lantern Willow 1.10.36,
+Inside: Pitchgut 1.35.36, Furrowmaw 1.17.33, Emberfrost Hound 2.18.33, Hollowbell 1.12.35, Lantern Willow 1.10.36,
 Wreckback 1.2.41, Swarmforge 1.4.39, Gloamwick 1.2.20, Giants Guide 1.8.0.
 
 ## New in 1.9.0
@@ -622,7 +624,7 @@ Wreckback 1.2.41, Swarmforge 1.4.39, Gloamwick 1.2.20, Giants Guide 1.8.0.
 - **For servers**: put a preset name or a settings string in `config/jj_giants_admin/new_world.txt` and every
   brand-new world the server makes gets it.
 
-Inside: Pitchgut 1.35.35, Furrowmaw 1.17.32, Cerberus 2.18.32, Hollowbell 1.12.34, Lantern Willow 1.10.35,
+Inside: Pitchgut 1.35.35, Furrowmaw 1.17.32, Emberfrost Hound 2.18.32, Hollowbell 1.12.34, Lantern Willow 1.10.35,
 Wreckback 1.2.40, Swarmforge 1.4.38, Gloamwick 1.2.19, Giants Guide 1.7.0.
 
 ## New in 1.8.0
@@ -643,7 +645,7 @@ Wreckback 1.2.40, Swarmforge 1.4.38, Gloamwick 1.2.19, Giants Guide 1.7.0.
 - **Settings sync** for server owners: put a settings string in `config/jj_giants_admin/sync.txt` and the server
   makes it the default for every world when it starts (`/giants admin sync status|now`).
 
-Inside: Pitchgut 1.35.34, Furrowmaw 1.17.31, Cerberus 2.18.31, Hollowbell 1.12.33, Lantern Willow 1.10.34,
+Inside: Pitchgut 1.35.34, Furrowmaw 1.17.31, Emberfrost Hound 2.18.31, Hollowbell 1.12.33, Lantern Willow 1.10.34,
 Wreckback 1.2.39, Swarmforge 1.4.37, Gloamwick 1.2.18, Giants Guide 1.6.0.
 
 ## New in 1.7.0
@@ -666,7 +668,7 @@ Wreckback 1.2.39, Swarmforge 1.4.37, Gloamwick 1.2.18, Giants Guide 1.6.0.
   (the Hold) and the Hollowbell's stinger shots show their names. The Guide's Performance screen shows "Sent to the
   server." instead of a code, and every giant's "stepped out of the world" server log line is worded the same.
 
-Inside: Pitchgut 1.35.33, Furrowmaw 1.17.30, Cerberus 2.18.30, Hollowbell 1.12.32, Lantern Willow 1.10.33,
+Inside: Pitchgut 1.35.33, Furrowmaw 1.17.30, Emberfrost Hound 2.18.30, Hollowbell 1.12.32, Lantern Willow 1.10.33,
 Wreckback 1.2.38, Swarmforge 1.4.36, Gloamwick 1.2.17, Giants Guide 1.5.0.
 
 ## New in 1.6.8
@@ -681,7 +683,7 @@ Wreckback 1.2.38, Swarmforge 1.4.36, Gloamwick 1.2.17, Giants Guide 1.5.0.
   both sides of the book and under it):
   - Pitchgut: one of his eyes on top, Pitchgut flesh round the book (simpler: no nether star, horn or goo).
   - Wreckback: a barnacle block on top, Shell Plates round the book. He drops three more plates (27 to 33).
-  - Cerberus: a blaze rod on top, Cerberus Pelts round the book. He drops three more pelts (29 to 35).
+  - Emberfrost Hound: a blaze rod on top, Emberfrost Pelts round the book. He drops three more pelts (29 to 35).
   - The Swarmforge: a redstone block on top, Forge Plates round the book. He drops three more plates (27).
   - Furrowmaw, Hollowbell, the Lantern Willow and the Gloamwick keep their books as they were.
 - **Every finder is a compass and easy everyday things**, and shows up in your recipe book as soon as you pick up a
@@ -689,7 +691,7 @@ Wreckback 1.2.38, Swarmforge 1.4.36, Gloamwick 1.2.17, Giants Guide 1.5.0.
   of each (a 3 by 2 grid):
   - Pitchgut: a spider eye, with rotten flesh.
   - Furrowmaw: a bone, with coarse dirt.
-  - Cerberus: a snowball, with coal or charcoal.
+  - Emberfrost Hound: a snowball, with coal or charcoal.
   - Hollowbell: an amethyst shard, with glass.
   - The Lantern Willow: a torch, with any kind of log.
   - Wreckback: string, with dried kelp.
@@ -703,9 +705,9 @@ Wreckback 1.2.38, Swarmforge 1.4.36, Gloamwick 1.2.17, Giants Guide 1.5.0.
   them. When he sleeps, real eyelids slide shut over his eyes.
 - **The Gloamwick at small sizes:** his flames, smoke and embers stay where they belong as he moves, and his shake,
   Candlefall and sparks are sized to him.
-- The Giants Guide (1.4.17) has the new healing rule for every giant and the right number of Cerberus pelts.
+- The Giants Guide (1.4.17) has the new healing rule for every giant and the right number of Emberfrost Hound pelts.
 
-Inside: Pitchgut 1.35.32, Furrowmaw 1.17.29, Cerberus 2.18.29, Hollowbell 1.12.31, Lantern Willow 1.10.32,
+Inside: Pitchgut 1.35.32, Furrowmaw 1.17.29, Emberfrost Hound 2.18.29, Hollowbell 1.12.31, Lantern Willow 1.10.32,
 Wreckback 1.2.37, Swarmforge 1.4.35, Gloamwick 1.2.16.
 
 ## New in 1.6.7
@@ -721,7 +723,7 @@ Wreckback 1.2.37, Swarmforge 1.4.35, Gloamwick 1.2.16.
 - **Pitchgut's** footsteps at the edge of loaded land no longer freeze the game.
 - The Giants Guide (1.4.16) explains the Drawing setting.
 
-Inside: Pitchgut 1.35.31, Furrowmaw 1.17.28, Cerberus 2.18.28, Hollowbell 1.12.30, Lantern Willow 1.10.31,
+Inside: Pitchgut 1.35.31, Furrowmaw 1.17.28, Emberfrost Hound 2.18.28, Hollowbell 1.12.30, Lantern Willow 1.10.31,
 Wreckback 1.2.36, Swarmforge 1.4.34, Gloamwick 1.2.15.
 
 ## New in 1.6.6
@@ -731,12 +733,12 @@ Wreckback 1.2.36, Swarmforge 1.4.34, Gloamwick 1.2.15.
 - **Painting a giant's ground**, and painting it again when he comes back, now happen a bit at a time instead of
   freezing the game. Being taken to the Lantern Willow doesn't freeze it either.
 - **The Gloamwick's** eclipse, Night Bellow and Snuff Wave no longer freeze the game.
-- **The Cerberus** no longer fills your game with graphics errors when he's far away. **Hollowbell's** deep toll is
+- **The Emberfrost Hound** no longer fills your game with graphics errors when he's far away. **Hollowbell's** deep toll is
   easier on the game, and **the Swarmforge's** robots spread out their path finding.
 - The Swarmforge's robots and sniper can't see or shoot through land nobody has loaded.
 - The tips of **Furrowmaw's** mandibles are solid now when he holds them out wide, so you can stand and sit on them.
 
-Inside: Pitchgut 1.35.30, Furrowmaw 1.17.27, Cerberus 2.18.27, Hollowbell 1.12.29, Lantern Willow 1.10.30,
+Inside: Pitchgut 1.35.30, Furrowmaw 1.17.27, Emberfrost Hound 2.18.27, Hollowbell 1.12.29, Lantern Willow 1.10.30,
 Wreckback 1.2.35, Swarmforge 1.4.33, Gloamwick 1.2.14.
 
 ## New in 1.6.5
@@ -751,7 +753,7 @@ Wreckback 1.2.35, Swarmforge 1.4.33, Gloamwick 1.2.14.
   and candles come down where he aims them, his Charge runs at where you stood when he set off, and his Stampede
   sends its biggest runner straight at you.
 
-Inside: Pitchgut 1.35.29, Furrowmaw 1.17.26, Cerberus 2.18.26, Hollowbell 1.12.28, Lantern Willow 1.10.29,
+Inside: Pitchgut 1.35.29, Furrowmaw 1.17.26, Emberfrost Hound 2.18.26, Hollowbell 1.12.28, Lantern Willow 1.10.29,
 Wreckback 1.2.34, Swarmforge 1.4.32, Gloamwick 1.2.13.
 
 ## New in 1.6.4
@@ -774,7 +776,7 @@ Wreckback 1.2.34, Swarmforge 1.4.32, Gloamwick 1.2.13.
   30% harder, and you never end up stuck in blocks after he coughs you up.
 - **Giants Guide 1.4.15:** says two seconds for the triple crouch and explains the new 100% model detail.
 
-Inside: Pitchgut 1.35.28, Furrowmaw 1.17.25, Cerberus 2.18.25, Hollowbell 1.12.27, Lantern Willow 1.10.28,
+Inside: Pitchgut 1.35.28, Furrowmaw 1.17.25, Emberfrost Hound 2.18.25, Hollowbell 1.12.27, Lantern Willow 1.10.28,
 Wreckback 1.2.33, Swarmforge 1.4.31, Gloamwick 1.2.12.
 
 ## New in 1.6.3
@@ -805,7 +807,7 @@ Wreckback 1.2.33, Swarmforge 1.4.31, Gloamwick 1.2.12.
   giant's effects in one place, and its **Controls** tab with every giant's keys. The `/giants` page has all the new
   commands, and the Guide tells you about backing down, `/giants flee` and sitting anywhere.
 
-Inside: Pitchgut 1.35.25, Furrowmaw 1.17.22, Cerberus 2.18.23, Hollowbell 1.12.25, Lantern Willow 1.10.26,
+Inside: Pitchgut 1.35.25, Furrowmaw 1.17.22, Emberfrost Hound 2.18.23, Hollowbell 1.12.25, Lantern Willow 1.10.26,
 Wreckback 1.2.31, Swarmforge 1.4.29, Gloamwick 1.2.9.
 
 ## New in 1.6.2
@@ -815,7 +817,7 @@ Wreckback 1.2.31, Swarmforge 1.4.29, Gloamwick 1.2.9.
   moment, and its bite hits very hard.
 - **Giants Guide 1.4.12:** the Gloamwick's Eclipse tells you about the Hush.
 
-Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Cerberus 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
+Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Emberfrost Hound 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
 Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.2.0.
 
 ## New in 1.6.1
@@ -823,7 +825,7 @@ Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.2.0.
 - **The Gloamwick 1.1.4:** in a fight with another giant he keeps fighting when it shoves him a long way off from
   you. Before, he could stop dead in the middle of it while the other giant got its health back.
 
-Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Cerberus 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
+Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Emberfrost Hound 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
 Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.1.4.
 
 ## New in 1.6.0
@@ -836,7 +838,7 @@ Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.1.4.
     real drops of goo and thin threads of dark vapour from his holes.
   - Furrowmaw: his lava breath pours out in an arc and leaves pools that cool, his geysers stand up out of glowing
     cracks, thin smoke rises from his vents, and his legs paw the air like a centipede's.
-  - Cerberus: flickering flame and frost crystals, tall roaring pillars in the firestorm, rings of shaken air when he
+  - Emberfrost Hound: flickering flame and frost crystals, tall roaring pillars in the firestorm, rings of shaken air when he
     roars or howls, and ice spikes, cinders, hail and boulders that are real shapes, not blocks.
   - Hollowbell: rings of sound when he tolls, trails behind his strands and arms, goo pouring from his pods, real sun
     lance beams and stingers with a green streak.
@@ -857,16 +859,16 @@ Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.1.4.
 - **Fixes:**
   - Furrowmaw no longer freezes or steps out of the world when you're near his tail but far from his head.
   - The Lantern Willow's roots come down where and when they hurt, the same on everyone's screen.
-  - The Cerberus no longer stops in the middle of a move when the only one watching is a spectator far off.
+  - The Emberfrost Hound no longer stops in the middle of a move when the only one watching is a spectator far off.
   - Pitchgut's sweeping leg, the Hollowbell's strand lash and the Swarmforge's crane swing, tread crush and ram only
     hit what they really pass through.
   - Wreckback: being dragged, flung or dropped by an anchor or its chain never gives fall damage.
   - The Gloamwick: his book reaches him from anywhere, even out of the world, his front hooves stay down when he
     stands still, his legs step round when he spins, and no more yellow glow on the ground under him at night.
-- **Giants Guide 1.4.11:** every giant's moves match his own book again, with the Cerberus's triple breath, rift and
+- **Giants Guide 1.4.11:** every giant's moves match his own book again, with the Emberfrost Hound's triple breath, rift and
   leaping slam, and the Gloamwick's pages have his real size, his new look, his dark wood and the Gloam Lantern.
 
-Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Cerberus 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
+Inside: Pitchgut 1.35.14, Furrowmaw 1.17.13, Emberfrost Hound 2.18.12, Hollowbell 1.12.16, Lantern Willow 1.10.16,
 Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.1.3.
 
 ## New in 1.5.0
@@ -876,12 +878,12 @@ Wreckback 1.2.19, Swarmforge 1.4.18, Gloamwick 1.1.3.
   the Gloaming, a forest stuck at dusk with the Antler Hollow in the middle. His gear: Wickbark armour (R: Soul Lash,
   Sneak + R: Soul Form), the Gloam Antler with Reap, the Undying Wick, his Codex and the Finder.
 - All the giants know him: each one fights him or keeps away from him when they meet, and their grounds never
-  overlap. He fights Pitchgut, the Cerberus, the Lantern Willow and the Swarmforge, and keeps away from the
+  overlap. He fights Pitchgut, the Emberfrost Hound, the Lantern Willow and the Swarmforge, and keeps away from the
   Furrowmaw, the Hollowbell and Wreckback.
 - The Giants Guide has his pages: who he is, his ground, all his moves, how to fight him, his drops and commands.
   Its Furrowmaw moves list matches his book again.
 
-Inside: Pitchgut 1.35.13, Furrowmaw 1.17.11, Cerberus 2.18.10, Hollowbell 1.12.15, Lantern Willow 1.10.15,
+Inside: Pitchgut 1.35.13, Furrowmaw 1.17.11, Emberfrost Hound 2.18.10, Hollowbell 1.12.15, Lantern Willow 1.10.15,
 Wreckback 1.2.17, Swarmforge 1.4.16, Gloamwick 1.0.0.
 
 ## New in 1.4.51
@@ -891,7 +893,7 @@ Wreckback 1.2.17, Swarmforge 1.4.16, Gloamwick 1.0.0.
 - Every giant's book shows how much wind each attack costs: a thin bar under each one, green, yellow or red if he
   hasn't enough wind left.
 - Every armour set has two powers now (whole set on): R for fighting and Sneak + R for getting about, finding things
-  or making things. Pitchgut: Goo Geyser and All Eyes Open. Furrowmaw: Burrow Strike and Earth Swim. Cerberus:
+  or making things. Pitchgut: Goo Geyser and All Eyes Open. Furrowmaw: Burrow Strike and Earth Swim. Emberfrost Hound:
   Three-Headed Fury and Hellhound's Hunt. Hollowbell: Great Toll and Glass Bell. Lantern Willow: Drowning Roots and
   Angler's Lure. Wreckback: Broadside and Anchor Throw. Swarmforge: War Form and Field Forge. The chestplate and the
   leggings by the hotbar show each wait.
@@ -903,17 +905,17 @@ Wreckback 1.2.17, Swarmforge 1.4.16, Gloamwick 1.0.0.
   half as long on players. The Lantern Willow's roots no longer kill cows and sheep.
 - The Giants Guide's Drops pages show the new powers and weapons.
 
-Inside: Pitchgut 1.35.12, Furrowmaw 1.17.10, Cerberus 2.18.9, Hollowbell 1.12.14, Lantern Willow 1.10.14,
+Inside: Pitchgut 1.35.12, Furrowmaw 1.17.10, Emberfrost Hound 2.18.9, Hollowbell 1.12.14, Lantern Willow 1.10.14,
 Wreckback 1.2.16, Swarmforge 1.4.15.
 
 ## New in 1.4.50
 
-- Cerberus: much easier to hit. Aiming at any part of him you can see, in normal reach, now hits him.
+- Emberfrost Hound: much easier to hit. Aiming at any part of him you can see, in normal reach, now hits him.
 - Swarmforge: the Forge armour's helper robot builds itself again after it's destroyed (no iron), and the armour
   power turns it into a big war robot for 30 seconds. The armour is as strong as the best giant set now.
 - Every giant: a book in your ender chest is nobody's now, like one in any chest.
 
-Inside: Pitchgut 1.35.8, Furrowmaw 1.17.6, Cerberus 2.18.5, Hollowbell 1.12.10, Lantern Willow 1.10.9, Wreckback 1.2.11,
+Inside: Pitchgut 1.35.8, Furrowmaw 1.17.6, Emberfrost Hound 2.18.5, Hollowbell 1.12.10, Lantern Willow 1.10.9, Wreckback 1.2.11,
 Swarmforge 1.4.10.
 
 ## New in 1.4.49
@@ -924,7 +926,7 @@ Swarmforge 1.4.10.
 - The old and the new tracks both stay: each time a fight or biome track starts, it picks one of them.
 - Biome background sounds are a little louder again.
 
-Inside: Pitchgut 1.35.7, Furrowmaw 1.17.5, Cerberus 2.18.4, Hollowbell 1.12.9, Lantern Willow 1.10.8, Wreckback 1.2.10,
+Inside: Pitchgut 1.35.7, Furrowmaw 1.17.5, Emberfrost Hound 2.18.4, Hollowbell 1.12.9, Lantern Willow 1.10.8, Wreckback 1.2.10,
 Swarmforge 1.4.9.
 
 ## New in 1.4.48
@@ -934,7 +936,7 @@ Swarmforge 1.4.9.
 - Every giant: new, calmer music in his biome, and calmer biome sounds: quieter, longer background loops and the
   small sounds come much less often.
 
-Inside: Pitchgut 1.35.6, Furrowmaw 1.17.4, Cerberus 2.18.3, Hollowbell 1.12.8, Lantern Willow 1.10.7, Wreckback 1.2.9,
+Inside: Pitchgut 1.35.6, Furrowmaw 1.17.4, Emberfrost Hound 2.18.3, Hollowbell 1.12.8, Lantern Willow 1.10.7, Wreckback 1.2.9,
 Swarmforge 1.4.8.
 
 ## New in 1.4.47
@@ -942,23 +944,23 @@ Swarmforge 1.4.8.
 - Every giant: beating him always drops enough of his materials to make all his gear and items, at any size.
   Pitchgut now also drops a goo bucket for the Goo Maw, and Wreckback drops wet logs.
 
-Inside: Pitchgut 1.35.5, Furrowmaw 1.17.3, Cerberus 2.18.2, Hollowbell 1.12.7, Lantern Willow 1.10.6, Wreckback 1.2.8,
+Inside: Pitchgut 1.35.5, Furrowmaw 1.17.3, Emberfrost Hound 2.18.2, Hollowbell 1.12.7, Lantern Willow 1.10.6, Wreckback 1.2.8,
 Swarmforge 1.4.7.
 
 ## New in 1.4.46
 
-- Cerberus: his fire and frost breath come out as thick streams now, from all three mouths in Triple Breath.
+- Emberfrost Hound: his fire and frost breath come out as thick streams now, from all three mouths in Triple Breath.
 
-Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Cerberus 2.18.1, Hollowbell 1.12.6, Lantern Willow 1.10.5, Wreckback 1.2.7,
+Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Emberfrost Hound 2.18.1, Hollowbell 1.12.6, Lantern Willow 1.10.5, Wreckback 1.2.7,
 Swarmforge 1.4.6.
 
 ## New in 1.4.45
 
-- Cerberus: his moves land where he aims them on hills and in dips. New moves: Triple Breath, Fire and Frost Rift
+- Emberfrost Hound: his moves land where he aims them on hills and in dips. New moves: Triple Breath, Fire and Frost Rift
   and Leaping Slam, and his howl knocks you back. His moves have sound now, his steps rumble and shake the ground a
   little, and anyone stuck inside him is moved out.
 
-Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Cerberus 2.18.0, Hollowbell 1.12.6, Lantern Willow 1.10.5, Wreckback 1.2.7,
+Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Emberfrost Hound 2.18.0, Hollowbell 1.12.6, Lantern Willow 1.10.5, Wreckback 1.2.7,
 Swarmforge 1.4.6.
 
 ## New in 1.4.44
@@ -968,7 +970,7 @@ Swarmforge 1.4.6.
   he swims, and anyone stuck inside him is moved out.
 - Swarmforge: a player who ends up in the hollow inside him is set down beside him instead of falling.
 
-Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Cerberus 2.17.3, Hollowbell 1.12.6, Lantern Willow 1.10.5, Wreckback 1.2.7,
+Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Emberfrost Hound 2.17.3, Hollowbell 1.12.6, Lantern Willow 1.10.5, Wreckback 1.2.7,
 Swarmforge 1.4.6.
 
 ## New in 1.4.43
@@ -976,7 +978,7 @@ Swarmforge 1.4.6.
 - Swarmforge: his own book cover (a cog with a robot eye), fewer hint lines, a low tread rumble and a small shake as
   he drives, and anyone stuck inside him is moved out.
 
-Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Cerberus 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.5, Wreckback 1.2.7,
+Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Emberfrost Hound 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.5, Wreckback 1.2.7,
 Swarmforge 1.4.5.
 
 ## New in 1.4.42
@@ -986,7 +988,7 @@ Swarmforge 1.4.5.
 - Pitchgut, Furrowmaw, Lantern Willow and Wreckback: anyone stuck inside him is moved out to clear ground straight
   away, and standing on him while he moves no longer makes you slide.
 
-Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Cerberus 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.5, Wreckback 1.2.7,
+Inside: Pitchgut 1.35.4, Furrowmaw 1.17.2, Emberfrost Hound 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.5, Wreckback 1.2.7,
 Swarmforge 1.4.4.
 
 ## New in 1.4.41
@@ -997,33 +999,33 @@ Swarmforge 1.4.4.
   shake as he walks.
 - Both: anyone who ends up stuck inside him is moved out to clear ground straight away.
 
-Inside: Pitchgut 1.35.3, Furrowmaw 1.17.1, Cerberus 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.4, Wreckback 1.2.6,
+Inside: Pitchgut 1.35.3, Furrowmaw 1.17.1, Emberfrost Hound 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.4, Wreckback 1.2.6,
 Swarmforge 1.4.4.
 
 ## New in 1.4.40
 
 - Furrowmaw: three new light moves (Snap Lunge, Ring Shudder, Tail Swipe), a low rumble as he crawls, his own book
   cover, and fewer hint lines. His Tail Sweep swings his tail again.
-- Cerberus: his own book cover (his three heads) and fewer hint lines.
+- Emberfrost Hound: his own book cover (his three heads) and fewer hint lines.
 
-Inside: Pitchgut 1.35.3, Furrowmaw 1.17.1, Cerberus 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.5,
+Inside: Pitchgut 1.35.3, Furrowmaw 1.17.1, Emberfrost Hound 2.17.3, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.5,
 Swarmforge 1.4.4.
 
 ## New in 1.4.39
 
 - Pitchgut and Wreckback: fewer hint lines. Their messages say what happened and leave the rest for you to find out.
 
-Inside: Pitchgut 1.35.3, Furrowmaw 1.17.0, Cerberus 2.17.2, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.5,
+Inside: Pitchgut 1.35.3, Furrowmaw 1.17.0, Emberfrost Hound 2.17.2, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.5,
 Swarmforge 1.4.4.
 
 ## New in 1.4.38
 
-- Cerberus: getting off is smooth, he lifts you off his back and sets you down on clear ground beside him. People on
+- Emberfrost Hound: getting off is smooth, he lifts you off his back and sets you down on clear ground beside him. People on
   his heads stay on through a pounce, his land loads much faster, his heads stop at another giant's side, and only one
   player at a time can have his book.
 - Every giant now has the one-book rule: `/<giant> book who` says who has it, `/<giant> book free` (ops) lets it go.
 
-Inside: Pitchgut 1.35.2, Furrowmaw 1.17.0, Cerberus 2.17.2, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.4,
+Inside: Pitchgut 1.35.2, Furrowmaw 1.17.0, Emberfrost Hound 2.17.2, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.4,
 Swarmforge 1.4.4.
 
 ## New in 1.4.37
@@ -1032,7 +1034,7 @@ Swarmforge 1.4.4.
   His inhale throws debris and his slam sends out a tremor ring. The small ones (spit, dust, thrash, vent, magma
   storm, tail flick) are gone. Lava he leaves cools back to normal ground after 20 seconds.
 
-Inside: Pitchgut 1.35.2, Furrowmaw 1.17.0, Cerberus 2.17.1, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.4,
+Inside: Pitchgut 1.35.2, Furrowmaw 1.17.0, Emberfrost Hound 2.17.1, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.4,
 Swarmforge 1.4.4.
 
 ## New in 1.4.36
@@ -1040,7 +1042,7 @@ Swarmforge 1.4.4.
 - Lantern Willow: the hole at the outer sides of his mouth is closed, shut or open. Only one player can have his
   book at a time, even while they're offline.
 
-Inside: Pitchgut 1.35.2, Furrowmaw 1.16.3, Cerberus 2.17.1, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.4,
+Inside: Pitchgut 1.35.2, Furrowmaw 1.16.3, Emberfrost Hound 2.17.1, Hollowbell 1.12.5, Lantern Willow 1.10.3, Wreckback 1.2.4,
 Swarmforge 1.4.4.
 
 ## New in 1.4.35
@@ -1048,7 +1050,7 @@ Swarmforge 1.4.4.
 - Hollowbell and the Swarmforge: only one player can have each one's book at a time, even while they're offline.
   `/<giant> book who` says who has it; `/<giant> book free` (ops) lets it go.
 
-Inside: Pitchgut 1.35.2, Furrowmaw 1.16.3, Cerberus 2.17.1, Hollowbell 1.12.5, Lantern Willow 1.10.2, Wreckback 1.2.4,
+Inside: Pitchgut 1.35.2, Furrowmaw 1.16.3, Emberfrost Hound 2.17.1, Hollowbell 1.12.5, Lantern Willow 1.10.2, Wreckback 1.2.4,
 Swarmforge 1.4.4.
 
 ## New in 1.4.34
@@ -1056,7 +1058,7 @@ Swarmforge 1.4.4.
 - Furrowmaw: only one player can have his book at a time, even while they're offline. `/furrowmaw book who` says
   who has it; `/furrowmaw book free` (ops) lets it go.
 
-Inside: Pitchgut 1.35.2, Furrowmaw 1.16.3, Cerberus 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.4,
+Inside: Pitchgut 1.35.2, Furrowmaw 1.16.3, Emberfrost Hound 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.4,
 Swarmforge 1.4.3.
 
 ## New in 1.4.33
@@ -1064,7 +1066,7 @@ Swarmforge 1.4.3.
 - Pitchgut: only one player can have his book at a time, even while they're offline, like Wreckback's.
   `/pitchgut book who` says who has it; `/pitchgut book free` (ops) lets it go.
 
-Inside: Pitchgut 1.35.2, Furrowmaw 1.16.2, Cerberus 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.4,
+Inside: Pitchgut 1.35.2, Furrowmaw 1.16.2, Emberfrost Hound 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.4,
 Swarmforge 1.4.3.
 
 ## New in 1.4.32
@@ -1073,7 +1075,7 @@ Swarmforge 1.4.3.
   it, and any other copy goes quiet. `/wreckback book who` says who has it; `/wreckback book free` (ops) lets it go.
   The other giants get the same rule next.
 
-Inside: Pitchgut 1.35.1, Furrowmaw 1.16.2, Cerberus 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.4,
+Inside: Pitchgut 1.35.1, Furrowmaw 1.16.2, Emberfrost Hound 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.4,
 Swarmforge 1.4.3.
 
 ## New in 1.4.31
@@ -1084,7 +1086,7 @@ Swarmforge 1.4.3.
 - The Swarmforge's robots get round him and reach you instead of wandering back to him.
 - Teleporting to the Hollowbell, Wreckback or the Swarmforge, or walking into their land, loads a lot faster.
 
-Inside: Pitchgut 1.35.1, Furrowmaw 1.16.2, Cerberus 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.3,
+Inside: Pitchgut 1.35.1, Furrowmaw 1.16.2, Emberfrost Hound 2.17.1, Hollowbell 1.12.4, Lantern Willow 1.10.2, Wreckback 1.2.3,
 Swarmforge 1.4.3.
 
 ## New in 1.4.30
@@ -1092,7 +1094,7 @@ Swarmforge 1.4.3.
 - Lantern Willow: getting down, you ride his lure smoothly all the way to the ground (no more hanging in the air and
   then a jump). Teleporting to him or walking into his marsh no longer freezes the game while his land loads.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.2, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.2, Wreckback 1.2.2,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.2, Emberfrost Hound 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.2, Wreckback 1.2.2,
 Swarmforge 1.4.2.
 
 ## New in 1.4.29
@@ -1100,7 +1102,7 @@ Swarmforge 1.4.2.
 - Furrowmaw: getting down, he carries you smoothly all the way to the ground (no more hanging in the air and then a
   jump), lets you off a few steps clear of him, and keeps still a moment so his next move doesn't catch you.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.2, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.2,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.2, Emberfrost Hound 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.2,
 Swarmforge 1.4.2.
 
 ## New in 1.4.28
@@ -1108,14 +1110,14 @@ Swarmforge 1.4.2.
 - Wreckback: the kelp on his sides hangs in whole strands, the posts on his rail stay with the hull (no more floating
   ones), and his mirrored feelers are joined on properly at the root.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.2,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Emberfrost Hound 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.2,
 Swarmforge 1.4.2.
 
 ## New in 1.4.27
 
 - Wreckback: a smaller, tidier jar. Nothing changes in game.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.1,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Emberfrost Hound 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.1,
 Swarmforge 1.4.2.
 
 ## New in 1.4.26
@@ -1123,7 +1125,7 @@ Swarmforge 1.4.2.
 - Wreckback: in his mast sweep the mainmast comes down onto the ground instead of into it, his small claw's snip lands
   where it's aimed, and his gaze and pincer crush shake less.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.0,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Emberfrost Hound 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.2.0,
 Swarmforge 1.4.2.
 
 ## New in 1.4.25
@@ -1132,22 +1134,22 @@ Swarmforge 1.4.2.
   people he holds or carries into another world are let go there, and his replies match the other giants.
 - Furrowmaw: a smaller, tidier jar. Nothing changes in game.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.1.2,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.1, Emberfrost Hound 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.1.2,
 Swarmforge 1.4.2.
 
 ## New in 1.4.24
 
 - Hollowbell: "Follow me" in his book, like the Lantern Willow's. He keeps just past his rim from you.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Cerberus 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.1.1,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Emberfrost Hound 2.17.1, Hollowbell 1.12.3, Lantern Willow 1.10.1, Wreckback 1.1.1,
 Swarmforge 1.4.2.
 
 ## New in 1.4.23
 
-- Cerberus and Lantern Willow: smaller, tidier jars and replies that match the other giants. Far away, the Lantern
+- Emberfrost Hound and Lantern Willow: smaller, tidier jars and replies that match the other giants. Far away, the Lantern
   Willow's broken lures show. Nothing else changes in game.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Cerberus 2.17.1, Hollowbell 1.12.2, Lantern Willow 1.10.1, Wreckback 1.1.1,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Emberfrost Hound 2.17.1, Hollowbell 1.12.2, Lantern Willow 1.10.1, Wreckback 1.1.1,
 Swarmforge 1.4.2.
 
 ## New in 1.4.22
@@ -1156,7 +1158,7 @@ Swarmforge 1.4.2.
   ball. Riding his arm, the swim beat doesn't throw you off. Press V with the book to send him after what you look
   at, and his replies match the other giants.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Cerberus 2.17.0, Hollowbell 1.12.2, Lantern Willow 1.10.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Emberfrost Hound 2.17.0, Hollowbell 1.12.2, Lantern Willow 1.10.0, Wreckback 1.1.1,
 Swarmforge 1.4.2.
 
 ## New in 1.4.21
@@ -1165,7 +1167,7 @@ Swarmforge 1.4.2.
   down beside him, and no more see-through square on your screen after riding him. He has `help`, `wake`, `paint`,
   `heavydelay` and `detail <distance>` like the others, and his replies match theirs.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.16.0, Emberfrost Hound 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
 Swarmforge 1.4.2.
 
 ## New in 1.4.20
@@ -1174,7 +1176,7 @@ Swarmforge 1.4.2.
   "Follow me" is in his book, `kill` reaches every world, his replies match the other giants, and `/giants list`
   shows where he really is.
 
-Inside: Pitchgut 1.35.0, Furrowmaw 1.15.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.35.0, Furrowmaw 1.15.0, Emberfrost Hound 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
 Swarmforge 1.4.2.
 
 ## New in 1.4.19
@@ -1182,7 +1184,7 @@ Swarmforge 1.4.2.
 - Swarmforge: getting out of his cab puts you on the ground beside him with no fall, remove and kill also reach the
   one waiting in his Scrapyard, his crane slam no longer shoots up like a pole, and his replies match the others.
 
-Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Emberfrost Hound 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
 Swarmforge 1.4.2.
 
 ## New in 1.4.18
@@ -1190,17 +1192,17 @@ Swarmforge 1.4.2.
 - Lantern Willow: getting down, his angler lure lowers you to clear ground beside him. No more getting stuck under
   him or inside his trunk. "Follow me" is in his book, and his light blows land with more weight.
 
-Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Emberfrost Hound 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.10.0, Wreckback 1.1.1,
 Swarmforge 1.4.1.
 
 ## New in 1.4.17
 
 - `/giants paint stop` stops every giant's paint. It works from the server console too.
-- Cerberus: "Put me down" sets you on clear ground beside him, no more see-through square on your screen after
+- Emberfrost Hound: "Put me down" sets you on clear ground beside him, no more see-through square on your screen after
   riding him, and `/cerberus detail <distance>`.
 - Hollowbell: a smaller jar, nothing changes in game.
 
-Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Cerberus 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.9.1, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Emberfrost Hound 2.17.0, Hollowbell 1.12.1, Lantern Willow 1.9.1, Wreckback 1.1.1,
 Swarmforge 1.4.1.
 
 ## New in 1.4.16
@@ -1208,7 +1210,7 @@ Swarmforge 1.4.1.
 - Swarmforge: `/giants paint stop` stops his paint, in the Nether he stands on the floor, and giants close together
   cost less to work out.
 
-Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Cerberus 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.1, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Emberfrost Hound 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.1, Wreckback 1.1.1,
 Swarmforge 1.4.1.
 
 ## New in 1.4.15
@@ -1216,7 +1218,7 @@ Swarmforge 1.4.1.
 - Pitchgut: `/giants paint stop` stops his paint, his goo trail follows the mob griefing rule, and in the Nether he
   stays on the floor instead of the roof.
 
-Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Cerberus 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.1, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.2, Furrowmaw 1.15.0, Emberfrost Hound 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.1, Wreckback 1.1.1,
 Swarmforge 1.4.0.
 
 ## New in 1.4.14
@@ -1224,7 +1226,7 @@ Swarmforge 1.4.0.
 - Lantern Willow: Lantern Willows in unloaded land count toward the limit, he no longer reels in another giant's
   rider, and damaged save numbers load safely.
 
-Inside: Pitchgut 1.34.1, Furrowmaw 1.15.0, Cerberus 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.1, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.1, Furrowmaw 1.15.0, Emberfrost Hound 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.1, Wreckback 1.1.1,
 Swarmforge 1.4.0.
 
 ## New in 1.4.13
@@ -1232,27 +1234,27 @@ Swarmforge 1.4.0.
 - Furrowmaw is solid: you can stand on him and ride him, you never get stuck inside him, and giants push apart.
   A sleeping one far away is drawn whole.
 
-Inside: Pitchgut 1.34.1, Furrowmaw 1.15.0, Cerberus 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.1, Furrowmaw 1.15.0, Emberfrost Hound 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.0, Wreckback 1.1.1,
 Swarmforge 1.4.0.
 
 ## New in 1.4.12
 
 - Hollowbell: new timing for his drop, slam, pulse and sweep, one shake per blow, a proper death landing, and his
   glow beats with the bell.
-- Cerberus: his mane stays outside his body, heavy moves wait for the first minute of a fight
+- Emberfrost Hound: his mane stays outside his body, heavy moves wait for the first minute of a fight
   (`/giants heavydelay` changes it), better tail sweep, pounce, stomp and death, and the book can forgive.
 
-Inside: Pitchgut 1.34.1, Furrowmaw 1.14.8, Cerberus 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.1, Furrowmaw 1.14.8, Emberfrost Hound 2.16.0, Hollowbell 1.12.0, Lantern Willow 1.9.0, Wreckback 1.1.1,
 Swarmforge 1.4.0.
 
 ## New in 1.4.11
 
-- Pitchgut and the Cerberus work together again (with the newest single jars the game crashed on start).
+- Pitchgut and the Emberfrost Hound work together again (with the newest single jars the game crashed on start).
 - Hollowbell: clean big-arm ends, no height limit. Wreckback: feet stay planted, no floating claw spines.
 - Swarmforge: robots and Commander orders survive a reload, the book's "Where is he?" and send-to-spot are back.
 - Lantern Willow: better impacts, look key, /lanternwillow help.
 
-Inside: Pitchgut 1.34.1, Furrowmaw 1.14.8, Cerberus 2.15.2, Hollowbell 1.11.1, Lantern Willow 1.9.0, Wreckback 1.1.1,
+Inside: Pitchgut 1.34.1, Furrowmaw 1.14.8, Emberfrost Hound 2.15.2, Hollowbell 1.11.1, Lantern Willow 1.9.0, Wreckback 1.1.1,
 Swarmforge 1.4.0.
 
 ## New in 1.4.10
@@ -1261,18 +1263,18 @@ Swarmforge 1.4.0.
 - Heavy moves wait a minute into a fight. Change it with `/giants heavydelay <seconds>`.
 - The Hollowbell moves like before again, with even small tentacles and lights that glow from every side.
 
-Inside: Pitchgut 1.34.0, Furrowmaw 1.14.8, Cerberus 2.15.0, Hollowbell 1.11.0, Lantern Willow 1.8.3, Wreckback 1.0.8,
+Inside: Pitchgut 1.34.0, Furrowmaw 1.14.8, Emberfrost Hound 2.15.0, Hollowbell 1.11.0, Lantern Willow 1.8.3, Wreckback 1.0.8,
 Swarmforge 1.3.2.
 
 ## New in 1.4.9
 
-- Pitchgut, the Cerberus, the Hollowbell and the Lantern Willow are solid now: you bump into them, stand on them and
+- Pitchgut, the Emberfrost Hound, the Hollowbell and the Lantern Willow are solid now: you bump into them, stand on them and
   ride along.
 - Standing on a Hollowbell pod or a Willow limb tip no longer throws you off.
 - The Willow's leaves don't go through his trunk, and you can't get stuck inside it.
 - Smaller Wreckback jar, nothing changes in game.
 
-Inside: Pitchgut 1.33.0, Furrowmaw 1.14.8, Cerberus 2.15.0, Hollowbell 1.10.1, Lantern Willow 1.8.2, Wreckback 1.0.7,
+Inside: Pitchgut 1.33.0, Furrowmaw 1.14.8, Emberfrost Hound 2.15.0, Hollowbell 1.10.1, Lantern Willow 1.8.2, Wreckback 1.0.7,
 Swarmforge 1.3.1.
 
 ## New in 1.4.8
@@ -1292,7 +1294,7 @@ Swarmforge 1.3.1.
 
 ## New in 1.4.7
 
-- **"Go after what I look at" works from far off.** Pitchgut, Furrowmaw, the Cerberus, the Hollowbell and the Lantern
+- **"Go after what I look at" works from far off.** Pitchgut, Furrowmaw, the Emberfrost Hound, the Hollowbell and the Lantern
   Willow (and Wreckback): look at something up to 512 blocks away and press that order in his book. He goes after it
   even if he is far away, asleep or out of the world, and keeps at it until it dies, it's lost for 30 seconds or you
   give a new order. A part of another giant counts as that giant. It glows for a moment, only for you, and the chat
@@ -1345,12 +1347,12 @@ Swarmforge 1.3.1.
 
 ## New in 1.4.2
 
-- **`/giants where` and the finder give the Cerberus's real spot** (Cerberus 2.14.7). Before, just after he was
+- **`/giants where` and the finder give the Emberfrost Hound's real spot** (Emberfrost Hound 2.14.7). Before, just after he was
   summoned or loaded, or while he was far off, they said he was at 0 0 0.
 
 ## New in 1.4.1
 
-- **The Cerberus's mane is sleeker** (Cerberus 2.14.6): shorter tufts that lie back along his necks instead of
+- **The Emberfrost Hound's mane is sleeker** (Emberfrost Hound 2.14.6): shorter tufts that lie back along his necks instead of
   shaggy strands hanging down, and it no longer clips through itself, his necks or the other heads' manes when he
   moves. The pelt armour's mane is a bit sleeker too.
 
@@ -1359,7 +1361,7 @@ Swarmforge 1.3.1.
 - **The Swarmforge is in**: JJ's seventh giant, a huge rusted war factory on four tank treads that keeps sending out
   robots. He has his own README (`Swarmforge README.md` in the Swarmforge folder) and his own pages in the Giants
   Guide, with an Army tab for his robots and units.
-- The other six know him: Pitchgut, Furrowmaw, the Cerberus and the Lantern Willow fight him when they meet; the
+- The other six know him: Pitchgut, Furrowmaw, the Emberfrost Hound and the Lantern Willow fight him when they meet; the
   Hollowbell and Wreckback keep away from him. `/giants` reaches him too, and his robots' blows land on the other
   giants like a giant's helpers'.
 - Every giant is at its newest version (see the table).
@@ -1390,7 +1392,7 @@ Swarmforge 1.3.1.
 
 - **Wreckback is in**: JJ's sixth giant, a hermit crab the size of a ship with a wrecked galleon on his back. He has
   his own README (`Wreckback README.md` in the Wreckback folder) and his own pages in the Giants Guide.
-- The other five know him: Pitchgut, Furrowmaw and the Cerberus fight him when they meet; the Hollowbell and the
+- The other five know him: Pitchgut, Furrowmaw and the Emberfrost Hound fight him when they meet; the Hollowbell and the
   Lantern Willow keep away from him. `/giants` reaches him too.
 - Every giant is at its newest version (see the table).
 
@@ -1425,7 +1427,7 @@ Swarmforge 1.3.1.
 - **Pitchgut:** the Goo Maw is 3D, his ground fades into the land at the edge, a brighter shrine beam.
 - **Furrowmaw:** far orders cost wind, the blade stays put in the Burrow dash, the dive circles under the spot
   when he's told to stay, and more moves were checked.
-- **Cerberus:** a real shaggy mane on all three necks that moves with the heads.
+- **Emberfrost Hound:** a real shaggy mane on all three necks that moves with the heads.
 - **Hollowbell:** the egg rain is big and easy to see: a wind-up, big eggs, rings where they land, and bellings
   hatching.
 - **Lantern Willow:** his strands don't fling out flat after a hitch any more.

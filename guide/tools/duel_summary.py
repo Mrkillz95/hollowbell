@@ -10,7 +10,7 @@ import csv, sys, os
 from collections import defaultdict
 
 ORDER = ['P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G']
-NAME = {'P': 'Pitchgut', 'F': 'Furrowmaw', 'C': 'Cerberus', 'H': 'Hollowbell', 'W': 'Willow', 'WB': 'Wreckback',
+NAME = {'P': 'Pitchgut', 'F': 'Furrowmaw', 'C': 'Emberfrost Hound', 'H': 'Hollowbell', 'W': 'Willow', 'WB': 'Wreckback',
         'S': 'Swarmforge', 'G': 'Gloamwick'}
 
 

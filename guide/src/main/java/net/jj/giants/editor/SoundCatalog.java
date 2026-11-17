@@ -79,7 +79,7 @@ public final class SoundCatalog {
     }
 
     private static String nameOf(String kind) {
-        return kind.equals("lanternwillow") ? "Lantern Willow"
+        return kind.equals("lanternwillow") ? "Lantern Willow" : kind.equals("cerberus") ? "Emberfrost Hound"
                 : Character.toUpperCase(kind.charAt(0)) + kind.substring(1);
     }
 

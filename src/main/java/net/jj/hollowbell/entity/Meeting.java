@@ -135,7 +135,7 @@ public final class Meeting {
         return switch (kind) {
             case "mountain_breathes" -> "Pitchgut";
             case "furrowmaw" -> "Furrowmaw";
-            case "fire_ice_cerberus" -> the + "Cerberus";
+            case "fire_ice_cerberus" -> the + "Emberfrost Hound";
             case "hollowbell" -> the + "Hollowbell";
             case "lanternwillow" -> the + "Lantern Willow";
             case "wreckback" -> "Wreckback";

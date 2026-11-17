@@ -129,6 +129,7 @@ public final class GiantsCommand {
         String mid = bridge.substring("net.jj.".length(), bridge.lastIndexOf('.'));
         return switch (mid) {
             case "mountain" -> "Pitchgut";
+            case "cerberus" -> "Emberfrost Hound";
             case "lanternwillow" -> "Lantern Willow";
             default -> Character.toUpperCase(mid.charAt(0)) + mid.substring(1);
         };
@@ -380,7 +381,7 @@ public final class GiantsCommand {
         return switch (name) {
             case "lanternwillow", "lantern_willow" -> "willow";
             case "mountain", "mountain_breathes" -> "pitchgut";
-            case "fire_ice_cerberus" -> "cerberus";
+            case "fire_ice_cerberus", "emberfrost", "emberfrost_hound", "hound" -> "cerberus";
             default -> name;
         };
     }
@@ -413,6 +414,10 @@ public final class GiantsCommand {
         }
         return lines.size();
     }
+
+    /** what typing a giant offers: the names above and the Emberfrost Hound's own (the Cerberus's since Nov 2026) */
+    private static final String[] SUGGEST = java.util.stream.Stream.concat(java.util.Arrays.stream(TP_NAMES),
+            java.util.stream.Stream.of("emberfrost")).toArray(String[]::new);
 
     /** the main body of each giant, by entity type id; the mod id before the colon picks its bridge */
     public static final String[] MAIN_TYPES = {
@@ -523,7 +528,7 @@ public final class GiantsCommand {
 
     private static RequiredArgumentBuilder<CommandSourceStack, String> which() {
         return Commands.argument("which", StringArgumentType.word())
-                .suggests((c, b) -> SharedSuggestionProvider.suggest(TP_NAMES, b));
+                .suggests((c, b) -> SharedSuggestionProvider.suggest(SUGGEST, b));
     }
 
     /** /giants <name> [giant]: the action for every giant, or only the named one */
