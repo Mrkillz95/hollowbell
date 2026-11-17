@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.fabricmc.loader.api.FabricLoader;
 import net.jj.giants.FirstJoin;
@@ -192,7 +193,7 @@ public class GuideGameTests implements FabricGameTest {
         List<String> wrong = new ArrayList<>();
         for (String mod : GIANT_MODS)
             if (Giants.ALL.stream().noneMatch(g -> g.modId().equals(mod))) wrong.add("no entry for " + mod);
-        int movesChecked = 0, ownChecked = 0, leftOut = 0;
+        int movesChecked = 0, ownChecked = 0, leftOut = 0, linesLeftOut = 0;
         for (Giant g : Giants.ALL) {
             for (String k :
                     new String[] {g.nameKey(), g.roleKey(), g.sizeKey(), "guide.jj_giants." + g.key() + ".short"})
@@ -221,23 +222,67 @@ public class GuideGameTests implements FabricGameTest {
                     if (!Language.getInstance().has(m.whatKey())) wrong.add(g.modId() + " has no " + m.whatKey());
                 }
             }
-            // every page line: items and recipes it names are real when his mod is here
-            for (String page : Giants.pages(g))
-                for (int n = 1; n <= Giants.MAX_LINES && l.has(g.lineKey(page, n)); n++) {
-                    String s = l.get(g.lineKey(page, n)).getAsString();
-                    checkLine(h, s, g.key() + "." + page + "." + n, wrong);
-                }
+            // every page line shown: items and recipes it names are real when his mod is here (the lines of items
+            // his mod hasn't got are left off the page)
+            for (String page : Giants.pages(g)) {
+                List<String> all = new ArrayList<>();
+                for (int n = 1; n <= Giants.MAX_LINES && l.has(g.lineKey(page, n)); n++)
+                    all.add(l.get(g.lineKey(page, n)).getAsString());
+                List<String> shown = Giants.shownLines(all);
+                linesLeftOut += all.size() - shown.size();
+                // (shown is all with some lines taken out, in order)
+                for (int n = 1, j = 0; n <= all.size() && j < shown.size(); n++)
+                    if (all.get(n - 1).equals(shown.get(j))) {
+                        j++;
+                        checkLine(h, all.get(n - 1), g.key() + "." + page + "." + n, wrong);
+                    }
+            }
         }
         for (String page : new String[] {"meetings", "giants"}) {
             if (!text(l, "guide.jj_giants.together." + page + ".1")) wrong.add("no together " + page + " page");
         }
         GiantsGuideMod.LOG.info(
-                "guide data: {} giants, {} moves, {} checked against the giants' own language files, {} not in them",
+                "guide data: {} giants, {} moves, {} checked against the giants' own language files, {} not in them,"
+                        + " {} page lines left out for items not in their mods",
                 Giants.ALL.size(),
                 movesChecked,
                 ownChecked,
-                leftOut);
+                leftOut,
+                linesLeftOut);
         h.assertTrue(wrong.isEmpty(), String.join("; ", wrong));
+        h.succeed();
+    }
+
+    /** an item his mod hasn't got (yet) is left off his page with what's under it, up to the next item or heading */
+    @GameTest(template = EMPTY_STRUCTURE)
+    public void itemsHisModDoesNotHaveAreLeftOffHisPage(GameTestHelper h) {
+        List<String> page = List.of(
+                "# Drops",
+                "@item a:lantern |  | his lantern",
+                "@recipe a:lantern",
+                "@item a:hammer |  | his hammer",
+                "| Right-click | a hut",
+                "@recipe a:hammer",
+                "@item a:boots,a:lantern | Some | one of the two is here",
+                "@item a:helmet,a:boots | Armour | neither is here",
+                "plain words about the armour",
+                "# Commands",
+                "| /a | b");
+        Predicate<String> no = id -> Set.of("a:hammer", "a:helmet", "a:boots").contains(id);
+        List<String> shown = Giants.shownLines(page, no);
+        List<String> want = List.of(
+                "# Drops",
+                "@item a:lantern |  | his lantern",
+                "@recipe a:lantern",
+                "@item a:boots,a:lantern | Some | one of the two is here",
+                "# Commands",
+                "| /a | b");
+        h.assertTrue(shown.equals(want), "shown " + shown);
+        h.assertTrue(Giants.shownLines(page, id -> false).equals(page), "with every item here, every line");
+        // with no mod of that name here, it is not taken for missing
+        h.assertFalse(Giants.noItem("no_such_mod_here:thing"), "a mod not here isn't missing items");
+        h.assertFalse(Giants.noItem("minecraft:stick"), "a real item");
+        h.assertTrue(Giants.noItem("minecraft:no_such_item_here"), "a loaded mod without the item");
         h.succeed();
     }
 

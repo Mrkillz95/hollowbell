@@ -222,6 +222,7 @@ public class GuideScreen extends Screen {
     private void lines(String prefix) {
         List<String> all = new ArrayList<>();
         for (int n = 1; n <= Giants.MAX_LINES && has(prefix + n); n++) all.add(raw(prefix + n));
+        all = Giants.shownLines(all);
         int leftW = leftWidth(all);
         for (String s : all) line(s, leftW);
     }

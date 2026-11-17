@@ -6,7 +6,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.locale.Language;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Every giant the guide knows. Adding one is one entry here plus his lines in the language file
@@ -466,6 +468,35 @@ public final class Giants {
     }
 
     /**
+     * the lines of one of his pages as his mod here has them: an "@item" line naming only items his mod (when it's
+     * here) hasn't got is left out, with the rows, recipes and text under it up to the next "@item" or heading (gear
+     * a release of his doesn't have). With his mod not here, every line
+     */
+    public static List<String> shownLines(List<String> lines) {
+        return shownLines(lines, Giants::noItem);
+    }
+
+    public static List<String> shownLines(List<String> lines, Predicate<String> noItem) {
+        List<String> out = new ArrayList<>();
+        boolean skip = false;
+        for (String s : lines) {
+            if (s.startsWith("@item ")) {
+                skip = true;
+                for (String id : s.substring(6).split(" \\| ")[0].split(","))
+                    if (!noItem.test(id.trim())) skip = false;
+            } else if (s.startsWith("# ")) skip = false;
+            if (!skip) out.add(s);
+        }
+        return out;
+    }
+
+    /** an item id whose mod is here but has no such item (a bad id, or one of a mod not here, is not this) */
+    public static boolean noItem(String id) {
+        ResourceLocation rl = ResourceLocation.tryParse(id);
+        return rl != null && modHere(rl.getNamespace()) && BuiltInRegistries.ITEM.getOptional(rl).isEmpty();
+    }
+
+    /**
      * one form of a giant who rebuilds himself (the Hearthstride): its own name in his mod, and its moves in his
      * book's order. His moves page lists his moves form by form
      */
@@ -511,8 +542,12 @@ public final class Giants {
     }
 
     public static boolean loaded(Giant g) {
+        return modHere(g.modId());
+    }
+
+    private static boolean modHere(String modId) {
         try {
-            return FabricLoader.getInstance().isModLoaded(g.modId());
+            return FabricLoader.getInstance().isModLoaded(modId);
         } catch (Throwable t) {
             // no loader to ask (run outside the game)
             return false;
