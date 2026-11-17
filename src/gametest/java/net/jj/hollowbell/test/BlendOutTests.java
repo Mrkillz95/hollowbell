@@ -132,23 +132,49 @@ public class BlendOutTests implements FabricGameTest {
      * cut short in the middle of a swing, he is never sent faster than the move had him going as it was cut, nor
      * jolted harder than it was jolting him; and a new move cutting in may move him as much as it does from rest
      */
-    static float cutLimit(float[] base, Jump j, int move, boolean newMove) {
+    static float cutLimit(float[] base, Jump j, int move, boolean newMove, float[] on) {
         float lim = Math.max(Math.max(limit(base) * 1.2f, j.ownSpeed * 1.25f), newMove ? base[4] * 1.25f : 0f);
+        lim = Math.max(lim, on[0] * 1.25f);
         return whipped(move) || newMove ? Math.max(lim, limit(base) * WHIPPED) : lim;
     }
 
-    static float cutJoltLimit(float[] base, Jump j, int move, boolean newMove) {
+    static float cutJoltLimit(float[] base, Jump j, int move, boolean newMove, float[] on) {
         float lim = Math.max(Math.max(joltLimit(base) * 1.2f, j.ownJolt * 1.5f), newMove ? base[5] * 1.5f : 0f);
+        lim = Math.max(lim, on[1] * 1.5f);
         return whipped(move) || newMove ? Math.max(lim, joltLimit(base) * WHIPPED * 2.5f) : lim;
+    }
+
+    /**
+     * the most he moves (and jolts) in a tick in the same ticks had the move gone on uncut: what the cut is answerable
+     * for is only what goes faster than that (the sweep's strands still swinging through, an arm the drop flung wide
+     * coming down on the ground, go on just the same whether it is cut or not)
+     */
+    static float[] goneOn(int move, int cut, int window) {
+        BellMotion b = new BellMotion();
+        b.run(160);
+        b.move = move;
+        b.arg = BellMotion.argFor(move);
+        float most = 0f, jolt = 0f;
+        int len = Moves.length(move);
+        for (int t = 1; t < cut + window && t < len; t++) {
+            b.moveT = t;
+            b.serverSide(move, t);
+            b.step();
+            if (t < cut) continue;
+            most = Math.max(most, b.jump);
+            jolt = Math.max(jolt, b.jolt);
+        }
+        return new float[] {most, jolt};
     }
 
     /**
      * Cut off in the middle of the lash's whip, the whirlpool's swirl or the dive's turn over, a strand flung right up
      * falls back and the pods on it turn over quickly as it does; and a new move cutting in swings its own strand out
      * at once: allowed this many times his drifting (they were up to twice that before the strands were let go of
-     * smoothly)
+     * smoothly; measured slice by slice as the strands are drawn, a strand falling back from the whirlpool's swirl
+     * comes to 5 times)
      */
-    static final float WHIPPED = 4.5f;
+    static final float WHIPPED = 5.25f;
 
     static boolean whipped(int move) {
         return move == Moves.LASH || move == Moves.WHIRLPOOL || move == Moves.SKY_DIVE;
@@ -188,6 +214,8 @@ public class BlendOutTests implements FabricGameTest {
         }
         rows.add("cut short\tits_speed\tafter_b/t\tjolt\tits_own_jolt\tworst_bone\tat_tick");
         for (int[] c : CUTS) {
+            float[] on = goneOn(c[0], c[1], WINDOW);
+            rows.add(String.format("%s at %d gone on uncut		%.2f	%.2f", Moves.NAMES[c[0]], c[1], on[0], on[1]));
             for (int k = 0; k < HOW.length; k++) {
                 // (he never starts a move until the last has finished or been stopped: a new one cutting straight into
                 // a whirlpool can't happen)
@@ -212,8 +240,8 @@ public class BlendOutTests implements FabricGameTest {
                         "%s at %d (%s)\t%.2f\t%.2f\t%.2f\t%.2f\t%s\t%d", Moves.NAMES[c[0]], c[1], HOW[k], j.ownSpeed,
                         j.after, j.jolt, j.ownJolt, j.bone, j.tick));
                 String what = Moves.NAMES[c[0]] + " cut short at " + c[1] + " (" + HOW[k] + ")";
-                if (j.after > cutLimit(base, j, c[0], k == 0)) fails.add(what + " moves " + j.after + " a tick");
-                if (j.jolt > cutJoltLimit(base, j, c[0], k == 0)) fails.add(what + " jolts " + j.jolt);
+                if (j.after > cutLimit(base, j, c[0], k == 0, on)) fails.add(what + " moves " + j.after + " a tick");
+                if (j.jolt > cutJoltLimit(base, j, c[0], k == 0, on)) fails.add(what + " jolts " + j.jolt);
             }
         }
         return rows;

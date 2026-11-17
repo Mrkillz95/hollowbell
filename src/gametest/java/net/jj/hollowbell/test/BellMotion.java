@@ -1,5 +1,7 @@
 package net.jj.hollowbell.test;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.jj.hollowbell.entity.Moves;
 import net.jj.hollowbell.rig.BellAnim;
 import net.jj.hollowbell.rig.BellModel;
@@ -14,12 +16,57 @@ import org.joml.Vector3f;
  * One of him stepped along tick by tick off the game, as the entity steps him (his swim beat, drifting over ground,
  * the move of the moment posed onto his body and swinging chains), measuring how far any corner of any part of him
  * goes in a tick (also between ticks, as the client draws him) and how much that step changes from one tick to the
- * next (the jolt). Model blocks throughout.
+ * next (the jolt). Model blocks throughout. The pieces of his arms and strands are measured slice by slice, as they
+ * are drawn (bent along a smooth curve through the joints): the rigid bone each piece also has (for working out what
+ * touches him) rolls round its length when he turns over or an arm lies bent double, which nothing drawn does.
  */
 final class BellMotion {
     static final BellRig RIG = BellRig.get();
     /** the eight corners of each part as built, and its middle */
     private static float[][] corners;
+
+    /** what is measured: each part not cut into slices (its corners, by its bone), and each slice of one that is */
+    private static float[][] units;
+
+    private static int[] unitBone, unitSlice;
+
+    static float[][] units() {
+        if (units != null) return units;
+        float[][] c = corners();
+        BellPieces bp = BellPieces.get();
+        List<float[]> u = new ArrayList<>();
+        List<int[]> who = new ArrayList<>();
+        for (int b = 0; b < c.length; b++) {
+            if (b >= bp.num.length || bp.num[b] <= 1) {
+                u.add(c[b]);
+                who.add(new int[] {b, -1});
+                continue;
+            }
+            for (int sl = bp.first[b]; sl < bp.first[b] + bp.num[b]; sl++) {
+                float[] bb = bp.bounds[sl];
+                if (bb == null) continue;
+                float[] o = new float[27];
+                int n = 0;
+                for (int i = 0; i < 8; i++) {
+                    o[n++] = (i & 1) == 0 ? bb[0] : bb[3];
+                    o[n++] = (i & 2) == 0 ? bb[1] : bb[4];
+                    o[n++] = (i & 4) == 0 ? bb[2] : bb[5];
+                }
+                o[n++] = (bb[0] + bb[3]) / 2;
+                o[n++] = (bb[1] + bb[4]) / 2;
+                o[n] = (bb[2] + bb[5]) / 2;
+                u.add(o);
+                who.add(new int[] {b, sl});
+            }
+        }
+        unitBone = new int[who.size()];
+        unitSlice = new int[who.size()];
+        for (int i = 0; i < who.size(); i++) {
+            unitBone[i] = who.get(i)[0];
+            unitSlice[i] = who.get(i)[1];
+        }
+        return units = u.toArray(new float[0][]);
+    }
 
     static float[][] corners() {
         if (corners != null) return corners;
@@ -73,8 +120,27 @@ final class BellMotion {
     final BellAnim anim = new BellAnim(RIG);
     final BellAnim.In in = new BellAnim.In();
     final BellState mid = new BellState(RIG), was = new BellState(RIG);
-    final Matrix4f[] pose = RIG.newPose(), before = RIG.newPose();
+    final Matrix4f[] pose = RIG.newPose();
     private final Matrix4f[] hang = BellPieces.get().newHang(), slices = BellPieces.get().newPose();
+    /** each measured unit's matrix now and a quarter tick before (see units) */
+    private final Matrix4f[] unitNow, unitBefore;
+
+    {
+        int n = units().length;
+        unitNow = new Matrix4f[n];
+        unitBefore = new Matrix4f[n];
+        for (int i = 0; i < n; i++) {
+            unitNow[i] = new Matrix4f();
+            unitBefore[i] = new Matrix4f();
+        }
+    }
+
+    /** every unit's matrix for the pose st, into out */
+    private void unitPose(BellState st, Matrix4f[] out) {
+        RIG.computePose(st, pose, hang);
+        BellPieces.get().pose(st, pose, hang, slices);
+        for (int i = 0; i < out.length; i++) out[i].set(unitSlice[i] >= 0 ? slices[unitSlice[i]] : pose[unitBone[i]]);
+    }
     Land land = flat(14f);
     /** where he is over the land (model blocks) and how he drifts this tick */
     float wx, wy, wz, vx, vz, vy;
@@ -123,27 +189,27 @@ final class BellMotion {
     }
 
     void measure() {
-        float[][] c = corners();
+        float[][] c = units();
         Vector3f a = new Vector3f(), b = new Vector3f();
         float most = 0f;
         anim.fill(was, 0f);
-        RIG.computePose(was, before);
+        unitPose(was, unitBefore);
         for (int q = 1; q <= 4; q++) {
             anim.fill(mid, q / 4f);
-            RIG.computePose(mid, pose);
+            unitPose(mid, unitNow);
             for (int bn = 0; bn < c.length; bn++) {
                 float[] o = c[bn];
                 for (int i = 0; i + 2 < o.length; i += 3) {
-                    pose[bn].transformPosition(o[i], o[i + 1], o[i + 2], a);
-                    before[bn].transformPosition(o[i], o[i + 1], o[i + 2], b);
+                    unitNow[bn].transformPosition(o[i], o[i + 1], o[i + 2], a);
+                    unitBefore[bn].transformPosition(o[i], o[i + 1], o[i + 2], b);
                     float d = a.distance(b) * 4f;
                     if (d > most) {
                         most = d;
-                        bone = RIG.boneNames[bn];
+                        bone = RIG.boneNames[unitBone[bn]];
                     }
                 }
             }
-            for (int bn = 0; bn < c.length; bn++) before[bn].set(pose[bn]);
+            for (int bn = 0; bn < c.length; bn++) unitBefore[bn].set(unitNow[bn]);
         }
         if (pts == null) {
             int n = 0;
@@ -155,7 +221,7 @@ final class BellMotion {
         int n = 0;
         for (int bn = 0; bn < c.length; bn++)
             for (int i = 0; i + 2 < c[bn].length; i += 3) {
-                pose[bn].transformPosition(c[bn][i], c[bn][i + 1], c[bn][i + 2], a);
+                unitNow[bn].transformPosition(c[bn][i], c[bn][i + 1], c[bn][i + 2], a);
                 pts[n++] = a.x;
                 pts[n++] = a.y;
                 pts[n++] = a.z;
@@ -181,7 +247,7 @@ final class BellMotion {
         jolt = (float) Math.sqrt(worst);
         for (int bn = 0, at = 0; bn < c.length; at += c[bn].length, bn++)
             if (jb < at + c[bn].length) {
-                joltBone = RIG.boneNames[bn];
+                joltBone = RIG.boneNames[unitBone[bn]];
                 break;
             }
         jump = most;
