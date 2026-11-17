@@ -9,9 +9,9 @@ landed and the ones used a lot that never landed.
 import csv, sys, os
 from collections import defaultdict
 
-ORDER = ['P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G']
+ORDER = ['P', 'F', 'C', 'H', 'W', 'WB', 'S', 'G', 'T']
 NAME = {'P': 'Pitchgut', 'F': 'Furrowmaw', 'C': 'Emberfrost Hound', 'H': 'Hollowbell', 'W': 'Willow', 'WB': 'Wreckback',
-        'S': 'Swarmforge', 'G': 'Gloamwick'}
+        'S': 'Swarmforge', 'G': 'Gloamwick', 'T': 'Tickmoor'}
 
 
 def load(path):

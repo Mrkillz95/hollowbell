@@ -42,7 +42,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Giant-vs-giant duels for balance runs (handoff\DUELS.md). For each pair of the eight giants, N runs, the start side
+ * Giant-vs-giant duels for balance runs (handoff\DUELS.md). For each pair of the nine fighting giants, N runs, the start side
  * swapped every run: both spawn at full size 150 blocks apart (inside the 160-block meet range, where giants notice
  * each other in the world; further apart some let go of the target at once) on one wide arena of deep flat ground (a lake to one side for Wreckback),
  * a meeting fight is started through each mod's own GiantsBridge "meet" (as /giants meet does), and every tick the
@@ -80,7 +80,9 @@ public class GiantDuelTests implements FabricGameTest {
         new Kind("S", "swarmforge", "swarmforge:swarmforge", "net.jj.swarmforge.GiantsBridge",
                 "net.jj.swarmforge.SwarmConfig", "setSize", "size", "net.jj.swarmforge.entity.Moves"),
         new Kind("G", "gloamwick", "gloamwick:gloamwick", "net.jj.gloamwick.GiantsBridge",
-                "net.jj.gloamwick.GloamConfig", "setSize", "size", "net.jj.gloamwick.entity.Moves")
+                "net.jj.gloamwick.GloamConfig", "setSize", "size", "net.jj.gloamwick.entity.Moves"),
+        new Kind("T", "tickmoor", "tickmoor:tickmoor", "net.jj.tickmoor.GiantsBridge",
+                "net.jj.tickmoor.TickConfig", "setSize", "size", "net.jj.tickmoor.moves.Moves")
     };
 
     static final String YIELD = "jj_giant_yield";
@@ -125,7 +127,7 @@ public class GiantDuelTests implements FabricGameTest {
             for (int a = 0; a < KINDS.length; a++)
                 for (int b = a + 1; b < KINDS.length; b++) {
                     Kind ka = KINDS[a], kb = KINDS[b];
-                    if (!wanted(ka, kb)) continue;
+                    if (!wanted(ka, kb) || !loaded(ka) || !loaded(kb)) continue;
                     Kind west = run % 2 == 0 ? ka : kb, east = run % 2 == 0 ? kb : ka;
                     int r = run;
                     String name = String.format(Locale.ROOT, "duel_%03d_%s_%s_%d", n++, ka.code, kb.code, run);
@@ -134,6 +136,11 @@ public class GiantDuelTests implements FabricGameTest {
                             h -> duel(h, ka, kb, west, east, r)));
                 }
         return out;
+    }
+
+    /** its mod is in run-mods (an older set of jars has no Tickmoor) */
+    static boolean loaded(Kind k) {
+        return net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded(k.mod);
     }
 
     static boolean wanted(Kind a, Kind b) {
@@ -493,6 +500,7 @@ public class GiantDuelTests implements FabricGameTest {
     /** every mod: no natural giants, no cap, none left over, nobody stepping out of the world, no block breaking (one arena for all runs) */
     static void setUp(MinecraftServer server) {
         for (Kind k : KINDS) {
+            if (!loaded(k)) continue;
             bridge(server, k, "natural", "off");
             // (no cap on how many: a world's own one parked out of the world would make a new one go)
             bridge(server, k, "limit", "0");
