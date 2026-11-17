@@ -75,13 +75,23 @@ public class SweepHitTests implements FabricGameTest {
             }
             Vec3[][] now = new Vec3[e.rig.strands.length][];
             for (int k = 0; k < now.length; k++) now[k] = LashHitTests.line(e, k);
-            if (last[0] != null)
+            if (last[0] != null) {
+                // (only strands swinging across, from what it's swung at on under him: one swinging back hits nothing)
+                Vec3 dir = e.position().subtract(home.getLast()).multiply(1, 0, 1).normalize();
+                boolean[] across = new boolean[now.length];
+                for (int k = 0; k < now.length; k++) {
+                    double m = 0;
+                    for (int j = 0; j < now[k].length; j++) m += now[k][j].subtract(last[0][k][j]).dot(dir);
+                    across[k] = m > 0;
+                }
                 for (int i = 0; i < pigs.size(); i++) {
                     // (from where it stood: a pig struck is flung off)
                     double d = nearest.get(i);
-                    for (int k = 0; k < now.length; k++) d = Math.min(d, nearest(last[0][k], now[k], home.get(i)));
+                    for (int k = 0; k < now.length; k++)
+                        if (across[k]) d = Math.min(d, nearest(last[0][k], now[k], home.get(i)));
                     nearest.set(i, d);
                 }
+            }
             last[0] = now;
         });
         h.runAfterDelay(START + Moves.length(Moves.SWEEP) + 4, () -> {

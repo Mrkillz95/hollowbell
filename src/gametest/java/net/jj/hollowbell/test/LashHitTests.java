@@ -45,9 +45,12 @@ public class LashHitTests implements FabricGameTest {
             strand[0] = e.moveArg();
         });
         h.onEachTick(() -> {
-            // (the ticks the server sweeps the strand over for its hits)
+            // (the poses the server sweeps the strand between for its hits: at its tick t it sees the pose of t - 1)
             float t = e.moveT(0f);
-            if (strand[0] >= 0 && e.moveNow() == Moves.LASH && t >= Moves.LASH_AT - 6 && t <= Moves.LASH_AT + 8)
+            if (strand[0] >= 0
+                    && e.moveNow() == Moves.LASH
+                    && t >= Moves.LASH_HIT_FROM - 2
+                    && t <= Moves.LASH_HIT_TO - 1)
                 lines.add(line(e, strand[0]));
         });
         h.runAfterDelay(20 + Moves.length(Moves.LASH) + 4, () -> {

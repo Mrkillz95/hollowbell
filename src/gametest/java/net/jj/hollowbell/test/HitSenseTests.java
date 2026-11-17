@@ -13,11 +13,14 @@ import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.jj.hollowbell.HollowbellMod;
 import net.jj.hollowbell.entity.HollowbellEntity;
 import net.jj.hollowbell.entity.Moves;
+import net.jj.hollowbell.rig.BellState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestFunction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.level.block.Blocks;
@@ -117,6 +120,58 @@ public class HitSenseTests implements FabricGameTest {
         return out;
     }
 
+    /**
+     * The lash hits only while its strand whips forward: stepped off the game (BellMotion), the lashed strand's end
+     * goes the way of the whip in every tick the server looks for hits (at its tick t it sees the pose of t - 1, and
+     * sweeps from the pose before that), and in the tick before them it is still winding back.
+     */
+    @GameTest(template = EMPTY_STRUCTURE)
+    public void theLashHitsOnlyWhileItWhipsForward(GameTestHelper h) {
+        // (a long strand at what's out in front, a short one round the other side, one at something low off his side)
+        List<String> bad = new ArrayList<>();
+        lashWhip(30, 55f, 4f, 25f, bad);
+        lashWhip(5, -40f, 4f, 10f, bad);
+        lashWhip(60, 10f, -10f, -70f, bad);
+        h.assertTrue(bad.isEmpty(), String.join("; ", bad));
+        h.succeed();
+    }
+
+    private static void lashWhip(int k, float tx, float ty, float tz, List<String> bad) {
+        int len = Moves.length(Moves.LASH);
+        BellMotion b = new BellMotion();
+        b.tx = tx;
+        b.ty = ty;
+        b.tz = tz;
+        b.run(80);
+        b.move = Moves.LASH;
+        b.arg = k;
+        int c = BellMotion.RIG.strandChain[k];
+        BellState st = new BellState(BellMotion.RIG);
+        float[][] tip = new float[len + 1][];
+        for (int t = 0; t <= len; t++) {
+            b.moveT = t;
+            b.step();
+            b.anim.fill(st, 1f);
+            float[] p = st.chain[c];
+            tip[t] = new float[] {p[p.length - 3], p[p.length - 2], p[p.length - 1]};
+        }
+        // (the way of the whip: where the end went over the ticks it hits)
+        int a0 = Moves.LASH_HIT_FROM - 2, a1 = Moves.LASH_HIT_TO - 1;
+        float wx = tip[a1][0] - tip[a0][0], wz = tip[a1][2] - tip[a0][2];
+        float wl = (float) Math.sqrt(wx * wx + wz * wz);
+        StringBuilder log = new StringBuilder();
+        for (int t = Moves.LASH_HIT_FROM - 1; t <= Moves.LASH_HIT_TO; t++) {
+            int p1 = t - 1, p0 = t - 2;
+            float go = ((tip[p1][0] - tip[p0][0]) * wx + (tip[p1][2] - tip[p0][2]) * wz) / wl;
+            log.append(String.format(" %d:%.1f", t, go));
+            if (t >= Moves.LASH_HIT_FROM && go < -0.5f) bad.add("strand " + k + " at " + t + " goes back " + go);
+            if (t == Moves.LASH_HIT_FROM - 1 && go > 0.5f)
+                bad.add("strand " + k + " already whipping forward at " + t + ": " + go);
+        }
+        HollowbellMod.LOG.info("lash whip, strand {}, along the whip a tick (model blocks):{}", k, log);
+        if (wl < 15f) bad.add("strand " + k + "'s whip hardly went anywhere: " + wl);
+    }
+
     /** a stone hut shut all round (and over) whatever stands in it */
     static void hut(ServerLevel l, BlockPos c) {
         for (int dx = -2; dx <= 2; dx++)
@@ -173,12 +228,18 @@ public class HitSenseTests implements FabricGameTest {
                 Pig p = pigs.get(i);
                 Spot s = pr.spots().get(i);
                 if (p.isAlive() && p.getHealth() >= p.getMaxHealth()) continue;
-                log.append(" ").append(s.name()).append("@").append(t);
+                // (stung by touching one of his strands where it stands, the way anything touching one is: just
+                // poisoned, that is no blow of the move's, and may come before it)
+                var poison = p.getEffect(MobEffects.POISON);
+                boolean touched = poison != null && poison.getDuration() >= 75;
+                log.append(" ").append(s.name()).append("@").append(t).append(touched ? "(touched)" : "");
                 firstAt.putIfAbsent(s.name(), in ? t : 9999f);
-                if (in && t < pr.from() && !wrong.contains("early " + s.name()))
+                if (in && t < pr.from() && !touched && !wrong.contains("early " + s.name()))
                     wrong.add("early " + s.name());
                 if (p.isAlive()) p.setHealth(p.getMaxHealth());
                 p.clearFire();
+                // (and the poison taken off again, so what it does later isn't taken for another blow)
+                p.removeAllEffects();
             }
         });
         h.runAfterDelay(140 + Moves.length(pr.move()) + 30, () -> {

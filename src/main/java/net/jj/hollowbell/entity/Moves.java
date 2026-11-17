@@ -152,6 +152,12 @@ public final class Moves {
     public static final int VOLLEY_AT = 14;
     /** the strand lash: when it hits */
     public static final int LASH_AT = 18;
+    /**
+     * the ticks the lash's strand hits what it passes through: from when it has turned at the end of its wind-back
+     * and whips forward, to when the whip has swung through and slows (the server sees the pose a tick old; till
+     * LASH_AT it is still winding back, and from LASH_AT + 11 a short strand is already swinging back)
+     */
+    public static final int LASH_HIT_FROM = LASH_AT + 1, LASH_HIT_TO = LASH_AT + 10;
     /** the glow flash */
     public static final int FLASH_AT = 18;
 

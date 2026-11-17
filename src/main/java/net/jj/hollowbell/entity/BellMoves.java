@@ -1014,10 +1014,17 @@ public final class BellMoves {
         if (was == null || box == null) return;
         for (Vec3[] line : was) for (Vec3 p : line) box = box.minmax(new AABB(p, p));
         double r = 3 * s + 1.5 * Math.min(1f, 10f * s);
+        // (only a strand swinging across, the way the sweep goes: one already swinging back hits nothing)
+        boolean[] across = new boolean[now.length];
+        for (int k = 0; k < now.length; k++) {
+            double m = 0;
+            for (int i = 0; i < now[k].length; i++) m += now[k][i].subtract(was[k][i]).dot(dir);
+            across[k] = m > 0;
+        }
         for (LivingEntity e : near(box.inflate(r + 2))) {
             if (struckThisMove.contains(e.getUUID())) continue;
             boolean hit = false;
-            for (int k = 0; k < now.length && !hit; k++) hit = swept(was[k], now[k], e, r);
+            for (int k = 0; k < now.length && !hit; k++) hit = across[k] && swept(was[k], now[k], e, r);
             if (!hit) continue;
             struckThisMove.add(e.getUUID());
             blow(e, 18f, h.position(), 0, 0.6);
@@ -1049,6 +1056,8 @@ public final class BellMoves {
     private void runPulse(float s, double bell) {
         // (the bell shuts a moment before the shock goes out of its rim)
         Vec3 rim = h.rimWorld();
+        // (one from a pulse before is never used: picked up past its shock, it rings from his rim now)
+        if (t < Moves.PULSE_AT) pulseAt = null;
         if (t == Moves.PULSE_AT - 5) {
             h.pulse(1.6f);
             h.sound(rim, ModSounds.PULSE, 3.5f, 0.6f);
@@ -1113,16 +1122,17 @@ public final class BellMoves {
         Vec3[] now = strandLine(arg);
         Vec3[] was = lashWas;
         lashWas = now;
-        // (from when it whips forward: winding back, it hits nothing)
-        if (was == null || t < Moves.LASH_AT - 4 || t > Moves.LASH_AT + 8) return;
+        // (from when it whips forward to when it has swung through: winding back, or swinging back, it hits nothing)
+        if (was == null || t < Moves.LASH_HIT_FROM || t > Moves.LASH_HIT_TO) return;
         Vec3 tip = now[now.length - 1], tipWas = was[was.length - 1];
         Vec3 way = tip.subtract(tipWas).multiply(1, 0, 1);
         way = way.lengthSqr() > 1e-6 ? way.normalize() : Vec3.ZERO;
-        if (t == Moves.LASH_AT || t == Moves.LASH_AT + 3) {
-            // the end cracks past, dragging dust; where it meets the ground, a thud
+        if (t == Moves.LASH_AT + 3 || t == Moves.LASH_AT + 6) {
+            // the end cracks past, dragging dust; where it meets the ground, a thud (as it whips through, fastest:
+            // at LASH_AT itself it is only just turning from the wind-back)
             Vec3 low = new Vec3(tip.x, h.groundAt(tip.x, tip.z), tip.z);
             fx(BigFx.TRAIL, low, px(4, 1.5), way, 0);
-            if (t == Moves.LASH_AT) {
+            if (t == Moves.LASH_AT + 3) {
                 if (tip.y - low.y < 6 * s + 2 * Math.min(1f, 10f * s)) fx(BigFx.STOMP, low, px(6, 2), way, 0);
                 h.sound(tip, SoundEvents.TRIDENT_RIPTIDE_1.value(), 2f, 1.4f);
             }
