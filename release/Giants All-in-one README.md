@@ -13,21 +13,21 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.17.0 |
-| Pitchgut | 1.35.45 |
-| Furrowmaw | 1.17.42 |
-| Emberfrost Hound | 2.18.43 |
-| Hollowbell | 1.12.45 |
-| Lantern Willow | 1.10.45 |
-| Wreckback | 1.2.50 |
-| The Swarmforge | 1.4.48 |
-| The Gloamwick | 1.2.29 |
-| The Hearthstride | 1.3.0 |
-| Tickmoor | 1.0.0 |
+| Giants Guide | 1.18.0 |
+| Pitchgut | 1.35.46 |
+| Furrowmaw | 1.17.43 |
+| Emberfrost Hound | 2.18.44 |
+| Hollowbell | 1.12.46 |
+| Lantern Willow | 1.10.46 |
+| Wreckback | 1.2.51 |
+| The Swarmforge | 1.4.49 |
+| The Gloamwick | 1.2.30 |
+| The Hearthstride | 1.3.1 |
+| Tickmoor | 1.0.1 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.19.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.20.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -35,7 +35,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…`, `gloamwick-…`, `hearthstride-…` and `tickmoor-…` out of your mods folder, and the
-old `giants-all-…` jar too, then put `giants-all-1.19.0.jar` (from the Releases page) in. Keep Fabric API in there.
+old `giants-all-…` jar too, then put `giants-all-1.20.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -140,6 +140,52 @@ A book about every giant you have. Right-click it to open it.
 - New in the Guide 1.16.2: the Hearthstride's page says he only fights his foes.
 - New in the Guide 1.17.0: Tickmoor's pages, the Emberfrost Hound's new name everywhere, the starting kit's
   finders, armour and books now really come with the giants, and a giant's page leaves off gear his mod hasn't got.
+- New in the Guide 1.18.0: Tickmoor's new clock-face land part by part, his riding cabin and view, the
+  Hearthstride's wading, settling, works and switches, and world settings always under Features.
+
+## New in 1.20.0
+
+Every giant gets the Nov 16 fixes: moves ease out smoothly when they end or are cut short, blows only land where
+you see them reach, effects come out of the part that makes them, and legs step steadily. Tickmoor's land is a
+clock face now, and the Hearthstride works on real land.
+
+### Tickmoor 1.0.1
+
+- His land is a clock face about 1,000 blocks across: the Great Works in the middle, where he sleeps, and the
+  Stopped, Racing, Ended and Rewound Hours round it, with seams of broken time between them and a giant pendulum.
+  A far chime rings the quarters.
+- You ride in the little gear cabin in his tower, just under his head, with the same view as every other giant.
+- Fights with other giants are better balanced.
+
+### The Hearthstride 1.3.1
+
+- Wades through water on its bed instead of walking on top, and settles on the levellest dry spot near him,
+  felling trees in the way. His works work on real land.
+- All 14 forms rebuilt inside and out. Walk into his doorway to go in.
+- His gear: Hearthwood, the Hearth Hammer and Hearthwood armour (a Hearthling carries your things).
+- 216 storage slots, Hearthguard, hits that show, helm keys 1 to 6, a quiet door and calmer music.
+
+### The other giants
+
+- **Pitchgut 1.35.46**: a new scream and new laser-eye sounds; beams from his eyes, goo from his mouth.
+- **Furrowmaw 1.17.43**: Lava Breath pours from his throat, heaving and far stronger.
+- **The Emberfrost Hound 2.18.44**: breath out of each head's jaws, smooth legs.
+- **Hollowbell 1.12.46**: Devour sucks what he grabs in under his rim and the bell shuts on it; the Whirlpool
+  spins the way it pulls.
+- **Lantern Willow 1.10.46**: his flash comes from his eyes and his nova from his lanterns.
+- **Wreckback 1.2.51**: bell, beams, waves and whirl from where you see them; smooth walk.
+- **The Swarmforge 1.4.49**: effects from his parts, smooth treads, a better-aimed cannon.
+- **The Gloamwick 1.2.30**: voice from his mouth, warning toll from his bell, steady hooves.
+- All of them know Tickmoor and the Emberfrost Hound's new name.
+
+### The Giants Guide 1.18.0
+
+- Tickmoor's Where page shows his new land, part by part, and his riding cabin and view are right.
+- The Hearthstride's pages: wading, settling, his works and his switches.
+- Newer move texts from the giants, and world settings always show under Features.
+
+Inside: Pitchgut 1.35.46, Furrowmaw 1.17.43, Emberfrost Hound 2.18.44, Hollowbell 1.12.46, Lantern Willow 1.10.46,
+Wreckback 1.2.51, Swarmforge 1.4.49, Gloamwick 1.2.30, Hearthstride 1.3.1, Tickmoor 1.0.1, Giants Guide 1.18.0.
 
 ## New in 1.19.0
 
