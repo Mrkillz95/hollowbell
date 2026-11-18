@@ -1,4 +1,4 @@
-# Hollowbell (Java mod), version 1.12.45
+# Hollowbell (Java mod), version 1.12.46
 
 My KillzAI Hollowbell build, turned into a boss for Minecraft Java 1.21.1 with Fabric. He's a huge green jellyfish
 made of glass, copper and bone, about 200 blocks wide and 200 tall at full size, and he swims through the air.
@@ -7,6 +7,16 @@ He's made from my build block for block, with every block's real texture. The gl
 into his hollow dome and see what he's caught.
 
 ## What's new
+
+- **Devour** looks real now: what he has grabbed is sucked in under his rim and up into his hollow, and the bell shuts hard on it. No gulp when the grab let go of nothing.
+- **Whirlpool** spins the way it pulls.
+- **Effects from the right parts**: the light bursts out of his glowing spots, the shock runs out from his rim and the toll comes from the bell itself.
+- Lash and Sweep only hit while the strands swing through, not while they wind back.
+- His moves let go smoothly, and his strands drag along the ground and bend back without jerks or flicks.
+- Knows **Tickmoor**, the tenth giant (a clockwork praying mantis, the giant of time): he's in `/giants`, the giant lists and the meeting table, and keeps away from him when they meet.
+- The Cerberus is called the **Emberfrost Hound** now, everywhere he's named.
+
+### 1.12.45
 
 - **Egg rain**: his eggs come down right on their markers on the ground, even when he lets them go low down or aims
   them far off, and far out in the world.
@@ -308,7 +318,7 @@ lands on that part, at any size, still or drifting.
 
 ## Install
 
-You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.19.jar` in your `mods` folder
+You need Fabric Loader 0.19.5 or newer for 1.21.1 and Fabric API. Put `hollowbell-1.12.46.jar` in your `mods` folder
 and take any older Hollowbell jar out. For a server, put the same jar in the server's `mods` folder too. Everyone who
 joins needs it as well.
 
