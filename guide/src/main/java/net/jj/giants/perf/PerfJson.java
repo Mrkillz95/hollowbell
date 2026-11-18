@@ -85,6 +85,8 @@ public final class PerfJson {
             default -> PerfSetting.GIANT;
         };
         boolean server = str(o, "side", 16).equals("server");
+        // the world's settings are the operators', all on the Features page, whatever section the giant gave it
+        if (server) section = PerfSetting.FEATURES;
         List<String> options = new ArrayList<>();
         if (o.get("options") instanceof JsonArray a)
             for (JsonElement e : a) if (e.isJsonPrimitive() && options.size() < 8) options.add(cut(e.getAsString(), 24));

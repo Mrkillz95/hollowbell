@@ -497,6 +497,7 @@ public class PerfGameTests implements FabricGameTest {
                 "{\"id\":\"odd\",\"section\":\"giant\",\"kind\":\"toggle\",\"side\":\"server\",\"ops\":false}")
                 .getAsJsonObject());
         h.assertTrue(odd != null && odd.ops() && !odd.editable(true, false), "every server setting is ops-only");
+        h.assertTrue(odd.section().equals(PerfSetting.FEATURES), "and it is shown in Features, not his own section");
         h.succeed();
     }
 
