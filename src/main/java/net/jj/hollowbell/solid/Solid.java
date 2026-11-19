@@ -44,12 +44,25 @@ public final class Solid {
 
     public static void track(SolidBody b) {
         List<SolidBody> l = b.solidSelf().level().isClientSide ? CLIENT : SERVER;
-        if (!l.contains(b)) l.add(b);
+        // (leak-fix) the very one, not one equal to it: two creatures are "equal" when their ids are, and one of him
+        // left over from the world you were in before has the same id as the one here now, which then never counted
+        for (SolidBody x : l) if (x == b) return;
+        l.add(b);
     }
 
     public static void untrack(SolidBody b) {
-        SERVER.remove(b);
-        CLIENT.remove(b);
+        SERVER.removeIf(x -> x == b);
+        CLIENT.removeIf(x -> x == b);
+    }
+
+    /**
+     * (leak-fix) your game has gone to another world: the bodies from the last one are let go (the game never tells a
+     * creature its world has gone, so they stayed listed, holding on to the whole old world); how many
+     */
+    public static int forgetOtherWorlds(@org.jetbrains.annotations.Nullable net.minecraft.world.level.Level now) {
+        int n = CLIENT.size();
+        CLIENT.removeIf(b -> b.solidSelf().level() != now || b.solidSelf().isRemoved());
+        return n - CLIENT.size();
     }
 
     public static void forgetAll(boolean client) {

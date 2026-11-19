@@ -144,7 +144,8 @@ def allTests = [
     'net.jj.hollowbell.test.BlendOutTests',
     'net.jj.hollowbell.test.SwallowTests',
     'net.jj.hollowbell.test.WhirlWayTests',
-    'net.jj.hollowbell.test.StrandGaitTests'
+    'net.jj.hollowbell.test.StrandGaitTests',
+    'net.jj.hollowbell.test.LeakTests' // (leak-fix)
 ]
 // probes: long measuring runs, never in the usual run, only when named with -Ponly
 def probeTests = ['net.jj.hollowbell.test.StallProbe']

@@ -109,6 +109,8 @@ public class HollowbellClient implements ClientModInitializer {
         });
         ArmourPowerKey.init();
         LookKey.init();
+        // (leak-fix) what a respawn or another world leaves behind: biome loops, old-world bodies and effects
+        LeftBehind.init();
         ClientTickEvents.END_CLIENT_TICK.register(c -> {
             Shake.tick();
             BeingHim.tick(c);

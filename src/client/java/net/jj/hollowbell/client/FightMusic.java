@@ -4,6 +4,7 @@ import net.jj.hollowbell.FightWith;
 import net.jj.hollowbell.BellConfig;
 import net.jj.hollowbell.GiantsPerf;
 import net.jj.hollowbell.HollowbellMod;
+import net.jj.hollowbell.LandMusic;
 import net.jj.hollowbell.ModSounds;
 import net.jj.hollowbell.MusicBoard;
 import net.jj.hollowbell.ThemeHold;
@@ -26,6 +27,11 @@ import net.minecraft.util.RandomSource;
  * It follows him. The theme is four takes of the same music, exactly as long as each other, started together and
  * kept playing together; only one is heard at a time. By his health: whole, under half, under a quarter, each blended
  * in over four seconds. While he lies sunk on the ground the fourth take plays, lower and heavier.
+ *
+ * <p>(leak-fix, as the Tickmoor's) When you die it doesn't hold: it fades out at once. On another world (or after the
+ * game stopped every sound, as it does on changing worlds and on a resource reload) it starts clean: the takes are known
+ * to be gone by the sound engine, not only by their own flag, which the game never sets when it stops them itself, and
+ * that is noticed whether or not his theme is wanted just then.
  */
 public final class FightMusic {
     private FightMusic() {}
@@ -46,6 +52,10 @@ public final class FightMusic {
     private static double lastNear = -1;
     /** ticks the theme has been asked for but the sound system hasn't had it running */
     private static int idle;
+    /** ticks the sound system may go without the theme before it counts as gone (a stream takes a moment to start) */
+    static final int IDLE = 40;
+    /** the world it last ran in (another one: whoever was fighting you there isn't now) */
+    private static Object lastLevel;
 
     static final class Take extends AbstractTickableSoundInstance {
         final int which;
@@ -92,7 +102,7 @@ public final class FightMusic {
 
     /** the flat distance squared to the nearest awake one in range of you; or -1 */
     static double nearest(Minecraft mc) {
-        if (mc.level == null || mc.player == null || mc.player.isSpectator()) return -1;
+        if (mc.level == null || mc.player == null || !mc.player.isAlive() || mc.player.isSpectator()) return -1;
         double best = -1;
         for (var e : mc.level.entitiesForRendering()) {
             if (!(e instanceof HollowbellEntity h) || h.isGhost() || h.isDeadOrDying() || !h.awake()
@@ -115,6 +125,14 @@ public final class FightMusic {
     }
 
     public static void tick(Minecraft mc) {
+        if (mc.level != lastLevel) {
+            // (a new world: the ids the server sent were for the last one)
+            lastLevel = mc.level;
+            FightWith.forget();
+            HOLD.reset();
+        }
+        // you died: no hold, it fades out now
+        if (mc.player != null && !mc.player.isAlive()) HOLD.reset();
         // (Part 5) the server's Fight music choice: usual (the player's own), on or off
         boolean on = net.jj.hollowbell.GiantsPlayers.music(
                 BellConfig.V.fightMusic && GiantsPerf.f("detail.music") > 0f);
@@ -128,14 +146,18 @@ public final class FightMusic {
         else MusicBoard.drop(HollowbellMod.MOD_ID);
         long now = System.currentTimeMillis();
         boolean mine = wanted && MusicBoard.plays(MusicBoard.musicBoard(), HollowbellMod.MOD_ID, now);
+        // (a stream takes a moment to start: only one that has stopped, or never got going, is begun again; and one
+        // the sound system dropped, on a world change or a resource reload, counts as gone wanted or not)
+        idle = playing != null && !mc.getSoundManager().isActive(playing[0]) ? idle + 1 : 0;
+        if (playing != null && LandMusic.gone(playing[0].isStopped(), idle <= IDLE)) {
+            for (Take t : playing) t.end();
+            playing = null;
+        }
         if (mine) {
-            // (a stream takes a moment to start: only one that has stopped, or never got going, is begun again)
-            idle = playing != null && !mc.getSoundManager().isActive(playing[0]) ? idle + 1 : 0;
-            if (playing == null || playing[0].isStopped() || idle > 40) start(mc);
+            if (playing == null) start(mc);
             for (Take t : playing) t.want = true;
         } else if (playing != null) {
             for (Take t : playing) t.want = false;
-            if (playing[0].isStopped()) playing = null;
         }
         for (int i = 0; i < TAKES.length; i++) {
             float to = i == want ? 1f : 0f;
