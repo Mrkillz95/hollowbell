@@ -405,6 +405,7 @@ public final class Giants {
                                 "cog_volley",
                                 "wing_buzz",
                                 "slow_pulse",
+                                "slow_motion_dodge",
                                 "time_skip=|codex.tickmoor.order_tip.time_skip"
                             },
                             new String[] {
@@ -416,7 +417,9 @@ public final class Giants {
                                 "echo_strike",
                                 "step_back",
                                 "rust_breath",
-                                "fast_forward"
+                                "fast_forward",
+                                "overclock",
+                                "borrowed_second"
                             },
                             new String[] {
                                 "midnight_strike",
@@ -427,7 +430,9 @@ public final class Giants {
                                 "blur_rush",
                                 "sundial_sweep",
                                 "gear_storm",
-                                "temporal_anchor"
+                                "temporal_anchor",
+                                "echo_ambush",
+                                "time_split"
                             }),
                     Set.of("furrowmaw", "cerberus", "wreckback", "swarmforge", "gloamwick")));
 
