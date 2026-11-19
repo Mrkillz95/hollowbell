@@ -13,21 +13,21 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 
 | Giant | Version |
 |---|---|
-| Giants Guide | 1.18.0 |
-| Pitchgut | 1.35.46 |
-| Furrowmaw | 1.17.43 |
-| Emberfrost Hound | 2.18.44 |
-| Hollowbell | 1.12.46 |
-| Lantern Willow | 1.10.46 |
-| Wreckback | 1.2.51 |
-| The Swarmforge | 1.4.49 |
-| The Gloamwick | 1.2.30 |
-| The Hearthstride | 1.3.1 |
-| Tickmoor | 1.0.1 |
+| Giants Guide | 1.18.1 |
+| Pitchgut | 1.35.47 |
+| Furrowmaw | 1.17.44 |
+| Emberfrost Hound | 2.18.45 |
+| Hollowbell | 1.12.47 |
+| Lantern Willow | 1.10.47 |
+| Wreckback | 1.2.52 |
+| The Swarmforge | 1.4.50 |
+| The Gloamwick | 1.2.31 |
+| The Hearthstride | 1.3.2 |
+| Tickmoor | 1.0.2 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.20.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.21.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -35,7 +35,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…`, `gloamwick-…`, `hearthstride-…` and `tickmoor-…` out of your mods folder, and the
-old `giants-all-…` jar too, then put `giants-all-1.20.0.jar` (from the Releases page) in. Keep Fabric API in there.
+old `giants-all-…` jar too, then put `giants-all-1.21.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -142,6 +142,43 @@ A book about every giant you have. Right-click it to open it.
   finders, armour and books now really come with the giants, and a giant's page leaves off gear his mod hasn't got.
 - New in the Guide 1.18.0: Tickmoor's new clock-face land part by part, his riding cabin and view, the
   Hearthstride's wading, settling, works and switches, and world settings always under Features.
+
+## New in 1.21.0
+
+Every giant's fight music is softer, and each giant's land music now fades out when you leave his land or die,
+with no sound loops piling up after you respawn. Tickmoor gets nine time moves, and Furrowmaw's lava looks like
+real lava.
+
+### Tickmoor 1.0.2
+
+- Nine time moves: he attacks you in bent time. In Midnight he blinks to each frozen player and chops them;
+  Stopwatch and Pinning Grasp get a blow of his that lands as they let go; while his Slow holds you, his quick
+  moves come faster. Nothing he does while time is stopped hurts you until it starts again.
+- Five new moves: Echo Ambush, Overclock, Borrowed Second, Time Split and Slow-Motion Dodge (29 in all).
+- A song for each part of his land, and no more lingering music or lag after you die or leave.
+- Standing still, his feet stay planted, and his effects, shake and sounds go with his size.
+
+### Furrowmaw 1.17.44
+
+- Lava Breath and his geysers pour as calm, heavy, natural lava, with no strings or smoke.
+- Burst from below and Burst up are earth and dust only: no glow or flash, and no magma or fire left round his hole.
+
+### Every giant
+
+- Softer fight music: warm brass instead of the harsh trumpet stab, and a softer tick with no sharp ping (the
+  Hearthstride's tense music has a warm horn instead of a harsh blast).
+- His land's music fades out over a few seconds when you leave or die, and comes back when you step in again. It
+  no longer starts again on the death screen, and the fight music stops when you die.
+- After you respawn, the old land's sound loops fade out instead of piling up, and going to another world leaves
+  no effects behind.
+- Pitchgut 1.35.47, the Emberfrost Hound 2.18.45, Hollowbell 1.12.47, the Lantern Willow 1.10.47, Wreckback 1.2.52,
+  the Swarmforge 1.4.50, the Gloamwick 1.2.31, the Hearthstride 1.3.2.
+
+### The Giants Guide 1.18.1
+
+- Tickmoor's pages know his time moves: the five new ones, what Midnight, Stopwatch, Pinning Grasp, Slow Pulse and
+  Time Collapse do now, his 29 seat keys and two new tips.
+- Furrowmaw's Burst from below no longer says the ground glows.
 
 ## New in 1.20.0
 
