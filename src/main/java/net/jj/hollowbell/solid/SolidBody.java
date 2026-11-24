@@ -2,6 +2,7 @@ package net.jj.hollowbell.solid;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 /**
@@ -51,6 +52,11 @@ public interface SolidBody {
 
     /** what never bumps into him: his own seats, shots, hooks, whoever rides at his helm... */
     default boolean solidIgnores(Entity e) {
+        return false;
+    }
+
+    /** a hollow of him that is a place to be: nobody walled in there is moved out of it */
+    default boolean solidHollowHolds(Vec3 at) {
         return false;
     }
 

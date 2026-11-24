@@ -663,6 +663,8 @@ public final class Solid {
         if (!b.solidReady()) {
             c.riding.clear();
             c.stuck.clear();
+            c.walled.clear();
+            c.deep.clear();
             return;
         }
         long t0 = clock();
@@ -697,6 +699,7 @@ public final class Solid {
                 level.getEntities(s, all, x -> !ignoresAll(x) && !b.solidIgnores(x) && !(x instanceof SolidBody))) {
             if (e instanceof Player p) {
                 if (p.isCreative() && p.getAbilities().flying) continue;
+                if (walledTick(b, c, e)) continue;
                 // their own game moves them out at once; this is for when it didn't. (Measured on their whole box, as
                 // their game does: a box shrunk to a sliver looks at other columns than the ones they're in, and by
                 // his hollow dome it read nothing now and then, which started the count again every few ticks.)
@@ -713,13 +716,20 @@ public final class Solid {
                 // (feet a little sunk into a top they stand on is standing on him: their game lifts them)
                 if (dp > 0.02 && dp < 0.6 * Math.min(1f, b.solidScale()) && anchorUnder(b, e, 0.9, 1.5) != null) dp = 0;
                 if (dp > 0.02) {
+                    // (not on a top of his: one carried on him may lag that far into a part for a tick)
+                    if (dp > 0.5 && anchorUnder(b, e, 0.9, 1.5) == null)
+                        c.deep.put(e.getId(), (int) e.level().getGameTime());
                     int n = c.stuck.merge(e.getId(), 1, Integer::sum);
                     if (n >= 8) {
                         c.stuck.remove(e.getId());
                         // (one standing on him is kept on him, as their own game would have done)
                         if (unstick(b, e, 0.08, anchorUnder(b, e, 1.5, 1.5) != null)) unstuckServer++;
                     }
-                } else c.stuck.remove(e.getId());
+                } else clearTick(c, e);
+                continue;
+            }
+            if (e.getControllingPassenger() instanceof Player) {
+                drivenIn(b, c, e);
                 continue;
             }
             // (one look up the columns under it does for all three: is it in him, in his soft parts, on him)
@@ -745,6 +755,153 @@ public final class Solid {
             }
         }
         time(false, t0);
+    }
+
+    /**
+     * A clear tick starts the count again, except just after being well in him (half a block or more): half in a part
+     * of him as it swings still adds up to being moved out.
+     */
+    private static void clearTick(SolidCache c, Entity e) {
+        Integer deep = c.deep.get(e.getId());
+        if (deep != null && (int) e.level().getGameTime() - deep <= 3) {
+            c.stuck.computeIfPresent(e.getId(), (k, n) -> n > 1 ? n - 1 : null);
+            return;
+        }
+        c.stuck.remove(e.getId());
+        c.deep.remove(e.getId());
+    }
+
+    /**
+     * Four times a second: a player walled in by him (in a hollow of him, not in a part of him, so the rest of the kit
+     * leaves them there) is moved out to open ground once it's seen twice running, or three times in five looks (as he
+     * pulses, a way out may open for a moment and shut again).
+     */
+    private static boolean walledTick(SolidBody b, SolidCache c, Entity e) {
+        if ((e.level().getGameTime() + e.getId()) % 5 != 0) return false;
+        // (one well in a part of him is the rest of the kit's; one a little sunk into a top of a hollow isn't)
+        if (depthIn(b, e.getBoundingBox(), 0.08, null, true) > 0.3
+                || b.solidHollowHolds(e.position())
+                || !walledIn(b, e)) {
+            c.walled.computeIfPresent(e.getId(), (k, n) -> n > 1 ? n - 1 : null);
+            return false;
+        }
+        if (c.walled.merge(e.getId(), 2, Integer::sum) < 4) return false;
+        c.walled.remove(e.getId());
+        Vec3 to = openSpot(b, e);
+        if (e instanceof ServerPlayer sp) sp.teleportTo(sp.serverLevel(), to.x, to.y, to.z, sp.getYRot(), sp.getXRot());
+        else e.setPos(to.x, to.y, to.z);
+        e.setDeltaMovement(Vec3.ZERO);
+        e.resetFallDistance();
+        e.hurtMarked = true;
+        unstuckServer++;
+        return true;
+    }
+
+    /** walled in by him where it stands now */
+    public static boolean walledIn(SolidBody b, Entity e) {
+        return walledAt(b, e, e.position());
+    }
+
+    /**
+     * In a hollow of him at `at`: him over their head, and no way out on any side within a few blocks, shut by him
+     * all round, or mostly by him while standing on him (a tunnel of their own under him is theirs).
+     */
+    public static boolean walledAt(SolidBody b, Entity e, Vec3 at) {
+        if (!b.solidTightBox().contains(at)) return false;
+        AABB box = e.getDimensions(e.getPose()).makeBoundingBox(at);
+        double reach = Math.min(12, 2 + 8 * b.solidScale()), y0 = box.minY + 0.3, y1 = box.maxY;
+        Runs r = new Runs();
+        if (column(b, at.x, at.z, y1, y1 + reach, false, r).n == 0) return false;
+        double st = Math.max(0.5, Math.min(1.0, columnWidth(b)));
+        int byHim = 0;
+        for (int k = 0; k < 8; k++) {
+            double a = k * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a);
+            boolean open = true;
+            for (double d = st; d <= reach && open; d += st) {
+                if (column(b, at.x + dx * d, at.z + dz * d, y0, y1, false, r).n > 0) {
+                    open = false;
+                    byHim++;
+                } else if (!e.level().noCollision(e, box.move(dx * d, 0.3, dz * d))) open = false;
+            }
+            if (open) return false;
+        }
+        return byHim == 8 || byHim >= 5 && floorUnder(b, at);
+    }
+
+    /** something of him over a spot, above the head of one this tall standing there */
+    static boolean underHim(SolidBody b, Vec3 at, double height) {
+        return column(b, at.x, at.z, at.y + height, b.solidTightBox().maxY + 1, false, new Runs()).n > 0;
+    }
+
+    /**
+     * The nearest spot out of a hollow of his: up onto him, or out sideways to where it can stand without a long
+     * fall; clear of him and the world, with nothing of him overhead (so not walled in again as he shifts).
+     */
+    static Vec3 openSpot(SolidBody b, Entity e) {
+        var dim = e.getDimensions(e.getPose());
+        AABB body = b.solidTightBox();
+        Vec3 from = e.position();
+        Vec3 best = null;
+        double bestD = Double.MAX_VALUE;
+        for (double dy = 0.5; from.y + dy < body.maxY + 3; dy += 0.5) {
+            Vec3 c = from.add(0, dy, 0);
+            if (clear(b, e, dim.makeBoundingBox(c)) && !underHim(b, c, dim.height())) {
+                best = c;
+                bestD = dy * 0.66;
+                break;
+            }
+        }
+        double far = Math.min(48, Math.hypot(body.getXsize(), body.getZsize()) + 4);
+        for (int k = 0; k < 8; k++) {
+            double a = k * Math.PI / 4;
+            for (double d = 1; d < Math.min(bestD, far); d += 1) {
+                Vec3 c = from.add(Math.cos(a) * d, 0, Math.sin(a) * d);
+                if (!clear(b, e, dim.makeBoundingBox(c)) || underHim(b, c, dim.height())) continue;
+                // (put down where it would land: the ground, or a top of his on the way down)
+                double land = Math.min(c.y, groundNow(e.level(), c.x, c.z, c.y));
+                Runs r = column(b, c.x, c.z, land, c.y, false, new Runs());
+                for (int j = 0; j < r.n; j++) land = Math.max(land, Math.min(r.top[j], c.y));
+                Vec3 down = new Vec3(c.x, land, c.z);
+                if (!clear(b, e, dim.makeBoundingBox(down))) down = c;
+                double cost = d + 0.25 * (c.y - down.y);
+                if (cost < bestD) {
+                    best = down;
+                    bestD = cost;
+                }
+                break;
+            }
+        }
+        if (best != null) return best;
+        return new Vec3(from.x, Math.max(body.maxY + 1, groundNow(e.level(), from.x, from.z, body.maxY + 1)), from.z);
+    }
+
+    /**
+     * A clear tick only takes one off the count, so being in and out of a moving part of him (half in a leg as it
+     * swings) still adds up to being moved out.
+     */
+    private static void unstuckTick(SolidCache c, Entity e) {
+        c.stuck.computeIfPresent(e.getId(), (k, n) -> n > 1 ? n - 1 : null);
+    }
+
+    /**
+     * A boat or a horse a player drives: their game moves it and won't take a move from here, so one left inside him
+     * for 8 ticks (it, or a rider sitting up in him) is got off, and it and its riders are moved out one by one.
+     */
+    private static void drivenIn(SolidBody b, SolidCache c, Entity v) {
+        boolean in = depthIn(b, v.getBoundingBox(), 0.08, null, true) > 0.02;
+        for (Entity r : v.getPassengers())
+            if (!in && !b.solidIgnores(r)) in = depthIn(b, r.getBoundingBox(), 0.08, null, true) > 0.02;
+        if (!in) {
+            unstuckTick(c, v);
+            return;
+        }
+        if (c.stuck.merge(v.getId(), 1, Integer::sum) < 8) return;
+        c.stuck.remove(v.getId());
+        List<Entity> riders = List.copyOf(v.getPassengers());
+        v.ejectPassengers();
+        if (unstick(b, v, 0.08)) unstuckServer++;
+        for (Entity r : riders)
+            if (!b.solidIgnores(r) && unstick(b, r, 0.08)) unstuckServer++;
     }
 
     /** is any part of him (his frames' boxes) about this box at all: the quick first look */

@@ -35,6 +35,10 @@ public final class SolidCache {
     final Int2ObjectOpenHashMap<Solid.Carried> riding = new Int2ObjectOpenHashMap<>();
 
     final HashMap<Integer, Integer> stuck = new HashMap<>();
+    /** players walled in by him, by how many looks running */
+    final HashMap<Integer, Integer> walled = new HashMap<>();
+    /** players by the last tick (game time) they were well in him */
+    final HashMap<Integer, Integer> deep = new HashMap<>();
 
     /**
      * which frames' boxes reach over each patch of the world (GRID blocks a side), worked out when first asked each

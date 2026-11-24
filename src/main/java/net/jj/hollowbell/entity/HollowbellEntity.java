@@ -2701,6 +2701,13 @@ public class HollowbellEntity extends Monster implements SitHost {
         return bellScale();
     }
 
+    /** the inside of his dome, and under it among the roots of his arms, is a place you can be */
+    @Override
+    public boolean solidHollowHolds(Vec3 at) {
+        Vector3f m = toModel(at);
+        return Math.hypot(m.x, m.z) < rig.domeInner(Math.max(m.y, rig.rimY));
+    }
+
     /** his seats, shots, hooks and Bellings, whoever he holds or is closing on, and the other giants (see jjHull) */
     @Override
     public boolean solidIgnores(Entity e) {

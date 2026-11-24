@@ -45,6 +45,7 @@ public final class SolidClient {
         }
         if (p.isSpectator() || p.isPassenger() || p.noPhysics) {
             clear();
+            if (p.isPassenger() && !p.isSpectator()) driveOut(p.getRootVehicle());
             return;
         }
         long t0 = System.nanoTime();
@@ -71,6 +72,19 @@ public final class SolidClient {
             }
         }
         Solid.nanosClient += System.nanoTime() - t0;
+    }
+
+    /** a boat or a horse you drive is moved by your game, so it's moved out of him here, the same tick */
+    private static void driveOut(Entity v) {
+        if (v.noPhysics || !v.isControlledByLocalInstance()) return;
+        for (SolidBody b : Solid.bodies(true)) {
+            if (b.solidSelf().level() != v.level() || !b.solidReady() || b.solidIgnores(v)) continue;
+            if (Solid.unstick(b, v, 0.08)) {
+                unstuck++;
+                Solid.unstuckClient++;
+                return;
+            }
+        }
     }
 
     /**
