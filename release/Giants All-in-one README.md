@@ -14,20 +14,20 @@ Minecraft Java 1.21.1, Fabric Loader 0.19.5, Fabric API. By JJ. All rights reser
 | Giant | Version |
 |---|---|
 | Giants Guide | 1.18.1 |
-| Pitchgut | 1.35.47 |
-| Furrowmaw | 1.17.44 |
-| Emberfrost Hound | 2.18.45 |
-| Hollowbell | 1.12.47 |
-| Lantern Willow | 1.10.47 |
-| Wreckback | 1.2.52 |
-| The Swarmforge | 1.4.50 |
-| The Gloamwick | 1.2.31 |
-| The Hearthstride | 1.3.2 |
-| Tickmoor | 1.0.2 |
+| Pitchgut | 1.35.48 |
+| Furrowmaw | 1.17.46 |
+| Emberfrost Hound | 2.18.46 |
+| Hollowbell | 1.12.48 |
+| Lantern Willow | 1.10.48 |
+| Wreckback | 1.2.53 |
+| The Swarmforge | 1.4.51 |
+| The Gloamwick | 1.2.32 |
+| The Hearthstride | 1.3.3 |
+| Tickmoor | 1.0.3 |
 
 ## Install
 
-The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.21.0), not in this folder: it's too big
+The jar is on the repo's **Releases** page on GitHub (Giants All-in-one 1.22.0), not in this folder: it's too big
 to keep in git.
 
 Easy way: run `install-all.ps1` in the Hollowbell folder. It downloads the newest all-in-one from Releases, takes
@@ -35,7 +35,7 @@ the single giant jars out of your mods folder and puts it in.
 
 By hand: take `pitchgut-…`, `furrowmaw-…`, `fire-ice-cerberus-…`, `hollowbell-…`, `lanternwillow-…`,
 `wreckback-…`, `swarmforge-…`, `gloamwick-…`, `hearthstride-…` and `tickmoor-…` out of your mods folder, and the
-old `giants-all-…` jar too, then put `giants-all-1.21.0.jar` (from the Releases page) in. Keep Fabric API in there.
+old `giants-all-…` jar too, then put `giants-all-1.22.0.jar` (from the Releases page) in. Keep Fabric API in there.
 For a server, put the same jar in the server's mods folder.
 
 If a single jar is left in by mistake the game still starts, but take it out anyway so the right version runs.
@@ -142,6 +142,42 @@ A book about every giant you have. Right-click it to open it.
   finders, armour and books now really come with the giants, and a giant's page leaves off gear his mod hasn't got.
 - New in the Guide 1.18.0: Tickmoor's new clock-face land part by part, his riding cabin and view, the
   Hearthstride's wading, settling, works and switches, and world settings always under Features.
+
+## New in 1.22.0
+
+Fixes from testers: shorter tooltips, and you can't get stuck inside a giant any more. The Hearthstride gets a
+full pass, Tickmoor's Cog Volley no longer tracks you perfectly, and Furrowmaw's Furrowlings look like him.
+
+### Every giant
+
+- Shorter tooltips: every piece of gear's tooltip is short and fits on the screen.
+- Never stuck inside a giant: if you end up inside one's body (even driving a boat), you're pushed out to the
+  nearest free spot, so you can't hide in there from his moves.
+- Pitchgut 1.35.48, the Emberfrost Hound 2.18.46, Hollowbell 1.12.48, the Lantern Willow 1.10.48, Wreckback 1.2.53,
+  the Swarmforge 1.4.51, the Gloamwick 1.2.32.
+
+### The Hearthstride 1.3.3
+
+- `/giants tp hearthstride` works: it puts you right by him.
+- Walk in and out of him: step through his door and you're inside at once, with no ride in or out.
+- Breaking a block in him takes as long as in the world, with the normal cracks.
+- No rain inside him, and any cartography table in him can steer him. His maps are filled to the edge.
+- Settle down holds while he's following you, wild or flying. Roomier rooms, and no holes where his hidden blocks
+  were.
+
+### Tickmoor 1.0.3
+
+- Cog Volley is no longer a perfect tracker: he sets his aim as he winds up and each gear is thrown a little off.
+  Move as he winds up and most of them miss.
+
+### Furrowmaw 1.17.46
+
+- His Furrowlings look like him in small.
+
+## New in 1.21.1
+
+Fixes a startup crash on some launchers (like CurseForge) whose Java leaves out an optional part (Furrowmaw
+1.17.45). Everything else is the same as 1.21.0.
 
 ## New in 1.21.0
 
